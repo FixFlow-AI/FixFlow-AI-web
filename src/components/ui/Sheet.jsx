@@ -1,21 +1,12 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface SheetProps {
-  isOpen: boolean
-  onClose: () => void
-  children: ReactNode
-  title?: string
-  description?: string
-  side?: 'left' | 'right'
-}
-
-function Sheet({ isOpen, onClose, children, title, description, side = 'right' }: SheetProps) {
+function Sheet({ isOpen, onClose, children, title, description, side = 'right' }) {
   // Close on escape key
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e) => {
       if (e.key === 'Escape') onClose()
     }
     if (isOpen) {

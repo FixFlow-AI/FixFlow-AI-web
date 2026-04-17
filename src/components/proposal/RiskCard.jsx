@@ -1,12 +1,7 @@
 import { motion } from 'framer-motion'
 import { AlertTriangle } from 'lucide-react'
-import type { RiskItem } from '@/lib/mock-data'
 
-interface RiskCardProps {
-  risks: RiskItem[]
-}
-
-function RiskCard({ risks }: RiskCardProps) {
+function RiskCard({ risks }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

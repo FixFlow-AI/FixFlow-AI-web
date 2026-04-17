@@ -1,14 +1,6 @@
 import { cn } from '@/lib/utils'
 
-interface AvatarProps {
-  src?: string
-  alt?: string
-  fallback?: string
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-}
-
-function Avatar({ src, alt, fallback, size = 'md', className }: AvatarProps) {
+function Avatar({ src, alt, fallback, size = 'md', className }) {
   const sizes = {
     sm: 'h-8 w-8 text-xs',
     md: 'h-10 w-10 text-sm',

@@ -1,11 +1,6 @@
-import { type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'secondary' | 'success' | 'warning' | 'destructive' | 'outline'
-}
-
-function Badge({ className, variant = 'default', ...props }: BadgeProps) {
+function Badge({ className, variant = 'default', ...props }) {
   const variants = {
     default: 'bg-primary/20 text-primary border-primary/30',
     secondary: 'bg-secondary text-secondary-foreground border-border',

@@ -1,15 +1,7 @@
 import { motion } from 'framer-motion'
 import { CheckCircle } from 'lucide-react'
-import type { TimelinePhase } from '@/lib/mock-data'
 
-interface TimelineStepProps {
-  phase: TimelinePhase
-  index: number
-  total: number
-  isActive?: boolean
-}
-
-function TimelineStep({ phase, index, total, isActive = false }: TimelineStepProps) {
+function TimelineStep({ phase, index, total, isActive = false }) {
   const isLast = index === total - 1
 
   return (

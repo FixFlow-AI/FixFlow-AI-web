@@ -1,9 +1,7 @@
-import { forwardRef, type InputHTMLAttributes } from 'react'
+import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {}
-
-const Input = forwardRef<HTMLInputElement, InputProps>(
+const Input = forwardRef(
   ({ className, type, ...props }, ref) => (
     <input
       type={type}
@@ -18,9 +16,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 )
 Input.displayName = 'Input'
 
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
-
-const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+const Textarea = forwardRef(
   ({ className, ...props }, ref) => (
     <textarea
       className={cn(

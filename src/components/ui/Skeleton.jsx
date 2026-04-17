@@ -1,8 +1,6 @@
 import { cn } from '@/lib/utils'
 
-interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-function Skeleton({ className, ...props }: SkeletonProps) {
+function Skeleton({ className, ...props }) {
   return (
     <div
       className={cn('shimmer rounded-md bg-muted', className)}
@@ -30,7 +28,7 @@ function SkeletonCard() {
   )
 }
 
-function SkeletonLine({ width = 'full' }: { width?: 'full' | '3/4' | '1/2' | '1/4' }) {
+function SkeletonLine({ width = 'full' }) {
   const widths = {
     full: 'w-full',
     '3/4': 'w-3/4',

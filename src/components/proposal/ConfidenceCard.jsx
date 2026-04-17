@@ -3,15 +3,8 @@ import { ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import ConfidenceBar from './ConfidenceBar'
 import { cn, getConfidenceColor, getConfidenceLabel } from '@/lib/utils'
-import type { FeatureItem } from '@/lib/mock-data'
 
-interface ConfidenceCardProps {
-  feature: FeatureItem
-  onClick: () => void
-  index?: number
-}
-
-function ConfidenceCard({ feature, onClick, index = 0 }: ConfidenceCardProps) {
+function ConfidenceCard({ feature, onClick, index = 0 }) {
   const confidenceColor = getConfidenceColor(feature.confidence_pct)
   const confidenceLabel = getConfidenceLabel(feature.confidence_pct)
 
@@ -19,7 +12,7 @@ function ConfidenceCard({ feature, onClick, index = 0 }: ConfidenceCardProps) {
     Low: 'success',
     Medium: 'warning',
     High: 'destructive',
-  } as const
+  }
 
   return (
     <motion.div

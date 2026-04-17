@@ -2,15 +2,8 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Badge } from '@/components/ui/Badge'
 import ConfidenceBar from './ConfidenceBar'
 import { getConfidenceColor } from '@/lib/utils'
-import type { FeatureItem } from '@/lib/mock-data'
 
-interface DetailDrawerProps {
-  feature: FeatureItem | null
-  isOpen: boolean
-  onClose: () => void
-}
-
-function DetailDrawer({ feature, isOpen, onClose }: DetailDrawerProps) {
+function DetailDrawer({ feature, isOpen, onClose }) {
   if (!feature) return null
 
   const confidenceColor = getConfidenceColor(feature.confidence_pct)
@@ -19,7 +12,7 @@ function DetailDrawer({ feature, isOpen, onClose }: DetailDrawerProps) {
     Low: 'success',
     Medium: 'warning',
     High: 'destructive',
-  } as const
+  }
 
   return (
     <Sheet

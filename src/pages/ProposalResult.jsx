@@ -19,13 +19,13 @@ import EffortCard from '@/components/proposal/EffortCard'
 import RiskCard from '@/components/proposal/RiskCard'
 import DetailDrawer from '@/components/proposal/DetailDrawer'
 import SectionSkeleton from '@/components/proposal/SectionSkeleton'
-import { mockProposal, type FeatureItem } from '@/lib/mock-data'
+import { mockProposal } from '@/lib/mock-data'
 
 function ProposalResult() {
   const { id } = useParams()
   const [isLoading, setIsLoading] = useState(true)
-  const [loadedSections, setLoadedSections] = useState<string[]>([])
-  const [selectedFeature, setSelectedFeature] = useState<FeatureItem | null>(null)
+  const [loadedSections, setLoadedSections] = useState([])
+  const [selectedFeature, setSelectedFeature] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
 
   // Simulate streaming loading
@@ -46,12 +46,12 @@ function ProposalResult() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleFeatureClick = (feature: FeatureItem) => {
+  const handleFeatureClick = (feature) => {
     setSelectedFeature(feature)
     setIsDrawerOpen(true)
   }
 
-  const isSectionLoaded = (section: string) => loadedSections.includes(section)
+  const isSectionLoaded = (section) => loadedSections.includes(section)
 
   return (
     <div className="max-w-6xl mx-auto">

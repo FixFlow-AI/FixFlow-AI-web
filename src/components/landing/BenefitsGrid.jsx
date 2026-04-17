@@ -2,55 +2,22 @@ import { motion } from 'framer-motion'
 import { Zap, Target, Users, TrendingUp, Lock, Layers } from 'lucide-react'
 
 const benefits = [
-  {
-    icon: Zap,
-    title: '10x Faster Proposals',
-    description: 'Reduce proposal creation time from days to minutes.',
-  },
-  {
-    icon: Target,
-    title: 'Higher Accuracy',
-    description: 'AI-powered estimates based on thousands of similar projects.',
-  },
-  {
-    icon: Users,
-    title: 'Team Collaboration',
-    description: 'Share and iterate on proposals with your entire team.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Data-Driven Insights',
-    description: 'Market analysis and trend data built into every proposal.',
-  },
-  {
-    icon: Lock,
-    title: 'Enterprise Security',
-    description: 'SOC 2 compliant with end-to-end encryption.',
-  },
-  {
-    icon: Layers,
-    title: 'Seamless Integration',
-    description: 'Connect with Jira, Notion, and your existing tools.',
-  },
+  { icon: Zap, title: '10x Faster Proposals', description: 'Reduce proposal creation time from days to minutes.' },
+  { icon: Target, title: 'Higher Accuracy', description: 'AI-powered estimates based on thousands of similar projects.' },
+  { icon: Users, title: 'Team Collaboration', description: 'Share and iterate on proposals with your entire team.' },
+  { icon: TrendingUp, title: 'Data-Driven Insights', description: 'Market analysis and trend data built into every proposal.' },
+  { icon: Lock, title: 'Enterprise Security', description: 'SOC 2 compliant with end-to-end encryption.' },
+  { icon: Layers, title: 'Seamless Integration', description: 'Connect with Jira, Notion, and your existing tools.' },
 ]
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
 }
 
 const itemVariants = {
   hidden: { opacity: 0, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.4 },
-  },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.4 } },
 }
 
 function BenefitsGrid() {

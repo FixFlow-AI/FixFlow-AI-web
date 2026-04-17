@@ -1,11 +1,6 @@
 import { motion } from 'framer-motion'
-import type { EffortEstimate } from '@/lib/mock-data'
 
-interface EffortCardProps {
-  efforts: EffortEstimate[]
-}
-
-function EffortCard({ efforts }: EffortCardProps) {
+function EffortCard({ efforts }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

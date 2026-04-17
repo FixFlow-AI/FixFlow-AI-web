@@ -66,7 +66,7 @@ function Dashboard() {
             { label: 'Completed', value: mockProposals.filter(p => p.status === 'complete').length },
             { label: 'Processing', value: mockProposals.filter(p => p.status === 'processing').length },
             { label: 'Drafts', value: mockProposals.filter(p => p.status === 'draft').length },
-          ].map((stat, index) => (
+          ].map((stat) => (
             <div
               key={stat.label}
               className="p-4 rounded-xl border border-border bg-card/50"

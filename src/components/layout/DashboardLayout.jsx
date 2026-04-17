@@ -1,13 +1,8 @@
-import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
 
-interface DashboardLayoutProps {
-  children: ReactNode
-}
-
-function DashboardLayout({ children }: DashboardLayoutProps) {
+function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />

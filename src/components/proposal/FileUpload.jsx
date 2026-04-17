@@ -3,25 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, FileText, X, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface FileUploadProps {
-  onFileSelect: (file: File | null) => void
-  selectedFile: File | null
-}
-
-function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
+function FileUpload({ onFileSelect, selectedFile }) {
   const [isDragging, setIsDragging] = useState(false)
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault()
     setIsDragging(true)
   }, [])
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e) => {
     e.preventDefault()
     setIsDragging(false)
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault()
     setIsDragging(false)
     
@@ -31,7 +26,7 @@ function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
     }
   }, [onFileSelect])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0]
     if (file) {
       onFileSelect(file)

@@ -1,13 +1,7 @@
 import { motion } from 'framer-motion'
 import { getConfidenceColor } from '@/lib/utils'
 
-interface ConfidenceBarProps {
-  percentage: number
-  animated?: boolean
-  delay?: number
-}
-
-function ConfidenceBar({ percentage, animated = true, delay = 0 }: ConfidenceBarProps) {
+function ConfidenceBar({ percentage, animated = true, delay = 0 }) {
   const color = getConfidenceColor(percentage)
 
   return (

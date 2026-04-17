@@ -1,10 +1,6 @@
 import { Skeleton, SkeletonLine } from '@/components/ui/Skeleton'
 
-interface SectionSkeletonProps {
-  type?: 'grid' | 'list' | 'card'
-}
-
-function SectionSkeleton({ type = 'grid' }: SectionSkeletonProps) {
+function SectionSkeleton({ type = 'grid' }) {
   if (type === 'grid') {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

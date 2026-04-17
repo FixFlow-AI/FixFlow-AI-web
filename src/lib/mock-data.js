@@ -1,71 +1,4 @@
-export interface Proposal {
-  id: string
-  title: string
-  status: 'draft' | 'processing' | 'complete'
-  createdAt: string
-  project_summary: string
-  features: FeatureItem[]
-  risks: RiskItem[]
-  market: MarketInsight[]
-  impact: BusinessImpact[]
-  timeline: TimelinePhase[]
-  effort: EffortEstimate[]
-}
-
-export interface FeatureItem {
-  id: string
-  title: string
-  description: string
-  technical_approach: string
-  complexity: 'Low' | 'Medium' | 'High'
-  confidence: 'High' | 'Medium' | 'Low'
-  confidence_pct: number
-  area: string
-}
-
-export interface RiskItem {
-  id: string
-  label: string
-  severity: number
-  color: string
-  mitigation: string
-  category: string
-}
-
-export interface MarketInsight {
-  id: string
-  title: string
-  description: string
-  trend: 'up' | 'down' | 'stable'
-  relevance: number
-}
-
-export interface BusinessImpact {
-  id: string
-  title: string
-  description: string
-  impact_score: number
-  category: string
-}
-
-export interface TimelinePhase {
-  id: string
-  phase: string
-  duration: string
-  tasks: string[]
-  dependencies: string[]
-}
-
-export interface EffortEstimate {
-  id: string
-  label: string
-  percentage: number
-  color: string
-  timeframe: string
-  description: string
-}
-
-export const mockProposal: Proposal = {
+export const mockProposal = {
   id: 'prop-001',
   title: 'E-Commerce Platform Modernization',
   status: 'complete',
@@ -294,7 +227,7 @@ export const mockProposal: Proposal = {
   ],
 }
 
-export const mockProposals: Proposal[] = [
+export const mockProposals = [
   mockProposal,
   {
     ...mockProposal,

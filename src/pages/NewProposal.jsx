@@ -9,7 +9,7 @@ import FileUpload from '@/components/proposal/FileUpload'
 function NewProposal() {
   const navigate = useNavigate()
   const [briefText, setBriefText] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFile, setSelectedFile] = useState(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
   const canSubmit = briefText.trim().length > 50 || selectedFile !== null

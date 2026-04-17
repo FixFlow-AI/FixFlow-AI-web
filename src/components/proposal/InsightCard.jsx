@@ -1,16 +1,5 @@
 import { motion } from 'framer-motion'
-import { type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-interface InsightCardProps {
-  title: string
-  value: string | number
-  subtitle?: string
-  icon: LucideIcon
-  color?: 'default' | 'success' | 'warning' | 'danger'
-  onClick?: () => void
-  index?: number
-}
 
 const colorClasses = {
   default: {
@@ -39,7 +28,7 @@ const colorClasses = {
   },
 }
 
-function InsightCard({ title, value, subtitle, icon: Icon, color = 'default', onClick, index = 0 }: InsightCardProps) {
+function InsightCard({ title, value, subtitle, icon: Icon, color = 'default', onClick, index = 0 }) {
   const colors = colorClasses[color]
 
   return (

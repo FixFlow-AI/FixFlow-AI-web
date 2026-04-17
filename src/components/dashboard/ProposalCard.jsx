@@ -3,19 +3,13 @@ import { motion } from 'framer-motion'
 import { FileText, Clock, ArrowRight, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { formatDate } from '@/lib/utils'
-import type { Proposal } from '@/lib/mock-data'
 
-interface ProposalCardProps {
-  proposal: Proposal
-  index: number
-}
-
-function ProposalCard({ proposal, index }: ProposalCardProps) {
+function ProposalCard({ proposal, index }) {
   const statusVariant = {
     draft: 'secondary',
     processing: 'warning',
     complete: 'success',
-  } as const
+  }
 
   const statusLabel = {
     draft: 'Draft',

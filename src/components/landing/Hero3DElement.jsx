@@ -4,7 +4,7 @@ import { Points, PointMaterial, Sphere } from '@react-three/drei'
 import * as THREE from 'three'
 
 function ParticleField() {
-  const ref = useRef<THREE.Points>(null)
+  const ref = useRef(null)
   
   const particlesPosition = useMemo(() => {
     const positions = new Float32Array(2000 * 3)
@@ -42,7 +42,7 @@ function ParticleField() {
 }
 
 function GlowingSphere() {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const meshRef = useRef(null)
   
   useFrame((state) => {
     if (meshRef.current) {

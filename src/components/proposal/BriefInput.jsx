@@ -1,10 +1,5 @@
 import { Textarea } from '@/components/ui/Input'
 
-interface BriefInputProps {
-  value: string
-  onChange: (value: string) => void
-}
-
 const placeholderText = `Paste your client brief here...
 
 Example:
@@ -17,7 +12,7 @@ Include details like:
 • Timeline expectations
 • Budget considerations (if any)`
 
-function BriefInput({ value, onChange }: BriefInputProps) {
+function BriefInput({ value, onChange }) {
   return (
     <div className="space-y-3">
       <label className="text-sm font-medium">Client Brief</label>
