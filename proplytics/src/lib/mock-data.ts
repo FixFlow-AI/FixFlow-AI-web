@@ -1,0 +1,323 @@
+export interface Proposal {
+  id: string
+  title: string
+  status: 'draft' | 'processing' | 'complete'
+  createdAt: string
+  project_summary: string
+  features: FeatureItem[]
+  risks: RiskItem[]
+  market: MarketInsight[]
+  impact: BusinessImpact[]
+  timeline: TimelinePhase[]
+  effort: EffortEstimate[]
+}
+
+export interface FeatureItem {
+  id: string
+  title: string
+  description: string
+  technical_approach: string
+  complexity: 'Low' | 'Medium' | 'High'
+  confidence: 'High' | 'Medium' | 'Low'
+  confidence_pct: number
+  area: string
+}
+
+export interface RiskItem {
+  id: string
+  label: string
+  severity: number
+  color: string
+  mitigation: string
+  category: string
+}
+
+export interface MarketInsight {
+  id: string
+  title: string
+  description: string
+  trend: 'up' | 'down' | 'stable'
+  relevance: number
+}
+
+export interface BusinessImpact {
+  id: string
+  title: string
+  description: string
+  impact_score: number
+  category: string
+}
+
+export interface TimelinePhase {
+  id: string
+  phase: string
+  duration: string
+  tasks: string[]
+  dependencies: string[]
+}
+
+export interface EffortEstimate {
+  id: string
+  label: string
+  percentage: number
+  color: string
+  timeframe: string
+  description: string
+}
+
+export const mockProposal: Proposal = {
+  id: 'prop-001',
+  title: 'E-Commerce Platform Modernization',
+  status: 'complete',
+  createdAt: '2024-03-15T10:30:00Z',
+  project_summary: 'A comprehensive modernization initiative to transform the existing legacy e-commerce platform into a scalable, cloud-native solution with enhanced user experience, real-time inventory management, and AI-powered personalization capabilities.',
+  features: [
+    {
+      id: 'feat-1',
+      title: 'AI-Powered Product Recommendations',
+      description: 'Machine learning engine to analyze user behavior and provide personalized product suggestions in real-time.',
+      technical_approach: 'Implement collaborative filtering with TensorFlow, deploy on AWS SageMaker, integrate via REST API with caching layer.',
+      complexity: 'High',
+      confidence: 'High',
+      confidence_pct: 87,
+      area: 'AI/ML Pipeline',
+    },
+    {
+      id: 'feat-2',
+      title: 'Real-Time Inventory Sync',
+      description: 'Event-driven architecture for instant inventory updates across all sales channels.',
+      technical_approach: 'Apache Kafka for event streaming, PostgreSQL with NOTIFY/LISTEN, WebSocket for frontend updates.',
+      complexity: 'Medium',
+      confidence: 'High',
+      confidence_pct: 92,
+      area: 'Backend Infrastructure',
+    },
+    {
+      id: 'feat-3',
+      title: 'Headless Commerce API',
+      description: 'GraphQL-based API layer enabling omnichannel commerce experiences.',
+      technical_approach: 'Apollo Server with federation, Redis caching, rate limiting with custom middleware.',
+      complexity: 'Medium',
+      confidence: 'Medium',
+      confidence_pct: 75,
+      area: 'API Layer',
+    },
+    {
+      id: 'feat-4',
+      title: 'Progressive Web App',
+      description: 'Mobile-first PWA with offline capabilities and push notifications.',
+      technical_approach: 'Next.js with service workers, Workbox for caching strategies, Web Push API integration.',
+      complexity: 'Medium',
+      confidence: 'High',
+      confidence_pct: 89,
+      area: 'Frontend',
+    },
+    {
+      id: 'feat-5',
+      title: 'Payment Gateway Integration',
+      description: 'Multi-provider payment processing with fraud detection.',
+      technical_approach: 'Stripe Connect with radar, PayPal integration, 3D Secure compliance, PCI-DSS audit preparation.',
+      complexity: 'High',
+      confidence: 'Medium',
+      confidence_pct: 68,
+      area: 'Payments',
+    },
+    {
+      id: 'feat-6',
+      title: 'Analytics Dashboard',
+      description: 'Real-time business intelligence dashboard for stakeholders.',
+      technical_approach: 'ClickHouse for analytics, Metabase for visualization, custom React dashboard components.',
+      complexity: 'Low',
+      confidence: 'High',
+      confidence_pct: 94,
+      area: 'Analytics',
+    },
+  ],
+  risks: [
+    {
+      id: 'risk-1',
+      label: 'Data Migration Complexity',
+      severity: 75,
+      color: 'var(--confidence-medium)',
+      mitigation: 'Implement phased migration with rollback capabilities, extensive testing with production data snapshots.',
+      category: 'Technical',
+    },
+    {
+      id: 'risk-2',
+      label: 'Third-Party API Dependencies',
+      severity: 60,
+      color: 'var(--confidence-medium)',
+      mitigation: 'Build abstraction layers, implement circuit breakers, maintain fallback providers.',
+      category: 'Integration',
+    },
+    {
+      id: 'risk-3',
+      label: 'Performance Under Load',
+      severity: 45,
+      color: 'var(--confidence-high)',
+      mitigation: 'Load testing with k6, auto-scaling policies, CDN implementation for static assets.',
+      category: 'Performance',
+    },
+    {
+      id: 'risk-4',
+      label: 'Security Compliance',
+      severity: 80,
+      color: 'var(--confidence-low)',
+      mitigation: 'Engage security consultants early, implement DevSecOps practices, regular penetration testing.',
+      category: 'Security',
+    },
+  ],
+  market: [
+    {
+      id: 'market-1',
+      title: 'Headless Commerce Growth',
+      description: 'The headless commerce market is projected to grow 22% CAGR through 2028.',
+      trend: 'up',
+      relevance: 95,
+    },
+    {
+      id: 'market-2',
+      title: 'AI Personalization Adoption',
+      description: '73% of consumers expect personalized experiences, driving AI investment.',
+      trend: 'up',
+      relevance: 88,
+    },
+    {
+      id: 'market-3',
+      title: 'Mobile Commerce Dominance',
+      description: 'Mobile commerce now accounts for 72% of e-commerce sales globally.',
+      trend: 'up',
+      relevance: 92,
+    },
+  ],
+  impact: [
+    {
+      id: 'impact-1',
+      title: 'Revenue Increase',
+      description: 'Projected 25-35% increase in conversion rates through personalization.',
+      impact_score: 90,
+      category: 'Revenue',
+    },
+    {
+      id: 'impact-2',
+      title: 'Operational Efficiency',
+      description: '40% reduction in manual inventory management tasks.',
+      impact_score: 75,
+      category: 'Operations',
+    },
+    {
+      id: 'impact-3',
+      title: 'Customer Satisfaction',
+      description: 'Expected 20-point NPS improvement from enhanced UX.',
+      impact_score: 85,
+      category: 'Customer',
+    },
+  ],
+  timeline: [
+    {
+      id: 'phase-1',
+      phase: 'Discovery & Planning',
+      duration: '2 weeks',
+      tasks: ['Requirements gathering', 'Technical architecture', 'Team onboarding'],
+      dependencies: [],
+    },
+    {
+      id: 'phase-2',
+      phase: 'Infrastructure Setup',
+      duration: '3 weeks',
+      tasks: ['Cloud environment setup', 'CI/CD pipeline', 'Database provisioning'],
+      dependencies: ['phase-1'],
+    },
+    {
+      id: 'phase-3',
+      phase: 'Core Development',
+      duration: '8 weeks',
+      tasks: ['API development', 'Frontend build', 'Integration work'],
+      dependencies: ['phase-2'],
+    },
+    {
+      id: 'phase-4',
+      phase: 'Testing & QA',
+      duration: '3 weeks',
+      tasks: ['Unit testing', 'Integration testing', 'Performance testing', 'Security audit'],
+      dependencies: ['phase-3'],
+    },
+    {
+      id: 'phase-5',
+      phase: 'Deployment & Launch',
+      duration: '2 weeks',
+      tasks: ['Staged rollout', 'Monitoring setup', 'Documentation'],
+      dependencies: ['phase-4'],
+    },
+  ],
+  effort: [
+    {
+      id: 'effort-1',
+      label: 'AI/ML Pipeline',
+      percentage: 25,
+      color: '#8b5cf6',
+      timeframe: '4-5 weeks',
+      description: 'Model training, deployment, and integration',
+    },
+    {
+      id: 'effort-2',
+      label: 'Backend Services',
+      percentage: 30,
+      color: '#6366f1',
+      timeframe: '5-6 weeks',
+      description: 'API development, database design, microservices',
+    },
+    {
+      id: 'effort-3',
+      label: 'Frontend Development',
+      percentage: 25,
+      color: '#22c55e',
+      timeframe: '4-5 weeks',
+      description: 'PWA, responsive design, component library',
+    },
+    {
+      id: 'effort-4',
+      label: 'Infrastructure & DevOps',
+      percentage: 12,
+      color: '#f59e0b',
+      timeframe: '2-3 weeks',
+      description: 'Cloud setup, CI/CD, monitoring',
+    },
+    {
+      id: 'effort-5',
+      label: 'Testing & QA',
+      percentage: 8,
+      color: '#ef4444',
+      timeframe: '2-3 weeks',
+      description: 'Automated testing, manual QA, security',
+    },
+  ],
+}
+
+export const mockProposals: Proposal[] = [
+  mockProposal,
+  {
+    ...mockProposal,
+    id: 'prop-002',
+    title: 'Healthcare Patient Portal',
+    status: 'processing',
+    createdAt: '2024-03-14T14:20:00Z',
+    project_summary: 'Secure patient portal for managing appointments, medical records, and telehealth consultations.',
+  },
+  {
+    ...mockProposal,
+    id: 'prop-003',
+    title: 'FinTech Mobile Banking App',
+    status: 'complete',
+    createdAt: '2024-03-12T09:15:00Z',
+    project_summary: 'Full-featured mobile banking application with biometric authentication and real-time transactions.',
+  },
+  {
+    ...mockProposal,
+    id: 'prop-004',
+    title: 'Supply Chain Management System',
+    status: 'draft',
+    createdAt: '2024-03-10T16:45:00Z',
+    project_summary: 'End-to-end supply chain visibility platform with predictive analytics and IoT integration.',
+  },
+]
