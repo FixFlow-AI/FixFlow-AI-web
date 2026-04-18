@@ -9,16 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^9.106.0",
+    "@react-three/fiber": "^8.16.8",
+    "@tanstack/react-query": "^5.99.0",
+    "axios": "^1.15.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.2.10",
+    "lucide-react": "^0.396.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.23.1",
-    "framer-motion": "^11.2.10",
-    "@react-three/fiber": "^8.16.8",
-    "@react-three/drei": "^9.106.0",
+    "tailwind-merge": "^2.3.0",
     "three": "^0.165.0",
-    "lucide-react": "^0.396.0",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

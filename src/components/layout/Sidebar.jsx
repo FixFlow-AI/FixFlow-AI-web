@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import useAuthStore from '@/stores/authStore'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -27,6 +28,11 @@ const secondaryNav = [
 function Sidebar() {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const user = useAuthStore((s) => s.user)
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '??'
 
   return (
     <motion.aside
@@ -112,12 +118,12 @@ function Sidebar() {
           isCollapsed && "justify-center px-0"
         )}>
           <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium shrink-0">
-            JD
+            {initials}
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">john@example.com</p>
+              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
             </div>
           )}
         </div>

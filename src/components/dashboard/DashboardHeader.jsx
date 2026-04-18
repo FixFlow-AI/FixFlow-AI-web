@@ -1,8 +1,28 @@
-import { Search, Bell, Settings } from 'lucide-react'
+import { Search, Bell, Settings, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
+import useAuthStore from '@/stores/authStore'
 
 function DashboardHeader() {
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+
+  function getInitials(name) {
+    if (!name) return '??'
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login')
+  }
+
   return (
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="flex items-center justify-between px-6 py-4">
@@ -28,8 +48,24 @@ function DashboardHeader() {
             <Settings className="h-5 w-5 text-muted-foreground" />
           </button>
 
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5 text-muted-foreground" />
+          </button>
+
           {/* User Avatar */}
-          <Avatar fallback="JD" size="md" />
+          <div className="flex items-center gap-2">
+            <Avatar fallback={getInitials(user?.name)} size="md" />
+            {user?.name && (
+              <span className="text-sm font-medium text-foreground hidden lg:block">
+                {user.name}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </header>

@@ -48,12 +48,12 @@ function Navbar() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Link to="/dashboard">
+              <Link to="/login">
                 <Button variant="ghost" size="sm">
                   Sign In
                 </Button>
               </Link>
-              <Link to="/new">
+              <Link to="/register">
                 <Button size="sm" className="glow-effect">
                   Get Started
                 </Button>
@@ -87,12 +87,12 @@ function Navbar() {
                 </a>
               ))}
               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
-                <Link to="/dashboard">
+                <Link to="/login">
                   <Button variant="ghost" size="sm" className="w-full justify-center">
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/new">
+                <Link to="/register">
                   <Button size="sm" className="w-full justify-center">
                     Get Started
                   </Button>
