@@ -14,7 +14,7 @@
 <br/>
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev)
 [![Node.js](https://img.shields.io/badge/Node.js-Backend-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![AWS](https://img.shields.io/badge/AWS-Full_Stack-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)](https://aws.amazon.com)
@@ -270,7 +270,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 | Layer | Technology | Version | Purpose |
 |:---:|:---:|:---:|:---|
 | **Frontend Framework** | React | 18.3 | Component-based UI with hooks |
-| **Language** | TypeScript | 5.4 | Type-safe frontend development |
+| **Language** | JavaScript | ES2022+ | Frontend & backend development |
 | **Build Tool** | Vite | 5.3 | Sub-second HMR, optimized prod bundles |
 | **Routing** | React Router DOM | 6.23 | Client-side SPA navigation |
 | **Animation** | Framer Motion | 11.2 | Page transitions, card animations |
@@ -328,59 +328,59 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 proplytics/
 │
 ├── 📁 src/
-│   ├── App.tsx                        ← React Router + AnimatePresence
-│   ├── main.tsx                       ← App entry point
+│   ├── App.jsx                        ← React Router + AnimatePresence
+│   ├── main.jsx                       ← App entry point
 │   ├── index.css                      ← Global styles + Tailwind
 │   │
 │   ├── 📁 pages/                      ← Route-level views
-│   │   ├── Landing.tsx                ← Hero + features + CTA
-│   │   ├── Dashboard.tsx              ← All proposals list
-│   │   ├── NewProposal.tsx            ← Brief input + AI generation
-│   │   └── ProposalResult.tsx         ← Full proposal output view
+│   │   ├── Landing.jsx                ← Hero + features + CTA
+│   │   ├── Dashboard.jsx              ← All proposals list
+│   │   ├── NewProposal.jsx            ← Brief input + AI generation
+│   │   └── ProposalResult.jsx         ← Full proposal output view
 │   │
 │   ├── 📁 components/
 │   │   ├── 📁 landing/                ← Landing page sections
-│   │   │   ├── HeroSection.tsx        ← Main CTA + tagline
-│   │   │   ├── Hero3DElement.tsx      ← Three.js 3D visual
-│   │   │   ├── FeaturesSection.tsx    ← Feature cards grid
-│   │   │   ├── HowItWorks.tsx         ← Step-by-step flow
-│   │   │   ├── BenefitsGrid.tsx       ← Value proposition grid
-│   │   │   └── Footer.tsx             ← Site footer
+│   │   │   ├── HeroSection.jsx        ← Main CTA + tagline
+│   │   │   ├── Hero3DElement.jsx      ← Three.js 3D visual
+│   │   │   ├── FeaturesSection.jsx    ← Feature cards grid
+│   │   │   ├── HowItWorks.jsx         ← Step-by-step flow
+│   │   │   ├── BenefitsGrid.jsx       ← Value proposition grid
+│   │   │   └── Footer.jsx             ← Site footer
 │   │   │
 │   │   ├── 📁 proposal/              ← Proposal output components
-│   │   │   ├── ConfidenceCard.tsx     ← Confidence Grid card
-│   │   │   ├── ConfidenceBar.tsx      ← Animated confidence bar
-│   │   │   ├── InsightCard.tsx        ← AI insight display
-│   │   │   ├── RiskCard.tsx           ← Risk with severity + mitigation
-│   │   │   ├── EffortCard.tsx         ← Effort estimate per layer
-│   │   │   ├── TimelineStep.tsx       ← Phase timeline item
-│   │   │   ├── BriefInput.tsx         ← Text paste input
-│   │   │   ├── FileUpload.tsx         ← PDF/DOCX drag-and-drop
-│   │   │   ├── DetailDrawer.tsx       ← Slide-out detail panel
-│   │   │   └── SectionSkeleton.tsx    ← Loading skeleton for streaming
+│   │   │   ├── ConfidenceCard.jsx     ← Confidence Grid card
+│   │   │   ├── ConfidenceBar.jsx      ← Animated confidence bar
+│   │   │   ├── InsightCard.jsx        ← AI insight display
+│   │   │   ├── RiskCard.jsx           ← Risk with severity + mitigation
+│   │   │   ├── EffortCard.jsx         ← Effort estimate per layer
+│   │   │   ├── TimelineStep.jsx       ← Phase timeline item
+│   │   │   ├── BriefInput.jsx         ← Text paste input
+│   │   │   ├── FileUpload.jsx         ← PDF/DOCX drag-and-drop
+│   │   │   ├── DetailDrawer.jsx       ← Slide-out detail panel
+│   │   │   └── SectionSkeleton.jsx    ← Loading skeleton for streaming
 │   │   │
 │   │   ├── 📁 dashboard/             ← Dashboard components
-│   │   │   ├── DashboardHeader.tsx    ← Title + actions
-│   │   │   ├── ProposalCard.tsx       ← Proposal list item
-│   │   │   └── EmptyState.tsx         ← No proposals CTA
+│   │   │   ├── DashboardHeader.jsx    ← Title + actions
+│   │   │   ├── ProposalCard.jsx       ← Proposal list item
+│   │   │   └── EmptyState.jsx         ← No proposals CTA
 │   │   │
 │   │   ├── 📁 layout/                ← App shell
-│   │   │   ├── DashboardLayout.tsx    ← Sidebar + content wrapper
-│   │   │   ├── Navbar.tsx             ← Top navigation bar
-│   │   │   └── Sidebar.tsx            ← Left navigation panel
+│   │   │   ├── DashboardLayout.jsx    ← Sidebar + content wrapper
+│   │   │   ├── Navbar.jsx             ← Top navigation bar
+│   │   │   └── Sidebar.jsx            ← Left navigation panel
 │   │   │
 │   │   └── 📁 ui/                    ← Reusable primitives
-│   │       ├── Button.tsx             ← Styled button variants
-│   │       ├── Card.tsx               ← Card container
-│   │       ├── Badge.tsx              ← Status badges
-│   │       ├── Input.tsx              ← Form input
-│   │       ├── Avatar.tsx             ← User avatar
-│   │       ├── Sheet.tsx              ← Slide-over panel
-│   │       └── Skeleton.tsx           ← Loading skeleton
+│   │       ├── Button.jsx             ← Styled button variants
+│   │       ├── Card.jsx               ← Card container
+│   │       ├── Badge.jsx              ← Status badges
+│   │       ├── Input.jsx              ← Form input
+│   │       ├── Avatar.jsx             ← User avatar
+│   │       ├── Sheet.jsx              ← Slide-over panel
+│   │       └── Skeleton.jsx           ← Loading skeleton
 │   │
 │   └── 📁 lib/                       ← Utilities
-│       ├── mock-data.ts              ← Development mock proposals
-│       └── utils.ts                  ← Helpers (cn, formatDate, etc.)
+│       ├── mock-data.js              ← Development mock proposals
+│       └── utils.js                  ← Helpers (cn, formatDate, etc.)
 │
 ├── 📁 reference/                      ← Design reference files
 │   ├── proposal_builder_tech_architecture.html
@@ -389,8 +389,8 @@ proplytics/
 │
 ├── index.html                        ← Vite entry HTML
 ├── package.json                      ← Dependencies + scripts
-├── vite.config.ts                    ← Vite + React plugin
-├── tsconfig.json                     ← TypeScript config
+├── vite.config.js                    ← Vite + React plugin
+├── jsconfig.json                     ← JS path aliases + IntelliSense
 ├── tailwind.config.js                ← Tailwind theme + extensions
 ├── postcss.config.js                 ← PostCSS + Tailwind plugin
 └── .gitignore                        ← Excluded files
@@ -541,7 +541,7 @@ npm run preview
 
 | Timeline | Feature | Status |
 |:---:|:---|:---:|
-| ✅ Done | React SPA with Vite + TypeScript | Released |
+| ✅ Done | React SPA with Vite + JavaScript | Released |
 | ✅ Done | Landing page with 3D hero element | Released |
 | ✅ Done | Dashboard with proposal list view | Released |
 | ✅ Done | Brief input (paste + file upload) | Released |
@@ -572,7 +572,7 @@ npm run preview
 |:---:|:---|
 | **Role** | Full-Stack AI Engineer · Product Architect |
 | **Focus** | End-to-end: LLM pipeline, Node.js backend, React frontend, AWS deployment |
-| **Stack** | TypeScript · React · Node.js · AWS · MongoDB · LLM APIs |
+| **Stack** | JavaScript · React · Node.js · Python · AWS · MongoDB · LLM APIs |
 | **GitHub** | [@Suvam-paul145](https://github.com/Suvam-paul145) |
 
 </div>
