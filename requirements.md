@@ -60,10 +60,14 @@
 
 ## 2. Target Architecture Overview
 
+> **Cost-Optimized Architecture** — Eliminates API Gateway & Lambda overhead.
+> ECS Fargate runs the full Express server (all routes + SSE streaming).
+> No Lambda 29s timeout issue. No API Gateway per-request billing.
+
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  CLIENT LAYER — React SPA                                      │
-│  Amplify Hosting + CloudFront CDN                              │
+│  AWS Amplify Hosting + CloudFront CDN                          │
 │                                                                │
 │  • Brief input (paste text / upload PDF/DOCX)                  │
 │  • Streaming output renderer (200ms partial JSON parse)        │
@@ -75,40 +79,192 @@
                          │ HTTPS + Bearer JWT
                          ▼
 ┌────────────────────────────────────────────────────────────────┐
-│  API LAYER — AWS API Gateway                                   │
-│  • JWT auth middleware (authorizer)                             │
-│  • Rate limiting (throttling)                                  │
-│  • CORS + request validation                                   │
-│  • WebSocket / SSE for streaming                               │
-└────────────────────────┬───────────────────────────────────────┘
-                         │ Lambda Proxy / ECS Fargate
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│  BACKEND — Node.js                                             │
-│  Lambda (short ops) + ECS Fargate (/generate streaming)        │
+│  COMPUTE LAYER — ECS Fargate (single Express service)          │
+│  ALB (Application Load Balancer) → Fargate Task                │
 │                                                                │
+│  Express.js handles ALL routes:                                │
+│  • JWT auth middleware (verify access/refresh tokens)          │
+│  • Rate limiting (express-rate-limit)                          │
+│  • CORS + Helmet security headers                              │
+│  • /api/auth/*     — Registration, login, refresh, logout      │
+│  • /api/proposals/* — CRUD operations                          │
+│  • /api/generate    — SSE streaming (no timeout constraint)    │
+│  • /api/proposals/:id/export — PDF export (Puppeteer)          │
+│                                                                │
+│  Services:                                                     │
 │  • File parser (pdf-parse / mammoth → clean text)              │
 │  • Prompt template engine                                      │
 │  • LLM API client (streaming)                                  │
 │  • Partial JSON validator (Zod)                                │
 │  • S3 upload handler (pre-signed URLs)                         │
-│  • Proposal CRUD                                               │
-│  • PDF export engine (Puppeteer)                               │
 └─────────┬──────────────┬───────────────────┬───────────────────┘
           │              │                   │
           ▼              ▼                   ▼
 ┌──────────────┐ ┌──────────────┐ ┌─────────────────┐
 │  MongoDB     │ │  AWS S3      │ │  LLM API        │
-│  Atlas       │ │              │ │  (Anthropic /    │
-│              │ │  • Uploaded   │ │   OpenAI)       │
-│  • Users     │ │    briefs    │ │                  │
-│  • Auth/JWT  │ │  • Proposal  │ │  • Streaming     │
-│  • Proposal  │ │    JSON      │ │    JSON output   │
-│    index     │ │    blobs     │ │  • Temp 0.2–0.4  │
-│  • Usage     │ │  • Versioned │ │  • Schema-       │
-│    counter   │ │    objects   │ │    enforced      │
+│  Atlas M0    │ │  (1 bucket)  │ │  (Anthropic /    │
+│  FREE TIER   │ │              │ │   OpenAI)       │
+│              │ │  proplytics- │ │                  │
+│  • Users     │ │  assets-{env}│ │  • Streaming     │
+│  • Auth/JWT  │ │  ├─ briefs/  │ │    JSON output   │
+│  • Proposal  │ │  ├─ output/  │ │  • Temp 0.2–0.4  │
+│    index     │ │  └─ exports/ │ │  • Schema-       │
+│  • Usage     │ │  (versioned) │ │    enforced      │
+│    counter   │ │              │ │                  │
 └──────────────┘ └──────────────┘ └─────────────────┘
+
+     Secrets: SSM Parameter Store (SecureString) — FREE TIER
+     Monitoring: CloudWatch Logs + Basic Metrics — FREE TIER
+     CI/CD: GitHub Actions → Amplify (frontend) + ECR/ECS (backend)
 ```
+
+### AWS Services & Cost Breakdown
+
+| Service | Usage | Free Tier | Est. Monthly Cost |
+|---|---|---|---|
+| **ECS Fargate** | 0.25 vCPU / 0.5 GB task, 1 desired count | N/A | ~$9/mo (can scale to 0 with scheduled scaling) |
+| **ALB** | Routes HTTPS to Fargate | N/A | ~$16/mo (or skip ALB and use Fargate public IP + Nginx for dev) |
+| **ECR** | Docker image storage | 500 MB/mo free | $0 |
+| **Amplify Hosting** | Frontend SPA + CloudFront | 1000 build-min, 15 GB served/mo | $0 (free tier) |
+| **S3** | 1 bucket, briefs + proposals + exports | 5 GB, 20K GET, 2K PUT/mo | $0–0.50/mo |
+| **SSM Parameter Store** | API keys, MongoDB URI, JWT secret | 10,000 standard params free | $0 |
+| **CloudWatch Logs** | Application logs from Fargate | 5 GB ingest, 5 GB storage/mo | $0 |
+| **MongoDB Atlas M0** | Users, proposals index | 512 MB free forever | $0 |
+| **LLM API** | Anthropic/OpenAI (pay-per-token) | N/A | $0.01–2/proposal (~$5/mo at 100 proposals) |
+
+**Total (development/low traffic): ~$9–25/month**
+
+> 💡 **Cost tip:** During development, skip the ALB entirely — run Fargate with a public IP
+> and use Nginx inside the container for SSL termination. This saves ~$16/mo.
+> Add ALB only when you need auto-scaling or health-check routing.
+
+### IAM Policy Requirements
+
+You need **one IAM user** (for CI/CD) and **one ECS Task Execution Role** (for Fargate):
+
+**1. IAM User: `proplytics-ci-cd`** (for GitHub Actions deployments)
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECRPushPull",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload"
+      ],
+      "Resource": "arn:aws:ecr:*:*:repository/proplytics-backend"
+    },
+    {
+      "Sid": "ECSUpdateService",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:UpdateService",
+        "ecs:DescribeServices",
+        "ecs:DescribeTaskDefinition",
+        "ecs:RegisterTaskDefinition"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PassRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/proplytics-ecs-*"
+    }
+  ]
+}
+```
+
+**2. ECS Task Role: `proplytics-ecs-task-role`** (attached to Fargate task)
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3Access",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::proplytics-assets-*",
+        "arn:aws:s3:::proplytics-assets-*/*"
+      ]
+    },
+    {
+      "Sid": "SSMParameterRead",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": "arn:aws:ssm:*:*:parameter/proplytics/*"
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/ecs/proplytics-*"
+    }
+  ]
+}
+```
+
+**3. ECS Task Execution Role: `proplytics-ecs-execution-role`** (pulls image + sends logs)
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SSMForEnvInjection",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameters"
+      ],
+      "Resource": "arn:aws:ssm:*:*:parameter/proplytics/*"
+    }
+  ]
+}
+```
+
+### SSM Parameter Store — Secrets Layout
+
+| Parameter Path | Type | Value |
+|---|---|---|
+| `/proplytics/prod/MONGODB_URI` | SecureString | `mongodb+srv://...` |
+| `/proplytics/prod/JWT_SECRET` | SecureString | `<hex string>` |
+| `/proplytics/prod/JWT_REFRESH_SECRET` | SecureString | `<hex string>` |
+| `/proplytics/prod/ANTHROPIC_API_KEY` | SecureString | `sk-ant-...` |
+| `/proplytics/prod/FRONTEND_URL` | String | `https://main.d1234.amplifyapp.com` |
+| `/proplytics/dev/...` | ... | (same structure for dev) |
 
 ### Tech Stack Summary
 
@@ -116,19 +272,22 @@
 |---|---|---|
 | Frontend | React 18, Vite 5, TailwindCSS, Framer Motion, Three.js | SPA + animations |
 | State Mgmt | Zustand + React Query (TanStack Query) | Global state + server state caching |
-| Backend | Node.js (Express or Fastify) | API server |
-| Streaming | ECS Fargate (long-lived) + SSE (Server-Sent Events) | LLM streaming to client |
-| Auth | JWT (access + refresh tokens) | Stateless auth |
+| Backend | Node.js (Express) on ECS Fargate | API server + SSE streaming (single service) |
+| Streaming | SSE (Server-Sent Events) over Express | LLM streaming to client (no timeout limit) |
+| Auth | JWT (access + refresh tokens) | Stateless auth (Express middleware) |
 | Database | MongoDB Atlas (M0 free tier) | Users, auth, proposal index |
-| File Storage | AWS S3 (versioned bucket) | Briefs, proposal JSON blobs |
+| File Storage | AWS S3 (1 bucket, prefix-based) | Briefs, proposal JSON, PDF exports |
 | AI/LLM | Anthropic Claude / OpenAI GPT-4 | Proposal generation |
 | File Parsing | pdf-parse, mammoth | PDF/DOCX → clean text |
 | Validation | Zod | JSON schema validation + repair |
 | PDF Export | Puppeteer (primary), react-pdf (fallback) | Business-grade PDF output |
-| API Gateway | AWS API Gateway (HTTP API) | Routing, throttling, JWT authorizer |
-| CI/CD | GitHub Actions | Automated tests + deploy |
-| Monitoring | AWS CloudWatch | Latency, errors, streaming drops |
-| Secrets | AWS Secrets Manager | API keys, MongoDB URI |
+| CI/CD | GitHub Actions → ECR + ECS / Amplify | Automated tests + deploy |
+| Monitoring | AWS CloudWatch (free tier) | Container logs + basic metrics |
+| Secrets | AWS SSM Parameter Store (SecureString) | API keys, MongoDB URI — FREE |
+| Hosting | AWS Amplify + CloudFront | Frontend SPA hosting + CDN |
+| Compute | ECS Fargate (0.25 vCPU / 0.5 GB) | Backend container runtime |
+
+> **Removed services:** Lambda (unnecessary — Express handles all routes), API Gateway (Express handles routing/auth/CORS/rate-limiting), Secrets Manager (replaced by free SSM Parameter Store)
 
 ---
 
@@ -240,23 +399,47 @@ backend/
 
 ### Step 0.3 — AWS Account + Services Setup
 
+> **All IAM policies are defined in Section 2 (Architecture Overview).**
+> Refer to the IAM Policy Requirements section for exact JSON policies.
+
 1. **Create AWS account** (or use existing)
-2. **Create IAM user** with programmatic access for:
-   - S3 (full access to proplytics buckets)
-   - Secrets Manager (read access)
-   - ECS (task execution)
-   - CloudWatch (logs + metrics)
-3. **Create S3 buckets:**
-   - `proplytics-briefs-{env}` — uploaded brief files
-   - `proplytics-proposals-{env}` — generated proposal JSON (versioning enabled)
-4. **Configure bucket policies:**
-   - Private by default
-   - Pre-signed URL access only
-   - Lifecycle rule: archive to Glacier after 90 days
-5. **Store secrets** in AWS Secrets Manager:
-   - LLM API key (Anthropic/OpenAI)
-   - MongoDB connection string
-   - JWT secret
+
+2. **Set up IAM roles & user** (see Section 2 for full JSON policies):
+   - **`proplytics-ci-cd` IAM user** — programmatic access for GitHub Actions (ECR push + ECS deploy)
+   - **`proplytics-ecs-task-role`** — attached to Fargate task (S3, SSM, CloudWatch Logs)
+   - **`proplytics-ecs-execution-role`** — ECS pulls images from ECR + reads SSM + writes logs
+
+3. **Create S3 bucket** (single bucket, prefix-based):
+   - `proplytics-assets-{env}` (e.g., `proplytics-assets-dev`, `proplytics-assets-prod`)
+   - Prefixes: `briefs/`, `output/`, `exports/`
+   - Enable versioning (for proposal revision history)
+   - Private by default — pre-signed URL access only
+   - Lifecycle rule: archive `exports/` to Glacier after 90 days
+
+4. **Store secrets** in SSM Parameter Store (SecureString — **FREE**):
+   ```bash
+   # Create parameters (run once per environment)
+   aws ssm put-parameter --name "/proplytics/dev/MONGODB_URI" --type SecureString --value "mongodb+srv://..."
+   aws ssm put-parameter --name "/proplytics/dev/JWT_SECRET" --type SecureString --value "<hex>"
+   aws ssm put-parameter --name "/proplytics/dev/JWT_REFRESH_SECRET" --type SecureString --value "<hex>"
+   aws ssm put-parameter --name "/proplytics/dev/ANTHROPIC_API_KEY" --type SecureString --value "sk-ant-..."
+   aws ssm put-parameter --name "/proplytics/dev/FRONTEND_URL" --type String --value "http://localhost:5173"
+   ```
+
+5. **Create ECR repository:**
+   ```bash
+   aws ecr create-repository --repository-name proplytics-backend --region us-east-1
+   ```
+
+6. **Create ECS cluster:**
+   ```bash
+   aws ecs create-cluster --cluster-name proplytics-cluster --region us-east-1
+   ```
+
+7. **Create CloudWatch log group:**
+   ```bash
+   aws logs create-log-group --log-group-name /ecs/proplytics-backend
+   ```
 
 ### Step 0.4 — GitHub CI/CD Pipeline
 
@@ -268,7 +451,7 @@ backend/
    ```
 2. **Create `.github/workflows/deploy.yml`:**
    - Deploy frontend to Amplify on `main` push
-   - Deploy backend to ECS/Lambda on `main` push
+   - Build Docker image → push to ECR → update ECS Fargate service on `main` push
 3. **Branch protection:** require CI green before merge
 
 ### Step 0.5 — Frontend Environment Prep
@@ -322,7 +505,7 @@ backend/
 2. **JWT tokens:**
    - Access token: 15 minute expiry, contains `{ userId, email }`
    - Refresh token: 7 day expiry, stored in MongoDB
-   - Signed with RS256 or HS256 (via Secrets Manager key)
+   - Signed with HS256 (via SSM Parameter Store key)
 3. **Auth middleware** (`src/middleware/auth.js`):
    - Extract `Authorization: Bearer <token>` header
    - Verify JWT signature + expiry
@@ -396,23 +579,53 @@ backend/
    - Frontend notifies backend of upload completion
    - Backend validates file exists in S3
 
-4. **S3 key structure:**
+4. **S3 key structure** (single bucket: `proplytics-assets-{env}`):
    ```
    briefs/{userId}/{proposalId}/brief.{pdf|docx|txt}
-   proposals/{userId}/{proposalId}/v{n}.json
+   output/{userId}/{proposalId}/v{n}.json
+   exports/{userId}/{proposalId}/proposal-v{n}.pdf
    ```
 
-### Step 1.5 — API Gateway Setup
+### Step 1.5 — ECS Fargate Task Definition
 
-1. **Create HTTP API** in API Gateway
-2. **Configure routes:**
-   - `POST /api/auth/*` → Lambda (auth service)
-   - `POST /api/proposals/*` → Lambda (CRUD)
-   - `POST /api/generate` → ECS Fargate (streaming — NO Lambda due to 29s timeout)
-   - `GET /api/generate/stream` → WebSocket API / SSE via ECS
-3. **JWT authorizer** — custom Lambda authorizer or API Gateway JWT authorizer
-4. **Throttling:** 100 requests/sec burst, 50 requests/sec sustained per user
-5. **CORS:** allow frontend origin only
+> **No API Gateway needed.** Express handles all routing, auth, CORS, and rate limiting internally.
+> The Fargate task runs the Express server directly, accessible via ALB or public IP.
+
+1. **Create Dockerfile** (`backend/Dockerfile`):
+   ```dockerfile
+   FROM node:20-alpine
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm ci --production
+   COPY src/ ./src/
+   EXPOSE 3001
+   CMD ["node", "src/index.js"]
+   ```
+
+2. **Create ECS Task Definition:**
+   - Family: `proplytics-backend`
+   - CPU: 256 (0.25 vCPU) — sufficient for auth/CRUD + streaming
+   - Memory: 512 MB
+   - Container: `proplytics-backend` from ECR
+   - Port mapping: 3001
+   - Task Role: `proplytics-ecs-task-role` (S3 + SSM + CloudWatch)
+   - Execution Role: `proplytics-ecs-execution-role` (ECR + logs + SSM)
+   - Environment: inject secrets from SSM Parameter Store (using `valueFrom`)
+   - Log driver: `awslogs` → `/ecs/proplytics-backend`
+
+3. **Create ECS Service:**
+   - Cluster: `proplytics-cluster`
+   - Service: `proplytics-backend-service`
+   - Desired count: 1 (scale later)
+   - Launch type: FARGATE
+   - Networking: public subnet + security group (inbound 3001)
+   - Health check: `GET /api/health`
+
+4. **Optional: ALB setup** (recommended for production):
+   - Application Load Balancer → Target Group → Fargate tasks
+   - HTTPS listener (443) with ACM certificate
+   - Health check path: `/api/health`
+   - Skip for development — use Fargate public IP + port 3001 directly
 
 ---
 
@@ -567,10 +780,10 @@ npm i @anthropic-ai/sdk   # or openai
    - Timeout after 120 seconds
    - Return partial result on timeout if buffer has valid JSON sections
 
-### Step 2.4 — SSE Streaming Endpoint (ECS Fargate)
+### Step 2.4 — SSE Streaming Endpoint (Express on Fargate)
 
-> ⚠️ **Cannot use Lambda** for this endpoint — 29s API Gateway timeout.
-> Use ECS Fargate or a standalone Node.js server for long-lived connections.
+> **No Lambda timeout concerns.** The Express server runs on ECS Fargate with no connection
+> time limits. SSE streaming connections can run as long as needed (60-120s for LLM generation).
 
 **Implementation** (`src/routes/generate.js`):
 
@@ -931,9 +1144,9 @@ npm i puppeteer
    → Return PDF as download
    ```
 
-3. **Puppeteer config for ECS/Lambda:**
-   - Use `puppeteer-core` + `@sparticuz/chromium` for serverless
-   - Memory allocation: at least 1024MB
+3. **Puppeteer config for ECS Fargate:**
+   - Use full `puppeteer` (Chromium included) — Fargate has enough memory
+   - Task memory: bump to 1024 MB if PDF generation is heavy
    - Timeout: 30 seconds
 
 **Option B (Fallback): react-pdf**
@@ -942,8 +1155,8 @@ npm i puppeteer
 
 ### Step 4.2 — S3 Versioned Storage
 
-1. **Enable versioning** on `proplytics-proposals-{env}` bucket
-2. **Version key structure:** `proposals/{userId}/{proposalId}/v{n}.json`
+1. **Enable versioning** on `proplytics-assets-{env}` bucket
+2. **Version key structure:** `output/{userId}/{proposalId}/v{n}.json`
 3. **On regeneration:**
    - Increment `versionCount` in MongoDB proposal document
    - Upload new JSON as `v{n+1}.json`
@@ -1015,22 +1228,38 @@ npm i puppeteer
    - Export modal: full-screen on mobile
    - Landing page: responsive hero section
 
-### Step 5.3 — CloudWatch Monitoring
+### Step 5.3 — CloudWatch Monitoring (Free Tier)
 
-1. **Custom metrics:**
-   - LLM call latency (p50, p95, p99)
-   - LLM error rate
-   - Streaming connection duration
-   - Streaming drop rate (incomplete streams)
-   - Proposal generation success rate
-   - File parse success/failure rate
+> **Cost-optimized:** Use only free-tier CloudWatch features initially.
+> Add custom metrics/alarms later when you have actual traffic to monitor.
 
-2. **Alarms:**
-   - LLM error rate > 5% → alert
-   - P99 latency > 30s → alert
-   - Streaming drop rate > 10% → alert
+1. **Free tier logging** (via ECS Fargate `awslogs` driver):
+   - Application logs automatically sent to `/ecs/proplytics-backend`
+   - Use structured JSON logging (`console.log(JSON.stringify({...}))`)
+   - Log: LLM call latency, errors, streaming duration, file parse results
 
-3. **Dashboard:** CloudWatch dashboard with all metrics
+2. **Free tier metrics** (automatic with ECS):
+   - CPU/memory utilization (ECS provides these free)
+   - Container health checks
+
+3. **CloudWatch Log Insights queries** (free for first 5 GB scanned/mo):
+   ```
+   # Find LLM errors
+   fields @timestamp, @message
+   | filter @message like /LLM_ERROR/
+   | sort @timestamp desc
+   | limit 20
+
+   # Average generation time
+   fields @timestamp, @message
+   | filter @message like /GENERATION_COMPLETE/
+   | stats avg(duration) as avg_duration by bin(1h)
+   ```
+
+4. **Future (when needed):** Add custom CloudWatch metrics + alarms for:
+   - LLM error rate > 5% → SNS alert
+   - P99 latency > 30s → SNS alert
+   - Streaming drop rate > 10% → SNS alert
 
 ### Step 5.4 — End-to-End Tests (Playwright)
 
@@ -1099,17 +1328,21 @@ npm i -D @playwright/test
 ### S3 Object Structure
 
 ```
-proplytics-briefs-{env}/
-  └── {userId}/
-      └── {proposalId}/
-          └── brief.pdf          # Uploaded brief file
-
-proplytics-proposals-{env}/
-  └── {userId}/
-      └── {proposalId}/
-          ├── v1.json            # First generation
-          ├── v2.json            # Regeneration
-          └── v3.json            # Latest version
+proplytics-assets-{env}/
+  ├── briefs/
+  │   └── {userId}/
+  │       └── {proposalId}/
+  │           └── brief.pdf          # Uploaded brief file
+  ├── output/
+  │   └── {userId}/
+  │       └── {proposalId}/
+  │           ├── v1.json            # First generation
+  │           ├── v2.json            # Regeneration
+  │           └── v3.json            # Latest version
+  └── exports/
+      └── {userId}/
+          └── {proposalId}/
+              └── proposal.pdf       # Generated PDF export
 ```
 
 ---
@@ -1244,14 +1477,14 @@ OUTPUT SCHEMA:
 
 | # | Risk | Severity | Mitigation |
 |---|---|---|---|
-| 1 | **Lambda 29s streaming timeout** | 🔴 High (90%) | Use ECS Fargate for `/generate` endpoint. Keep-alive pings every 20s. Plan Fargate task sizing in Phase 0. |
-| 2 | **LLM hallucinating JSON keys** | 🟡 Medium (70%) | Enforce schema with Zod. Re-prompt on validation failure. 4-strategy JSON repair pipeline. |
-| 3 | **Streaming mid-cut JSON** | 🟡 Medium (65%) | Accumulate full buffer. Validate only on stream completion. Repair broken trailing JSON. |
-| 4 | **LLM API rate limits** | 🟡 Medium (55%) | Per-user generation queue. Exponential retry backoff. Usage counter in MongoDB. |
-| 5 | **PDF export fidelity** | 🟡 Medium (50%) | Puppeteer for pixel-accurate output. react-pdf as fallback. Budget a full week. |
-| 6 | **MongoDB cold start latency** | 🟢 Low (35%) | Connection pooling. Lambda warm-up pings. Use `serverSelectionTimeoutMS: 5000`. |
-| 7 | **200ms partial JSON parse pattern** | 🔴 High (complexity) | `setInterval(200ms)` with try/catch `JSON.parse`. Render completed top-level keys. `SectionSkeleton` for pending. |
-| 8 | **S3 cost at scale** | 🟢 Low (20%) | Lifecycle rule: archive to Glacier after 90 days. Delete orphaned objects weekly. |
+| 1 | **LLM hallucinating JSON keys** | 🟡 Medium (70%) | Enforce schema with Zod. Re-prompt on validation failure. 4-strategy JSON repair pipeline. |
+| 2 | **Streaming mid-cut JSON** | 🟡 Medium (65%) | Accumulate full buffer. Validate only on stream completion. Repair broken trailing JSON. |
+| 3 | **LLM API rate limits** | 🟡 Medium (55%) | Per-user generation queue. Exponential retry backoff. Usage counter in MongoDB. |
+| 4 | **PDF export fidelity** | 🟡 Medium (50%) | Puppeteer for pixel-accurate output. react-pdf as fallback. Budget a full week. |
+| 5 | **MongoDB cold start latency** | 🟢 Low (35%) | Connection pooling via Mongoose. Keep Fargate task running. Use `serverSelectionTimeoutMS: 5000`. |
+| 6 | **200ms partial JSON parse pattern** | 🔴 High (complexity) | `setInterval(200ms)` with try/catch `JSON.parse`. Render completed top-level keys. `SectionSkeleton` for pending. |
+| 7 | **S3 cost at scale** | 🟢 Low (20%) | Lifecycle rule: archive to Glacier after 90 days. Delete orphaned objects weekly. |
+| 8 | **ECS Fargate cost during idle** | 🟢 Low (25%) | Use scheduled scaling to 0 during non-business hours (saves ~50%). Scale to 1 on first request via ALB. |
 
 ---
 
@@ -1261,9 +1494,9 @@ OUTPUT SCHEMA:
 |---|---|---|---|
 | **AI Pipeline + Streaming** | 35% | 3–4 weeks | File parser, prompt engine, LLM streaming client, SSE endpoint, JSON validation, partial JSON parser |
 | **Frontend Integration** | 25% | 2–3 weeks | Zustand stores, React Query hooks, streaming display, confidence grid animations, replace all mock data |
-| **Auth + AWS Infrastructure** | 20% | 1–2 weeks | JWT auth, MongoDB schemas, S3 setup, API Gateway, ECS Fargate, Secrets Manager |
+| **Auth + AWS Infrastructure** | 20% | 1–2 weeks | JWT auth, MongoDB schemas, S3 bucket, ECS Fargate task, SSM params, Amplify hosting |
 | **Export + Revision History** | 15% | 1–2 weeks | Puppeteer PDF, S3 versioning, revision diff UI, export modal |
-| **Polish + QA** | 5% | 1 week | Error boundaries, mobile audit, CloudWatch, Playwright tests |
+| **Polish + QA** | 5% | 1 week | Error boundaries, mobile audit, CloudWatch logs, Playwright tests |
 
 ### Total Estimated Timeline: 8–12 weeks
 
@@ -1310,7 +1543,7 @@ cd frontend && npm run build
 
 ## Environment Variables
 
-### Backend `.env`
+### Backend `.env` (local development only — production uses SSM Parameter Store)
 
 ```bash
 # Server
@@ -1325,12 +1558,11 @@ JWT_SECRET=<generate with: node -e "console.log(require('crypto').randomBytes(32
 JWT_ACCESS_EXPIRY=15m
 JWT_REFRESH_EXPIRY=7d
 
-# AWS
+# AWS (local dev uses IAM credentials; Fargate uses Task Role — no keys needed)
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=<from IAM>
-AWS_SECRET_ACCESS_KEY=<from IAM>
-S3_BRIEFS_BUCKET=proplytics-briefs-dev
-S3_PROPOSALS_BUCKET=proplytics-proposals-dev
+AWS_ACCESS_KEY_ID=<from IAM — local dev only>
+AWS_SECRET_ACCESS_KEY=<from IAM — local dev only>
+S3_BUCKET=proplytics-assets-dev
 
 # LLM
 ANTHROPIC_API_KEY=<from console.anthropic.com>
@@ -1343,6 +1575,10 @@ LLM_MAX_TOKENS=8000
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5173
 ```
+
+> **Production:** All secrets are stored in SSM Parameter Store under `/proplytics/prod/*`.
+> The ECS Task Definition injects them as environment variables using `valueFrom`.
+> No `.env` file or AWS credential keys are needed in production.
 
 ### Frontend `.env`
 
