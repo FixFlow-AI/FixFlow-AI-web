@@ -1,0 +1,80 @@
+{
+  "family": "proplytics-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "taskRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "proplytics-backend",
+      "image": "034476915822.dkr.ecr.us-east-1.amazonaws.com/proplytics-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5000,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "MONGODB_URI",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/MONGODB_URI"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_SECRET"
+        },
+        {
+          "name": "JWT_REFRESH_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_REFRESH_SECRET"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/ANTHROPIC_API_KEY"
+        },
+        {
+          "name": "FRONTEND_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/FRONTEND_URL"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "5000"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "S3_BUCKET",
+          "value": "proplytics-assets-dev"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/proplytics-backend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://localhost:5000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))\""
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      }
+    }
+  ]
+}
