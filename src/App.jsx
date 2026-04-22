@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -24,10 +24,34 @@ const queryClient = new QueryClient({
 
 function AppRoutes() {
   const checkAuth = useAuthStore((s) => s.checkAuth)
+  const completeOAuthLogin = useAuthStore((s) => s.completeOAuthLogin)
+  const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const accessToken = params.get('accessToken')
+    const refreshToken = params.get('refreshToken')
+    const encodedUser = params.get('user')
+
+    if (!accessToken || !refreshToken) {
+      return
+    }
+
+    try {
+      const user = encodedUser ? JSON.parse(atob(encodedUser)) : null
+      completeOAuthLogin({ accessToken, refreshToken, user })
+      navigate('/dashboard', { replace: true })
+    } catch {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      navigate('/login', { replace: true })
+    }
+  }, [completeOAuthLogin, location.search, navigate])
 
   return (
     <AnimatePresence mode="wait">

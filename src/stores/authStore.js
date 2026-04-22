@@ -7,6 +7,16 @@ const useAuthStore = create((set, get) => ({
   isLoading: true,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  completeOAuthLogin: ({ accessToken, refreshToken, user }) => {
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+
+    set({
+      user: user || null,
+      isAuthenticated: !!accessToken,
+      isLoading: false,
+    });
+  },
 
   register: async ({ email, password, name }) => {
     const { data } = await api.post('/auth/register', { email, password, name });

@@ -258,7 +258,7 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
     const user = await findOrCreateUserFromGithub(profile);
     const authResult = await issueTokensForUser(user);
 
-    const redirectUrl = safeFrontendRedirect('/dashboard', {
+    const redirectUrl = safeFrontendRedirect('/login', {
       provider: 'github',
       state,
       accessToken: authResult.accessToken,

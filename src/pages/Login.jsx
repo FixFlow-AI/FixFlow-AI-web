@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Github, LogIn, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +10,6 @@ import api from '@/config/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const startGithubLogin = useAuthStore((s) => s.startGithubLogin);
 
@@ -23,31 +22,6 @@ export default function Login() {
   const [isOtpRequested, setIsOtpRequested] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    const accessToken = searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
-    const user = searchParams.get('user');
-
-    if (accessToken && refreshToken) {
-      try {
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-
-        if (user) {
-          const decodedUser = JSON.parse(atob(user));
-          useAuthStore.getState().setUser(decodedUser);
-        }
-
-        toast.success('GitHub login successful!');
-        navigate('/dashboard', { replace: true });
-      } catch {
-        toast.error('GitHub login completed, but token processing failed. Please sign in again.');
-      } finally {
-        setSearchParams({}, { replace: true });
-      }
-    }
-  }, [navigate, searchParams, setSearchParams]);
 
   function handleChange(e) {
     const { name, value } = e.target;
