@@ -10,6 +10,8 @@ const { authLimiter } = require('../middleware/rateLimit');
 
 const router = Router();
 
+const otpStore = new Map();
+
 function ensureGithubConfigured() {
   if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
     throw new BadRequestError('GitHub OAuth is not configured on the server');
@@ -175,6 +177,20 @@ async function issueTokensForUser(user) {
   };
 }
 
+function safeFrontendRedirect(path, params) {
+  const url = new URL(path, env.FRONTEND_URL);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  });
+  return url.toString();
+}
+
+function createOtpCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 // GET /api/auth/github/url
 router.get('/github/url', (req, res, next) => {
   try {
@@ -242,11 +258,82 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
     const user = await findOrCreateUserFromGithub(profile);
     const authResult = await issueTokensForUser(user);
 
-    res.json({
-      ...authResult,
+    const redirectUrl = safeFrontendRedirect('/dashboard', {
       provider: 'github',
       state,
+      accessToken: authResult.accessToken,
+      refreshToken: authResult.refreshToken,
+      user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
     });
+
+    res.redirect(302, redirectUrl);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/forgot-password/request
+router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
+  try {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+
+    if (!email) {
+      throw new BadRequestError('Email is required');
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new UnauthorizedError('No account found for that email');
+    }
+
+    const otp = createOtpCode();
+    otpStore.set(email, {
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    // In production, send OTP via email provider. For now, return a safe development response.
+    res.json({
+      message: 'OTP generated successfully. Check your email integration to deliver it.',
+      otp,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/forgot-password/verify
+router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
+  try {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
+    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (!email || !otp || !newPassword) {
+      throw new BadRequestError('Email, OTP, and new password are required');
+    }
+
+    const stored = otpStore.get(email);
+    if (!stored || stored.expiresAt < Date.now()) {
+      otpStore.delete(email);
+      throw new UnauthorizedError('OTP expired or invalid');
+    }
+
+    if (stored.otp !== otp) {
+      throw new UnauthorizedError('OTP is incorrect');
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new UnauthorizedError('No account found for that email');
+    }
+
+    user.passwordHash = newPassword;
+    user.refreshTokens = [];
+    await user.save();
+    otpStore.delete(email);
+
+    res.json({ message: 'Password updated successfully' });
   } catch (err) {
     next(err);
   }
