@@ -3,10 +3,18 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const { env } = require('../config/env');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
-const { registerSchema, loginSchema, refreshSchema, githubExchangeSchema } = require('../models/schemas');
+const {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  githubExchangeSchema,
+  forgotPasswordRequestSchema,
+  forgotPasswordVerifySchema,
+} = require('../models/schemas');
 const { UnauthorizedError, ConflictError, BadRequestError } = require('../utils/errors');
 const { authMiddleware } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
+const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
 
 const router = Router();
 
@@ -275,27 +283,34 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
 // POST /api/auth/forgot-password/request
 router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
   try {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-
-    if (!email) {
-      throw new BadRequestError('Email is required');
+    if (!isSmtpConfigured()) {
+      throw new BadRequestError('Email service is not configured. Please contact support.');
     }
 
-    const user = await User.findOne({ email });
+    const { email } = forgotPasswordRequestSchema.parse(req.body);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       throw new UnauthorizedError('No account found for that email');
     }
 
     const otp = createOtpCode();
-    otpStore.set(email, {
+    otpStore.set(normalizedEmail, {
       otp,
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    // In production, send OTP via email provider. For now, return a safe development response.
+    try {
+      await sendPasswordResetOtp({ to: normalizedEmail, otp });
+    } catch (sendError) {
+      otpStore.delete(normalizedEmail);
+      console.error('Failed to send OTP email:', sendError);
+      throw new BadRequestError('Unable to send OTP email right now. Please try again in a moment.');
+    }
+
     res.json({
-      message: 'OTP generated successfully. Check your email integration to deliver it.',
-      otp,
+      message: 'OTP sent to your registered email address.',
     });
   } catch (err) {
     next(err);
@@ -305,25 +320,21 @@ router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
 // POST /api/auth/forgot-password/verify
 router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
   try {
-    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
-    const otp = typeof req.body?.otp === 'string' ? req.body.otp.trim() : '';
-    const newPassword = typeof req.body?.newPassword === 'string' ? req.body.newPassword : '';
+    const { email, otp, newPassword } = forgotPasswordVerifySchema.parse(req.body);
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedOtp = otp.trim();
 
-    if (!email || !otp || !newPassword) {
-      throw new BadRequestError('Email, OTP, and new password are required');
-    }
-
-    const stored = otpStore.get(email);
+    const stored = otpStore.get(normalizedEmail);
     if (!stored || stored.expiresAt < Date.now()) {
-      otpStore.delete(email);
+      otpStore.delete(normalizedEmail);
       throw new UnauthorizedError('OTP expired or invalid');
     }
 
-    if (stored.otp !== otp) {
+    if (stored.otp !== normalizedOtp) {
       throw new UnauthorizedError('OTP is incorrect');
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       throw new UnauthorizedError('No account found for that email');
     }
@@ -331,7 +342,7 @@ router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
     user.passwordHash = newPassword;
     user.refreshTokens = [];
     await user.save();
-    otpStore.delete(email);
+    otpStore.delete(normalizedEmail);
 
     res.json({ message: 'Password updated successfully' });
   } catch (err) {

@@ -13,6 +13,15 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().default(''),
   GITHUB_CALLBACK_URL: z.string().url().default('http://localhost:5000/api/auth/github/callback'),
   GITHUB_OAUTH_SCOPE: z.string().default('read:user user:email'),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .default('false')
+    .transform((value) => value.toLowerCase() === 'true'),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default(''),
 });
 
 function validateEnv() {

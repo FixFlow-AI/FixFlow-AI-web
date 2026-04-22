@@ -14,6 +14,17 @@ const navLinks = [
 function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  const handleAnchorClick = (e, href) => {
+    if (href.startsWith('#')) {
+      e.preventDefault()
+      const element = document.querySelector(href)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setIsMobileMenuOpen(false)
+      }
+    }
+  }
+
   return (
     <motion.header
       initial={{ y: -100, opacity: 0 }}
@@ -39,6 +50,7 @@ function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
+                  onClick={(e) => handleAnchorClick(e, link.href)}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
@@ -81,6 +93,7 @@ function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
+                  onClick={(e) => handleAnchorClick(e, link.href)}
                   className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                 >
                   {link.label}
