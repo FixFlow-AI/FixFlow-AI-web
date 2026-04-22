@@ -7,15 +7,23 @@ import { formatDate } from '@/lib/utils'
 function ProposalCard({ proposal, index }) {
   const statusVariant = {
     draft: 'secondary',
+    generating: 'warning',
     processing: 'warning',
     complete: 'success',
+    failed: 'destructive',
   }
 
   const statusLabel = {
     draft: 'Draft',
+    generating: 'Generating',
     processing: 'Processing',
     complete: 'Complete',
+    failed: 'Failed',
   }
+
+  const proposalId = proposal.proposalId || proposal.id
+  const summary =
+    proposal.project_summary || proposal.projectSummary || 'Proposal details are still being prepared.'
 
   return (
     <motion.div
@@ -25,34 +33,32 @@ function ProposalCard({ proposal, index }) {
       whileHover={{ y: -4 }}
       className="group"
     >
-      <Link to={`/proposal/${proposal.id}`}>
+      <Link to={`/proposal/${proposalId}`}>
         <div className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all duration-300">
           <div className="flex items-start justify-between mb-4">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileText className="h-5 w-5 text-primary" />
             </div>
-            <Badge variant={statusVariant[proposal.status]}>
-              {proposal.status === 'processing' && (
+            <Badge variant={statusVariant[proposal.status] || 'secondary'}>
+              {['processing', 'generating'].includes(proposal.status) && (
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
               )}
-              {statusLabel[proposal.status]}
+              {statusLabel[proposal.status] || proposal.status}
             </Badge>
           </div>
 
           <h3 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors line-clamp-1">
             {proposal.title}
           </h3>
-          
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {proposal.project_summary}
-          </p>
+
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{summary}</p>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5" />
               <span>{formatDate(proposal.createdAt)}</span>
             </div>
-            
+
             <div className="flex items-center gap-1 text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
               <span>View</span>
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />

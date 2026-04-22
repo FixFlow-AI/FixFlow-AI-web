@@ -8,7 +8,7 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters'),
   JWT_ACCESS_EXPIRY: z.string().default('15m'),
   JWT_REFRESH_EXPIRY: z.string().default('7d'),
-  FRONTEND_URL: z.string().url().default('http://localhost:3001'),
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   GITHUB_CLIENT_ID: z.string().default(''),
   GITHUB_CLIENT_SECRET: z.string().default(''),
   GITHUB_CALLBACK_URL: z.string().url().default('http://localhost:5000/api/auth/github/callback'),
@@ -22,6 +22,16 @@ const envSchema = z.object({
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().default(''),
+  ANTHROPIC_API_KEY: z.string().default(''),
+  ANTHROPIC_MODEL: z.string().default('claude-sonnet-4-20250514'),
+  AWS_REGION: z.string().default('us-east-1'),
+  S3_BUCKET: z.string().default('proplytics-assets-dev'),
+  STREAM_TIMEOUT_MS: z.coerce.number().default(120000),
+  PUPPETEER_EXECUTABLE_PATH: z.string().default(''),
+  USE_FAKE_LLM: z
+    .string()
+    .default('false')
+    .transform((value) => value.toLowerCase() === 'true'),
 });
 
 function validateEnv() {

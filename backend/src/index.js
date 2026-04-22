@@ -8,6 +8,8 @@ const { corsMiddleware } = require('./middleware/cors');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
+const generateRoutes = require('./routes/generate');
+const proposalRoutes = require('./routes/proposals');
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.get('/api/health', (_req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/generate', generateRoutes);
+app.use('/api/proposals', proposalRoutes);
 
 // 404 handler
 app.use((_req, res) => {

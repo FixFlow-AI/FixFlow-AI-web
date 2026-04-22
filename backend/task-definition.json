@@ -3,7 +3,7 @@
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
-  "memory": "512",
+  "memory": "1024",
   "taskRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-task-role",
   "executionRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-execution-role",
   "containerDefinitions": [
