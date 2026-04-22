@@ -22,8 +22,14 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const githubExchangeSchema = z.object({
+  code: z.string().min(1, 'GitHub authorization code is required'),
+  state: z.string().optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   refreshSchema,
+  githubExchangeSchema,
 };
