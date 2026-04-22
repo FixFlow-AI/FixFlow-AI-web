@@ -24,6 +24,15 @@ const useAuthStore = create((set, get) => ({
     return data;
   },
 
+  startGithubLogin: async () => {
+    const { data } = await api.get('/auth/github/url');
+    if (!data?.authUrl) {
+      throw new Error('GitHub login is not available right now.');
+    }
+
+    window.location.href = data.authUrl;
+  },
+
   logout: async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     try {

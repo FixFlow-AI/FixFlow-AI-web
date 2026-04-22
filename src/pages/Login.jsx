@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogIn, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Github, LogIn, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import useAuthStore from '@/stores/authStore';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
+  const startGithubLogin = useAuthStore((s) => s.startGithubLogin);
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +48,14 @@ export default function Login() {
       toast.error(message);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleGithubLogin() {
+    try {
+      await startGithubLogin();
+    } catch (err) {
+      toast.error(err.message || 'Unable to start GitHub login.');
     }
   }
 
@@ -119,6 +128,17 @@ export default function Login() {
               Sign In
             </Button>
           </form>
+
+          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <Button type="button" variant="outline" className="w-full" onClick={handleGithubLogin}>
+            <Github className="h-4 w-4" />
+            Continue with GitHub
+          </Button>
         </div>
 
         {/* Footer */}
