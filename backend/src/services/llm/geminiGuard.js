@@ -12,6 +12,14 @@ const AUTH_ERROR_PATTERNS = [
   /service disabled/i,
 ];
 
+const LEAKED_KEY_PATTERNS = [
+  /reported as leaked/i,
+  /known leaked/i,
+  /publicly exposed/i,
+  /api key.*blocked/i,
+  /blocked.*api key/i,
+];
+
 const QUOTA_ERROR_PATTERNS = [
   /rate limit/i,
   /quota/i,
@@ -63,6 +71,11 @@ function isGeminiAuthError(error) {
   return matchesAny(AUTH_ERROR_PATTERNS, message);
 }
 
+function isGeminiLeakedKeyError(error) {
+  const message = getErrorMessage(error);
+  return matchesAny(LEAKED_KEY_PATTERNS, message);
+}
+
 function isGeminiQuotaError(error) {
   const status = getErrorStatus(error);
   const message = getErrorMessage(error);
@@ -79,6 +92,22 @@ function isGeminiModelError(error) {
 
 function getGeminiModelCandidates(primaryModel = DEFAULT_GEMINI_MODEL, fallbackModel = DEFAULT_GEMINI_FALLBACK_MODEL) {
   return [...new Set([primaryModel, fallbackModel].map((model) => String(model || '').trim()).filter(Boolean))];
+}
+
+function getGeminiAuthErrorMessage(error, { model } = {}) {
+  const providerMessage = getErrorMessage(error);
+  const modelSuffix = model ? ` for model "${model}"` : '';
+  const providerSuffix = providerMessage ? ` Provider message: ${providerMessage}` : '';
+
+  if (isGeminiLeakedKeyError(error)) {
+    return `Gemini API key is blocked because it was reported as leaked. Create a new key in Google AI Studio, replace GEMINI_API_KEY in backend/.env, and restart the backend.${providerSuffix}`;
+  }
+
+  if (/api key/i.test(providerMessage) || getErrorStatus(error) === 401) {
+    return `Gemini API key is invalid or revoked${modelSuffix}. Create a new key in Google AI Studio, replace GEMINI_API_KEY in backend/.env, and restart the backend.${providerSuffix}`;
+  }
+
+  return `Gemini API key was rejected or does not have access${modelSuffix}. Verify the key in Google AI Studio, make sure the Gemini API is enabled for that project, and replace GEMINI_API_KEY in backend/.env if needed.${providerSuffix}`;
 }
 
 function formatGuardMessage(lastFailureMessage, remainingMs) {
@@ -119,10 +148,12 @@ module.exports = {
   DEFAULT_GEMINI_FALLBACK_MODEL,
   DEFAULT_GEMINI_KEY_GUARD_MS,
   createGeminiGuard,
+  getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
   getErrorMessage,
   getErrorStatus,
   isGeminiAuthError,
+  isGeminiLeakedKeyError,
   isGeminiModelError,
   isGeminiQuotaError,
 };

@@ -2,8 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   createGeminiGuard,
+  getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
   isGeminiAuthError,
+  isGeminiLeakedKeyError,
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('../services/llm/geminiGuard');
@@ -13,6 +15,17 @@ test('detects Gemini auth errors', () => {
   assert.equal(isGeminiAuthError({ status: 403, message: 'Forbidden' }), true);
   assert.equal(isGeminiAuthError({ message: 'API key not valid. Please pass a valid API key.' }), true);
   assert.equal(isGeminiAuthError({ status: 403, message: 'model gemini-9 not found' }), false);
+});
+
+test('detects leaked Gemini API keys and returns an actionable message', () => {
+  const leakedError = {
+    status: 403,
+    message: 'Your API key was reported as leaked. Please use another API key.',
+  };
+
+  assert.equal(isGeminiLeakedKeyError(leakedError), true);
+  assert.match(getGeminiAuthErrorMessage(leakedError), /reported as leaked/i);
+  assert.match(getGeminiAuthErrorMessage(leakedError), /backend\/\.env/i);
 });
 
 test('detects Gemini quota and model errors', () => {

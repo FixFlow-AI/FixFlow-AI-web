@@ -3,6 +3,7 @@ const { env } = require('../../config/env');
 const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
 const {
   createGeminiGuard,
+  getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
   isGeminiAuthError,
   isGeminiModelError,
@@ -24,8 +25,8 @@ function getGeminiClient() {
   return geminiClient;
 }
 
-function buildGeminiAuthError(error) {
-  const message = 'Gemini API key was rejected or does not have access to the selected model.';
+function buildGeminiAuthError(error, model) {
+  const message = getGeminiAuthErrorMessage(error, { model });
   const wrappedError = new Error(message);
   wrappedError.code = 'GEMINI_AUTH_ERROR';
   wrappedError.status = 503;
@@ -86,7 +87,7 @@ async function* streamGeminiModel(system, userMessage, model, retryCount = 0) {
 
     if (isGeminiAuthError(error)) {
       geminiGuard.markHardFailure(error);
-      throw buildGeminiAuthError(error);
+      throw buildGeminiAuthError(error, model);
     }
 
     throw error;
