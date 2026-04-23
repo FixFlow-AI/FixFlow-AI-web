@@ -63,7 +63,7 @@ function DashboardHeader({ onOpenSidebar }) {
           </button>
 
           <div className="flex items-center gap-2">
-            <Avatar src={user?.avatar} fallback={getInitials(user?.name)} size="md" />
+            <Avatar src={user?.avatar || '/avatar.png'} fallback={getInitials(user?.name)} size="md" />
             {user?.name && (
               <span className="text-sm font-medium text-foreground hidden xl:block max-w-[140px] truncate">
                 {user.name}

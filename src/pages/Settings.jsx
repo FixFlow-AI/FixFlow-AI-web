@@ -5,12 +5,12 @@ import useAuthStore from '../stores/authStore';
 import toast from 'react-hot-toast';
 
 const AVATARS = [
-  'https://api.dicebear.com/7.x/micah/svg?seed=Felix&backgroundColor=transparent',
-  'https://api.dicebear.com/7.x/micah/svg?seed=Aneka&backgroundColor=transparent',
-  'https://api.dicebear.com/7.x/micah/svg?seed=Milo&backgroundColor=transparent',
-  'https://api.dicebear.com/7.x/micah/svg?seed=Jasmine&backgroundColor=transparent',
-  'https://api.dicebear.com/7.x/micah/svg?seed=Bandit&backgroundColor=transparent',
-  'https://api.dicebear.com/7.x/micah/svg?seed=Lilly&backgroundColor=transparent',
+  '/avatar.png',
+  '/avatar2.png',
+  '/avatar3.png',
+  '/avatar4.png',
+  '/avatar5.png',
+  '/avatar6.png',
 ];
 
 export default function Settings() {

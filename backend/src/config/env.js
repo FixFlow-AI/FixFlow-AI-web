@@ -24,6 +24,8 @@ const envSchema = z.object({
   SMTP_FROM: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+  GEMINI_FALLBACK_MODEL: z.string().default('gemini-2.5-flash-lite'),
+  GEMINI_KEY_GUARD_MS: z.coerce.number().default(15 * 60 * 1000),
   AWS_REGION: z.string().default('us-east-1'),
   S3_BUCKET: z.string().default('proplytics-assets-dev'),
   STREAM_TIMEOUT_MS: z.coerce.number().default(120000),

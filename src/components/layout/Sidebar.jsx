@@ -95,7 +95,7 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, onNavig
             {user?.avatar ? (
               <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover scale-110" />
             ) : (
-              initials
+              <img src="/avatar.png" alt="Avatar" className="w-full h-full object-cover scale-110" />
             )}
           </div>
           {!isCollapsed && (

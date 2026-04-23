@@ -1,8 +1,16 @@
 const { GoogleGenAI } = require('@google/genai');
 const { env } = require('../../config/env');
 const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
+const {
+  createGeminiGuard,
+  getGeminiModelCandidates,
+  isGeminiAuthError,
+  isGeminiModelError,
+  isGeminiQuotaError,
+} = require('./geminiGuard');
 
 let geminiClient = null;
+const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
 
 function getGeminiClient() {
   if (!env.GEMINI_API_KEY) {
@@ -14,6 +22,77 @@ function getGeminiClient() {
   }
 
   return geminiClient;
+}
+
+function buildGeminiAuthError(error) {
+  const message = 'Gemini API key was rejected or does not have access to the selected model.';
+  const wrappedError = new Error(message);
+  wrappedError.code = 'GEMINI_AUTH_ERROR';
+  wrappedError.status = 503;
+  wrappedError.cause = error;
+  return wrappedError;
+}
+
+function buildGeminiRequest(system, userMessage, model) {
+  return {
+    model,
+    contents: userMessage,
+    config: {
+      temperature: 0.3,
+      maxOutputTokens: 8000,
+      systemInstruction: system,
+      responseMimeType: 'application/json',
+      responseJsonSchema: RESPONSE_JSON_SCHEMA,
+    },
+  };
+}
+
+async function* streamGeminiModel(system, userMessage, model, retryCount = 0) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
+
+  try {
+    const gemini = getGeminiClient();
+    const request = buildGeminiRequest(system, userMessage, model);
+    const stream = await gemini.models.generateContentStream({
+      ...request,
+      config: { ...request.config, abortSignal: controller.signal },
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        yield chunk.text;
+      }
+    }
+  } catch (error) {
+    if (isGeminiQuotaError(error) && retryCount < 3) {
+      const waitMs = Math.pow(2, retryCount) * 1000;
+      console.log(
+        JSON.stringify({
+          event: 'LLM_RETRY',
+          model,
+          attempt: retryCount + 1,
+          waitMs,
+        })
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      yield* streamGeminiModel(system, userMessage, model, retryCount + 1);
+      return;
+    }
+
+    if (error?.name === 'AbortError') {
+      throw new Error(`LLM request timed out after ${env.STREAM_TIMEOUT_MS}ms.`);
+    }
+
+    if (isGeminiAuthError(error)) {
+      geminiGuard.markHardFailure(error);
+      throw buildGeminiAuthError(error);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function buildMockProposal(userMessage) {
@@ -141,51 +220,52 @@ async function* streamMockProposal(userMessage) {
   }
 }
 
-async function* streamProposal(system, userMessage, retryCount = 0) {
+async function* streamProposal(system, userMessage) {
   if (env.USE_FAKE_LLM) {
     yield* streamMockProposal(userMessage);
     return;
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
+  geminiGuard.assertAvailable();
 
-  try {
-    const gemini = getGeminiClient();
-    const stream = await gemini.models.generateContentStream({
-      model: env.GEMINI_MODEL,
-      contents: userMessage,
-      config: {
-        temperature: 0.3,
-        maxOutputTokens: 8000,
-        systemInstruction: system,
-        responseMimeType: 'application/json',
-        responseJsonSchema: RESPONSE_JSON_SCHEMA,
-        abortSignal: controller.signal,
-      },
-    });
+  const models = getGeminiModelCandidates(env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL);
+  let lastError = null;
 
-    for await (const chunk of stream) {
-      if (chunk.text) {
-        yield chunk.text;
+  for (let index = 0; index < models.length; index += 1) {
+    const model = models[index];
+    let emittedChunk = false;
+
+    try {
+      for await (const chunk of streamGeminiModel(system, userMessage, model)) {
+        emittedChunk = true;
+        yield chunk;
       }
-    }
-  } catch (error) {
-    if (error?.status === 429 && retryCount < 3) {
-      const waitMs = Math.pow(2, retryCount) * 1000;
-      console.log(JSON.stringify({ event: 'LLM_RETRY', attempt: retryCount + 1, waitMs }));
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      yield* streamProposal(system, userMessage, retryCount + 1);
       return;
-    }
+    } catch (error) {
+      lastError = error;
 
-    if (error?.name === 'AbortError') {
-      throw new Error(`LLM request timed out after ${env.STREAM_TIMEOUT_MS}ms.`);
-    }
+      if (error?.code === 'GEMINI_AUTH_ERROR') {
+        throw error;
+      }
 
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+      if (!emittedChunk && index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_MODEL_FALLBACK',
+            from: model,
+            to: models[index + 1],
+            reason: error.message,
+          })
+        );
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
   }
 }
 

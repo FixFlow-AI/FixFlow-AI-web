@@ -1568,7 +1568,10 @@ S3_BUCKET=proplytics-assets-dev
 
 # LLM
 GEMINI_API_KEY=<from aistudio.google.com/apikey>
+# Best free-tier quality/performance tradeoff for text generation.
 GEMINI_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash-lite
+GEMINI_KEY_GUARD_MS=900000
 STREAM_TIMEOUT_MS=120000
 
 # Frontend URL (for CORS)

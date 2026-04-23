@@ -24,6 +24,8 @@ const queryClient = new QueryClient({
   },
 })
 
+import RouteTransition from './components/layout/RouteTransition'
+
 function AppRoutes() {
   const checkAuth = useAuthStore((s) => s.checkAuth)
   const completeOAuthLogin = useAuthStore((s) => s.completeOAuthLogin)
@@ -56,8 +58,9 @@ function AppRoutes() {
   }, [completeOAuthLogin, location.search, navigate])
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
+    <RouteTransition>
+      <AnimatePresence mode="wait">
+        <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -113,6 +116,7 @@ function AppRoutes() {
         />
       </Routes>
     </AnimatePresence>
+    </RouteTransition>
   )
 }
 
