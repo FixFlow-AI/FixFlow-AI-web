@@ -2,12 +2,26 @@ import { MessageSquare } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import ChatMessageThread from './ChatMessageThread'
 import ChatInputBar from './ChatInputBar'
+import { Canvas } from '@react-three/fiber'
+import { Sphere, MeshDistortMaterial } from '@react-three/drei'
+
+function Header3D() {
+  return (
+    <div className="w-8 h-8 relative">
+      <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
+      <Canvas camera={{ position: [0, 0, 2] }}>
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} />
+        <Sphere args={[1, 32, 32]} scale={1.2}>
+          <MeshDistortMaterial color="#4f46e5" speed={3} distort={0.3} radius={1} />
+        </Sphere>
+      </Canvas>
+    </div>
+  )
+}
 
 /**
  * ProposalChatSidebar
- *
- * Main slide-over panel for the ProposalChat feature.
- * Contains the message thread, input bar, and version indicator.
  */
 function ProposalChatSidebar({
   isOpen,
@@ -25,9 +39,7 @@ function ProposalChatSidebar({
       onClose={onClose}
       title={
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <MessageSquare className="h-4 w-4 text-primary" />
-          </div>
+          <Header3D />
           <div>
             <span className="text-lg font-semibold">Proposal Chat</span>
             {versionLabel && (

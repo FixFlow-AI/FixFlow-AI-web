@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
+import Hero3DElement from '@/components/ui/Hero3DElement'
 
 function DashboardLayout({ children }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <Hero3DElement />
       <Sidebar
         isMobileOpen={isMobileSidebarOpen}
         onMobileClose={() => setIsMobileSidebarOpen(false)}

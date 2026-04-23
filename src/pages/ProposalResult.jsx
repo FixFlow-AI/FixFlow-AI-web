@@ -43,6 +43,7 @@ function ProposalResult() {
   const [sectionOverrides, setSectionOverrides] = useState({})
   const [updatingSections, setUpdatingSections] = useState({})
   const [sectionVersions, setSectionVersions] = useState({})
+  const [pendingUpdates, setPendingUpdates] = useState({}) // track sections with uncommitted updates
 
   // ProposalChat hook
   const {
@@ -139,12 +140,44 @@ function ProposalResult() {
       [latest.section]: latest.newVersion,
     }))
 
+    // Mark as pending user commitment
+    setPendingUpdates((prev) => ({
+      ...prev,
+      [latest.section]: true,
+    }))
+
     // Invalidate queries so next full fetch picks up the new data
     queryClient.invalidateQueries({ queryKey: ['proposal', id] })
     queryClient.invalidateQueries({ queryKey: ['proposal', id, 'versions'] })
 
-    toast.success(`${latest.section.charAt(0).toUpperCase() + latest.section.slice(1)} updated to v${latest.newVersion}`)
+    toast.success(`New version of ${latest.section} is ready for review.`, {
+      icon: '✨',
+      duration: 5000,
+    })
   }, [sectionUpdates, queryClient, id])
+
+  const handleApplyUpdate = useCallback((section) => {
+    setPendingUpdates((prev) => {
+      const next = { ...prev }
+      delete next[section]
+      return next
+    })
+    toast.success(`${section.charAt(0).toUpperCase() + section.slice(1)} changes committed.`)
+  }, [])
+
+  const handleRevertUpdate = useCallback((section) => {
+    setSectionOverrides((prev) => {
+      const next = { ...prev }
+      delete next[section]
+      return next
+    })
+    setPendingUpdates((prev) => {
+      const next = { ...prev }
+      delete next[section]
+      return next
+    })
+    toast.error(`${section.charAt(0).toUpperCase() + section.slice(1)} reverted to original.`)
+  }, [])
 
   const handleOpenChat = useCallback(() => {
     setIsChatOpen(true)
@@ -293,7 +326,10 @@ function ProposalResult() {
         <SectionUpdateOverlay
           sectionKey="summary"
           isUpdating={updatingSections.summary}
+          hasPendingUpdate={pendingUpdates.summary}
           newVersion={sectionVersions.summary}
+          onApply={() => handleApplyUpdate('summary')}
+          onRevert={() => handleRevertUpdate('summary')}
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -346,7 +382,10 @@ function ProposalResult() {
       <SectionUpdateOverlay
         sectionKey="features"
         isUpdating={updatingSections.features}
+        hasPendingUpdate={pendingUpdates.features}
         newVersion={sectionVersions.features}
+        onApply={() => handleApplyUpdate('features')}
+        onRevert={() => handleRevertUpdate('features')}
       >
         <div className="mb-8">
           <motion.h2
@@ -376,7 +415,10 @@ function ProposalResult() {
         <SectionUpdateOverlay
           sectionKey="risks"
           isUpdating={updatingSections.risks}
+          hasPendingUpdate={pendingUpdates.risks}
           newVersion={sectionVersions.risks}
+          onApply={() => handleApplyUpdate('risks')}
+          onRevert={() => handleRevertUpdate('risks')}
         >
           <div>
             <h2 className="text-lg font-semibold mb-4">Risk Assessment</h2>
@@ -389,7 +431,10 @@ function ProposalResult() {
         <SectionUpdateOverlay
           sectionKey="effort"
           isUpdating={updatingSections.effort}
+          hasPendingUpdate={pendingUpdates.effort}
           newVersion={sectionVersions.effort}
+          onApply={() => handleApplyUpdate('effort')}
+          onRevert={() => handleRevertUpdate('effort')}
         >
           <div>
             <h2 className="text-lg font-semibold mb-4">Effort Estimation</h2>
@@ -403,7 +448,10 @@ function ProposalResult() {
       <SectionUpdateOverlay
         sectionKey="timeline"
         isUpdating={updatingSections.timeline}
+        hasPendingUpdate={pendingUpdates.timeline}
         newVersion={sectionVersions.timeline}
+        onApply={() => handleApplyUpdate('timeline')}
+        onRevert={() => handleRevertUpdate('timeline')}
       >
         <div className="mb-8">
           <h2 className="text-lg font-semibold mb-4">Project Timeline</h2>

@@ -1,5 +1,6 @@
 import { Search, Bell, Settings, LogOut, Menu } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import useAuthStore from '@/stores/authStore'
@@ -43,33 +44,46 @@ function DashboardHeader({ onOpenSidebar }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <button className="relative p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex">
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex"
+          >
             <Bell className="h-5 w-5 text-muted-foreground" />
             <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
-          </button>
+          </motion.button>
 
-          <button className="p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex">
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex"
+          >
             <Settings className="h-5 w-5 text-muted-foreground" />
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={handleLogout}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors text-red-400 hover:text-red-500"
             title="Logout"
             data-testid="logout"
           >
-            <LogOut className="h-5 w-5 text-muted-foreground" />
-          </button>
+            <LogOut className="h-5 w-5" />
+          </motion.button>
 
-          <div className="flex items-center gap-2">
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className="flex items-center gap-2 pl-2 border-l border-border"
+          >
             <Avatar src={user?.avatar || '/avatar.png'} fallback={getInitials(user?.name)} size="md" />
             {user?.name && (
               <span className="text-sm font-medium text-foreground hidden xl:block max-w-[140px] truncate">
                 {user.name}
               </span>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
     </header>

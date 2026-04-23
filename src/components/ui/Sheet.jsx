@@ -52,7 +52,7 @@ function Sheet({ isOpen, onClose, children, title, description, side = 'right', 
             exit={slideVariants[side].exit}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className={cn(
-              'fixed z-50 h-full w-full max-w-lg bg-card border-border shadow-2xl',
+              'fixed z-50 h-full w-full max-w-lg bg-card/70 backdrop-blur-xl border-border shadow-2xl',
               side === 'right' ? 'right-0 top-0 border-l' : 'left-0 top-0 border-r',
               className
             )}

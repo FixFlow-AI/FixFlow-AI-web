@@ -34,7 +34,7 @@ function ProposalCard({ proposal, index }) {
       className="group"
     >
       <Link to={`/proposal/${proposalId}`}>
-        <div className="glass-card rounded-xl p-6 hover:border-primary/30 transition-all duration-300">
+        <div className="glass-card rounded-xl p-6 bg-card/50 backdrop-blur-md border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg shadow-black/5">
           <div className="flex items-start justify-between mb-4">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileText className="h-5 w-5 text-primary" />
