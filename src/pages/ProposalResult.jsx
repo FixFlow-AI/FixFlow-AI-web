@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   Download,
@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Target,
   Clock,
+  MessageSquare,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
@@ -22,15 +23,35 @@ import DetailDrawer from '@/components/proposal/DetailDrawer'
 import SectionSkeleton from '@/components/proposal/SectionSkeleton'
 import ExportModal from '@/components/proposal/ExportModal'
 import RevisionHistory from '@/components/proposal/RevisionHistory'
+import ProposalChatSidebar from '@/components/proposalChat/ProposalChatSidebar'
+import SectionUpdateOverlay from '@/components/proposalChat/SectionUpdateOverlay'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import api from '@/config/api'
-import { normalizeProposalRecord, summarizeChangedSections } from '@/lib/proposals'
+import { normalizeProposalRecord, summarizeChangedSections, calculateOverallConfidence, calculateEstimatedDuration } from '@/lib/proposals'
+import { useProposalChat } from '@/hooks/useProposalChat'
 
 function ProposalResult() {
   const { id } = useParams()
+  const queryClient = useQueryClient()
   const [selectedFeature, setSelectedFeature] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [hasOpenedChat, setHasOpenedChat] = useState(false)
+
+  // Section-level state for live patching from mutations
+  const [sectionOverrides, setSectionOverrides] = useState({})
+  const [updatingSections, setUpdatingSections] = useState({})
+  const [sectionVersions, setSectionVersions] = useState({})
+
+  // ProposalChat hook
+  const {
+    messages: chatMessages,
+    isStreaming: isChatStreaming,
+    sectionUpdates,
+    currentVersion: chatVersion,
+    sendMessage: sendChatMessage,
+  } = useProposalChat(id)
 
   const proposalQuery = useQuery({
     queryKey: ['proposal', id],
@@ -58,10 +79,87 @@ function ProposalResult() {
     enabled: Boolean(id && versionsQuery.data?.currentVersion > 1),
   })
 
-  const proposal = proposalQuery.data
+  const rawProposal = proposalQuery.data
+
+  // Apply section overrides from chat mutations
+  const proposal = useMemo(() => {
+    if (!rawProposal) return null
+
+    const patched = { ...rawProposal }
+
+    for (const [section, data] of Object.entries(sectionOverrides)) {
+      if (section === 'summary') {
+        patched.project_summary = data
+      } else if (Array.isArray(data)) {
+        // Re-normalize the section data with IDs
+        patched[section] = data.map((item, index) => ({
+          ...item,
+          id: item.id || `${section}-${index + 1}`,
+        }))
+      }
+    }
+
+    // Recalculate derived values
+    if (sectionOverrides.features) {
+      patched.overallConfidence = calculateOverallConfidence(patched.features)
+    }
+    if (sectionOverrides.timeline) {
+      patched.estimatedDuration = calculateEstimatedDuration(patched.timeline)
+    }
+
+    return patched
+  }, [rawProposal, sectionOverrides])
+
   const changedSections = useMemo(
     () => summarizeChangedSections(compareQuery.data?.diff),
     [compareQuery.data?.diff]
+  )
+
+  // Handle section updates from chat mutations
+  useEffect(() => {
+    if (sectionUpdates.length === 0) return
+
+    const latest = sectionUpdates[sectionUpdates.length - 1]
+
+    // Mark section as updating briefly for animation
+    setUpdatingSections((prev) => ({ ...prev, [latest.section]: true }))
+    setTimeout(() => {
+      setUpdatingSections((prev) => ({ ...prev, [latest.section]: false }))
+    }, 500)
+
+    // Apply the section override
+    setSectionOverrides((prev) => ({
+      ...prev,
+      [latest.section]: latest.payload,
+    }))
+
+    // Track section version for badge display
+    setSectionVersions((prev) => ({
+      ...prev,
+      [latest.section]: latest.newVersion,
+    }))
+
+    // Invalidate queries so next full fetch picks up the new data
+    queryClient.invalidateQueries({ queryKey: ['proposal', id] })
+    queryClient.invalidateQueries({ queryKey: ['proposal', id, 'versions'] })
+
+    toast.success(`${latest.section.charAt(0).toUpperCase() + latest.section.slice(1)} updated to v${latest.newVersion}`)
+  }, [sectionUpdates, queryClient, id])
+
+  const handleOpenChat = useCallback(() => {
+    setIsChatOpen(true)
+    setHasOpenedChat(true)
+  }, [])
+
+  const handleSendChatMessage = useCallback(
+    (message, intent, targetSection) => {
+      // Mark section as updating when mutation starts
+      if (intent === 'mutate' && targetSection) {
+        setUpdatingSections((prev) => ({ ...prev, [targetSection]: true }))
+      }
+      sendChatMessage(message, intent, targetSection)
+    },
+    [sendChatMessage]
   )
 
   const handleFeatureClick = (feature) => {
@@ -166,18 +264,46 @@ function ProposalResult() {
             <Download className="h-4 w-4 mr-2" />
             Export PDF
           </Button>
+          <div className="relative">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleOpenChat}
+              className="border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Negotiate & Refine
+            </Button>
+            {/* Pulsing indicator on first load */}
+            {!hasOpenedChat && (
+              <motion.span
+                className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [1, 0.7, 1],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
+          </div>
         </motion.div>
       </div>
 
       <ErrorBoundary>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-xl p-6 mb-8"
+        <SectionUpdateOverlay
+          sectionKey="summary"
+          isUpdating={updatingSections.summary}
+          newVersion={sectionVersions.summary}
         >
-          <h2 className="font-semibold mb-3">Project Summary</h2>
-          <p className="text-muted-foreground leading-relaxed">{proposal.project_summary}</p>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-xl p-6 mb-8"
+          >
+            <h2 className="font-semibold mb-3">Project Summary</h2>
+            <p className="text-muted-foreground leading-relaxed">{proposal.project_summary}</p>
+          </motion.div>
+        </SectionUpdateOverlay>
       </ErrorBoundary>
 
       <ErrorBoundary>
@@ -217,61 +343,85 @@ function ProposalResult() {
         </div>
       </ErrorBoundary>
 
-      <div className="mb-8">
-        <motion.h2
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-lg font-semibold mb-4"
-        >
-          Feature Analysis
-        </motion.h2>
+      <SectionUpdateOverlay
+        sectionKey="features"
+        isUpdating={updatingSections.features}
+        newVersion={sectionVersions.features}
+      >
+        <div className="mb-8">
+          <motion.h2
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-lg font-semibold mb-4"
+          >
+            Feature Analysis
+          </motion.h2>
 
-        <ErrorBoundary>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {proposal.features.map((feature, index) => (
-              <ConfidenceCard
-                key={feature.id}
-                feature={feature}
-                onClick={() => handleFeatureClick(feature)}
-                index={index}
-              />
-            ))}
-          </div>
-        </ErrorBoundary>
-      </div>
+          <ErrorBoundary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {proposal.features.map((feature, index) => (
+                <ConfidenceCard
+                  key={feature.id}
+                  feature={feature}
+                  onClick={() => handleFeatureClick(feature)}
+                  index={index}
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
+        </div>
+      </SectionUpdateOverlay>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Risk Assessment</h2>
-          <ErrorBoundary>
-            <RiskCard risks={proposal.risks} />
-          </ErrorBoundary>
-        </div>
-
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Effort Estimation</h2>
-          <ErrorBoundary>
-            <EffortCard efforts={proposal.effort} />
-          </ErrorBoundary>
-        </div>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Project Timeline</h2>
-        <ErrorBoundary>
-          <div className="max-w-2xl">
-            {proposal.timeline.map((phase, index) => (
-              <TimelineStep
-                key={phase.id}
-                phase={phase}
-                index={index}
-                total={proposal.timeline.length}
-                isActive={index === 0}
-              />
-            ))}
+        <SectionUpdateOverlay
+          sectionKey="risks"
+          isUpdating={updatingSections.risks}
+          newVersion={sectionVersions.risks}
+        >
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Risk Assessment</h2>
+            <ErrorBoundary>
+              <RiskCard risks={proposal.risks} />
+            </ErrorBoundary>
           </div>
-        </ErrorBoundary>
+        </SectionUpdateOverlay>
+
+        <SectionUpdateOverlay
+          sectionKey="effort"
+          isUpdating={updatingSections.effort}
+          newVersion={sectionVersions.effort}
+        >
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Effort Estimation</h2>
+            <ErrorBoundary>
+              <EffortCard efforts={proposal.effort} />
+            </ErrorBoundary>
+          </div>
+        </SectionUpdateOverlay>
       </div>
+
+      <SectionUpdateOverlay
+        sectionKey="timeline"
+        isUpdating={updatingSections.timeline}
+        newVersion={sectionVersions.timeline}
+      >
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">Project Timeline</h2>
+          <ErrorBoundary>
+            <div className="max-w-2xl">
+              {proposal.timeline.map((phase, index) => (
+                <TimelineStep
+                  key={phase.id}
+                  phase={phase}
+                  index={index}
+                  total={proposal.timeline.length}
+                  isActive={index === 0}
+                />
+              ))}
+            </div>
+          </ErrorBoundary>
+        </div>
+      </SectionUpdateOverlay>
 
       {proposal.market.length > 0 && (
         <ErrorBoundary>
@@ -326,6 +476,15 @@ function ProposalResult() {
       {isExportOpen && (
         <ExportModal proposalId={proposal.proposalId} onClose={() => setIsExportOpen(false)} />
       )}
+
+      <ProposalChatSidebar
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        messages={chatMessages}
+        isStreaming={isChatStreaming}
+        currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
+        onSendMessage={handleSendChatMessage}
+      />
     </div>
   )
 }

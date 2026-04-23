@@ -10,6 +10,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
 const generateRoutes = require('./routes/generate');
 const proposalRoutes = require('./routes/proposals');
+const proposalChatRoutes = require('./routes/proposalChat');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/generate', generateRoutes);
 app.use('/api/proposals', proposalRoutes);
+app.use('/api/proposal', proposalChatRoutes);
 
 // 404 handler
 app.use((_req, res) => {

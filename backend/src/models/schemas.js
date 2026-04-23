@@ -66,6 +66,18 @@ const versionCompareSchema = z.object({
   to: z.coerce.number().int().min(1),
 });
 
+const proposalChatSchema = z.object({
+  message: z.string().trim().min(1, 'Message is required').max(5000, 'Message must be under 5000 characters'),
+  intent: z.enum(['question', 'mutate']).default('question'),
+  targetSection: z.string().trim().nullable().optional().default(null),
+  history: z.array(
+    z.object({
+      role: z.enum(['user', 'assistant']),
+      content: z.string(),
+    })
+  ).optional().default([]),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -77,4 +89,5 @@ module.exports = {
   uploadUrlSchema,
   proposalExportSchema,
   versionCompareSchema,
+  proposalChatSchema,
 };
