@@ -31,8 +31,8 @@
           "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_REFRESH_SECRET"
         },
         {
-          "name": "ANTHROPIC_API_KEY",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/ANTHROPIC_API_KEY"
+          "name": "GEMINI_API_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GEMINI_API_KEY"
         },
         {
           "name": "FRONTEND_URL",

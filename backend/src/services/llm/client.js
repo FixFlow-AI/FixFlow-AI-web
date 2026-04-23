@@ -1,18 +1,19 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenAI } = require('@google/genai');
 const { env } = require('../../config/env');
+const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
 
-let anthropicClient = null;
+let geminiClient = null;
 
-function getAnthropicClient() {
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not configured.');
+function getGeminiClient() {
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   }
 
-  return anthropicClient;
+  return geminiClient;
 }
 
 function buildMockProposal(userMessage) {
@@ -150,21 +151,23 @@ async function* streamProposal(system, userMessage, retryCount = 0) {
   const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
 
   try {
-    const anthropic = getAnthropicClient();
-    const stream = anthropic.messages.stream(
-      {
-        model: env.ANTHROPIC_MODEL,
-        max_tokens: 8000,
+    const gemini = getGeminiClient();
+    const stream = await gemini.models.generateContentStream({
+      model: env.GEMINI_MODEL,
+      contents: userMessage,
+      config: {
         temperature: 0.3,
-        system,
-        messages: [{ role: 'user', content: userMessage }],
+        maxOutputTokens: 8000,
+        systemInstruction: system,
+        responseMimeType: 'application/json',
+        responseJsonSchema: RESPONSE_JSON_SCHEMA,
+        abortSignal: controller.signal,
       },
-      { signal: controller.signal }
-    );
+    });
 
     for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-        yield chunk.delta.text;
+      if (chunk.text) {
+        yield chunk.text;
       }
     }
   } catch (error) {
@@ -176,7 +179,7 @@ async function* streamProposal(system, userMessage, retryCount = 0) {
       return;
     }
 
-    if (error?.name === 'AbortError' || error?.name === 'APIUserAbortError') {
+    if (error?.name === 'AbortError') {
       throw new Error(`LLM request timed out after ${env.STREAM_TIMEOUT_MS}ms.`);
     }
 

@@ -13,9 +13,9 @@
   "type": "commonjs",
   "description": "",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.90.0",
     "@aws-sdk/client-s3": "^3.1034.0",
     "@aws-sdk/s3-request-presigner": "^3.1034.0",
+    "@google/genai": "^1.50.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

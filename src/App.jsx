@@ -7,6 +7,8 @@ import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import NewProposal from './pages/NewProposal'
 import ProposalResult from './pages/ProposalResult'
+import Settings from './pages/Settings'
+import Help from './pages/Help'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -85,6 +87,26 @@ function AppRoutes() {
             <ProtectedRoute>
               <DashboardLayout>
                 <ProposalResult />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Help />
               </DashboardLayout>
             </ProtectedRoute>
           }

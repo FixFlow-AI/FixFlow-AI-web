@@ -102,8 +102,8 @@
           ▼              ▼                   ▼
 ┌──────────────┐ ┌──────────────┐ ┌─────────────────┐
 │  MongoDB     │ │  AWS S3      │ │  LLM API        │
-│  Atlas M0    │ │  (1 bucket)  │ │  (Anthropic /    │
-│  FREE TIER   │ │              │ │   OpenAI)       │
+│  Atlas M0    │ │  (1 bucket)  │ │  (Google Gemini) │
+│  FREE TIER   │ │              │ │                  │
 │              │ │  proplytics- │ │                  │
 │  • Users     │ │  assets-{env}│ │  • Streaming     │
 │  • Auth/JWT  │ │  ├─ briefs/  │ │    JSON output   │
@@ -130,7 +130,7 @@
 | **SSM Parameter Store** | API keys, MongoDB URI, JWT secret | 10,000 standard params free | $0 |
 | **CloudWatch Logs** | Application logs from Fargate | 5 GB ingest, 5 GB storage/mo | $0 |
 | **MongoDB Atlas M0** | Users, proposals index | 512 MB free forever | $0 |
-| **LLM API** | Anthropic/OpenAI (pay-per-token) | N/A | $0.01–2/proposal (~$5/mo at 100 proposals) |
+| **LLM API** | Google Gemini API | Free tier available | $0 for low-volume dev; paid as usage grows |
 
 **Total (development/low traffic): ~$9–25/month**
 
@@ -262,7 +262,7 @@ You need **one IAM user** (for CI/CD) and **one ECS Task Execution Role** (for F
 | `/proplytics/prod/MONGODB_URI` | SecureString | `mongodb+srv://...` |
 | `/proplytics/prod/JWT_SECRET` | SecureString | `<hex string>` |
 | `/proplytics/prod/JWT_REFRESH_SECRET` | SecureString | `<hex string>` |
-| `/proplytics/prod/ANTHROPIC_API_KEY` | SecureString | `sk-ant-...` |
+| `/proplytics/prod/GEMINI_API_KEY` | SecureString | `AIza...` |
 | `/proplytics/prod/FRONTEND_URL` | String | `https://main.d1234.amplifyapp.com` |
 | `/proplytics/dev/...` | ... | (same structure for dev) |
 
@@ -277,7 +277,7 @@ You need **one IAM user** (for CI/CD) and **one ECS Task Execution Role** (for F
 | Auth | JWT (access + refresh tokens) | Stateless auth (Express middleware) |
 | Database | MongoDB Atlas (M0 free tier) | Users, auth, proposal index |
 | File Storage | AWS S3 (1 bucket, prefix-based) | Briefs, proposal JSON, PDF exports |
-| AI/LLM | Anthropic Claude / OpenAI GPT-4 | Proposal generation |
+| AI/LLM | Google Gemini 2.5 Flash | Proposal generation |
 | File Parsing | pdf-parse, mammoth | PDF/DOCX → clean text |
 | Validation | Zod | JSON schema validation + repair |
 | PDF Export | Puppeteer (primary), react-pdf (fallback) | Business-grade PDF output |
@@ -422,7 +422,7 @@ backend/
    aws ssm put-parameter --name "/proplytics/dev/MONGODB_URI" --type SecureString --value "mongodb+srv://..."
    aws ssm put-parameter --name "/proplytics/dev/JWT_SECRET" --type SecureString --value "<hex>"
    aws ssm put-parameter --name "/proplytics/dev/JWT_REFRESH_SECRET" --type SecureString --value "<hex>"
-   aws ssm put-parameter --name "/proplytics/dev/ANTHROPIC_API_KEY" --type SecureString --value "sk-ant-..."
+   aws ssm put-parameter --name "/proplytics/dev/GEMINI_API_KEY" --type SecureString --value "AIza..."
    aws ssm put-parameter --name "/proplytics/dev/FRONTEND_URL" --type String --value "http://localhost:5173"
    ```
 
@@ -671,7 +671,7 @@ npm i pdf-parse mammoth
 
 4. **Text sanitization:**
    - Remove excessive whitespace/newlines
-   - Truncate to LLM context limit (e.g., 100K chars for Claude)
+   - Truncate to the model context limit (current implementation keeps briefs under 150K chars)
    - Strip any potentially harmful content
    - Return character count for token estimation
 
@@ -750,7 +750,7 @@ npm i pdf-parse mammoth
 
 **Install dependencies:**
 ```bash
-npm i @anthropic-ai/sdk   # or openai
+npm i @google/genai
 ```
 
 **Implementation** (`src/services/llm/client.js`):
@@ -758,17 +758,19 @@ npm i @anthropic-ai/sdk   # or openai
 1. **Streaming call:**
    ```javascript
    async function* streamProposal(system, userMessage) {
-     const stream = await anthropic.messages.stream({
-       model: 'claude-sonnet-4-20250514',
-       max_tokens: 8000,
-       temperature: 0.3,
-       system: system,
-       messages: [{ role: 'user', content: userMessage }],
+     const stream = await gemini.models.generateContentStream({
+       model: 'gemini-2.5-flash',
+       contents: userMessage,
+       config: {
+         temperature: 0.3,
+         maxOutputTokens: 8000,
+         systemInstruction: system,
+       },
      });
 
      for await (const chunk of stream) {
-       if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-         yield chunk.delta.text;
+       if (chunk.text) {
+         yield chunk.text;
        }
      }
    }
@@ -1318,7 +1320,7 @@ npm i -D @playwright/test
   "versionCount": "number",
   "inputType": "text | pdf | docx",
   "inputHash": "string (SHA-256 of input for dedup)",
-  "modelUsed": "string (e.g., claude-sonnet-4-20250514)",
+  "modelUsed": "string (e.g., gemini-2.5-flash)",
   "generationTimeMs": "number",
   "createdAt": "Date",
   "updatedAt": "Date"
@@ -1565,12 +1567,9 @@ AWS_SECRET_ACCESS_KEY=<from IAM — local dev only>
 S3_BUCKET=proplytics-assets-dev
 
 # LLM
-ANTHROPIC_API_KEY=<from console.anthropic.com>
-# OR
-OPENAI_API_KEY=<from platform.openai.com>
-LLM_MODEL=claude-sonnet-4-20250514
-LLM_TEMPERATURE=0.3
-LLM_MAX_TOKENS=8000
+GEMINI_API_KEY=<from aistudio.google.com/apikey>
+GEMINI_MODEL=gemini-2.5-flash
+STREAM_TIMEOUT_MS=120000
 
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5173

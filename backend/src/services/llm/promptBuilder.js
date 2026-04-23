@@ -53,6 +53,124 @@ const OUTPUT_SCHEMA = {
   ],
 };
 
+const RESPONSE_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    project_summary: {
+      type: 'string',
+      description: 'A concise 2-4 sentence summary of the recommended project approach.',
+    },
+    features: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          technical_approach: { type: 'string' },
+          complexity: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+          confidence: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+          confidence_pct: { type: 'number', minimum: 0, maximum: 100 },
+          area: { type: 'string' },
+        },
+        required: [
+          'title',
+          'description',
+          'technical_approach',
+          'complexity',
+          'confidence',
+          'confidence_pct',
+          'area',
+        ],
+      },
+    },
+    risks: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          label: { type: 'string' },
+          severity: { type: 'number', minimum: 0, maximum: 100 },
+          mitigation: { type: 'string' },
+          category: { type: 'string' },
+        },
+        required: ['label', 'severity', 'mitigation', 'category'],
+      },
+    },
+    timeline: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          phase: { type: 'string' },
+          duration: { type: 'string' },
+          tasks: {
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string' },
+          },
+          dependencies: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: ['phase', 'duration', 'tasks', 'dependencies'],
+      },
+    },
+    effort: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          label: { type: 'string' },
+          percentage: { type: 'number', minimum: 0, maximum: 100 },
+          timeframe: { type: 'string' },
+          description: { type: 'string' },
+        },
+        required: ['label', 'percentage', 'timeframe', 'description'],
+      },
+    },
+    market: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          trend: { type: 'string', enum: ['up', 'down', 'stable'] },
+          relevance: { type: 'number', minimum: 0, maximum: 100 },
+        },
+        required: ['title', 'description', 'trend', 'relevance'],
+      },
+    },
+    impact: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          impact_score: { type: 'number', minimum: 0, maximum: 100 },
+          category: { type: 'string' },
+        },
+        required: ['title', 'description', 'impact_score', 'category'],
+      },
+    },
+  },
+  required: ['project_summary', 'features', 'risks', 'timeline', 'effort', 'market', 'impact'],
+};
+
 const SYSTEM_PROMPT = `You are an elite senior technical consultant and solution architect.
 You analyze client project briefs and produce comprehensive, structured project proposals.
 
@@ -84,4 +202,10 @@ function buildPrompt(briefText) {
   };
 }
 
-module.exports = { buildPrompt, normalizeBriefText, SYSTEM_PROMPT, OUTPUT_SCHEMA };
+module.exports = {
+  buildPrompt,
+  normalizeBriefText,
+  SYSTEM_PROMPT,
+  OUTPUT_SCHEMA,
+  RESPONSE_JSON_SCHEMA,
+};

@@ -7,6 +7,7 @@ const useAuthStore = create((set, get) => ({
   isLoading: true,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  updateUser: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
   completeOAuthLogin: ({ accessToken, refreshToken, user }) => {
     if (accessToken) localStorage.setItem('accessToken', accessToken);
     if (refreshToken) localStorage.setItem('refreshToken', refreshToken);

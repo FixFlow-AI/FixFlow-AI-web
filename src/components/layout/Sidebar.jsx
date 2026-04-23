@@ -91,8 +91,12 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, onNavig
 
       <div className="p-4 border-t border-border">
         <div className={cn('flex items-center gap-3 px-3 py-2', isCollapsed && 'justify-center px-0')}>
-          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium shrink-0">
-            {initials}
+          <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium shrink-0 overflow-hidden shadow-sm">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover scale-110" />
+            ) : (
+              initials
+            )}
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
