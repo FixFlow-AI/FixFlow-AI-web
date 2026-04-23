@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -7,6 +7,8 @@ import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import NewProposal from './pages/NewProposal'
 import ProposalResult from './pages/ProposalResult'
+import Settings from './pages/Settings'
+import Help from './pages/Help'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import DashboardLayout from './components/layout/DashboardLayout'
@@ -22,16 +24,43 @@ const queryClient = new QueryClient({
   },
 })
 
+import RouteTransition from './components/layout/RouteTransition'
+
 function AppRoutes() {
   const checkAuth = useAuthStore((s) => s.checkAuth)
+  const completeOAuthLogin = useAuthStore((s) => s.completeOAuthLogin)
+  const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     checkAuth()
   }, [checkAuth])
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const accessToken = params.get('accessToken')
+    const refreshToken = params.get('refreshToken')
+    const encodedUser = params.get('user')
+
+    if (!accessToken || !refreshToken) {
+      return
+    }
+
+    try {
+      const user = encodedUser ? JSON.parse(atob(encodedUser)) : null
+      completeOAuthLogin({ accessToken, refreshToken, user })
+      navigate('/dashboard', { replace: true })
+    } catch {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      navigate('/login', { replace: true })
+    }
+  }, [completeOAuthLogin, location.search, navigate])
+
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
+    <RouteTransition>
+      <AnimatePresence mode="wait">
+        <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -65,8 +94,29 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Help />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </AnimatePresence>
+    </RouteTransition>
   )
 }
 

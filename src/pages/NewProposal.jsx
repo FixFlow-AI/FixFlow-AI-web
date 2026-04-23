@@ -1,32 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import BriefInput from '@/components/proposal/BriefInput'
 import FileUpload from '@/components/proposal/FileUpload'
+import StreamingDisplay from '@/components/proposal/StreamingDisplay'
+import { useStreamingProposal } from '@/hooks/useStreamingProposal'
 
 function NewProposal() {
   const navigate = useNavigate()
   const [briefText, setBriefText] = useState('')
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [fileKey, setFileKey] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const { generate, parsedSections, isGenerating, error, proposalId, resetStream } = useStreamingProposal()
 
-  const canSubmit = briefText.trim().length > 50 || selectedFile !== null
+  const canSubmit = briefText.trim().length > 50 || fileKey !== null
+
+  useEffect(() => {
+    if (!error) return
+    toast.error(error)
+  }, [error])
+
+  useEffect(() => {
+    if (!proposalId) return
+    navigate(`/proposal/${proposalId}`)
+  }, [navigate, proposalId])
+
+  useEffect(() => () => resetStream(), [resetStream])
 
   const handleGenerate = async () => {
-    setIsGenerating(true)
-    
-    // Simulate AI processing
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Navigate to result page
-    navigate('/proposal/prop-001')
+    await generate(briefText, fileKey)
   }
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -41,7 +50,6 @@ function NewProposal() {
         </p>
       </motion.div>
 
-      {/* Form */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -49,20 +57,23 @@ function NewProposal() {
         className="glass-card rounded-2xl p-8 space-y-8"
       >
         <BriefInput value={briefText} onChange={setBriefText} />
-        
+
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px bg-border" />
           <span className="text-sm text-muted-foreground">or</span>
           <div className="flex-1 h-px bg-border" />
         </div>
-        
-        <FileUpload selectedFile={selectedFile} onFileSelect={setSelectedFile} />
 
-        {/* Submit Button */}
+        <FileUpload
+          onFileUploaded={({ fileKey: nextFileKey }) => setFileKey(nextFileKey)}
+          onFileRemoved={() => setFileKey(null)}
+          onUploadingChange={setIsUploading}
+        />
+
         <div className="pt-4">
           <Button
             onClick={handleGenerate}
-            disabled={!canSubmit}
+            disabled={!canSubmit || isUploading || isGenerating}
             isLoading={isGenerating}
             className="w-full h-12 text-base glow-effect"
           >
@@ -75,16 +86,37 @@ function NewProposal() {
               </>
             )}
           </Button>
-          
+
           {!canSubmit && (
             <p className="text-xs text-muted-foreground text-center mt-3">
               Please enter at least 50 characters or upload a file to continue
             </p>
           )}
+
+          {isUploading && (
+            <p className="text-xs text-muted-foreground text-center mt-3">
+              Uploading your document before generation starts.
+            </p>
+          )}
         </div>
       </motion.div>
 
-      {/* Tips */}
+      {(isGenerating || Object.keys(parsedSections).length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8 space-y-4"
+        >
+          <div>
+            <h2 className="text-xl font-semibold">Live Proposal Preview</h2>
+            <p className="text-sm text-muted-foreground">
+              Sections will appear as the model streams them in.
+            </p>
+          </div>
+          <StreamingDisplay parsedSections={parsedSections} isGenerating={isGenerating} />
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

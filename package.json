@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "npm run build && npm --prefix backend test",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@react-three/drei": "^9.106.0",
@@ -15,6 +19,7 @@
     "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",
+    "jsondiffpatch": "^0.7.3",
     "lucide-react": "^0.396.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,6 +30,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",

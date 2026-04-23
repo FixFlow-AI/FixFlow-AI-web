@@ -28,3 +28,25 @@ next-env.d.ts
 setup-guide.md
 remaining.md
 deploy
+backend\OAUTH_SETUP.md
+TEST_SCENARIOS.md
+
+# Vite build output & temporary files
+/dist
+dist-ssr
+*.local
+vite.config.js.timestamp-*.mjs
+
+# Deployment archives
+deploy.zip
+*.zip
+*.tar.gz
+
+# Internal Reference & Requirements
+/reference/
+requirements.md
+
+# Testing artifacts
+/playwright-report/
+test-results/
+scripts

@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: mongodb://localhost:27017/proplytics-ci
+      JWT_SECRET: 1234567890abcdef1234567890abcdef
+      JWT_REFRESH_SECRET: abcdef1234567890abcdef1234567890
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Run backend unit tests
+        run: npm --prefix backend test
+
+      - name: Build frontend
+        run: npm run build

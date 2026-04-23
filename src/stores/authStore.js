@@ -7,6 +7,17 @@ const useAuthStore = create((set, get) => ({
   isLoading: true,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  updateUser: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
+  completeOAuthLogin: ({ accessToken, refreshToken, user }) => {
+    if (accessToken) localStorage.setItem('accessToken', accessToken);
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+
+    set({
+      user: user || null,
+      isAuthenticated: !!accessToken,
+      isLoading: false,
+    });
+  },
 
   register: async ({ email, password, name }) => {
     const { data } = await api.post('/auth/register', { email, password, name });
@@ -22,6 +33,15 @@ const useAuthStore = create((set, get) => ({
     localStorage.setItem('refreshToken', data.refreshToken);
     set({ user: data.user, isAuthenticated: true });
     return data;
+  },
+
+  startGithubLogin: async () => {
+    const { data } = await api.get('/auth/github/url');
+    if (!data?.authUrl) {
+      throw new Error('GitHub login is not available right now.');
+    }
+
+    window.location.href = data.authUrl;
   },
 
   logout: async () => {

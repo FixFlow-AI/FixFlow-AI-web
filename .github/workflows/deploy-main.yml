@@ -1,0 +1,182 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: mongodb://localhost:27017/proplytics-ci
+      JWT_SECRET: 1234567890abcdef1234567890abcdef
+      JWT_REFRESH_SECRET: abcdef1234567890abcdef1234567890
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm --prefix backend ci
+
+      - name: Run backend tests
+        run: npm --prefix backend test
+
+      - name: Build frontend
+        run: npm run build
+
+  deploy-backend:
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      backend_url: ${{ steps.backend-url.outputs.backend_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        run: |
+          docker build -t "${{ secrets.ECR_REPOSITORY }}:latest" ./backend
+          docker push "${{ secrets.ECR_REPOSITORY }}:latest"
+
+      - name: Force ECS service redeployment
+        run: |
+          aws ecs update-service \
+            --cluster proplytics-cluster \
+            --service proplytics-backend-service \
+            --force-new-deployment \
+            --region "${{ secrets.AWS_REGION }}"
+
+      - name: Wait for ECS service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster proplytics-cluster \
+            --services proplytics-backend-service \
+            --region "${{ secrets.AWS_REGION }}"
+
+      - name: Resolve backend URL
+        id: backend-url
+        run: |
+          BACKEND_CF_ID="E292TEOARMEG6N"
+          BACKEND_CF_DOMAIN="d6opkcrsagj0v.cloudfront.net"
+
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster proplytics-cluster \
+            --service-name proplytics-backend-service \
+            --desired-status RUNNING \
+            --region "${{ secrets.AWS_REGION }}" \
+            --query 'taskArns[0]' \
+            --output text)
+
+          ENI_ID=$(aws ecs describe-tasks \
+            --cluster proplytics-cluster \
+            --tasks "$TASK_ARN" \
+            --region "${{ secrets.AWS_REGION }}" \
+            --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value | [0]" \
+            --output text)
+
+          PUBLIC_DNS=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids "$ENI_ID" \
+            --region "${{ secrets.AWS_REGION }}" \
+            --query 'NetworkInterfaces[0].Association.PublicDnsName' \
+            --output text)
+
+          CF_CONFIG=$(aws cloudfront get-distribution-config --id "$BACKEND_CF_ID")
+          ETAG=$(echo "$CF_CONFIG" | jq -r '.ETag')
+          echo "$CF_CONFIG" \
+            | jq --arg origin "$PUBLIC_DNS" '.DistributionConfig.Origins.Items[0].DomainName = $origin | .DistributionConfig' \
+            > cloudfront-config.json
+
+          aws cloudfront update-distribution \
+            --id "$BACKEND_CF_ID" \
+            --if-match "$ETAG" \
+            --distribution-config file://cloudfront-config.json >/dev/null
+
+          aws cloudfront wait distribution-deployed --id "$BACKEND_CF_ID"
+
+          echo "backend_url=https://$BACKEND_CF_DOMAIN/api" >> "$GITHUB_OUTPUT"
+
+  deploy-frontend:
+    needs:
+      - verify
+      - deploy-backend
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_URL: ${{ needs.deploy-backend.outputs.backend_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update Amplify branch environment variables
+        run: |
+          aws amplify update-branch \
+            --app-id d22glq95zibf1w \
+            --branch-name main \
+            --environment-variables "VITE_API_URL=${{ needs.deploy-backend.outputs.backend_url }}"
+
+      - name: Package build output
+        run: |
+          cd dist
+          zip -r ../deploy.zip .
+
+      - name: Create Amplify deployment
+        id: amplify
+        run: |
+          read -r JOB_ID UPLOAD_URL <<< "$(aws amplify create-deployment --app-id d22glq95zibf1w --branch-name main --query '[jobId,zipUploadUrl]' --output text)"
+          echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
+          echo "upload_url=$UPLOAD_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact to Amplify
+        run: |
+          curl -X PUT \
+            --upload-file deploy.zip \
+            -H "Content-Type: application/zip" \
+            "${{ steps.amplify.outputs.upload_url }}"
+
+      - name: Start Amplify deployment
+        run: |
+          aws amplify start-deployment \
+            --app-id d22glq95zibf1w \
+            --branch-name main \
+            --job-id "${{ steps.amplify.outputs.job_id }}"

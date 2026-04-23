@@ -132,7 +132,7 @@ Most AI proposal tools fail because they generate generic text. We do the opposi
     ║           ▼                                       ║
     ║  ┌─────────────────┐                              ║
     ║  │  Streaming LLM   │  ← SSE pipe: Node → API GW  ║
-    ║  │  (Anthropic/OAI) │    → React progressive render║
+    ║  │    (Gemini)      │    → React progressive render║
     ║  └────────┬─────────┘                             ║
     ║           │                                       ║
     ║           ▼                                       ║
@@ -233,7 +233,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
            ▼                    ▼                       ▼
 ┌──────────────────┐ ┌──────────────────┐ ┌─────────────────────────────┐
 │ MONGODB ATLAS    │ │ AWS S3           │ │ LLM API                     │
-│ (Auth + Index)   │ │ (Versioned)      │ │ (Anthropic / OpenAI)        │
+│ (Auth + Index)   │ │ (Versioned)      │ │ (Google Gemini)             │
 │                  │ │                  │ │                             │
 │ • Users + JWT    │ │ • Brief uploads  │ │ • Streaming JSON            │
 │ • Proposal index │ │ • Proposal JSON  │ │ • Temp 0.2–0.4             │
@@ -282,7 +282,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 | | | | |
 | **Backend Runtime** | Node.js | — | API handlers + LLM client |
 | **File Parsing** | pdf-parse / mammoth | — | PDF/DOCX → clean text extraction |
-| **LLM Provider** | Anthropic / OpenAI | — | Streaming JSON proposal generation |
+| **LLM Provider** | Google Gemini | — | Streaming JSON proposal generation |
 | **Schema Validation** | Zod | — | Enforce LLM output structure |
 | **PDF Engine** | Puppeteer | — | Headless Chrome → pixel-accurate PDF |
 | | | | |
