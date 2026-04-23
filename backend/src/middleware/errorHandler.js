@@ -2,6 +2,14 @@ const { AppError } = require('../utils/errors');
 const { env } = require('../config/env');
 
 function errorHandler(err, _req, res, _next) {
+  // CORS origin rejections
+  if (typeof err?.message === 'string' && err.message.startsWith('Not allowed by CORS')) {
+    if (env.NODE_ENV !== 'production') {
+      console.warn(`CORS rejection: ${err.message}`);
+    }
+    return res.status(403).json({ error: 'Not allowed by CORS' });
+  }
+
   // Zod validation errors
   if (err.name === 'ZodError') {
     const messages = err.issues.map((issue) => ({
