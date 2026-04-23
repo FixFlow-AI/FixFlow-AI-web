@@ -43,7 +43,7 @@ deploy.zip
 *.tar.gz
 
 # Internal Reference & Requirements
-/reference/
+
 requirements.md
 
 # Testing artifacts
