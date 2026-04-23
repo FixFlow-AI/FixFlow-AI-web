@@ -3,6 +3,27 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import api from '@/config/api'
 
+function getFilenameFromDisposition(disposition, fallback) {
+  const match = disposition?.match(/filename="?([^"]+)"?/i)
+  return match?.[1] || fallback
+}
+
+async function getExportErrorMessage(error) {
+  const data = error.response?.data
+
+  if (data instanceof Blob) {
+    const text = await data.text()
+
+    try {
+      return JSON.parse(text).error || 'Export failed.'
+    } catch {
+      return text || 'Export failed.'
+    }
+  }
+
+  return data?.error || 'Export failed.'
+}
+
 export default function ExportModal({ proposalId, onClose }) {
   const [format, setFormat] = useState('pdf')
   const [isDownloading, setIsDownloading] = useState(false)
@@ -19,14 +40,21 @@ export default function ExportModal({ proposalId, onClose }) {
 
       const url = window.URL.createObjectURL(response.data)
       const anchor = document.createElement('a')
+      const filename = getFilenameFromDisposition(
+        response.headers['content-disposition'],
+        `proposal.${format}`
+      )
+
       anchor.href = url
-      anchor.download = `proposal.${format}`
+      anchor.download = filename
+      document.body.appendChild(anchor)
       anchor.click()
-      window.URL.revokeObjectURL(url)
+      anchor.remove()
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 0)
       toast.success(`Proposal exported as ${format.toUpperCase()}.`)
       onClose()
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Export failed.')
+      toast.error(await getExportErrorMessage(error))
     } finally {
       setIsDownloading(false)
     }

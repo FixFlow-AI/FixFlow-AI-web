@@ -11,8 +11,11 @@ WORKDIR /app
 # Copy dependency manifests first (cache optimization)
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --omit=dev
+# Install production dependencies only.
+# `npm ci` is ideal when the lockfile is perfectly reproducible, but the current
+# dependency tree includes optional peer resolution that breaks clean installs in
+# the container. `npm install` keeps the image build reliable for ECS deploys.
+RUN npm install --omit=dev --no-audit --no-fund
 
 # Copy source code
 COPY src/ ./src/

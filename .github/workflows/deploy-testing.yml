@@ -1,9 +1,9 @@
-name: Deploy
+name: Deploy Testing
 
 on:
   push:
     branches:
-      - main
+      - testing
 
 jobs:
   verify:
@@ -58,14 +58,24 @@ jobs:
 
       - name: Build and push backend image
         run: |
-          docker build -t "${{ secrets.ECR_REPOSITORY }}:latest" ./backend
-          docker push "${{ secrets.ECR_REPOSITORY }}:latest"
+          docker build -t "${{ secrets.ECR_REPOSITORY }}:testing" ./backend
+          docker push "${{ secrets.ECR_REPOSITORY }}:testing"
 
-      - name: Force ECS service redeployment
+      - name: Update ECS task definition with testing image
         run: |
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition proplytics-backend --query taskDefinition)
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          NEW_TASK_DEF=$(echo $NEW_TASK_DEF | jq '.containerDefinitions[0].image = "${{ secrets.ECR_REPOSITORY }}:testing"')
+          
+          echo $NEW_TASK_DEF > new-task-def.json
+          
+          NEW_TASK_INFO=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json)
+          NEW_TASK_REVISION=$(echo $NEW_TASK_INFO | jq -r '.taskDefinition.revision')
+          
           aws ecs update-service \
             --cluster proplytics-cluster \
             --service proplytics-backend-service \
+            --task-definition proplytics-backend:$NEW_TASK_REVISION \
             --force-new-deployment \
             --region "${{ secrets.AWS_REGION }}"
 
@@ -152,7 +162,7 @@ jobs:
         run: |
           aws amplify update-branch \
             --app-id d22glq95zibf1w \
-            --branch-name main \
+            --branch-name testing \
             --environment-variables "VITE_API_URL=${{ needs.deploy-backend.outputs.backend_url }}"
 
       - name: Package build output
@@ -163,7 +173,7 @@ jobs:
       - name: Create Amplify deployment
         id: amplify
         run: |
-          read -r JOB_ID UPLOAD_URL <<< "$(aws amplify create-deployment --app-id d22glq95zibf1w --branch-name main --query '[jobId,zipUploadUrl]' --output text)"
+          read -r JOB_ID UPLOAD_URL <<< "$(aws amplify create-deployment --app-id d22glq95zibf1w --branch-name testing --query '[jobId,zipUploadUrl]' --output text)"
           echo "job_id=$JOB_ID" >> "$GITHUB_OUTPUT"
           echo "upload_url=$UPLOAD_URL" >> "$GITHUB_OUTPUT"
 
@@ -178,5 +188,5 @@ jobs:
         run: |
           aws amplify start-deployment \
             --app-id d22glq95zibf1w \
-            --branch-name main \
+            --branch-name testing \
             --job-id "${{ steps.amplify.outputs.job_id }}"

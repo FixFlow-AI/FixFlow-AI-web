@@ -136,23 +136,33 @@ function buildHTMLTemplate(data) {
 }
 
 async function generatePDF(proposalData) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  let browser;
 
   try {
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath: env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
     const page = await browser.newPage();
     await page.setContent(buildHTMLTemplate(proposalData), { waitUntil: 'networkidle0' });
 
-    return page.pdf({
+    const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: { top: '20mm', right: '16mm', bottom: '20mm', left: '16mm' },
     });
+
+    return pdfBuffer;
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close().catch((error) => {
+        if (env.NODE_ENV !== 'production') {
+          console.warn('PDF browser cleanup failed:', error.message);
+        }
+      });
+    }
   }
 }
 
