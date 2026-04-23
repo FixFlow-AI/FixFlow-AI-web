@@ -25,6 +25,9 @@ const QUOTA_ERROR_PATTERNS = [
   /quota/i,
   /resource exhausted/i,
   /too many requests/i,
+  /service unavailable/i,
+  /high demand/i,
+  /overloaded/i,
 ];
 
 const MODEL_ERROR_PATTERNS = [
@@ -80,7 +83,7 @@ function isGeminiQuotaError(error) {
   const status = getErrorStatus(error);
   const message = getErrorMessage(error);
 
-  return status === 429 || matchesAny(QUOTA_ERROR_PATTERNS, message);
+  return [429, 500, 503].includes(status) || matchesAny(QUOTA_ERROR_PATTERNS, message);
 }
 
 function isGeminiModelError(error) {

@@ -151,9 +151,20 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
       sendEvent('complete', { proposalId, version: nextVersion });
     } catch (error) {
+      let friendlyMessage = error.message;
+      try {
+        const match = error.message.match(/\{.*\}/s);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          friendlyMessage = parsed.error?.message || parsed.message || friendlyMessage;
+        }
+      } catch (e) {
+        // Ignore parse errors and keep original
+      }
+
       proposalRecord.set({
         status: 'failed',
-        generationError: error.message,
+        generationError: friendlyMessage,
       });
       await proposalRecord.save();
 
@@ -162,11 +173,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
           event: 'LLM_ERROR',
           proposalId,
           userId: req.user.userId,
-          error: error.message,
+          error: friendlyMessage,
         })
       );
 
-      sendEvent('error', { message: error.message });
+      sendEvent('error', { message: friendlyMessage });
     } finally {
       clearInterval(keepAlive);
       res.end();
