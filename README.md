@@ -549,12 +549,12 @@ npm run preview
 | ✅ Done | Risk matrix + effort estimator UI | Released |
 | ✅ Done | Timeline / roadmap phase view | Released |
 | ✅ Done | Section skeleton loaders | Released |
-| 🚧 Next | Node.js backend + LLM integration | In Progress |
-| 🚧 Next | SSE streaming + partial JSON parser | In Progress |
-| 🚧 Next | JWT authentication flow | In Progress |
-| 📅 Planned | AWS deployment (Lambda + ECS + S3) | Q2 2026 |
-| 📅 Planned | PDF export via Puppeteer | Q2 2026 |
-| 📅 Planned | Revision history with S3 versioning | Q3 2026 |
+| ✅ Done | Node.js backend + LLM integration | In Progress |
+| ✅ Done | SSE streaming + partial JSON parser | In Progress |
+| ✅ Done | JWT authentication flow | In Progress |
+| ✅ Done | AWS deployment (Lambda + ECS + S3) | Q2 2026 |
+| ✅ Done | PDF export via Puppeteer | Q2 2026 |
+| ✅ Done | Revision history with S3 versioning | Q3 2026 |
 | 📅 Planned | Client email delivery (SES) | Q3 2026 |
 | 💡 Future | Team workspaces + shared proposals | Q4 2026 |
 | 💡 Future | Custom brand template builder | Q4 2026 |
