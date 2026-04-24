@@ -27,7 +27,10 @@ async function buildWorkspaceDetails(workspace) {
   }
 
   const memberIds = workspace.members.map((member) => member.userId);
-  const users = await User.find({ _id: { $in: memberIds } }).lean();
+  const inviteActorIds = (workspace.invitePending || [])
+    .flatMap((invite) => [invite.inviterId, invite.acceptedBy])
+    .filter(Boolean);
+  const users = await User.find({ _id: { $in: [...new Set([...memberIds, ...inviteActorIds].map((id) => id.toString()))] } }).lean();
   const userMap = new Map(users.map((user) => [user._id.toString(), user]));
 
   return {
@@ -41,6 +44,26 @@ async function buildWorkspaceDetails(workspace) {
       email: userMap.get(member.userId.toString())?.email || '',
       avatar: userMap.get(member.userId.toString())?.avatar || '',
     })),
+    invites: [...(workspace.invitePending || [])]
+      .sort((left, right) => new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime())
+      .map((invite) => ({
+        inviteId: invite.inviteId,
+        email: invite.email,
+        role: invite.role,
+        status: invite.status || 'pending',
+        createdAt: invite.createdAt || null,
+        expiresAt: invite.expiresAt || null,
+        acceptedAt: invite.acceptedAt || null,
+        inviterId: invite.inviterId ? invite.inviterId.toString() : null,
+        inviterName: userMap.get(invite.inviterId?.toString())?.name || invite.inviterName || 'Workspace owner',
+        acceptedBy: invite.acceptedBy
+          ? {
+              userId: invite.acceptedBy.toString(),
+              name: userMap.get(invite.acceptedBy.toString())?.name || 'Workspace member',
+              email: userMap.get(invite.acceptedBy.toString())?.email || invite.email,
+            }
+          : null,
+      })),
   };
 }
 
@@ -118,7 +141,11 @@ router.post('/current/invites', authMiddleware, async (req, res, next) => {
     }
     const { workspace: scopedWorkspace } = await assertWorkspaceMembership(req.user.userId, workspace._id, ['owner', 'editor']);
     const result = await inviteToWorkspace({ workspace: scopedWorkspace, inviter: user, email: payload.email, role: payload.role });
-    res.status(201).json(result);
+    res.status(201).json({
+      ...result,
+      workspace: buildWorkspaceSummary(scopedWorkspace, req.user.userId),
+      fullWorkspace: await buildWorkspaceDetails(scopedWorkspace),
+    });
   } catch (error) {
     next(error);
   }

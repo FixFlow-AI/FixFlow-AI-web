@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import InviteModal from '@/components/workspace/InviteModal'
 import MemberList from '@/components/workspace/MemberList'
+import InviteHistoryList from '@/components/workspace/InviteHistoryList'
 import api from '@/config/api'
 
 export default function WorkspaceSettings() {
@@ -45,6 +46,16 @@ export default function WorkspaceSettings() {
         <h2 className="text-xl font-semibold">Members</h2>
         <div className="mt-5">
           <MemberList members={fullWorkspace?.members || []} canManage={currentWorkspace?.currentUserRole === 'owner'} onRemove={handleRemove} />
+        </div>
+      </div>
+
+      <div className="glass-card rounded-[28px] p-6">
+        <h2 className="text-xl font-semibold">Invitations</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Track every invite by email, role, status, and timestamp.
+        </p>
+        <div className="mt-5">
+          <InviteHistoryList invites={fullWorkspace?.invites || []} />
         </div>
       </div>
 

@@ -30,6 +30,7 @@ function buildWorkspaceSummary(workspace, currentUserId = null) {
     plan: normalizePlan(workspace.plan),
     ownerId: workspace.ownerId.toString(),
     memberCount: workspace.members.length,
+    pendingInviteCount: (workspace.invitePending || []).filter((invite) => invite.status === 'pending').length,
     currentUserRole: member?.role || null,
     capabilities: getWorkspaceCapabilities(workspace.plan),
   };
@@ -127,6 +128,13 @@ function hashInviteToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken).digest('hex');
 }
 
+function getPendingInviteByEmail(workspace, email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  return (workspace.invitePending || []).find(
+    (entry) => entry.email === normalizedEmail && entry.status === 'pending'
+  );
+}
+
 async function inviteToWorkspace({ workspace, inviter, email, role }) {
   const capabilities = getWorkspaceCapabilities(workspace.plan);
 
@@ -145,18 +153,31 @@ async function inviteToWorkspace({ workspace, inviter, email, role }) {
   }
 
   const rawToken = createInviteToken();
-  const invite = {
+  const inviteFields = {
     email: normalizedEmail,
     role,
     tokenHash: hashInviteToken(rawToken),
     inviterId: inviter._id,
     inviterName: inviter.name,
+    createdAt: new Date(),
     expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+    status: 'pending',
+    acceptedAt: null,
+    acceptedBy: null,
   };
 
-  workspace.invitePending = (workspace.invitePending || []).filter((entry) => entry.email !== normalizedEmail);
-  workspace.invitePending.push(invite);
+  const existingPendingInvite = getPendingInviteByEmail(workspace, normalizedEmail);
+  if (existingPendingInvite) {
+    Object.assign(existingPendingInvite, inviteFields);
+  } else {
+    workspace.invitePending.push({
+      inviteId: crypto.randomUUID(),
+      ...inviteFields,
+    });
+  }
   await workspace.save();
+
+  const savedInvite = getPendingInviteByEmail(workspace, normalizedEmail);
 
   const mailResult = await sendWorkspaceInviteEmail({
     to: normalizedEmail,
@@ -168,9 +189,12 @@ async function inviteToWorkspace({ workspace, inviter, email, role }) {
 
   return {
     invite: {
+      inviteId: savedInvite?.inviteId || '',
       email: normalizedEmail,
       role,
-      expiresAt: invite.expiresAt,
+      status: 'pending',
+      createdAt: savedInvite?.createdAt || inviteFields.createdAt,
+      expiresAt: savedInvite?.expiresAt || inviteFields.expiresAt,
       joinUrl: mailResult.joinUrl,
       emailDeliverySkipped: mailResult.skipped,
     },
@@ -188,7 +212,9 @@ async function previewInvite(rawToken) {
     throw new NotFoundError('Workspace invite not found or expired');
   }
 
-  const invite = workspace.invitePending.find((entry) => entry.tokenHash === hashInviteToken(rawToken));
+  const invite = workspace.invitePending.find(
+    (entry) => entry.tokenHash === hashInviteToken(rawToken) && entry.status === 'pending'
+  );
   if (!invite || invite.expiresAt.getTime() < Date.now()) {
     throw new NotFoundError('Workspace invite not found or expired');
   }
@@ -209,7 +235,9 @@ async function acceptInvite({ user, rawToken }) {
   }
 
   const tokenHash = hashInviteToken(rawToken);
-  const invite = workspace.invitePending.find((entry) => entry.tokenHash === tokenHash);
+  const invite = workspace.invitePending.find(
+    (entry) => entry.tokenHash === tokenHash && entry.status === 'pending'
+  );
   if (!invite || invite.expiresAt.getTime() < Date.now()) {
     throw new NotFoundError('Workspace invite not found or expired');
   }
@@ -232,7 +260,9 @@ async function acceptInvite({ user, rawToken }) {
     });
   }
 
-  workspace.invitePending = workspace.invitePending.filter((entry) => entry.tokenHash !== tokenHash);
+  invite.status = 'accepted';
+  invite.acceptedAt = new Date();
+  invite.acceptedBy = user._id;
   await workspace.save();
 
   user.currentWorkspaceId = workspace._id;
