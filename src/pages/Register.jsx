@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { UserPlus, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -9,8 +9,11 @@ import toast from 'react-hot-toast';
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const register = useAuthStore((s) => s.register);
 
+  const [entryMode, setEntryMode] = useState(searchParams.get('mode') === 'team' ? 'team' : 'individual');
+  const [plan, setPlan] = useState(searchParams.get('plan') || 'free');
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,9 +46,16 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      await register({ name: form.name, email: form.email, password: form.password });
+      await register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        plan,
+        defaultEntryMode: entryMode,
+        teamPlanPreference: entryMode === 'team' ? plan : 'free',
+      });
       toast.success('Account created!');
-      navigate('/dashboard');
+      navigate(entryMode === 'team' ? '/workspace' : '/dashboard');
     } catch (err) {
       const message = err.response?.data?.error || 'Registration failed. Please try again.';
       toast.error(message);
@@ -76,6 +86,41 @@ export default function Register() {
 
         {/* Form */}
         <div className="glass-card rounded-2xl p-6">
+          <div className="mb-5 flex rounded-full border border-border bg-background/35 p-1">
+            {['individual', 'team'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setEntryMode(mode)}
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  entryMode === mode ? 'bg-primary text-[#03131d]' : 'text-muted-foreground'
+                }`}
+              >
+                {mode === 'individual' ? 'Individual' : 'Team'}
+              </button>
+            ))}
+          </div>
+
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            {[
+              { value: 'free', label: 'Free', price: '$0' },
+              { value: 'standard', label: 'Standard', price: '$10' },
+              { value: 'pro', label: 'Pro', price: '$25' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setPlan(option.value)}
+                className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                  plan === option.value ? 'border-primary bg-primary/10' : 'border-border bg-background/30'
+                }`}
+              >
+                <div className="text-sm font-medium">{option.label}</div>
+                <div className="mt-2 text-2xl font-semibold">{option.price}</div>
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">
@@ -165,7 +210,7 @@ export default function Register() {
         {/* Footer */}
         <p className="text-center text-sm text-muted-foreground mt-6">
           Already have an account?{' '}
-          <Link to="/login" className="text-primary hover:underline font-medium">
+          <Link to={`/login?mode=${entryMode}`} className="text-primary hover:underline font-medium">
             Sign in
           </Link>
         </p>

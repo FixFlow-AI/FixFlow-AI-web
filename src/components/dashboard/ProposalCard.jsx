@@ -83,6 +83,11 @@ function ProposalCard({ proposal, index }) {
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <StatusSelector value={dealStatus} onChange={handleDealStatusChange} isLoading={isUpdating} compact />
+          {proposal.strategy && proposal.strategy !== 'standard' ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              {proposal.strategy}
+            </div>
+          ) : null}
           {proposal.briefScore?.overallScore ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
               <Gauge className="h-3.5 w-3.5 text-primary" />

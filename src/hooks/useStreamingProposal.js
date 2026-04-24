@@ -16,7 +16,7 @@ export function useStreamingProposal() {
   const resetStream = useProposalStore((state) => state.resetStream)
 
   const generate = useCallback(
-    async (briefText, fileKey = null, existingProposalId = null, briefScore = null) => {
+    async (briefText, fileKey = null, existingProposalId = null, briefScore = null, options = {}) => {
       startStream()
 
       const accessToken = localStorage.getItem('accessToken')
@@ -36,6 +36,10 @@ export function useStreamingProposal() {
             fileKey,
             proposalId: existingProposalId,
             briefScore,
+            calibrationContext: options.calibrationContext || '',
+            strategy: options.strategy || 'standard',
+            tripId: options.tripId || null,
+            workspaceId: options.workspaceId || null,
           }),
         })
 

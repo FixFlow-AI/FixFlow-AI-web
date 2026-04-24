@@ -16,6 +16,7 @@ const AVATARS = [
 
 export default function Settings() {
   const user = useAuthStore((s) => s.user);
+  const currentWorkspace = useAuthStore((s) => s.currentWorkspace);
   const updateUser = useAuthStore((s) => s.updateUser);
   
   const [name, setName] = useState(user?.name || '');
@@ -71,6 +72,24 @@ export default function Settings() {
                 />
               </motion.button>
             ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Plan & Mode</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-border bg-background/35 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Personal Plan</div>
+              <div className="mt-2 text-xl font-semibold capitalize">{user?.plan || 'free'}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-background/35 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Default Mode</div>
+              <div className="mt-2 text-xl font-semibold capitalize">{user?.defaultEntryMode || 'individual'}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-background/35 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Current Workspace</div>
+              <div className="mt-2 text-xl font-semibold">{currentWorkspace?.name || 'None yet'}</div>
+            </div>
           </div>
         </div>
 

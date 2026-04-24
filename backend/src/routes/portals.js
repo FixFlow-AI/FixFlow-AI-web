@@ -8,7 +8,8 @@ const {
 } = require('../models/schemas');
 const { getPortalForProposal, upsertPortal } = require('../services/portal/portalService');
 const { generateOutcome, sendOutcomeEmail } = require('../services/proposal/outcomeService');
-const { getOwnedProposal } = require('../services/proposal/proposalAccess');
+const { getEditableProposal } = require('../services/proposal/proposalAccess');
+const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.post('/:id/portal', authMiddleware, async (req, res, next) => {
 router.patch('/:id/deal-status', authMiddleware, async (req, res, next) => {
   try {
     const payload = dealStatusSchema.parse(req.body);
-    const proposal = await getOwnedProposal(req.user.userId, req.params.id);
+    const proposal = await getEditableProposal(req.user.userId, req.params.id);
 
     proposal.dealStatus = payload.dealStatus;
     proposal.dealStatusUpdatedAt = new Date();
@@ -53,6 +54,7 @@ router.patch('/:id/deal-status', authMiddleware, async (req, res, next) => {
     }
 
     await proposal.save();
+    await refreshAgencyPatternsForProposal(proposal).catch(() => null);
 
     res.json({
       success: true,

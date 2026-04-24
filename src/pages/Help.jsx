@@ -8,6 +8,18 @@ const FAQS = [
     answer: 'The dashboard gives you a high-level overview of all your recent proposals. You can see their statuses, recent activity, and jump quickly into editing any existing proposal by clicking on it.'
   },
   {
+    question: 'What is Agency Brain?',
+    answer: 'Agency Brain analyzes your closed proposal history and surfaces reusable calibration insights. When your plan supports it, those insights can be applied before generation so new proposals reflect what has historically worked best for you or your workspace.'
+  },
+  {
+    question: 'What is TriProposal?',
+    answer: 'TriProposal generates Lean, Standard, and Premium strategies in parallel from the same brief. You can compare them side by side and share selected strategies together in one portal when your plan includes that capability.'
+  },
+  {
+    question: 'How does Team Workspace work?',
+    answer: 'Team Workspace adds a shared proposal area with members, roles, comments, and presence. Owners and editors can generate, export, and share, while viewers stay read-only but can still participate in review through comments.'
+  },
+  {
     question: 'How can I create a New Proposal?',
     answer: 'Navigate to "New Proposal" from the sidebar. You can paste your client brief or upload a document to get started. Our AI will analyze the requirements and structure a comprehensive proposal based on your input.'
   },

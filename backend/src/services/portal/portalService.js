@@ -1,10 +1,12 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const Portal = require('../../models/Portal');
+const Workspace = require('../../models/Workspace');
 const { env } = require('../../config/env');
 const { AppError, BadRequestError, NotFoundError, UnauthorizedError } = require('../../utils/errors');
 const {
-  getOwnedProposal,
+  getEditableProposal,
+  getProposalAccessContext,
   getProposalById,
   getProposalJSONForRecord,
   getProposalOwner,
@@ -30,7 +32,11 @@ function sanitizePortal(portal) {
   }
 
   return {
+    portalType: portal.portalType || 'single',
     proposalId: portal.proposalId,
+    tripId: portal.tripId || '',
+    proposalIds: portal.proposalIds || (portal.proposalId ? [portal.proposalId] : []),
+    strategySelection: portal.strategySelection || [],
     shareToken: portal.shareToken,
     shareUrl: buildShareUrl(portal.shareToken),
     expiryAt: portal.expiryAt,
@@ -55,20 +61,23 @@ function assertPortalActive(portal) {
 }
 
 async function getPortalForProposal(userId, proposalId) {
-  await getOwnedProposal(userId, proposalId);
-  const portal = await Portal.findOne({ proposalId, userId }).lean();
+  await getEditableProposal(userId, proposalId);
+  const portal = await Portal.findOne({ proposalId, portalType: 'single' }).lean();
   return sanitizePortal(portal);
 }
 
 async function upsertPortal({ userId, proposalId, expiryDays, pinEnabled, pin }) {
-  await getOwnedProposal(userId, proposalId);
+  const { proposal } = await getProposalAccessContext(userId, proposalId);
 
-  let portal = await Portal.findOne({ proposalId, userId });
+  let portal = await Portal.findOne({ proposalId, portalType: 'single' });
 
   if (!portal) {
     portal = new Portal({
       proposalId,
-      userId,
+      userId: proposal.userId,
+      workspaceId: proposal.workspaceId || null,
+      portalType: 'single',
+      proposalIds: [proposalId],
       shareToken: crypto.randomUUID(),
       sectionMetrics: createSectionMetrics(),
     });
@@ -99,13 +108,37 @@ async function getPortalByToken(shareToken) {
 
 async function getPortalPublicMeta(shareToken) {
   const portal = await getPortalByToken(shareToken);
+  if (portal.portalType === 'bundle') {
+    const proposals = await Promise.all((portal.proposalIds || []).map((proposalId) => getProposalById(proposalId)));
+    const primary = proposals[0];
+    const owner = primary ? await getProposalOwner(primary.userId) : null;
+    const workspace = primary?.workspaceId ? await Workspace.findById(primary.workspaceId).lean() : null;
+
+    return {
+      shareToken: portal.shareToken,
+      portalType: 'bundle',
+      proposalTitle: primary?.title || 'Proposal bundle',
+      agencyName: workspace?.name || owner?.name || 'Proplytics',
+      bundleStrategies: proposals.map((proposal) => ({
+        proposalId: proposal.proposalId,
+        title: proposal.title,
+        strategy: proposal.strategy || 'standard',
+      })),
+      requiresPin: Boolean(portal.pinHash),
+      expiryAt: portal.expiryAt,
+      createdAt: portal.createdAt,
+    };
+  }
+
   const proposal = await getProposalById(portal.proposalId);
   const owner = await getProposalOwner(proposal.userId);
+  const workspace = proposal.workspaceId ? await Workspace.findById(proposal.workspaceId).lean() : null;
 
   return {
     shareToken: portal.shareToken,
+    portalType: 'single',
     proposalTitle: proposal.title,
-    agencyName: owner.name,
+    agencyName: workspace?.name || owner.name,
     requiresPin: Boolean(portal.pinHash),
     expiryAt: portal.expiryAt,
     createdAt: portal.createdAt,
@@ -123,15 +156,41 @@ async function verifyPortalAccess(shareToken, pin) {
     }
   }
 
-  const proposal = await getProposalById(portal.proposalId);
-  const owner = await getProposalOwner(proposal.userId);
-  const proposalJSON = await getProposalJSONForRecord(proposal);
-
   const now = new Date();
   portal.viewCount += 1;
   portal.lastViewedAt = now;
   portal.firstViewedAt = portal.firstViewedAt || now;
   await portal.save();
+
+  if (portal.portalType === 'bundle') {
+    const proposals = await Promise.all(
+      (portal.proposalIds || []).map(async (proposalId) => {
+        const proposal = await getProposalById(proposalId);
+        const proposalJSON = await getProposalJSONForRecord(proposal);
+        const owner = await getProposalOwner(proposal.userId);
+        return {
+          proposalId: proposal.proposalId,
+          title: proposal.title,
+          strategy: proposal.strategy || 'standard',
+          data: proposalJSON,
+          projectSummary: proposal.projectSummary,
+          agencyName: owner.name,
+          generatedAt: proposal.createdAt,
+        };
+      })
+    );
+
+    return {
+      portal: sanitizePortal(portal.toObject()),
+      bundle: {
+        proposals: proposals.sort((a, b) => (portal.strategySelection || []).indexOf(a.strategy) - (portal.strategySelection || []).indexOf(b.strategy)),
+      },
+    };
+  }
+
+  const proposal = await getProposalById(portal.proposalId);
+  const owner = await getProposalOwner(proposal.userId);
+  const proposalJSON = await getProposalJSONForRecord(proposal);
 
   return {
     portal: sanitizePortal(portal.toObject()),
@@ -164,7 +223,7 @@ async function recordPortalEvents(shareToken, events) {
 
 async function submitPortalFeedback(shareToken, message) {
   const portal = await getPortalByToken(shareToken);
-  const proposal = await getProposalById(portal.proposalId);
+  const proposal = await getProposalById(portal.proposalId || portal.proposalIds?.[0]);
   const owner = await getProposalOwner(proposal.userId);
   const entry = {
     message,
@@ -196,6 +255,50 @@ async function submitPortalFeedback(shareToken, message) {
   };
 }
 
+async function upsertBundlePortal({
+  userId,
+  tripId,
+  proposalIds,
+  strategySelection,
+  expiryDays,
+  pinEnabled,
+  pin,
+  workspaceId = null,
+}) {
+  let portal = await Portal.findOne({ tripId, portalType: 'bundle' });
+
+  if (!portal) {
+    portal = new Portal({
+      portalType: 'bundle',
+      tripId,
+      userId,
+      workspaceId,
+      proposalIds,
+      strategySelection,
+      shareToken: crypto.randomUUID(),
+      sectionMetrics: createSectionMetrics(),
+    });
+  }
+
+  portal.proposalIds = proposalIds;
+  portal.strategySelection = strategySelection;
+  portal.expiryAt = expiryDays === 0 ? null : new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
+
+  if (pinEnabled) {
+    if (pin) {
+      portal.pinHash = await bcrypt.hash(pin, 10);
+    } else if (!portal.pinHash) {
+      throw new BadRequestError('PIN is required the first time you enable portal protection.');
+    }
+  } else {
+    portal.pinHash = '';
+  }
+
+  await portal.save();
+
+  return sanitizePortal(portal.toObject());
+}
+
 module.exports = {
   PORTAL_SECTION_KEYS,
   buildShareUrl,
@@ -206,4 +309,5 @@ module.exports = {
   verifyPortalAccess,
   recordPortalEvents,
   submitPortalFeedback,
+  upsertBundlePortal,
 };

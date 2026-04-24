@@ -15,6 +15,11 @@ const proposalChatRoutes = require('./routes/proposalChat');
 const portalRoutes = require('./routes/portals');
 const publicPortalRoutes = require('./routes/publicPortal');
 const analyticsRoutes = require('./routes/analytics');
+const agencyBrainRoutes = require('./routes/agencyBrain');
+const workspaceRoutes = require('./routes/workspaces');
+const proposalCommentsRoutes = require('./routes/proposalComments');
+const proposalPresenceRoutes = require('./routes/proposalPresence');
+const tripRoutes = require('./routes/trips');
 
 const app = express();
 
@@ -41,9 +46,14 @@ app.use('/api/brief', briefScoreRoutes);
 app.use('/api/generate', generateRoutes);
 app.use('/api/proposals', proposalRoutes);
 app.use('/api/proposals', portalRoutes);
+app.use('/api/proposals', proposalCommentsRoutes);
+app.use('/api/proposals', proposalPresenceRoutes);
 app.use('/api/proposal', proposalChatRoutes);
 app.use('/api/portal', publicPortalRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/agency-brain', agencyBrainRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/trips', tripRoutes);
 
 // 404 handler
 app.use((_req, res) => {

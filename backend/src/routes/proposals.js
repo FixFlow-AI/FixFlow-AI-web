@@ -10,18 +10,18 @@ const s3Service = require('../services/storage/s3');
 const { generatePDF } = require('../services/export/pdfExport');
 const { buildMarkdownExport, sanitizeDownloadName } = require('../services/export/formatters');
 const { NotFoundError } = require('../utils/errors');
+const {
+  getProposalAccessContext,
+  getEditableProposal,
+  getProposalJSONForRecord,
+  listAccessibleProposals,
+} = require('../services/proposal/proposalAccess');
 
 const router = express.Router();
 const diffPatcher = createJsonDiffPatch();
 
 async function getOwnedProposal(userId, proposalId) {
-  const proposal = await Proposal.findOne({ proposalId, userId });
-
-  if (!proposal) {
-    throw new NotFoundError('Proposal not found');
-  }
-
-  return proposal;
+  return getEditableProposal(userId, proposalId);
 }
 
 function getVersionNumber(proposal, requestedVersion) {
@@ -42,18 +42,16 @@ router.get('/', authMiddleware, async (req, res, next) => {
   try {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
     const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
-    const skip = (page - 1) * limit;
+    const scope = req.query.scope === 'workspace' ? 'workspace' : 'personal';
 
-    const [proposals, total] = await Promise.all([
-      Proposal.find({ userId: req.user.userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Proposal.countDocuments({ userId: req.user.userId }),
-    ]);
+    const { proposals, total, workspace } = await listAccessibleProposals(req.user.userId, {
+      scope,
+      workspaceId: req.query.workspaceId || null,
+      page,
+      limit,
+    });
 
-    res.json({ proposals, total, page, limit });
+    res.json({ proposals, total, page, limit, workspace });
   } catch (error) {
     next(error);
   }
@@ -61,13 +59,13 @@ router.get('/', authMiddleware, async (req, res, next) => {
 
 router.get('/:id/versions', authMiddleware, async (req, res, next) => {
   try {
-    const proposal = await getOwnedProposal(req.user.userId, req.params.id);
+    const { proposal } = await getProposalAccessContext(req.user.userId, req.params.id);
 
     const versions = Array.from({ length: proposal.versionCount }, (_, index) => {
       const version = index + 1;
       return {
         version,
-        s3Key: s3Service.makeProposalKey(req.user.userId, proposal.proposalId, version),
+        s3Key: s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version),
         createdAt: proposal.updatedAt,
       };
     });
@@ -80,14 +78,14 @@ router.get('/:id/versions', authMiddleware, async (req, res, next) => {
 
 router.get('/:id/versions/compare', authMiddleware, async (req, res, next) => {
   try {
-    const proposal = await getOwnedProposal(req.user.userId, req.params.id);
+    const { proposal } = await getProposalAccessContext(req.user.userId, req.params.id);
     const { from, to } = versionCompareSchema.parse(req.query);
     const fromVersion = getVersionNumber(proposal, from);
     const toVersion = getVersionNumber(proposal, to);
 
     const [fromData, toData] = await Promise.all([
-      s3Service.getProposalJSON(s3Service.makeProposalKey(req.user.userId, proposal.proposalId, fromVersion)),
-      s3Service.getProposalJSON(s3Service.makeProposalKey(req.user.userId, proposal.proposalId, toVersion)),
+      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, fromVersion)),
+      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, toVersion)),
     ]);
 
     const diff = diffPatcher.diff(fromData, toData) || {};
@@ -99,13 +97,22 @@ router.get('/:id/versions/compare', authMiddleware, async (req, res, next) => {
 
 router.get('/:id/versions/:version', authMiddleware, async (req, res, next) => {
   try {
-    const proposal = await getOwnedProposal(req.user.userId, req.params.id);
+    const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
     const version = getVersionNumber(proposal, req.params.version);
-    const s3Key = s3Service.makeProposalKey(req.user.userId, proposal.proposalId, version);
+    const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
     const data = await s3Service.getProposalJSON(s3Key);
 
     res.json({
       ...proposal.toObject(),
+      accessRole: role,
+      workspace: workspace
+        ? {
+            id: workspace._id.toString(),
+            name: workspace.name,
+            slug: workspace.slug,
+            plan: workspace.plan,
+          }
+        : null,
       requestedVersion: version,
       data,
     });
@@ -119,7 +126,7 @@ router.post('/:id/export', authMiddleware, async (req, res, next) => {
     const proposal = await getOwnedProposal(req.user.userId, req.params.id);
     const { format } = proposalExportSchema.parse(req.body);
     const version = getVersionNumber(proposal, req.query.version || proposal.versionCount);
-    const s3Key = s3Service.makeProposalKey(req.user.userId, proposal.proposalId, version);
+    const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
     const proposalData = await s3Service.getProposalJSON(s3Key);
     const fileName = `${sanitizeDownloadName(proposal.title)}-v${version}`;
 
@@ -149,15 +156,39 @@ router.post('/:id/export', authMiddleware, async (req, res, next) => {
 
 router.get('/:id', authMiddleware, async (req, res, next) => {
   try {
-    const proposal = await getOwnedProposal(req.user.userId, req.params.id);
+    const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
 
     if (!proposal.s3Key) {
-      res.json({ ...proposal.toObject(), data: null });
+      res.json({
+        ...proposal.toObject(),
+        accessRole: role,
+        workspace: workspace
+          ? {
+              id: workspace._id.toString(),
+              name: workspace.name,
+              slug: workspace.slug,
+              plan: workspace.plan,
+            }
+          : null,
+        data: null,
+      });
       return;
     }
 
-    const data = await s3Service.getProposalJSON(proposal.s3Key);
-    res.json({ ...proposal.toObject(), data });
+    const data = await getProposalJSONForRecord(proposal);
+    res.json({
+      ...proposal.toObject(),
+      accessRole: role,
+      workspace: workspace
+        ? {
+            id: workspace._id.toString(),
+            name: workspace.name,
+            slug: workspace.slug,
+            plan: workspace.plan,
+          }
+        : null,
+      data,
+    });
   } catch (error) {
     next(error);
   }
@@ -166,7 +197,7 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
 router.delete('/:id', authMiddleware, async (req, res, next) => {
   try {
     const proposal = await getOwnedProposal(req.user.userId, req.params.id);
-    await s3Service.deleteProposalVersions(req.user.userId, proposal.proposalId, proposal.versionCount);
+    await s3Service.deleteProposalVersions(proposal.userId, proposal.proposalId, proposal.versionCount);
     await proposal.deleteOne();
     res.json({ success: true });
   } catch (error) {

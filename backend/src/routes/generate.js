@@ -6,6 +6,7 @@ const {
   uploadUrlSchema,
 } = require('../models/schemas');
 const Proposal = require('../models/Proposal');
+const User = require('../models/User');
 const { buildPrompt } = require('../services/llm/promptBuilder');
 const { streamProposal } = require('../services/llm/client');
 const { validateAndRepair } = require('../services/llm/jsonValidator');
@@ -15,6 +16,12 @@ const {
   assertSufficientBriefLength,
 } = require('../services/brief/briefHydrationService');
 const s3Service = require('../services/storage/s3');
+const { buildBriefSignals, buildBriefSnapshot } = require('../services/agencyBrain/briefSignalService');
+const { getPersonalCapabilities, getWorkspaceCapabilities, assertCapability } = require('../services/capabilities/capabilityService');
+const { assertWorkspaceMembership } = require('../services/workspace/workspaceService');
+const { upsertTripProposal } = require('../services/trips/tripService');
+const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
+const { getEditableProposal } = require('../services/proposal/proposalAccess');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
@@ -33,28 +40,54 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
   try {
     const payload = proposalGenerateSchema.parse(req.body);
+    const currentUser = await User.findById(req.user.userId);
+    if (!currentUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    let workspaceContext = null;
+    if (payload.workspaceId) {
+      workspaceContext = await assertWorkspaceMembership(req.user.userId, payload.workspaceId, ['owner', 'editor']);
+    }
+
+    if (payload.calibrationContext) {
+      const capabilities = workspaceContext
+        ? getWorkspaceCapabilities(workspaceContext.workspace.plan)
+        : getPersonalCapabilities(currentUser.plan);
+      assertCapability(
+        capabilities.agencyBrain,
+        'Your current plan does not include Agency Brain calibration.'
+      );
+    }
+
+    if (payload.strategy !== 'standard') {
+      const capabilities = workspaceContext
+        ? getWorkspaceCapabilities(workspaceContext.workspace.plan)
+        : getPersonalCapabilities(currentUser.plan);
+      assertCapability(
+        capabilities.triProposal,
+        'Your current plan does not include TriProposal strategy generation.'
+      );
+    }
+
     const inputType = inferInputType(payload);
     const hydratedText = assertSufficientBriefLength(
       await hydrateBriefText(req.user.userId, payload.briefText, payload.fileKey)
     );
+    const briefSnapshot = buildBriefSnapshot(hydratedText);
+    const briefSignals = buildBriefSignals(hydratedText);
 
     let proposalId = payload.proposalId || uuidv4();
     let nextVersion = 1;
 
     if (payload.proposalId) {
-      proposalRecord = await Proposal.findOne({
-        proposalId: payload.proposalId,
-        userId: req.user.userId,
-      });
-
-      if (!proposalRecord) {
-        throw new NotFoundError('Proposal not found');
-      }
+      proposalRecord = await getEditableProposal(req.user.userId, payload.proposalId);
 
       nextVersion = proposalRecord.versionCount + 1;
     } else {
       proposalRecord = new Proposal({
         userId: req.user.userId,
+        createdBy: req.user.userId,
         proposalId,
         title: 'Generating proposal...',
         projectSummary: 'Proposal generation in progress.',
@@ -63,6 +96,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
         inputType,
         sourceFileKey: payload.fileKey || '',
         briefScore: payload.briefScore || null,
+        briefSnapshot,
+        briefSignals,
+        strategy: payload.strategy,
+        tripId: payload.tripId || '',
+        workspaceId: workspaceContext?.workspace?._id || null,
       });
       await proposalRecord.save();
     }
@@ -93,10 +131,18 @@ router.post('/', authMiddleware, async (req, res, next) => {
         proposalRecord.inputType = inputType;
         proposalRecord.sourceFileKey = payload.fileKey || proposalRecord.sourceFileKey || '';
         proposalRecord.briefScore = payload.briefScore || proposalRecord.briefScore || null;
+        proposalRecord.briefSnapshot = briefSnapshot || proposalRecord.briefSnapshot || '';
+        proposalRecord.briefSignals = briefSignals || proposalRecord.briefSignals || null;
+        proposalRecord.strategy = payload.strategy || proposalRecord.strategy || 'standard';
+        proposalRecord.tripId = payload.tripId || proposalRecord.tripId || '';
+        proposalRecord.workspaceId = workspaceContext?.workspace?._id || proposalRecord.workspaceId || null;
         await proposalRecord.save();
       }
 
-      const { system, user } = buildPrompt(hydratedText);
+      const { system, user } = buildPrompt(hydratedText, {
+        calibrationContext: payload.calibrationContext,
+        strategy: payload.strategy,
+      });
       let fullBuffer = '';
 
       for await (const chunk of streamProposal(system, user)) {
@@ -123,8 +169,23 @@ router.post('/', authMiddleware, async (req, res, next) => {
         generationError: '',
         sourceFileKey: payload.fileKey || proposalRecord.sourceFileKey || '',
         briefScore: payload.briefScore || proposalRecord.briefScore || null,
+        briefSnapshot,
+        briefSignals,
+        strategy: payload.strategy,
+        tripId: payload.tripId || proposalRecord.tripId || '',
+        workspaceId: workspaceContext?.workspace?._id || proposalRecord.workspaceId || null,
       });
       await proposalRecord.save();
+      await upsertTripProposal({
+        tripId: payload.tripId,
+        userId: req.user.userId,
+        workspaceId: workspaceContext?.workspace?._id || null,
+        proposalId,
+        strategy: payload.strategy,
+        status: 'complete',
+        title: proposalRecord.title,
+      });
+      await refreshAgencyPatternsForProposal(proposalRecord).catch(() => null);
 
       console.log(
         JSON.stringify({
@@ -154,6 +215,15 @@ router.post('/', authMiddleware, async (req, res, next) => {
         generationError: friendlyMessage,
       });
       await proposalRecord.save();
+      await upsertTripProposal({
+        tripId: payload.tripId,
+        userId: req.user.userId,
+        workspaceId: workspaceContext?.workspace?._id || null,
+        proposalId,
+        strategy: payload.strategy,
+        status: 'failed',
+        title: proposalRecord.title,
+      });
 
       console.log(
         JSON.stringify({

@@ -65,7 +65,7 @@ function Navbar() {
                   Sign In
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to="/register?mode=individual&plan=free">
                 <Button size="sm" className="glow-effect">
                   Get Started
                 </Button>
@@ -105,7 +105,7 @@ function Navbar() {
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/register">
+                <Link to="/register?mode=individual&plan=free">
                   <Button size="sm" className="w-full justify-center">
                     Get Started
                   </Button>

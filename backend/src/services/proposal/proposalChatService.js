@@ -5,10 +5,10 @@
  */
 
 const s3Service = require('../storage/s3');
-const Proposal = require('../../models/Proposal');
 const { buildQuestionPrompt } = require('../../prompts/chatSystemPrompt');
 const { buildMutationPrompt } = require('../../prompts/mutationPrompt');
 const { NotFoundError } = require('../../utils/errors');
+const { getProposalAccessContext } = require('./proposalAccess');
 
 const MAX_HISTORY_TURNS = 6;
 
@@ -20,11 +20,7 @@ const MAX_HISTORY_TURNS = 6;
  * @returns {Promise<{ proposal: Object, proposalJSON: Object }>}
  */
 async function fetchProposalContext(userId, proposalId) {
-  const proposal = await Proposal.findOne({ proposalId, userId });
-
-  if (!proposal) {
-    throw new NotFoundError('Proposal not found');
-  }
+  const { proposal, role } = await getProposalAccessContext(userId, proposalId);
 
   if (!proposal.s3Key) {
     throw new NotFoundError('Proposal data not yet available');
@@ -32,7 +28,7 @@ async function fetchProposalContext(userId, proposalId) {
 
   const proposalJSON = await s3Service.getProposalJSON(proposal.s3Key);
 
-  return { proposal, proposalJSON };
+  return { proposal, proposalJSON, role };
 }
 
 /**

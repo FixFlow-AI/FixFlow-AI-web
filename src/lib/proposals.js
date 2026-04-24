@@ -81,6 +81,13 @@ export function normalizeProposalRecord(record = {}) {
     briefScore: record.briefScore || null,
     wonOutcome: record.wonOutcome || null,
     lostOutcome: record.lostOutcome || null,
+    strategy: record.strategy || 'standard',
+    tripId: record.tripId || '',
+    accessRole: record.accessRole || 'owner',
+    workspace: record.workspace || null,
+    comments: record.comments || [],
+    createdBy: record.createdBy || null,
+    assignedTo: record.assignedTo || null,
     features,
     risks,
     timeline,
@@ -100,4 +107,10 @@ export function summarizeChangedSections(diff = {}) {
   return Object.keys(diff)
     .filter((key) => key !== '_t')
     .map((key) => key.replace(/_/g, ' '))
+}
+
+export function estimateProposalPrice(proposal = {}) {
+  const efforts = Array.isArray(proposal.effort) ? proposal.effort : []
+  const base = efforts.reduce((total, item) => total + Number(item.percentage || 0), 0) || 100
+  return Math.round(base * 120)
 }

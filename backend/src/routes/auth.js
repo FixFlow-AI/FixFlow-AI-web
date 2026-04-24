@@ -15,6 +15,8 @@ const { UnauthorizedError, ConflictError, BadRequestError } = require('../utils/
 const { authMiddleware } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimit');
 const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
+const { getPersonalCapabilities, normalizePlan } = require('../services/capabilities/capabilityService');
+const { buildAuthProfile } = require('../services/auth/profileService');
 
 const router = Router();
 
@@ -179,7 +181,7 @@ async function issueTokensForUser(user) {
   await user.save();
 
   return {
-    user: user.toJSON(),
+    ...(await buildAuthProfile(user)),
     accessToken,
     refreshToken,
   };
@@ -364,6 +366,10 @@ router.post('/register', authLimiter, async (req, res, next) => {
       email: data.email,
       passwordHash: data.password,
       name: data.name,
+      plan: data.plan,
+      teamPlanPreference: data.defaultEntryMode === 'team' ? data.plan : data.teamPlanPreference,
+      defaultEntryMode: data.defaultEntryMode,
+      usageLimit: getPersonalCapabilities(data.plan).usageLimit,
     });
     await user.save();
 
@@ -374,8 +380,10 @@ router.post('/register', authLimiter, async (req, res, next) => {
     user.refreshTokens.push(refreshToken);
     await user.save();
 
+    const profile = await buildAuthProfile(user);
+
     res.status(201).json({
-      user: user.toJSON(),
+      ...profile,
       accessToken,
       refreshToken,
     });
@@ -399,6 +407,16 @@ router.post('/login', authLimiter, async (req, res, next) => {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    if (data.entryMode) {
+      user.defaultEntryMode = data.entryMode;
+    }
+
+    const normalizedPlan = normalizePlan(user.plan);
+    if (user.plan !== normalizedPlan) {
+      user.plan = normalizedPlan;
+    }
+    user.usageLimit = getPersonalCapabilities(user.plan).usageLimit;
+
     const payload = { userId: user._id.toString(), email: user.email };
     const accessToken = signAccessToken(payload);
     const refreshToken = signRefreshToken(payload);
@@ -406,8 +424,10 @@ router.post('/login', authLimiter, async (req, res, next) => {
     user.refreshTokens.push(refreshToken);
     await user.save();
 
+    const profile = await buildAuthProfile(user);
+
     res.json({
-      user: user.toJSON(),
+      ...profile,
       accessToken,
       refreshToken,
     });
@@ -457,7 +477,14 @@ router.get('/me', authMiddleware, async (req, res, next) => {
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
-    res.json({ user: user.toJSON() });
+    if (user.plan === 'enterprise') {
+      user.plan = 'pro';
+      user.usageLimit = getPersonalCapabilities('pro').usageLimit;
+      await user.save();
+    }
+
+    const profile = await buildAuthProfile(user);
+    res.json(profile);
   } catch (err) {
     next(err);
   }

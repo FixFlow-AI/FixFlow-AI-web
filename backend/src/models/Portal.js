@@ -36,8 +36,7 @@ const portalSchema = new mongoose.Schema(
   {
     proposalId: {
       type: String,
-      required: true,
-      unique: true,
+      default: '',
       trim: true,
     },
     userId: {
@@ -45,6 +44,32 @@ const portalSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
       index: true,
+    },
+    workspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      default: null,
+      index: true,
+    },
+    portalType: {
+      type: String,
+      enum: ['single', 'bundle'],
+      default: 'single',
+      index: true,
+    },
+    tripId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
+    proposalIds: {
+      type: [String],
+      default: [],
+    },
+    strategySelection: {
+      type: [String],
+      default: [],
     },
     shareToken: {
       type: String,
@@ -92,6 +117,13 @@ const portalSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-portalSchema.index({ userId: 1, proposalId: 1 });
+portalSchema.index(
+  { userId: 1, proposalId: 1, portalType: 1 },
+  { unique: true, partialFilterExpression: { portalType: 'single', proposalId: { $type: 'string', $ne: '' } } }
+);
+portalSchema.index(
+  { userId: 1, tripId: 1, portalType: 1 },
+  { unique: true, partialFilterExpression: { portalType: 'bundle', tripId: { $type: 'string', $ne: '' } } }
+);
 
 module.exports = mongoose.model('Portal', portalSchema);

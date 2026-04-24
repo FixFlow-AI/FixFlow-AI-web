@@ -1,7 +1,8 @@
 const { verifyAccessToken } = require('../utils/jwt');
+const User = require('../models/User');
 const { UnauthorizedError } = require('../utils/errors');
 
-function authMiddleware(req, _res, next) {
+async function authMiddleware(req, _res, next) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer ')) {
@@ -12,7 +13,21 @@ function authMiddleware(req, _res, next) {
 
   try {
     const decoded = verifyAccessToken(token);
-    req.user = { userId: decoded.userId, email: decoded.email };
+    const user = await User.findById(decoded.userId).lean();
+    if (!user) {
+      return next(new UnauthorizedError('User not found'));
+    }
+
+    req.user = {
+      userId: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar || '',
+      plan: user.plan,
+      teamPlanPreference: user.teamPlanPreference,
+      defaultEntryMode: user.defaultEntryMode,
+      currentWorkspaceId: user.currentWorkspaceId ? user.currentWorkspaceId.toString() : null,
+    };
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

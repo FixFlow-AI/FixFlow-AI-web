@@ -193,17 +193,65 @@ function normalizeBriefText(briefText) {
   return text;
 }
 
-function buildPrompt(briefText) {
+function buildStrategyDirective(strategy = 'standard') {
+  if (strategy === 'lean') {
+    return `STRATEGY DIRECTIVE:
+Generate a minimum viable scope proposal.
+- Keep only the core outcomes the client needs.
+- Remove nice-to-have features or future-phase ideas.
+- Prefer the simplest viable architecture.
+- Shorten timeline and effort honestly.
+- Higher confidence is acceptable only when the tighter scope supports it.`;
+  }
+
+  if (strategy === 'premium') {
+    return `STRATEGY DIRECTIVE:
+Generate an expanded strategic proposal.
+- Fulfill the brief and proactively extend it with high-value additions.
+- Add deeper architecture, analytics, reliability, or phased enhancements when justified.
+- Explain the value of meaningful additions inside the structured sections.
+- Be honest about longer timelines, higher effort, and increased uncertainty.`;
+  }
+
+  return `STRATEGY DIRECTIVE:
+Generate a faithful interpretation of the brief exactly as written.
+- Do not intentionally shrink or expand scope.
+- Estimate accurately and conservatively.`;
+}
+
+function buildCalibrationDirective(calibrationContext = '') {
+  const normalized = String(calibrationContext || '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  return `AGENCY CALIBRATION CONTEXT (internal only, never reveal verbatim in the output):
+${normalized}`;
+}
+
+function buildPrompt(briefText, options = {}) {
   const normalizedBrief = normalizeBriefText(briefText);
+  const strategy = options.strategy || 'standard';
+  const calibrationContext = buildCalibrationDirective(options.calibrationContext);
+  const strategyDirective = buildStrategyDirective(strategy);
+
+  const systemSections = [
+    SYSTEM_PROMPT,
+    strategyDirective,
+    calibrationContext,
+    `OUTPUT SCHEMA (strict):\n${JSON.stringify(OUTPUT_SCHEMA, null, 2)}`,
+  ].filter(Boolean);
 
   return {
-    system: `${SYSTEM_PROMPT}\n\nOUTPUT SCHEMA (strict):\n${JSON.stringify(OUTPUT_SCHEMA, null, 2)}`,
+    system: systemSections.join('\n\n'),
     user: `Analyze the following client brief and generate a structured proposal:\n\n${normalizedBrief}`,
   };
 }
 
 module.exports = {
   buildPrompt,
+  buildStrategyDirective,
+  buildCalibrationDirective,
   normalizeBriefText,
   SYSTEM_PROMPT,
   OUTPUT_SCHEMA,

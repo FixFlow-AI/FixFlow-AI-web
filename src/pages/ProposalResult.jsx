@@ -12,6 +12,7 @@ import {
   Target,
   Clock,
   MessageSquare,
+  Users,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
@@ -36,6 +37,11 @@ import api from '@/config/api'
 import { cn } from '@/lib/utils'
 import { normalizeProposalRecord, summarizeChangedSections, calculateOverallConfidence, calculateEstimatedDuration } from '@/lib/proposals'
 import { useProposalChat } from '@/hooks/useProposalChat'
+import { usePresence } from '@/hooks/usePresence'
+import PresenceStack from '@/components/workspace/PresenceStack'
+import CommentsSidebar from '@/components/comments/CommentsSidebar'
+import CommentMarker from '@/components/comments/CommentMarker'
+import ApprovalBadge from '@/components/comments/ApprovalBadge'
 
 function ProposalResult() {
   const { id } = useParams()
@@ -49,8 +55,10 @@ function ProposalResult() {
   const [isUpdatingDealStatus, setIsUpdatingDealStatus] = useState(false)
   const [dealStatus, setDealStatus] = useState('pending')
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false)
   const [hasOpenedChat, setHasOpenedChat] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+  const [comments, setComments] = useState([])
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024)
@@ -135,6 +143,32 @@ function ProposalResult() {
 
     return patched
   }, [rawProposal, sectionOverrides])
+  const isViewer = proposal?.accessRole === 'viewer'
+  const { viewers } = usePresence(proposal?.proposalId, proposal?.workspace?.id, Boolean(proposal?.workspace?.id))
+
+  useEffect(() => {
+    setComments(proposal?.comments || [])
+  }, [proposal?.comments])
+
+  const unresolvedCommentCounts = useMemo(() => {
+    return comments.reduce((accumulator, comment) => {
+      if (comment.resolved) {
+        return accumulator
+      }
+
+      accumulator[comment.section] = (accumulator[comment.section] || 0) + 1
+      return accumulator
+    }, {})
+  }, [comments])
+
+  const approvedSections = useMemo(() => {
+    return comments.reduce((accumulator, comment) => {
+      if (comment.type === 'approval' && !comment.resolved) {
+        accumulator[comment.section] = true
+      }
+      return accumulator
+    }, {})
+  }, [comments])
 
   const changedSections = useMemo(
     () => summarizeChangedSections(compareQuery.data?.diff),
@@ -210,9 +244,11 @@ function ProposalResult() {
   }, [])
 
   const handleOpenChat = useCallback(() => {
+    if (isViewer) return
+    setIsCommentsOpen(false)
     setIsChatOpen(true)
     setHasOpenedChat(true)
-  }, [])
+  }, [isViewer])
 
   const handleSendChatMessage = useCallback(
     (message, intent, targetSection) => {
@@ -231,6 +267,7 @@ function ProposalResult() {
   }
 
   const handleShare = () => {
+    if (isViewer) return
     setIsShareOpen(true)
   }
 
@@ -314,8 +351,8 @@ function ProposalResult() {
     <div className="flex min-h-screen">
       <motion.div 
         animate={{ 
-          marginRight: isChatOpen && !isMobile ? '400px' : '0px',
-          paddingRight: isChatOpen && !isMobile ? '40px' : '0px'
+          marginRight: (isChatOpen || isCommentsOpen) && !isMobile ? '400px' : '0px',
+          paddingRight: (isChatOpen || isCommentsOpen) && !isMobile ? '40px' : '0px'
         }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
         className="flex-1 max-w-6xl mx-auto w-full"
@@ -345,11 +382,17 @@ function ProposalResult() {
               Generated proposal with AI-powered analysis and export-ready sections
             </motion.p>
             <div className="mt-3 flex flex-wrap gap-3">
-              <StatusSelector value={dealStatus} onChange={handleDealStatusChange} isLoading={isUpdatingDealStatus} />
+              <StatusSelector value={dealStatus} onChange={handleDealStatusChange} isLoading={isUpdatingDealStatus || isViewer} />
               {proposal.briefScore?.overallScore ? (
                 <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/35 px-3 py-1.5 text-xs text-muted-foreground">
                   <Gauge className="h-3.5 w-3.5 text-primary" />
                   BriefScore {proposal.briefScore.overallScore}
+                </div>
+              ) : null}
+              {proposal.workspace ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/35 px-3 py-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 text-primary" />
+                  {proposal.workspace.name}
                 </div>
               ) : null}
             </div>
@@ -361,19 +404,30 @@ function ProposalResult() {
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-3"
         >
-          <Button data-testid="open-share-modal" variant="outline" size="sm" onClick={handleShare} className="h-9">
+          <Button data-testid="open-share-modal" variant="outline" size="sm" onClick={handleShare} className="h-9" disabled={isViewer}>
             <Share2 className="h-4 w-4 mr-2" />
             Share Portal
           </Button>
-          <Button size="sm" className="glow-effect h-10 px-5" onClick={() => setIsExportOpen(true)}>
+          <Button size="sm" className="glow-effect h-10 px-5" onClick={() => setIsExportOpen(true)} disabled={isViewer}>
             <Download className="h-5 w-5 mr-2" />
             <span className="font-semibold">Export PDF</span>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => {
+            setIsChatOpen(false)
+            setIsCommentsOpen(!isCommentsOpen)
+          }} className="h-10 px-5">
+            <MessageSquare className="h-5 w-5 mr-2" />
+            <span className="font-semibold">Comments</span>
           </Button>
           <div className="relative">
             <Button
               size="sm"
               variant={isChatOpen ? "secondary" : "outline"}
-              onClick={() => setIsChatOpen(!isChatOpen)}
+              onClick={() => {
+                setIsCommentsOpen(false)
+                setIsChatOpen(!isChatOpen)
+              }}
+              disabled={isViewer}
               className={cn(
                 "h-10 px-5 border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all relative overflow-visible",
                 isChatOpen && "bg-primary/10 border-primary/50 text-primary"
@@ -398,6 +452,16 @@ function ProposalResult() {
         </motion.div>
       </div>
 
+      {proposal.workspace ? (
+        <div className="mb-6 flex items-center justify-between rounded-2xl border border-border bg-background/30 px-4 py-3">
+          <div>
+            <div className="text-sm font-medium">Live workspace presence</div>
+            <div className="text-xs text-muted-foreground">See who else is reviewing this proposal right now.</div>
+          </div>
+          <PresenceStack viewers={viewers} />
+        </div>
+      ) : null}
+
       <ErrorBoundary>
         <SectionUpdateOverlay
           sectionKey="summary"
@@ -412,7 +476,11 @@ function ProposalResult() {
             animate={{ opacity: 1, y: 0 }}
             className="glass-card rounded-xl p-6 mb-8"
           >
-            <h2 className="font-semibold mb-3">Project Summary</h2>
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="font-semibold">Project Summary</h2>
+              <CommentMarker count={unresolvedCommentCounts.summary || 0} />
+              <ApprovalBadge approved={approvedSections.summary} />
+            </div>
             <p className="text-muted-foreground leading-relaxed">{proposal.project_summary}</p>
           </motion.div>
         </SectionUpdateOverlay>
@@ -469,9 +537,11 @@ function ProposalResult() {
           <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-lg font-semibold mb-4"
+            className="mb-4 flex items-center gap-3 text-lg font-semibold"
           >
-            Feature Analysis
+            <span>Feature Analysis</span>
+            <CommentMarker count={unresolvedCommentCounts.features || 0} />
+            <ApprovalBadge approved={approvedSections.features} />
           </motion.h2>
 
           <ErrorBoundary>
@@ -499,7 +569,11 @@ function ProposalResult() {
           onRevert={() => handleRevertUpdate('risks')}
         >
           <div>
-            <h2 className="text-lg font-semibold mb-4">Risk Assessment</h2>
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Risk Assessment</h2>
+              <CommentMarker count={unresolvedCommentCounts.risks || 0} />
+              <ApprovalBadge approved={approvedSections.risks} />
+            </div>
             <ErrorBoundary>
               <RiskCard risks={proposal.risks} />
             </ErrorBoundary>
@@ -515,7 +589,11 @@ function ProposalResult() {
           onRevert={() => handleRevertUpdate('effort')}
         >
           <div>
-            <h2 className="text-lg font-semibold mb-4">Effort Estimation</h2>
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Effort Estimation</h2>
+              <CommentMarker count={unresolvedCommentCounts.effort || 0} />
+              <ApprovalBadge approved={approvedSections.effort} />
+            </div>
             <ErrorBoundary>
               <EffortCard efforts={proposal.effort} totalDuration={proposal.estimatedDuration} />
             </ErrorBoundary>
@@ -532,7 +610,11 @@ function ProposalResult() {
         onRevert={() => handleRevertUpdate('timeline')}
       >
         <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">Project Timeline</h2>
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-semibold">Project Timeline</h2>
+            <CommentMarker count={unresolvedCommentCounts.timeline || 0} />
+            <ApprovalBadge approved={approvedSections.timeline} />
+          </div>
           <ErrorBoundary>
             <div className="max-w-2xl">
               {proposal.timeline.map((phase, index) => (
@@ -552,7 +634,11 @@ function ProposalResult() {
       {proposal.market.length > 0 && (
         <ErrorBoundary>
           <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">Market Signals</h2>
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Market Signals</h2>
+              <CommentMarker count={unresolvedCommentCounts.market || 0} />
+              <ApprovalBadge approved={approvedSections.market} />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {proposal.market.map((item) => (
                 <div key={item.id} className="glass-card rounded-xl p-5">
@@ -571,7 +657,11 @@ function ProposalResult() {
       {proposal.impact.length > 0 && (
         <ErrorBoundary>
           <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">Business Impact</h2>
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="text-lg font-semibold">Business Impact</h2>
+              <CommentMarker count={unresolvedCommentCounts.impact || 0} />
+              <ApprovalBadge approved={approvedSections.impact} />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {proposal.impact.map((item) => (
                 <div key={item.id} className="glass-card rounded-xl p-5">
@@ -632,30 +722,18 @@ function ProposalResult() {
         <div 
           className={cn(
             "fixed top-[73px] right-0 bottom-0 z-40 transition-all duration-500 ease-in-out",
-            isChatOpen ? "w-[400px] opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full"
+            isChatOpen || isCommentsOpen ? "w-[400px] opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full"
           )}
         >
-          <ProposalChatPane
-            messages={chatMessages}
-            isStreaming={isChatStreaming}
-            currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
-            onSendMessage={handleSendChatMessage}
-            onClose={() => setIsChatOpen(false)}
-            showClose={true}
-          />
-        </div>
-      )}
-
-      {/* Mobile Drawer */}
-      {isMobile && isChatOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsChatOpen(false)} />
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            className="absolute bottom-0 left-0 right-0 h-[80vh] rounded-t-3xl overflow-hidden"
-          >
+          {isCommentsOpen ? (
+            <CommentsSidebar
+              proposalId={proposal.proposalId}
+              comments={comments}
+              canComment
+              onCommentsChange={setComments}
+              onClose={() => setIsCommentsOpen(false)}
+            />
+          ) : (
             <ProposalChatPane
               messages={chatMessages}
               isStreaming={isChatStreaming}
@@ -664,6 +742,41 @@ function ProposalResult() {
               onClose={() => setIsChatOpen(false)}
               showClose={true}
             />
+          )}
+        </div>
+      )}
+
+      {/* Mobile Drawer */}
+      {isMobile && (isChatOpen || isCommentsOpen) && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => {
+            setIsChatOpen(false)
+            setIsCommentsOpen(false)
+          }} />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            className="absolute bottom-0 left-0 right-0 h-[80vh] rounded-t-3xl overflow-hidden"
+          >
+            {isCommentsOpen ? (
+              <CommentsSidebar
+                proposalId={proposal.proposalId}
+                comments={comments}
+                canComment
+                onCommentsChange={setComments}
+                onClose={() => setIsCommentsOpen(false)}
+              />
+            ) : (
+              <ProposalChatPane
+                messages={chatMessages}
+                isStreaming={isChatStreaming}
+                currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
+                onSendMessage={handleSendChatMessage}
+                onClose={() => setIsChatOpen(false)}
+                showClose={true}
+              />
+            )}
           </motion.div>
         </div>
       )}

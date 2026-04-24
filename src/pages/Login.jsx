@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Github, LogIn, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -10,9 +10,11 @@ import api from '@/config/api';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const startGithubLogin = useAuthStore((s) => s.startGithubLogin);
 
+  const [entryMode, setEntryMode] = useState(searchParams.get('mode') === 'team' ? 'team' : 'individual');
   const [form, setForm] = useState({ email: '', password: '' });
   const [forgotForm, setForgotForm] = useState({ email: '', otp: '', newPassword: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -52,9 +54,9 @@ export default function Login() {
 
     setIsLoading(true);
     try {
-      await login(form);
+      await login({ ...form, entryMode });
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      navigate(entryMode === 'team' ? '/workspace' : '/dashboard');
     } catch (err) {
       const message = err.response?.data?.error || 'Login failed. Please try again.';
       if (/invalid email or password/i.test(message)) {
@@ -133,6 +135,21 @@ export default function Login() {
 
         {/* Form */}
         <div className="glass-card rounded-2xl p-6">
+          <div className="mb-5 flex rounded-full border border-border bg-background/35 p-1">
+            {['individual', 'team'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setEntryMode(mode)}
+                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  entryMode === mode ? 'bg-primary text-[#03131d]' : 'text-muted-foreground'
+                }`}
+              >
+                {mode === 'individual' ? 'Individual' : 'Team'}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
@@ -273,9 +290,9 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
+      <p className="text-center text-sm text-muted-foreground mt-6">
           Don't have an account?{' '}
-          <Link to="/register" className="text-primary hover:underline font-medium">
+          <Link to={`/register?mode=${entryMode}`} className="text-primary hover:underline font-medium">
             Create one
           </Link>
         </p>

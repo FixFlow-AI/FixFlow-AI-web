@@ -16,6 +16,7 @@ const { shouldReclassifyAsMutation, classifyIntent } = require('../services/prop
 const { VALID_SECTIONS } = require('../schemas/sectionSchemas');
 const { env } = require('../config/env');
 const { GoogleGenAI } = require('@google/genai');
+const { ForbiddenError } = require('../utils/errors');
 const {
   createGeminiGuard,
   isGeminiAuthError,
@@ -166,10 +167,14 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
     }
 
     // Fetch proposal context
-    const { proposal, proposalJSON } = await fetchProposalContext(
+    const { proposal, proposalJSON, role } = await fetchProposalContext(
       req.user.userId,
       proposalId
     );
+
+    if (intent === 'mutate' && !['owner', 'editor'].includes(role)) {
+      throw new ForbiddenError('Your workspace role does not allow proposal mutations.');
+    }
 
     // Build prompt
     const { system, user } = buildChatPrompt(

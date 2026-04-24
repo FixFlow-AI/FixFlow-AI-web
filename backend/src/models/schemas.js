@@ -11,11 +11,15 @@ const registerSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must not exceed 50 characters'),
+  plan: z.enum(['free', 'standard', 'pro']).optional().default('free'),
+  defaultEntryMode: z.enum(['individual', 'team']).optional().default('individual'),
+  teamPlanPreference: z.enum(['free', 'standard', 'pro']).optional().default('free'),
 });
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  entryMode: z.enum(['individual', 'team']).nullable().optional().default(null),
 });
 
 const refreshSchema = z.object({
@@ -47,6 +51,10 @@ const proposalGenerateSchema = z
     fileKey: z.string().trim().max(1024).nullable().optional().default(null),
     proposalId: z.string().trim().max(128).nullable().optional().default(null),
     briefScore: z.unknown().nullable().optional().default(null),
+    calibrationContext: z.string().trim().max(20000).optional().default(''),
+    strategy: z.enum(['lean', 'standard', 'premium']).optional().default('standard'),
+    tripId: z.string().trim().max(128).nullable().optional().default(null),
+    workspaceId: z.string().trim().max(128).nullable().optional().default(null),
   })
   .refine((data) => data.briefText || data.fileKey, {
     message: 'Provide a brief or upload a file',
@@ -134,6 +142,43 @@ const outcomeSendSchema = z.object({
   emailKey: z.string().trim().min(1).max(32),
 });
 
+const workspaceCreateSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  plan: z.enum(['free', 'standard', 'pro']).optional().default('free'),
+});
+
+const workspaceUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  plan: z.enum(['free', 'standard', 'pro']).optional(),
+  defaultEntryMode: z.enum(['individual', 'team']).optional(),
+});
+
+const workspaceInviteSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  role: z.enum(['editor', 'viewer']),
+});
+
+const proposalCommentCreateSchema = z.object({
+  section: z.enum(['summary', 'features', 'risks', 'timeline', 'effort', 'market', 'impact']),
+  type: z.enum(['review', 'approval', 'question', 'edit_note']).default('review'),
+  body: z.string().trim().min(2).max(5000),
+});
+
+const proposalCommentResolveSchema = z.object({
+  resolved: z.boolean(),
+});
+
+const proposalPresenceSchema = z.object({
+  workspaceId: z.string().trim().max(128).nullable().optional().default(null),
+});
+
+const tripBundlePortalSchema = z.object({
+  proposalIds: z.array(z.string().trim().min(1)).min(1).max(3),
+  expiryDays: z.union([z.literal(0), z.literal(7), z.literal(30)]).default(7),
+  pinEnabled: z.boolean().default(false),
+  pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits').nullable().optional().default(null),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -155,4 +200,11 @@ module.exports = {
   dealStatusSchema,
   outcomeRequestSchema,
   outcomeSendSchema,
+  workspaceCreateSchema,
+  workspaceUpdateSchema,
+  workspaceInviteSchema,
+  proposalCommentCreateSchema,
+  proposalCommentResolveSchema,
+  proposalPresenceSchema,
+  tripBundlePortalSchema,
 };

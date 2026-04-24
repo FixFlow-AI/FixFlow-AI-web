@@ -4,23 +4,23 @@ import { Brain, Shield, Clock, Calculator } from 'lucide-react'
 const features = [
   {
     icon: Brain,
-    title: 'Instant Brief Analysis',
-    description: 'Our AI parses complex client briefs in seconds, extracting key requirements, constraints, and objectives automatically.',
+    title: 'Agency Brain',
+    description: 'Turn your proposal history into a calibration layer that shapes future estimates, stack choices, and risk framing.',
   },
   {
     icon: Shield,
-    title: 'Risk Assessment',
-    description: 'Identify potential technical, operational, and business risks before they become problems with AI-powered analysis.',
+    title: 'TriProposal',
+    description: 'Generate Lean, Standard, and Premium strategies in parallel so every brief becomes a sales conversation, not a single take-it-or-leave-it output.',
   },
   {
     icon: Clock,
-    title: 'Smart Timeline Generation',
-    description: 'Generate realistic project timelines with dependencies, milestones, and buffer periods based on similar projects.',
+    title: 'Team Workspace',
+    description: 'Invite teammates, track who is reviewing live, and keep proposal comments and approvals inside the product.',
   },
   {
     icon: Calculator,
-    title: 'Effort Estimation',
-    description: 'Get accurate effort breakdowns by layer (AI, Backend, Frontend, DevOps) with confidence scores.',
+    title: 'Confidence-Led Delivery',
+    description: 'Keep the original Proplytics strengths: BriefScore, confidence grids, lifecycle tracking, export, and client portals.',
   },
 ]
 
@@ -60,7 +60,7 @@ function FeaturesSection() {
             <span className="text-gradient-primary">Modern Teams</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to transform client conversations into actionable project plans.
+            Proplytics now spans single-user delivery, agency memory, strategic proposal options, and team collaboration.
           </p>
         </motion.div>
 

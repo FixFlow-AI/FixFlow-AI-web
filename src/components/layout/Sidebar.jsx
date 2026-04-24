@@ -5,6 +5,8 @@ import {
   FileText,
   PlusCircle,
   BarChart3,
+  Brain,
+  Users,
   Settings,
   HelpCircle,
   Sparkles,
@@ -15,18 +17,6 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/stores/authStore'
 import { Sheet } from '@/components/ui/Sheet'
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'New Proposal', href: '/new', icon: PlusCircle },
-  { name: 'Proposals', href: '/dashboard', icon: FileText },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-]
-
-const secondaryNav = [
-  { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Help', href: '/help', icon: HelpCircle },
-]
 
 function NavLinks({ items, isCollapsed, location, onNavigate }) {
   return items.map((item) => {
@@ -53,10 +43,24 @@ function NavLinks({ items, isCollapsed, location, onNavigate }) {
   })
 }
 
-function SidebarContent({ isCollapsed, onToggleCollapse, location, user, onNavigate, mobile = false }) {
+function SidebarContent({ isCollapsed, onToggleCollapse, location, user, currentWorkspace, onNavigate, mobile = false }) {
   const initials = user?.name
     ? user.name.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2)
     : '??'
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'New Proposal', href: '/new', icon: PlusCircle },
+    { name: 'Proposals', href: '/dashboard', icon: FileText },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
+    { name: 'Workspace', href: '/workspace', icon: Users },
+  ]
+
+  const secondaryNav = [
+    ...(currentWorkspace ? [{ name: 'Workspace Settings', href: '/workspace/settings', icon: Users }] : []),
+    { name: 'Settings', href: '/settings', icon: Settings },
+    { name: 'Help', href: '/help', icon: HelpCircle },
+  ]
 
   return (
     <>
@@ -116,6 +120,7 @@ function Sidebar({ isMobileOpen, onMobileClose }) {
   const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const user = useAuthStore((state) => state.user)
+  const currentWorkspace = useAuthStore((state) => state.currentWorkspace)
 
   return (
     <>
@@ -130,6 +135,7 @@ function Sidebar({ isMobileOpen, onMobileClose }) {
           onToggleCollapse={() => setIsCollapsed((value) => !value)}
           location={location}
           user={user}
+          currentWorkspace={currentWorkspace}
         />
       </motion.aside>
 
@@ -144,6 +150,7 @@ function Sidebar({ isMobileOpen, onMobileClose }) {
             isCollapsed={false}
             location={location}
             user={user}
+            currentWorkspace={currentWorkspace}
             mobile
             onNavigate={onMobileClose}
           />

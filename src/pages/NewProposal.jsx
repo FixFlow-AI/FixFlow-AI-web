@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight, Gauge } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import BriefInput from '@/components/proposal/BriefInput'
@@ -10,16 +11,45 @@ import StreamingDisplay from '@/components/proposal/StreamingDisplay'
 import { useStreamingProposal } from '@/hooks/useStreamingProposal'
 import { useBriefScore } from '@/hooks/useBriefScore'
 import BriefScorePanel from '@/components/briefScore/BriefScorePanel'
+import CalibrationPanel from '@/components/agencyBrain/CalibrationPanel'
+import StrategyToggle from '@/components/triproposal/StrategyToggle'
+import TriLoadingColumns from '@/components/triproposal/TriLoadingColumns'
+import { useTriGeneration } from '@/hooks/useTriGeneration'
+import useAgencyBrainStore from '@/stores/agencyBrainStore'
+import useAuthStore from '@/stores/authStore'
+import api from '@/config/api'
 
 function NewProposal() {
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const currentWorkspace = useAuthStore((state) => state.currentWorkspace)
   const [briefText, setBriefText] = useState('')
   const [fileKey, setFileKey] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isTriMode, setIsTriMode] = useState(false)
   const { generate, parsedSections, isGenerating, error, proposalId, resetStream } = useStreamingProposal()
+  const triGeneration = useTriGeneration()
   const { briefScore, isLoading: isScoring, error: briefScoreError, canAnalyze, wordCount } = useBriefScore(briefText, fileKey)
+  const hydrateInsights = useAgencyBrainStore((state) => state.hydrateInsights)
+  const buildCalibrationContext = useAgencyBrainStore((state) => state.buildCalibrationContext)
 
   const canSubmit = briefText.trim().length > 50 || fileKey !== null
+  const workspaceId = user?.defaultEntryMode === 'team' ? currentWorkspace?.id || null : null
+  const canUseAgencyBrain = workspaceId ? Boolean(currentWorkspace?.capabilities?.agencyBrain) : Boolean(user?.capabilities?.agencyBrain)
+  const canUseTriProposal = workspaceId ? Boolean(currentWorkspace?.capabilities?.triProposal) : Boolean(user?.capabilities?.triProposal)
+
+  const calibrationQuery = useQuery({
+    queryKey: ['agency-calibration', workspaceId, briefText, fileKey, briefScore?.overallScore],
+    queryFn: () =>
+      api
+        .post('/agency-brain/calibration', {
+          briefText,
+          workspaceId,
+        })
+        .then((response) => response.data),
+    enabled: canUseAgencyBrain && canAnalyze && (briefText.trim().length > 60 || fileKey !== null),
+    retry: 1,
+  })
 
   useEffect(() => {
     if (!error) return
@@ -36,10 +66,33 @@ function NewProposal() {
     navigate(`/proposal/${proposalId}`)
   }, [navigate, proposalId])
 
+  useEffect(() => {
+    hydrateInsights(calibrationQuery.data?.insights || [])
+  }, [calibrationQuery.data, hydrateInsights])
+
   useEffect(() => () => resetStream(), [resetStream])
 
   const handleGenerate = async () => {
-    await generate(briefText, fileKey, null, briefScore)
+    const calibrationContext = canUseAgencyBrain ? buildCalibrationContext(calibrationQuery.data?.insights || []) : ''
+
+    if (isTriMode) {
+      const nextTripId = crypto.randomUUID()
+      await triGeneration.generateAll({
+        briefText,
+        fileKey,
+        briefScore,
+        calibrationContext,
+        workspaceId,
+        nextTripId,
+      })
+      navigate(`/tri/${nextTripId}`)
+      return
+    }
+
+    await generate(briefText, fileKey, null, briefScore, {
+      calibrationContext,
+      workspaceId,
+    })
   }
 
   return (
@@ -89,25 +142,33 @@ function NewProposal() {
             onUploadingChange={setIsUploading}
           />
 
+          {canUseAgencyBrain && (
+            <CalibrationPanel insights={calibrationQuery.data?.insights || []} isLoading={calibrationQuery.isLoading} />
+          )}
+
+          {canUseTriProposal && (
+            <StrategyToggle enabled={isTriMode} onChange={setIsTriMode} disabled={isGenerating || triGeneration.isGenerating} />
+          )}
+
           <div className="pt-4">
             <Button
               data-testid="generate-proposal"
               onClick={handleGenerate}
-              disabled={!canSubmit || isUploading || isGenerating}
-              isLoading={isGenerating}
+              disabled={!canSubmit || isUploading || isGenerating || triGeneration.isGenerating}
+              isLoading={isGenerating || triGeneration.isGenerating}
               variant={briefScore && !briefScore.readyToGenerate ? 'warning' : 'default'}
               className="w-full h-12 text-base glow-effect"
             >
-              {isGenerating ? (
-                'Generating Proposal...'
+              {isGenerating || triGeneration.isGenerating ? (
+                isTriMode ? 'Generating 3 Strategies...' : 'Generating Proposal...'
               ) : briefScore && !briefScore.readyToGenerate ? (
                 <>
-                  Generate Anyway
+                  {isTriMode ? 'Generate 3 Anyway' : 'Generate Anyway'}
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </>
               ) : (
                 <>
-                  Generate Proposal
+                  {isTriMode ? 'Generate 3 Proposals' : 'Generate Proposal'}
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </>
               )}
@@ -177,6 +238,22 @@ function NewProposal() {
           className="mt-8"
         >
           <BriefScorePanel briefScore={briefScore} isLoading={isScoring} />
+        </motion.div>
+      )}
+
+      {triGeneration.isGenerating && (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8 space-y-4"
+        >
+          <div>
+            <h2 className="text-xl font-semibold">TriProposal Preview</h2>
+            <p className="text-sm text-muted-foreground">
+              Lean, Standard, and Premium are streaming in parallel.
+            </p>
+          </div>
+          <TriLoadingColumns strategies={triGeneration.strategies} />
         </motion.div>
       )}
 

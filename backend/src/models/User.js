@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const SALT_ROUNDS = 12;
+const PERSONAL_PLANS = ['free', 'standard', 'pro', 'enterprise'];
+const TEAM_PLANS = ['free', 'standard', 'pro'];
 
 const userSchema = new mongoose.Schema(
   {
@@ -27,10 +29,31 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    avatar: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     plan: {
       type: String,
-      enum: ['free', 'pro', 'enterprise'],
+      enum: PERSONAL_PLANS,
       default: 'free',
+    },
+    teamPlanPreference: {
+      type: String,
+      enum: TEAM_PLANS,
+      default: 'free',
+    },
+    defaultEntryMode: {
+      type: String,
+      enum: ['individual', 'team'],
+      default: 'individual',
+    },
+    currentWorkspaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      default: null,
+      index: true,
     },
     usageCount: {
       type: Number,
@@ -52,6 +75,7 @@ const userSchema = new mongoose.Schema(
         delete ret.passwordHash;
         delete ret.refreshTokens;
         delete ret.__v;
+        ret.plan = ret.plan === 'enterprise' ? 'pro' : ret.plan;
         ret.id = ret._id;
         delete ret._id;
         return ret;

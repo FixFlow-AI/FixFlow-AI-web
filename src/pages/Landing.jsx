@@ -4,6 +4,7 @@ import HeroSection from '@/components/landing/HeroSection'
 import FeaturesSection from '@/components/landing/FeaturesSection'
 import HowItWorks from '@/components/landing/HowItWorks'
 import BenefitsGrid from '@/components/landing/BenefitsGrid'
+import PricingSection from '@/components/landing/PricingSection'
 import Footer from '@/components/landing/Footer'
 
 function Landing() {
@@ -21,6 +22,7 @@ function Landing() {
         <FeaturesSection />
         <HowItWorks />
         <BenefitsGrid />
+        <PricingSection />
       </main>
       <Footer />
     </motion.div>

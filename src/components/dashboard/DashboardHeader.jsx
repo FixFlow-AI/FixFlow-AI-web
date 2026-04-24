@@ -7,7 +7,7 @@ import useAuthStore from '@/stores/authStore'
 
 function DashboardHeader({ onOpenSidebar }) {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const { user, currentWorkspace, logout } = useAuthStore()
 
   function getInitials(name) {
     if (!name) return '??'
@@ -40,6 +40,11 @@ function DashboardHeader({ onOpenSidebar }) {
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search proposals..." className="pl-10 bg-muted/50" />
+          </div>
+          <div className="hidden xl:inline-flex rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
+            {user?.defaultEntryMode === 'team' && currentWorkspace?.name
+              ? `${currentWorkspace.name} · Team Mode`
+              : `${user?.plan || 'free'} · Individual Mode`}
           </div>
         </div>
 

@@ -3,35 +3,47 @@ import api from '../config/api';
 
 const useAuthStore = create((set, get) => ({
   user: null,
+  currentWorkspace: null,
   isAuthenticated: false,
   isLoading: true,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setCurrentWorkspace: (currentWorkspace) => set({ currentWorkspace }),
   updateUser: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
-  completeOAuthLogin: ({ accessToken, refreshToken, user }) => {
+  updateCurrentWorkspace: (updates) =>
+    set((state) => ({ currentWorkspace: state.currentWorkspace ? { ...state.currentWorkspace, ...updates } : null })),
+  completeOAuthLogin: ({ accessToken, refreshToken, user, currentWorkspace = null }) => {
     if (accessToken) localStorage.setItem('accessToken', accessToken);
     if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
 
     set({
       user: user || null,
+      currentWorkspace: currentWorkspace || null,
       isAuthenticated: !!accessToken,
       isLoading: false,
     });
   },
 
-  register: async ({ email, password, name }) => {
-    const { data } = await api.post('/auth/register', { email, password, name });
+  register: async ({ email, password, name, plan = 'free', defaultEntryMode = 'individual', teamPlanPreference = 'free' }) => {
+    const { data } = await api.post('/auth/register', {
+      email,
+      password,
+      name,
+      plan,
+      defaultEntryMode,
+      teamPlanPreference,
+    });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
-    set({ user: data.user, isAuthenticated: true });
+    set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true });
     return data;
   },
 
-  login: async ({ email, password }) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  login: async ({ email, password, entryMode = null }) => {
+    const { data } = await api.post('/auth/login', { email, password, entryMode });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
-    set({ user: data.user, isAuthenticated: true });
+    set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true });
     return data;
   },
 
@@ -53,23 +65,23 @@ const useAuthStore = create((set, get) => ({
     }
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, currentWorkspace: null, isAuthenticated: false });
   },
 
   checkAuth: async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, currentWorkspace: null, isAuthenticated: false, isLoading: false });
       return;
     }
 
     try {
       const { data } = await api.get('/auth/me');
-      set({ user: data.user, isAuthenticated: true, isLoading: false });
+      set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true, isLoading: false });
     } catch {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, currentWorkspace: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));

@@ -26,6 +26,7 @@ export default function ProposalPortal() {
   const { token } = useParams()
   const [meta, setMeta] = useState(null)
   const [portalPayload, setPortalPayload] = useState(null)
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState('')
@@ -47,6 +48,9 @@ export default function ProposalPortal() {
           }).then((payload) => {
             if (!ignore) {
               setPortalPayload(payload)
+              if (payload.bundle?.proposals?.length) {
+                setSelectedStrategyId(payload.bundle.proposals[0].proposalId)
+              }
             }
           })
         }
@@ -70,13 +74,30 @@ export default function ProposalPortal() {
   }, [token])
 
   const proposal = useMemo(() => {
+    if (portalPayload?.bundle?.proposals?.length) {
+      const selected = portalPayload.bundle.proposals.find((item) => item.proposalId === selectedStrategyId)
+        || portalPayload.bundle.proposals[0]
+
+      if (!selected) {
+        return null
+      }
+
+      return normalizeProposalRecord({
+        proposalId: selected.proposalId,
+        title: selected.title,
+        strategy: selected.strategy,
+        projectSummary: selected.projectSummary,
+        data: selected.data,
+      })
+    }
+
     if (!portalPayload?.proposal) return null
     return normalizeProposalRecord({
       title: portalPayload.proposal.title,
       projectSummary: portalPayload.proposal.projectSummary,
       data: portalPayload.proposal.data,
     })
-  }, [portalPayload])
+  }, [portalPayload, selectedStrategyId])
 
   const { registerSectionRef, flushPending } = usePortalTracking(token, Boolean(proposal))
 
@@ -89,6 +110,9 @@ export default function ProposalPortal() {
         body: JSON.stringify({ pin }),
       })
       setPortalPayload(payload)
+      if (payload.bundle?.proposals?.length) {
+        setSelectedStrategyId(payload.bundle.proposals[0].proposalId)
+      }
       toast.success('Portal unlocked.')
     } catch (verifyError) {
       toast.error(verifyError.message || 'PIN verification failed.')
@@ -137,6 +161,26 @@ export default function ProposalPortal() {
           <PinGate onVerify={handleVerify} isLoading={isVerifying} />
         ) : (
           <>
+            {portalPayload?.bundle?.proposals?.length ? (
+              <div className="grid gap-3 rounded-[28px] border border-border bg-card/60 p-5 lg:grid-cols-3">
+                {portalPayload.bundle.proposals.map((item) => (
+                  <button
+                    key={item.proposalId}
+                    type="button"
+                    onClick={() => setSelectedStrategyId(item.proposalId)}
+                    className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
+                      (selectedStrategyId || portalPayload.bundle.proposals[0].proposalId) === item.proposalId
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-background/30'
+                    }`}
+                  >
+                    <div className="text-xs uppercase tracking-[0.2em] text-primary">{item.strategy}</div>
+                    <div className="mt-2 font-medium">{item.title}</div>
+                    <div className="mt-2 text-sm text-muted-foreground">Request this approach if it best matches your goals.</div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <ProposalReadonlyView
               proposal={proposal}
               sectionRefs={{
@@ -149,7 +193,19 @@ export default function ProposalPortal() {
                 impact: registerSectionRef('impact'),
               }}
             />
-            <ClientFeedbackForm onSubmit={handleFeedbackSubmit} />
+            <ClientFeedbackForm
+              onSubmit={handleFeedbackSubmit}
+              initialMessage={
+                portalPayload?.bundle?.proposals?.length
+                  ? `We want to move forward with the ${proposal.strategy} approach because `
+                  : ''
+              }
+              title={
+                portalPayload?.bundle?.proposals?.length
+                  ? 'Request this proposal strategy'
+                  : 'Send feedback directly to the agency'
+              }
+            />
           </>
         )}
       </div>

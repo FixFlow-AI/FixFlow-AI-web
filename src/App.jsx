@@ -14,6 +14,11 @@ const NewProposal = lazy(() => import('./pages/NewProposal'))
 const ProposalResult = lazy(() => import('./pages/ProposalResult'))
 const ProposalPortal = lazy(() => import('./pages/ProposalPortal'))
 const Analytics = lazy(() => import('./pages/Analytics'))
+const AgencyBrain = lazy(() => import('./pages/AgencyBrain'))
+const TriProposal = lazy(() => import('./pages/TriProposal'))
+const Workspace = lazy(() => import('./pages/Workspace'))
+const WorkspaceSettings = lazy(() => import('./pages/WorkspaceSettings'))
+const JoinWorkspace = lazy(() => import('./pages/JoinWorkspace'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
 const Login = lazy(() => import('./pages/Login'))
@@ -70,6 +75,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/p/:token" element={<ProposalPortal />} />
+        <Route path="/join/:token" element={<JoinWorkspace />} />
         <Route
           path="/dashboard"
           element={
@@ -116,6 +122,46 @@ function AppRoutes() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Analytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agency-brain"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <AgencyBrain />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tri/:tripId"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <TriProposal />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspace"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Workspace />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspace/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <WorkspaceSettings />
               </DashboardLayout>
             </ProtectedRoute>
           }

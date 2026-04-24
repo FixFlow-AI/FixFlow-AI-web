@@ -107,47 +107,50 @@ This is not a template filler. Proplytics is a **deterministic analysis pipeline
 
 ### The Core Insight
 
-Most AI proposal tools fail because they generate generic text. We do the opposite: **the LLM extracts structured data, the frontend renders it as an interactive, reviewable proposal.**
+Most AI proposal tools generate long text first and try to structure it later. Proplytics does the reverse: **generate schema-constrained JSON first, then render interactive proposal UI from that structured output.**
 
 <div align="center">
 
 ```
-                    PROPLYTICS PIPELINE
-    ╔═══════════════════════════════════════════════════╗
-    ║                                                   ║
-    ║  Client Brief (Paste or Upload)                   ║
-    ║         │                                         ║
-    ║         ▼                                         ║
-    ║  ┌─────────────────┐                              ║
-    ║  │  Input Ingestion │  ← PDF/DOCX → text via      ║
-    ║  │  + Sanitization  │    pdf-parse / mammoth       ║
-    ║  └────────┬─────────┘                             ║
-    ║           │                                       ║
-    ║           ▼                                       ║
-    ║  ┌─────────────────┐                              ║
-    ║  │  Prompt Builder  │  ← Elite consultant persona  ║
-    ║  │  (Temp: 0.2-0.4) │    JSON-only output enforced ║
-    ║  └────────┬─────────┘                             ║
-    ║           │                                       ║
-    ║           ▼                                       ║
-    ║  ┌─────────────────┐                              ║
-    ║  │  Streaming LLM   │  ← SSE pipe: Node → API GW  ║
-    ║  │    (Gemini)      │    → React progressive render║
-    ║  └────────┬─────────┘                             ║
-    ║           │                                       ║
-    ║           ▼                                       ║
-    ║  ┌─────────────────┐                              ║
-    ║  │  JSON Validation │  ← Zod schema validation     ║
-    ║  │  + Repair Pass   │    fallback re-prompt        ║
-    ║  └────────┬─────────┘                             ║
-    ║           │                                       ║
-    ║           ▼                                       ║
-    ║  ┌─────────────────┐                              ║
-    ║  │  Confidence Grid │  ← Per-feature scoring       ║
-    ║  │  + PDF Export    │    animated UI reveal         ║
-    ║  └─────────────────┘                              ║
-    ║                                                   ║
-    ╚═══════════════════════════════════════════════════╝
+                    PROPLYTICS DELIVERY PIPELINE
+    ╔════════════════════════════════════════════════════════════╗
+    ║                                                            ║
+    ║  Brief Input (Text or PDF/DOCX upload)                    ║
+    ║        │                                                   ║
+    ║        ▼                                                   ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ BriefScore Preflight         │  ← Quality diagnostics   ║
+    ║  │ /api/brief/score             │    + improvement prompts ║
+    ║  └───────────────┬──────────────┘                          ║
+    ║                  │                                           ║
+    ║                  ▼                                           ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ Prompt Builder + JSON Schema │  ← Strict output contract ║
+    ║  └───────────────┬──────────────┘                          ║
+    ║                  │                                           ║
+    ║                  ▼                                           ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ Gemini Stream (/api/generate)│  ← SSE chunks to client   ║
+    ║  └───────────────┬──────────────┘                          ║
+    ║                  │                                           ║
+    ║                  ▼                                           ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ Zod Validation + JSON Repair │  ← Fence strip/extract    ║
+    ║  └───────────────┬──────────────┘                          ║
+    ║                  │                                           ║
+    ║                  ▼                                           ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ Persist + Versioning          │  ← S3 output/{u}/{p}/vN  ║
+    ║  │ + Metadata index              │    + MongoDB metadata     ║
+    ║  └───────────────┬──────────────┘                          ║
+    ║                  │                                           ║
+    ║                  ▼                                           ║
+    ║  ┌──────────────────────────────┐                          ║
+    ║  │ Proposal Workspace            │  ← Chat refine, diff,     ║
+    ║  │ + Export + Share Portal       │    analytics, lifecycle   ║
+    ║  └──────────────────────────────┘                          ║
+    ║                                                            ║
+    ╚════════════════════════════════════════════════════════════╝
 ```
 
 </div>
@@ -158,14 +161,14 @@ Most AI proposal tools fail because they generate generic text. We do the opposi
 
 | | Feature | Confidence | Complexity | What It Means |
 |:---:|:---|:---:|:---:|:---|
-| 🟢 | Brief Ingestion | **High (88%)** | Low | Well-understood, standard parsing |
-| 🟢 | LLM JSON Streaming | **High (82%)** | High | Complex but proven pattern |
-| 🟢 | Confidence Grid UI | **High (85%)** | Medium | Clear requirements, strong design |
-| 🟡 | Partial JSON Parsing | **Medium (58%)** | High | Edge cases in progressive rendering |
-| 🟡 | PDF Export | **Medium (60%)** | Medium | Font embedding + layout accuracy |
-| 🟡 | Revision History Diff | **Medium (55%)** | Medium | S3 versioning integration |
-| 🔴 | Lambda Streaming Timeout | **Low (28%)** | High | 29s limit requires ECS Fargate |
-| 🔴 | JSON Schema Repair | **Low (32%)** | High | LLM occasionally cuts off output |
+| 🟢 | BriefScore preflight | **High (90%)** | Medium | Intake quality is scored before generation starts |
+| 🟢 | LLM JSON streaming | **High (84%)** | High | End-to-end chunk streaming with progressive UI rendering |
+| 🟢 | Confidence Grid UI | **High (86%)** | Medium | Per-feature confidence bars and complexity badges are live |
+| 🟢 | Revision diff engine | **High (80%)** | Medium | Version compare endpoint with structured JSON diff |
+| 🟢 | Multi-format export | **High (78%)** | Medium | PDF, JSON, and Markdown export from stored versions |
+| 🟡 | Section mutation chat | **Medium (66%)** | High | Live negotiation updates with section-level version bumps |
+| 🟡 | Portal telemetry + feedback | **Medium (63%)** | Medium | Share links, PIN gates, dwell/event tracking, feedback capture |
+| 🟡 | Email-dependent workflows | **Medium (58%)** | Medium | OTP reset and outcome sends depend on SMTP configuration |
 
 </div>
 
@@ -177,13 +180,13 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 | Competitor Approach | Proplytics Approach |
 |:---|:---|
-| Template-based fill-in-the-blank | AI extracts features from the client's own brief |
-| Generic effort estimates | Per-feature confidence scoring with complexity |
-| Static document output | Streaming, animated proposal with progressive reveal |
-| No visibility into AI reasoning | Confidence Grid shows exactly what the AI is sure about |
-| PDF-only export | Interactive web view + PDF export |
-| No revision tracking | S3-versioned proposals with diff history |
-| One-size-fits-all output | Every proposal is uniquely structured from the brief |
+| One-shot generation with no intake quality check | BriefScore preflight + improvement prompts before generation |
+| Generic blocks of AI text | Strict schema-constrained JSON from the model |
+| Wait for full response before rendering | Streaming sections appear progressively in the workspace |
+| “Trust us” black-box output | Confidence/complexity surfaced feature-by-feature |
+| No post-generation workflow | In-app negotiate/refine chat with versioned section updates |
+| Single document output | PDF + JSON + Markdown exports from versioned snapshots |
+| No client visibility layer | Secure public portal with PIN/expiry, analytics, and feedback |
 
 </div>
 
@@ -194,52 +197,49 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 <div align="center">
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│                        USER BROWSER                                     │
-│             React 18 + Vite  ·  Amplify Hosting + CloudFront            │
-│                                                                         │
-│   ┌──────────┐   ┌──────────────┐   ┌────────────┐   ┌──────────────┐  │
-│   │ Landing  │   │  Dashboard   │   │   /new     │   │  /proposal   │  │
-│   │  Page    │   │  All Briefs  │   │  AI Gen    │   │   /:id View  │  │
-│   └──────────┘   └──────────────┘   └────────────┘   └──────────────┘  │
-│                                                                         │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │  HTTPS + Bearer JWT
-                                │  POST /generate  GET /proposals  SSE
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    AWS API GATEWAY  (REST + WebSocket)                   │
-│          JWT authorizer  ·  Rate limiting  ·  CORS auto-managed         │
-└───────────────────────────────┬─────────────────────────────────────────┘
-                                │  Lambda Proxy / ECS Fargate
-                                ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                  BACKEND  —  Node.js                                    │
-│          Lambda (short ops) + ECS Fargate (LLM streaming)               │
-│                                                                         │
-│   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────────┐  │
-│   │  /auth/*   │ │ File Parser│ │  Prompt    │ │  LLM Streaming     │  │
-│   │ JWT Auth   │ │ PDF / DOCX │ │  Builder   │ │  Client (SSE)      │  │
-│   └────────────┘ └────────────┘ └────────────┘ └────────────────────┘  │
-│   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────────┐  │
-│   │  JSON      │ │  Proposal  │ │  PDF Export│ │  S3 Upload         │  │
-│   │  Validator │ │  CRUD      │ │  Engine    │ │  Handler           │  │
-│   │  Zod       │ │            │ │  Puppeteer │ │                    │  │
-│   └────────────┘ └────────────┘ └────────────┘ └────────────────────┘  │
-│                                                                         │
-└──────────┬────────────────────┬───────────────────────┬─────────────────┘
-           │                    │                       │
-           ▼                    ▼                       ▼
-┌──────────────────┐ ┌──────────────────┐ ┌─────────────────────────────┐
-│ MONGODB ATLAS    │ │ AWS S3           │ │ LLM API                     │
-│ (Auth + Index)   │ │ (Versioned)      │ │ (Google Gemini)             │
-│                  │ │                  │ │                             │
-│ • Users + JWT    │ │ • Brief uploads  │ │ • Streaming JSON            │
-│ • Proposal index │ │ • Proposal JSON  │ │ • Temp 0.2–0.4             │
-│ • Usage counter  │ │ • versioned:     │ │ • Schema-enforced           │
-│ • Plan / tier    │ │   uid/pid/v1.json│ │ • Confidence scores         │
-└──────────────────┘ └──────────────────┘ └─────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  USER APP                                   │
+│                     React 18 + Vite + Zustand + React Query                 │
+│                                                                              │
+│  /new (brief intake + score)  /proposal/:id (workspace + chat + export)     │
+│  /dashboard (pipeline list)    /analytics (win/loss + confidence insights)   │
+│  /p/:token (public client portal with PIN + tracking + feedback)             │
+└──────────────────────────────────────┬───────────────────────────────────────┘
+                                       │ HTTPS + JWT
+                                       ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         BACKEND API — Express 5                              │
+│                                                                              │
+│  Auth & Access         Intelligence             Proposal Lifecycle            │
+│  • /api/auth/*         • /api/brief/score      • /api/proposals/*            │
+│  • JWT + refresh       • /api/generate (SSE)   • /versions + compare         │
+│  • GitHub OAuth        • prompt + schema guard • export (pdf/json/md)        │
+│  • OTP reset (SMTP)    • json repair pipeline  • outcome (won/lost)          │
+│                                                                              │
+│  Collaboration & Client View                                                  │
+│  • /api/proposal/:id/chat (SSE, mutate sections)                              │
+│  • /api/proposals/:id/portal (share links, PIN, expiry)                       │
+│  • /api/portal/:token/* (public verify/event/feedback)                        │
+│  • /api/analytics/proposals                                                   │
+└───────────────┬────────────────────────────┬─────────────────────────────────┘
+                │                            │
+                ▼                            ▼
+      ┌───────────────────────┐    ┌────────────────────────────┐
+      │ MongoDB Atlas         │    │ AWS S3                     │
+      │ • users/auth tokens   │    │ • briefs/{userId}/...      │
+      │ • proposal metadata   │    │ • output/{userId}/{id}/vN  │
+      │ • deal lifecycle      │    │ • versioned JSON snapshots │
+      │ • portal telemetry    │    │                            │
+      └───────────┬───────────┘    └──────────────┬─────────────┘
+                  │                               │
+                  └──────────────┬────────────────┘
+                                 ▼
+                     ┌──────────────────────────┐
+                     │ Google Gemini via SDK    │
+                     │ • primary + fallback     │
+                     │ • guard on key failures  │
+                     │ • structured JSON stream │
+                     └──────────────────────────┘
 ```
 
 </div>
@@ -250,14 +250,14 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 | Decision | Why We Made It | What It Enables |
 |:---|:---|:---|
-| **React SPA + Zustand** | Lightweight state for streaming buffer + proposals | Progressive JSON reveal without re-renders |
-| **SSE for streaming** | Server-Sent Events pipe LLM chunks to frontend | Cards appear as sections become parseable |
-| **ECS Fargate for /generate** | Lambda's 29s timeout kills LLM streaming | Long-lived connections without timeout |
-| **S3 for proposal storage** | JSON blobs don't belong in MongoDB | Keeps DB lean; storage costs near-zero |
-| **MongoDB for auth only** | User docs + JWT store + proposal index pointers | Horizontal sharding, global replication |
-| **Zod schema validation** | LLMs occasionally malform JSON output | Auto-repair pass or re-prompt on failure |
-| **Partial JSON parser (200ms)** | Users shouldn't wait for full response | Sections render as they become parseable |
-| **Puppeteer PDF export** | Pixel-accurate rendering of React views | Business-grade PDF from the actual UI |
+| **Schema-first generation** | Unstructured responses are hard to validate safely | Deterministic rendering + safer downstream automation |
+| **SSE over fetch stream parsing** | Need token-by-token updates for long responses | Live section reveal and better perceived performance |
+| **S3 versioned proposal blobs** | Full proposal payloads are document-like | Cheap immutable versions + compare/export by version |
+| **MongoDB metadata index** | Fast querying for dashboard and lifecycle status | Pagination, filtering, analytics, portal ownership checks |
+| **Proposal chat section mutator** | Editing one section should not regenerate everything | Targeted updates + automatic version increments |
+| **Portal token + optional PIN model** | Clients need low-friction but controlled access | Public share links with expiry, tracking, and feedback |
+| **Gemini guard + fallback model** | API keys/model availability can fail at runtime | Faster recovery from quota/auth/model issues |
+| **Puppeteer + markdown/json export** | Different stakeholders want different handoff formats | Browser-quality PDF plus machine-readable exports |
 
 </div>
 
@@ -269,30 +269,32 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 | Layer | Technology | Version | Purpose |
 |:---:|:---:|:---:|:---|
-| **Frontend Framework** | React | 18.3 | Component-based UI with hooks |
-| **Language** | JavaScript | ES2022+ | Frontend & backend development |
-| **Build Tool** | Vite | 5.3 | Sub-second HMR, optimized prod bundles |
-| **Routing** | React Router DOM | 6.23 | Client-side SPA navigation |
-| **Animation** | Framer Motion | 11.2 | Page transitions, card animations |
-| **3D Rendering** | Three.js + R3F | 0.165 | Landing page 3D hero element |
-| **State Management** | Zustand (planned) | — | Global: `authUser`, `proposalList` |
-| **Icons** | Lucide React | 0.396 | Consistent, tree-shakable icon set |
-| **Styling** | Tailwind CSS | 3.4 | Utility-first responsive design |
-| **Frontend Hosting** | AWS Amplify | — | Git-based CI/CD + CloudFront CDN |
+| **Frontend Framework** | React | 18.3 | SPA with route-level lazy loading |
+| **Language** | JavaScript | ES2022+ | Shared frontend/backend language |
+| **Build Tool** | Vite | 5.3 | Fast local dev + optimized production bundles |
+| **Routing** | React Router DOM | 6.23 | Protected routes + public portal routes |
+| **Server State** | TanStack React Query | 5.99 | API caching + async state synchronization |
+| **Client State** | Zustand | 5.0 | Auth, streaming proposal buffer/state |
+| **Animation** | Framer Motion | 11.2 | Page transitions + section animations |
+| **3D Rendering** | Three.js + R3F + Drei | 0.165 / 8.16 / 9.106 | Landing hero visuals |
+| **Styling** | Tailwind CSS | 3.4 | Utility-first design system |
+| **Icons / Feedback** | Lucide React + React Hot Toast | 0.396 / 2.6 | Iconography + notifications |
 | | | | |
-| **Backend Runtime** | Node.js | — | API handlers + LLM client |
-| **File Parsing** | pdf-parse / mammoth | — | PDF/DOCX → clean text extraction |
-| **LLM Provider** | Google Gemini | — | Streaming JSON proposal generation |
-| **Schema Validation** | Zod | — | Enforce LLM output structure |
-| **PDF Engine** | Puppeteer | — | Headless Chrome → pixel-accurate PDF |
+| **Backend Runtime** | Node.js + Express | Express 5.2 | API routes, auth, SSE streaming |
+| **Auth & Security** | JWT + bcryptjs + helmet + express-rate-limit | — | Access/refresh auth, hashing, headers, throttling |
+| **Data Layer** | Mongoose + MongoDB Atlas | 9.4 | Users, proposal metadata, portal metrics |
+| **File Parsing** | pdf-parse / mammoth | 2.4 / 1.12 | PDF/DOCX brief extraction |
+| **LLM Provider** | Google Gemini (`@google/genai`) | 1.50 | Structured JSON generation + chat refinement |
+| **Schema Validation** | Zod | 4.3 | Request validation + output contracts |
+| **Diff Engine** | jsondiffpatch | 0.7 | Version comparison for proposal history |
+| **PDF Engine** | Puppeteer | 24.42 | Browser-grade export rendering |
+| **Email Delivery** | Nodemailer (SMTP) | 8.0 | OTP + lifecycle email delivery |
 | | | | |
-| **Cloud Compute** | AWS Lambda + ECS Fargate | — | Short ops + long-lived streaming |
-| **API Layer** | AWS API Gateway | v2 | REST + WebSocket, JWT authorizer |
-| **File Storage** | AWS S3 | — | Brief uploads + versioned proposal JSON |
-| **Primary DB** | MongoDB Atlas | M0+ | Users, auth, proposal index |
-| **Secrets** | AWS Secrets Manager | — | LLM API keys, MongoDB URI — never in env |
-| **CDN** | AWS CloudFront | — | SPA static assets, cached reads |
-| **Monitoring** | AWS CloudWatch | — | LLM latency, error rates, streaming drops |
+| **Object Storage** | AWS S3 + AWS SDK v3 | 3.1034 | Brief uploads + versioned proposal JSON |
+| **Database** | MongoDB Atlas | — | Proposal index + lifecycle/portal analytics |
+| **Frontend Host (optional)** | Vercel / Amplify / static hosting | — | Deploy built SPA |
+| **Backend Host (optional)** | Node runtime / container (Docker present) | — | API deployment flexibility |
+| **Testing** | Node test runner + Playwright | 1.59 (Playwright) | Backend service tests + E2E suite |
 
 </div>
 
@@ -304,19 +306,23 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 | | Feature | Description | Status |
 |:---:|:---|:---|:---:|
-| 📋 | **Brief Input (Paste / Upload)** | Paste raw text or drop PDF/DOCX — auto-extracts clean brief content | ✅ Frontend |
-| 🤖 | **AI Proposal Generation** | One-click: brief → full structured proposal with features, risks, and timeline | 🚧 In Progress |
-| ⚡ | **Streaming Output** | SSE streams LLM response; sections reveal progressively as JSON keys resolve | 🚧 In Progress |
-| 📊 | **Confidence Grid** | Per-feature confidence bars with color-coded accents (High/Medium/Low) | ✅ Frontend |
-| ⏱️ | **Effort Estimator** | AI-generated effort breakdown per layer with week estimates | ✅ Frontend |
-| ⚠️ | **Risk Matrix** | Extracted risks with severity scoring and mitigation strategies | ✅ Frontend |
-| 📅 | **Timeline View** | Phase-gated roadmap with deliverables and gate criteria | ✅ Frontend |
-| 🗂️ | **Proposal Dashboard** | List all generated proposals with status, date, and quick access | ✅ Frontend |
-| 📤 | **PDF Export** | Business-grade PDF rendered from the actual proposal view via Puppeteer | 📅 Planned |
-| 🔄 | **Revision History** | S3-versioned proposals with diff comparison between versions | 📅 Planned |
-| 🔐 | **JWT Authentication** | Secure auth flow with MongoDB-backed user store | 📅 Planned |
-| 📧 | **Email Proposal (SES)** | Send generated proposal PDF directly to the client | 💡 Future |
-| 💳 | **Usage Tiers** | Free / Pro / Enterprise with query limits and team features | 💡 Future |
+| 📋 | **Brief Intake (Paste / Upload)** | Paste text or upload PDF/DOCX/TXT via signed URL flow | ✅ Live |
+| 🧠 | **BriefScore Quality Gate** | Scores scope/technical/timeline/budget/stakeholder/success signal before generation | ✅ Live |
+| 🤖 | **AI Proposal Generation** | Structured proposal JSON generated from brief using strict schema prompts | ✅ Live |
+| ⚡ | **Streaming Output** | SSE stream with progressive section reveal in the UI | ✅ Live |
+| 📊 | **Confidence Grid** | Per-feature confidence %, complexity, and visual confidence styling | ✅ Live |
+| ⏱️ | **Effort + Timeline + Risk Views** | Dedicated cards for effort allocation, phases, and mitigations | ✅ Live |
+| 🗂️ | **Proposal Dashboard** | Proposal listing with lifecycle states (pending / negotiating / won / lost) | ✅ Live |
+| 🔄 | **Revision History + Diff** | Versioned snapshots with side-by-side compare endpoint | ✅ Live |
+| 📤 | **Export (PDF / JSON / Markdown)** | Download proposal artifacts from any stored version | ✅ Live |
+| 🔐 | **Auth Suite (JWT + GitHub OAuth)** | Email/password auth, refresh token rotation, GitHub sign-in | ✅ Live |
+| 🔁 | **Forgot Password with OTP** | Email OTP request + password reset flow | 🟡 SMTP-dependent |
+| 💬 | **Negotiate & Refine Chat** | Proposal Q&A and section-level mutation with automatic new versions | ✅ Live |
+| 🌐 | **Client Share Portal** | Public tokenized portal with optional PIN + expiry windows | ✅ Live |
+| 📈 | **Portal + Outcome Analytics** | Section dwell tracking, feedback capture, win/loss and confidence analytics | ✅ Live |
+| 📧 | **Outcome Email Sending** | Send kickoff or follow-up sequence emails from won/lost flows | 🟡 SMTP-dependent |
+| 👥 | **Team workspaces** | Multi-user collaboration and org-level sharing | 📅 Planned |
+| 💳 | **Usage tiers / billing** | Free/Pro/Agency monetization and enforcement | 💡 Future |
 
 </div>
 
@@ -328,72 +334,67 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 proplytics/
 │
 ├── 📁 src/
-│   ├── App.jsx                        ← React Router + AnimatePresence
-│   ├── main.jsx                       ← App entry point
-│   ├── index.css                      ← Global styles + Tailwind
-│   │
-│   ├── 📁 pages/                      ← Route-level views
-│   │   ├── Landing.jsx                ← Hero + features + CTA
-│   │   ├── Dashboard.jsx              ← All proposals list
-│   │   ├── NewProposal.jsx            ← Brief input + AI generation
-│   │   └── ProposalResult.jsx         ← Full proposal output view
-│   │
+│   ├── App.jsx                         ← Router + auth check + route transitions
+│   ├── main.jsx                        ← React entrypoint
+│   ├── 📁 pages/
+│   │   ├── Landing.jsx                 ← Marketing landing + 3D hero
+│   │   ├── Dashboard.jsx               ← Proposal pipeline overview
+│   │   ├── NewProposal.jsx             ← Brief intake + BriefScore + streaming preview
+│   │   ├── ProposalResult.jsx          ← Full workspace (export/chat/revisions/share)
+│   │   ├── ProposalPortal.jsx          ← Public client portal `/p/:token`
+│   │   ├── Analytics.jsx               ← Outcome + confidence analytics
+│   │   ├── Login.jsx / Register.jsx    ← Auth pages
+│   │   ├── Settings.jsx                ← Theme/profile UI preferences
+│   │   └── Help.jsx                    ← In-app FAQ
 │   ├── 📁 components/
-│   │   ├── 📁 landing/                ← Landing page sections
-│   │   │   ├── HeroSection.jsx        ← Main CTA + tagline
-│   │   │   ├── Hero3DElement.jsx      ← Three.js 3D visual
-│   │   │   ├── FeaturesSection.jsx    ← Feature cards grid
-│   │   │   ├── HowItWorks.jsx         ← Step-by-step flow
-│   │   │   ├── BenefitsGrid.jsx       ← Value proposition grid
-│   │   │   └── Footer.jsx             ← Site footer
-│   │   │
-│   │   ├── 📁 proposal/              ← Proposal output components
-│   │   │   ├── ConfidenceCard.jsx     ← Confidence Grid card
-│   │   │   ├── ConfidenceBar.jsx      ← Animated confidence bar
-│   │   │   ├── InsightCard.jsx        ← AI insight display
-│   │   │   ├── RiskCard.jsx           ← Risk with severity + mitigation
-│   │   │   ├── EffortCard.jsx         ← Effort estimate per layer
-│   │   │   ├── TimelineStep.jsx       ← Phase timeline item
-│   │   │   ├── BriefInput.jsx         ← Text paste input
-│   │   │   ├── FileUpload.jsx         ← PDF/DOCX drag-and-drop
-│   │   │   ├── DetailDrawer.jsx       ← Slide-out detail panel
-│   │   │   └── SectionSkeleton.jsx    ← Loading skeleton for streaming
-│   │   │
-│   │   ├── 📁 dashboard/             ← Dashboard components
-│   │   │   ├── DashboardHeader.jsx    ← Title + actions
-│   │   │   ├── ProposalCard.jsx       ← Proposal list item
-│   │   │   └── EmptyState.jsx         ← No proposals CTA
-│   │   │
-│   │   ├── 📁 layout/                ← App shell
-│   │   │   ├── DashboardLayout.jsx    ← Sidebar + content wrapper
-│   │   │   ├── Navbar.jsx             ← Top navigation bar
-│   │   │   └── Sidebar.jsx            ← Left navigation panel
-│   │   │
-│   │   └── 📁 ui/                    ← Reusable primitives
-│   │       ├── Button.jsx             ← Styled button variants
-│   │       ├── Card.jsx               ← Card container
-│   │       ├── Badge.jsx              ← Status badges
-│   │       ├── Input.jsx              ← Form input
-│   │       ├── Avatar.jsx             ← User avatar
-│   │       ├── Sheet.jsx              ← Slide-over panel
-│   │       └── Skeleton.jsx           ← Loading skeleton
-│   │
-│   └── 📁 lib/                       ← Utilities
-│       ├── mock-data.js              ← Development mock proposals
-│       └── utils.js                  ← Helpers (cn, formatDate, etc.)
+│   │   ├── analytics/                  ← Win-rate and comparison visualizations
+│   │   ├── auth/                       ← Route guards and auth helpers
+│   │   ├── briefScore/                 ← Brief scoring cards and diagnostics
+│   │   ├── dashboard/                  ← Proposal cards + empty states
+│   │   ├── landing/                    ← Hero and marketing sections
+│   │   ├── layout/                     ← Sidebar/navbar shell
+│   │   ├── portal/                     ← Share modal, portal metrics, feedback UI
+│   │   ├── proposal/                   ← Confidence/risk/effort/timeline/export/revision UI
+│   │   ├── proposalChat/               ← Negotiate/refine chat pane + update overlays
+│   │   ├── winloss/                    ← Deal status + won/lost outcome modals
+│   │   └── ui/                         ← Reusable design primitives
+│   ├── 📁 hooks/
+│   │   ├── useStreamingProposal.js     ← `/api/generate` stream parser
+│   │   ├── useBriefScore.js            ← Intake quality scoring hook
+│   │   ├── useProposalChat.js          ← Chat stream + section mutation events
+│   │   └── usePortalTracking.js        ← Public portal dwell/event tracking
+│   ├── 📁 stores/                      ← Zustand stores (`auth`, `proposal`, `theme`)
+│   ├── 📁 lib/                         ← Proposal normalizers, streaming helpers, utils
+│   └── 📁 config/
+│       └── api.js                      ← Axios instance + token refresh interceptor
+│
+├── 📁 backend/
+│   ├── src/
+│   │   ├── index.js                    ← Express app + route registration
+│   │   ├── config/env.js               ← Environment validation
+│   │   ├── db/mongoose.js              ← Mongo connection
+│   │   ├── middleware/                 ← auth/cors/rate-limit/error handlers
+│   │   ├── models/                     ← User, Proposal, Portal schemas
+│   │   ├── routes/                     ← auth, generate, proposals, chat, portal, analytics
+│   │   ├── services/                   ← LLM, brief score, S3, export, portal, lifecycle logic
+│   │   ├── prompts/                    ← Prompt templates for generation/outcomes
+│   │   ├── schemas/                    ← Zod schemas + section contracts
+│   │   └── test/                       ← Node test suite for core services
+│   ├── Dockerfile                      ← Backend container image
+│   ├── task-definition.json            ← ECS task definition template
+│   └── .env.example                    ← Backend env template
 │
 ├── 📁 reference/                      ← Design reference files
 │   ├── proposal_builder_tech_architecture.html
 │   ├── proposal_builder_master_form.html
 │   └── README.md                     ← Style reference
 │
-├── index.html                        ← Vite entry HTML
-├── package.json                      ← Dependencies + scripts
-├── vite.config.js                    ← Vite + React plugin
-├── jsconfig.json                     ← JS path aliases + IntelliSense
-├── tailwind.config.js                ← Tailwind theme + extensions
-├── postcss.config.js                 ← PostCSS + Tailwind plugin
-└── .gitignore                        ← Excluded files
+├── package.json                       ← Frontend scripts + dependencies
+├── playwright.config.js               ← E2E test configuration
+├── tests/e2e/                         ← Playwright scenarios
+├── vite.config.js                     ← Vite config (dev port 3001)
+├── tailwind.config.js                 ← Tailwind theme tokens
+└── scripts/                           ← Deployment helper scripts
 ```
 
 ---
@@ -405,6 +406,7 @@ proplytics/
 ```bash
 node --version         # Node 18+
 npm --version          # npm 9+
+mongo --version        # Optional local Mongo shell (Atlas recommended)
 ```
 
 ### Local Development
@@ -414,14 +416,31 @@ npm --version          # npm 9+
 git clone https://github.com/Suvam-paul145/Proplytics.git
 cd Proplytics
 
-# 2. Install dependencies
+# 2. Install frontend dependencies
 npm install
 
-# 3. Start development server
-npm run dev
-# App: http://localhost:5173
+# 3. Install backend dependencies
+npm --prefix backend install
 
-# 4. Build for production
+# 4. Configure backend environment
+#   Copy backend/.env.example to backend/.env
+#   Fill required values (MongoDB URI, JWT secrets, S3 bucket, Gemini key)
+
+# 5. Start backend API
+npm --prefix backend run dev
+# API: http://localhost:5000
+
+# 6. Start frontend app
+npm run dev
+# App: http://localhost:3001
+
+# 7. Run backend tests
+npm --prefix backend test
+
+# 8. Optional end-to-end tests
+npm run test:e2e
+
+# 9. Build for production
 npm run build
 npm run preview
 ```
@@ -434,11 +453,12 @@ npm run preview
 
 | Step | Stage | What Happens | Technology |
 |:---:|:---|:---|:---|
-| **1** | Input Ingestion | Accept raw text paste OR file upload (PDF/DOCX). Extract clean text, sanitise, truncate to LLM context limit. | pdf-parse, mammoth, S3 pre-signed URL |
-| **2** | Prompt Construction | System prompt (elite consultant persona) + client brief injected into template. JSON-only output enforced. Temperature 0.2–0.4. | Prompt template engine, token counter |
-| **3** | Streaming LLM Call | SSE pipe: Node.js streams LLM delta chunks → API Gateway → React client. Frontend accumulates raw JSON string and progressively reveals sections. | EventSource, partial JSON parser |
-| **4** | JSON Validation + Repair | Validate full JSON against Zod schema. If malformed, run repair pass or re-request broken section only. Assign confidence per field. | Zod, fallback re-prompt |
-| **5** | Proposal Persistence | Validated JSON stored to S3 at `userId/proposalId/v1.json`. Metadata saved to MongoDB. Enables revision history diff. | S3 versioned bucket, MongoDB index |
+| **1** | Brief Intake + Scoring | Accept pasted text or uploaded file and score brief quality before generation (scope/tech/timeline/budget/stakeholders/success criteria). | `/api/brief/score`, heuristic + Gemini structured scoring |
+| **2** | Hydration + Prompt Build | Load uploaded brief content from S3 when needed, normalize/truncate text, then build strict schema-constrained prompt. | `briefHydrationService`, `promptBuilder`, JSON schema contract |
+| **3** | Streaming Generation | Stream structured model output to the frontend via SSE while the workspace progressively renders parseable sections. | `/api/generate`, fetch stream reader, partial section extraction |
+| **4** | Validation + Repair | Attempt direct parse, fence stripping, and JSON object extraction; reject if schema cannot be satisfied. | Zod proposal schema + repair strategies |
+| **5** | Persistence + Versioning | Save validated proposal to S3 under `output/{userId}/{proposalId}/v{n}.json` and store metadata in MongoDB. | AWS SDK v3 + Mongoose |
+| **6** | Post-Generation Workflows | Enable compare/export/chat-mutation/portal sharing against the stored versioned proposal state. | `jsondiffpatch`, Puppeteer, proposal chat mutator, portal service |
 
 </div>
 
@@ -450,13 +470,14 @@ npm run preview
 
 | Risk | Severity | Mitigation |
 |:---|:---:|:---|
-| Lambda 29s streaming timeout | 🔴 **90%** | Use ECS Fargate for /generate endpoint |
-| LLM hallucinating JSON keys | 🟡 **70%** | Enforce schema with Zod, re-prompt on failure |
-| PDF export fidelity | 🟡 **50%** | Puppeteer for pixel-accurate; react-pdf as fallback |
-| LLM API rate limits | 🟡 **55%** | Per-user queue, exponential retry, usage counter |
-| Streaming mid-cut JSON | 🟡 **65%** | Accumulate full buffer, validate on stream end |
-| MongoDB cold start latency | 🟢 **35%** | Connection pooling + Lambda warm-up pings |
-| S3 cost at scale | 🟢 **20%** | Archive old revisions to S3 Glacier after 90 days |
+| Gemini key invalid/revoked/leaked | 🔴 **85%** | Guard layer pauses generation after hard auth failures and surfaces actionable recovery guidance |
+| Provider quota / temporary overload | 🟡 **68%** | Exponential retry + model fallback (`GEMINI_MODEL` → `GEMINI_FALLBACK_MODEL`) |
+| Malformed streamed JSON | 🟡 **62%** | Multi-stage repair + strict Zod contract before persistence |
+| Long generation latency for large briefs | 🟡 **58%** | SSE keepalive + progressive UI sections + timeout guard (`STREAM_TIMEOUT_MS`) |
+| SMTP-dependent flows unavailable | 🟡 **55%** | Graceful degradation for OTP/outcome email features when SMTP is not configured |
+| Public portal misuse risk | 🟡 **50%** | Tokenized links + optional PIN + expiry + per-proposal ownership checks |
+| Export rendering drift in edge layouts | 🟡 **46%** | Browser rendering via Puppeteer and HTML escaping in templates |
+| Storage growth over many versions | 🟢 **32%** | Versioned key strategy + explicit delete of all versions on proposal removal |
 
 </div>
 
@@ -508,10 +529,10 @@ npm run preview
 
 | Traffic Level | Infrastructure | Monthly Cost | Concurrent Users |
 |:---|:---|:---:|:---:|
-| **MVP / Demo** | Lambda free tier + MongoDB M0 | **$0** | ~100 |
-| **Early Adopters (500 users)** | Lambda + Atlas M10 + ECS | **~$65** | ~300 |
-| **Growth (5K users)** | ECS Fargate autoscale + Atlas M30 | **~$350** | ~3,000 |
-| **Scale (50K users)** | Multi-region ECS + Atlas M80 + CloudFront | **~$2,500** | ~30,000 |
+| **MVP / Demo** | Single backend service + MongoDB M0 + S3 | **Low** | ~100 |
+| **Early Adopters (500 users)** | Containerized API + Atlas M10 + object storage | **Moderate** | ~300 |
+| **Growth (5K users)** | Autoscaled containers + Atlas M30 + CDN-backed frontend | **Medium** | ~3,000 |
+| **Scale (50K users)** | Multi-region container services + managed DB scaling + CDN | **High** | ~30,000 |
 
 </div>
 
@@ -523,13 +544,16 @@ npm run preview
 
 | Layer | Implementation |
 |:---|:---|
-| **Authentication** | JWT tokens with MongoDB-backed user store |
-| **Authorization** | Per-user proposal scoping — users cannot access others' data |
-| **File upload** | PDF/DOCX/TXT only validation, content-type check, UUID-renamed storage |
-| **LLM output** | Zod schema validation on every response; malformed JSON rejected |
-| **Secrets** | AWS Secrets Manager for all API keys — never in env files or code |
-| **API protection** | Rate limiting + CORS via API Gateway |
-| **Storage** | S3 bucket policies, pre-signed URLs with expiry |
+| **Authentication** | Access/refresh JWT flow with token rotation, plus GitHub OAuth option |
+| **Credential Storage** | Passwords hashed with bcrypt before persistence |
+| **Password Recovery** | OTP reset flow via email (enabled when SMTP config is present) |
+| **Authorization** | Strict per-user ownership checks for proposal CRUD, version access, and portal management |
+| **Public Sharing Controls** | Tokenized portal URLs with optional PIN + expiry windows |
+| **File Upload Safety** | Whitelisted MIME types/extensions (PDF/DOCX/TXT) + signed upload URLs |
+| **Input Validation** | Zod validation on request payloads and generated JSON contracts |
+| **API Hardening** | Helmet headers, CORS middleware, global and auth-specific rate limiting |
+| **Output Safety** | HTML escaping in export templates to avoid script injection in generated artifacts |
+| **Secrets Handling** | Environment-based secret loading via validated config (`env.js`) |
 
 </div>
 
@@ -541,24 +565,23 @@ npm run preview
 
 | Timeline | Feature | Status |
 |:---:|:---|:---:|
-| ✅ Done | React SPA with Vite + JavaScript | Released |
-| ✅ Done | Landing page with 3D hero element | Released |
-| ✅ Done | Dashboard with proposal list view | Released |
-| ✅ Done | Brief input (paste + file upload) | Released |
-| ✅ Done | Confidence Grid with animated bars | Released |
-| ✅ Done | Risk matrix + effort estimator UI | Released |
-| ✅ Done | Timeline / roadmap phase view | Released |
-| ✅ Done | Section skeleton loaders | Released |
-| ✅ Done | Node.js backend + LLM integration | In Progress |
-| ✅ Done | SSE streaming + partial JSON parser | In Progress |
-| ✅ Done | JWT authentication flow | In Progress |
-| ✅ Done | AWS deployment (Lambda + ECS + S3) | Q2 2026 |
-| ✅ Done | PDF export via Puppeteer | Q2 2026 |
-| ✅ Done | Revision history with S3 versioning | Q3 2026 |
-| 📅 Planned | Client email delivery (SES) | Q3 2026 |
-| 💡 Future | Team workspaces + shared proposals | Q4 2026 |
-| 💡 Future | Custom brand template builder | Q4 2026 |
-| 💡 Future | Proposal analytics dashboard | 2027 |
+| ✅ Done | React SPA with dashboard, generation workspace, proposal result, analytics, and public portal pages | Released |
+| ✅ Done | Brief intake via text + file upload (PDF/DOCX/TXT) | Released |
+| ✅ Done | BriefScore diagnostics and readiness signal before generation | Released |
+| ✅ Done | SSE-based proposal streaming with progressive rendering | Released |
+| ✅ Done | Schema-validated proposal persistence with S3 versioning | Released |
+| ✅ Done | Revision history + compare diff endpoint | Released |
+| ✅ Done | Proposal export in PDF, JSON, and Markdown | Released |
+| ✅ Done | JWT auth + refresh + GitHub OAuth | Released |
+| ✅ Done | Client share portal (token, PIN, expiry, feedback, section telemetry) | Released |
+| ✅ Done | Deal lifecycle tracking (`pending`, `negotiating`, `won`, `lost`) + outcome packs | Released |
+| ✅ Done | Analytics page (win rate, confidence comparison, brief score comparison, feature leaderboard) | Released |
+| 🚧 In Progress | Hardening SMTP-backed OTP and outcome email delivery across environments | Active |
+| 🚧 In Progress | Profile/settings persistence beyond local store state | Active |
+| 📅 Planned | Team workspace collaboration + shared proposal ownership | Planned |
+| 📅 Planned | Brand templates and white-label export customization | Planned |
+| 💡 Future | Billing/usage tiers and seat-based access controls | Future |
+| 💡 Future | Deeper longitudinal proposal performance benchmarking | Future |
 
 </div>
 
