@@ -200,8 +200,6 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 ## 🏗️ Architecture
 
-![Proplytics System Architecture](./public/web-interface/hero-architecture.png)
-
 ### Visual Architecture Overview
 
 #### 1) System Architecture Map
