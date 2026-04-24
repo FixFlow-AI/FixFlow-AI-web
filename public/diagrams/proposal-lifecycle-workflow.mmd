@@ -1,0 +1,18 @@
+stateDiagram-v2
+  [*] --> Intake: Brief received
+  Intake --> Scored: BriefScore preflight
+  Scored --> Generating: /api/generate started
+  Generating --> Failed: Stream/validation/provider error
+  Failed --> Generating: Retry generation
+
+  Generating --> Complete: v1 saved in S3 + metadata in MongoDB
+  Complete --> Negotiating: Chat refinements / scope changes
+  Negotiating --> Complete: Section mutation saved as vN+1
+
+  Complete --> Shared: Portal link created (token/PIN/expiry)
+  Shared --> Negotiating: Client asks for revisions
+  Shared --> Won: Deal marked won
+  Shared --> Lost: Deal marked lost
+
+  Won --> [*]
+  Lost --> [*]

@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant FE as React Frontend
+  participant API as Express API /api/generate
+  participant LLM as Gemini
+  participant V as Validator (Zod + repair)
+  participant S3 as AWS S3
+  participant DB as MongoDB Atlas
+
+  U->>FE: Paste/upload brief and click Generate
+  FE->>API: POST /api/generate with JWT and brief input
+  API->>DB: Create/update proposal status = generating
+  API->>LLM: Send prompt and start stream
+
+  loop SSE stream while model is generating
+    LLM-->>API: chunk
+    API-->>FE: SSE chunk event
+    FE-->>U: Progressive section rendering
+  end
+
+  API->>V: validateAndRepair(fullBuffer)
+  V-->>API: Valid proposal JSON
+  API->>S3: Save versioned proposal JSON in S3
+  API->>DB: status=complete, versionCount++, metadata update
+  API-->>FE: SSE complete event with proposalId and version
+  FE-->>U: Proposal ready for review/export/chat refinement

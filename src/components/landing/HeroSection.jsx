@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -8,15 +8,31 @@ import { Button } from '@/components/ui/Button'
 const Hero3DElement = lazy(() => import('./Hero3DElement'))
 
 function HeroSection() {
+  const { scrollY } = useScroll()
+  
+  // Parallax transforms
+  const yBg = useTransform(scrollY, [0, 1000], [0, 300])
+  const yContent = useTransform(scrollY, [0, 1000], [0, -100])
+  const opacity = useTransform(scrollY, [0, 600], [1, 0])
+  const yBadges = useTransform(scrollY, [0, 1000], [0, -150])
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* 3D Background */}
-      <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
-        <Hero3DElement />
-      </Suspense>
+      <motion.div 
+        style={{ y: yBg, opacity }} 
+        className="absolute inset-0 w-full h-full"
+      >
+        <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
+          <Hero3DElement />
+        </Suspense>
+      </motion.div>
 
       {/* Hero Content */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <motion.div 
+        style={{ y: yContent, opacity }}
+        className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
+      >
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -76,6 +92,7 @@ function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.7, delay: 0.7 }}
+          style={{ y: yBadges }}
           className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground"
         >
           <div className="flex items-center gap-2">
@@ -91,13 +108,14 @@ function HeroSection() {
             <span>Enterprise Ready</span>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* Scroll indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.7, delay: 1 }}
+        style={{ opacity }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
       >
         <motion.div

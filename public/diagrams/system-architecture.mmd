@@ -1,0 +1,52 @@
+flowchart LR
+  subgraph C["Users"]
+    U1[Agency User]
+    U2[Client Portal User]
+  end
+
+  subgraph F["Frontend (React 18 + Vite)"]
+    FE1[Brief Intake + New Proposal]
+    FE2[Proposal Workspace + Chat + Export]
+    FE3[Dashboard + Analytics + Team Workspace]
+    FE4["Public Portal (/p/:token)"]
+  end
+
+  subgraph B["Backend API (Express 5)"]
+    A1["/api/auth"]
+    A2["/api/brief/score"]
+    A3["/api/generate (SSE)"]
+    A4["/api/proposals/* (versions, compare, export)"]
+    A5["/api/proposal/:id/chat (SSE)"]
+    A6["/api/portal/:token/*"]
+    A7["/api/analytics + /api/workspaces + /api/trips"]
+  end
+
+  subgraph D["Data & Storage"]
+    DB[("MongoDB Atlas<br/>users, proposal metadata, lifecycle, telemetry")]
+    S3[("AWS S3<br/>briefs by user<br/>versioned proposal outputs")]
+  end
+
+  subgraph L["AI Layer"]
+    G["Google Gemini<br/>primary + fallback model"]
+  end
+
+  U1 --> FE1
+  U1 --> FE2
+  U1 --> FE3
+  U2 --> FE4
+
+  FE1 --> A2
+  FE1 --> A3
+  FE2 --> A4
+  FE2 --> A5
+  FE3 --> A1
+  FE3 --> A7
+  FE4 --> A6
+
+  A3 --> G
+  A3 --> DB
+  A3 --> S3
+  A4 --> DB
+  A4 --> S3
+  A6 --> DB
+  A7 --> DB

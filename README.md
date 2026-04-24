@@ -194,6 +194,20 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 ## 🏗️ Architecture
 
+### Visual Architecture Overview (Mermaid)
+
+#### 1) System Architecture Map
+
+![System Architecture Map](./public/diagrams/system-architecture.svg)
+
+#### 2) Proposal Generation Flow (End-to-End)
+
+![Proposal Generation Flow](./public/diagrams/proposal-generation-flow.svg)
+
+#### 3) Proposal Lifecycle Workflow
+
+![Proposal Lifecycle Workflow](./public/diagrams/proposal-lifecycle-workflow.svg)
+
 <div align="center">
 
 ```
