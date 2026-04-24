@@ -36,6 +36,46 @@ const proposalFixture = {
       dependencies: [],
     },
   ],
+  delivery_plan: {
+    mode: 'weekly',
+    generatedFrom: 'llm',
+    weeks: [
+      {
+        id: 'week-1',
+        label: 'Week 1',
+        startWeek: 1,
+        endWeek: 1,
+        sourcePhase: 'Implementation',
+        goals: ['Lock scope'],
+        tasks: [{ id: 'task-1', title: 'Build core flows', owner: 'team', status: 'planned', notify: true }],
+        deliverables: ['Build package'],
+        dependencies: [],
+      },
+    ],
+    roadmap: [
+      {
+        id: 'roadmap-1',
+        title: 'Implementation milestone',
+        targetWeek: 1,
+        sourceWeekIds: ['week-1'],
+        status: 'planned',
+      },
+    ],
+    backlog: [
+      {
+        id: 'backlog-1',
+        title: 'Stretch item',
+        sourceWeekId: 'week-1',
+        reason: 'timeline_overflow',
+        status: 'backlog',
+      },
+    ],
+    notificationDefaults: {
+      enabled: true,
+      channels: ['in_app', 'email'],
+      events: ['invite', 'comment'],
+    },
+  },
   effort: [
     {
       label: 'Build',
@@ -49,11 +89,13 @@ const proposalFixture = {
 };
 
 test('buildMarkdownExport renders major headings', () => {
-  const markdown = buildMarkdownExport(proposalFixture);
+  const markdown = buildMarkdownExport(proposalFixture, { layout: 'delivery' });
 
   assert.match(markdown, /^# Proposal/m);
   assert.match(markdown, /## Features/);
   assert.match(markdown, /Core Platform/);
+  assert.match(markdown, /## Weekly Plan/);
+  assert.match(markdown, /## Backlog/);
 });
 
 test('sanitizeDownloadName creates a filesystem-safe slug', () => {
@@ -64,8 +106,9 @@ test('buildHTMLTemplate escapes inserted HTML', () => {
   const html = buildHTMLTemplate({
     ...proposalFixture,
     project_summary: '<script>alert(1)</script>',
-  });
+  }, { layout: 'delivery' });
 
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /&lt;script&gt;alert/);
+  assert.match(html, /Structured Delivery Report/);
 });

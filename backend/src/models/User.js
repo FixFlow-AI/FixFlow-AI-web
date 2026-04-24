@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+} = require('../services/notifications/notificationPreferences');
 
 const SALT_ROUNDS = 12;
 const PERSONAL_PLANS = ['free', 'standard', 'pro', 'enterprise'];
@@ -54,6 +57,20 @@ const userSchema = new mongoose.Schema(
       ref: 'Workspace',
       default: null,
       index: true,
+    },
+    notificationPreferences: {
+      enabled: {
+        type: Boolean,
+        default: DEFAULT_NOTIFICATION_PREFERENCES.enabled,
+      },
+      channels: {
+        type: [String],
+        default: () => [...DEFAULT_NOTIFICATION_PREFERENCES.channels],
+      },
+      events: {
+        type: [String],
+        default: () => [...DEFAULT_NOTIFICATION_PREFERENCES.events],
+      },
     },
     usageCount: {
       type: Number,

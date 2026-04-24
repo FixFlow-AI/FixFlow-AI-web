@@ -20,6 +20,7 @@ test('buildPrompt includes schema instructions and the user brief', () => {
 
   assert.match(system, /OUTPUT SCHEMA/);
   assert.match(system, /project_summary/);
+  assert.match(system, /delivery_plan/);
   assert.match(user, /restaurant ordering/);
 });
 

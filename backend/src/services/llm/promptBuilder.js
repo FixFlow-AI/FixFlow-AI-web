@@ -27,6 +27,54 @@ const OUTPUT_SCHEMA = {
       dependencies: ['string'],
     },
   ],
+  delivery_plan: {
+    mode: '"weekly"',
+    generatedFrom: '"llm" | "derived"',
+    weeks: [
+      {
+        id: 'string',
+        label: 'string',
+        startWeek: 'number',
+        endWeek: 'number',
+        sourcePhase: 'string',
+        goals: ['string'],
+        tasks: [
+          {
+            id: 'string',
+            title: 'string',
+            owner: '"team" | "client" | "shared"',
+            status: '"planned" | "done" | "backlog"',
+            notify: 'boolean',
+          },
+        ],
+        deliverables: ['string'],
+        dependencies: ['string'],
+      },
+    ],
+    roadmap: [
+      {
+        id: 'string',
+        title: 'string',
+        targetWeek: 'number',
+        sourceWeekIds: ['string'],
+        status: '"planned" | "done"',
+      },
+    ],
+    backlog: [
+      {
+        id: 'string',
+        title: 'string',
+        sourceWeekId: 'string | null',
+        reason: '"timeline_overflow" | "future_enhancement" | "dependency_blocked"',
+        status: '"backlog"',
+      },
+    ],
+    notificationDefaults: {
+      enabled: 'boolean',
+      channels: ['"in_app" | "email"'],
+      events: ['"invite" | "comment" | "approval" | "assignment" | "goal_completed" | "backlog_moved"'],
+    },
+  },
   effort: [
     {
       label: 'string',
@@ -124,6 +172,107 @@ const RESPONSE_JSON_SCHEMA = {
         required: ['phase', 'duration', 'tasks', 'dependencies'],
       },
     },
+    delivery_plan: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        mode: { type: 'string', enum: ['weekly'] },
+        generatedFrom: { type: 'string', enum: ['llm', 'derived'] },
+        weeks: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string' },
+              startWeek: { type: 'number', minimum: 1 },
+              endWeek: { type: 'number', minimum: 1 },
+              sourcePhase: { type: 'string' },
+              goals: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              tasks: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  properties: {
+                    id: { type: 'string' },
+                    title: { type: 'string' },
+                    owner: { type: 'string', enum: ['team', 'client', 'shared'] },
+                    status: { type: 'string', enum: ['planned', 'done', 'backlog'] },
+                    notify: { type: 'boolean' },
+                  },
+                  required: ['id', 'title', 'owner', 'status', 'notify'],
+                },
+              },
+              deliverables: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              dependencies: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+            required: ['id', 'label', 'startWeek', 'endWeek', 'sourcePhase', 'goals', 'tasks', 'deliverables', 'dependencies'],
+          },
+        },
+        roadmap: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              targetWeek: { type: 'number', minimum: 1 },
+              sourceWeekIds: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+              status: { type: 'string', enum: ['planned', 'done'] },
+            },
+            required: ['id', 'title', 'targetWeek', 'sourceWeekIds', 'status'],
+          },
+        },
+        backlog: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              title: { type: 'string' },
+              sourceWeekId: { type: ['string', 'null'] },
+              reason: { type: 'string', enum: ['timeline_overflow', 'future_enhancement', 'dependency_blocked'] },
+              status: { type: 'string', enum: ['backlog'] },
+            },
+            required: ['id', 'title', 'sourceWeekId', 'reason', 'status'],
+          },
+        },
+        notificationDefaults: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            enabled: { type: 'boolean' },
+            channels: {
+              type: 'array',
+              items: { type: 'string', enum: ['in_app', 'email'] },
+            },
+            events: {
+              type: 'array',
+              items: { type: 'string', enum: ['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved'] },
+            },
+          },
+          required: ['enabled', 'channels', 'events'],
+        },
+      },
+      required: ['mode', 'generatedFrom', 'weeks', 'roadmap', 'backlog', 'notificationDefaults'],
+    },
     effort: {
       type: 'array',
       minItems: 1,
@@ -179,9 +328,10 @@ RULES:
 2. Follow the exact schema provided below and keep the top-level key order unchanged.
 3. Assess each feature honestly and use realistic confidence percentages.
 4. Identify real risks and clear mitigations.
-5. Provide practical timelines and effort breakdowns.
+5. Provide practical timelines, effort breakdowns, and a structured weekly delivery plan.
 6. If the brief is vague, still provide your best assessment but lower confidence scores.
-7. Do not include markdown, commentary, or code fences.`;
+7. Include both the classic timeline array and a delivery_plan object that turns the proposal into an execution-ready weekly plan.
+8. Do not include markdown, commentary, or code fences.`;
 
 function normalizeBriefText(briefText) {
   const text = String(briefText || '').trim();

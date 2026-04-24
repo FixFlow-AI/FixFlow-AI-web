@@ -2,6 +2,7 @@ const Proposal = require('../../models/Proposal');
 const User = require('../../models/User');
 const Workspace = require('../../models/Workspace');
 const s3Service = require('../storage/s3');
+const { ensureDeliveryPlan } = require('./deliveryPlanService');
 const { ForbiddenError, NotFoundError } = require('../../utils/errors');
 const { assertWorkspaceMembership, buildWorkspaceSummary } = require('../workspace/workspaceService');
 
@@ -138,7 +139,7 @@ async function getProposalJSONForRecord(proposal) {
     throw new NotFoundError('Proposal data not yet available');
   }
 
-  return s3Service.getProposalJSON(proposal.s3Key);
+  return ensureDeliveryPlan(await s3Service.getProposalJSON(proposal.s3Key));
 }
 
 async function getOwnedProposalWithJSON(userId, proposalId) {

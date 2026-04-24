@@ -1,5 +1,14 @@
 const { z } = require('zod');
 
+const notificationPreferencesSchema = z.object({
+  enabled: z.boolean().optional().default(true),
+  channels: z.array(z.enum(['in_app', 'email'])).optional().default(['in_app', 'email']),
+  events: z
+    .array(z.enum(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']))
+    .optional()
+    .default(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']),
+});
+
 const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z
@@ -78,6 +87,10 @@ const uploadUrlSchema = z.object({
 
 const proposalExportSchema = z.object({
   format: z.enum(['pdf', 'json', 'md']).default('pdf'),
+  layout: z.enum(['delivery', 'classic']).optional().default('delivery'),
+  includeRoadmap: z.boolean().optional().default(true),
+  includeBacklog: z.boolean().optional().default(true),
+  includeNotifications: z.boolean().optional().default(true),
 });
 
 const versionCompareSchema = z.object({
@@ -151,6 +164,7 @@ const workspaceUpdateSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   plan: z.enum(['free', 'standard', 'pro']).optional(),
   defaultEntryMode: z.enum(['individual', 'team']).optional(),
+  notificationDefaults: notificationPreferencesSchema.optional(),
 });
 
 const workspaceInviteSchema = z.object({
@@ -194,7 +208,43 @@ const chatEtaSchema = z.object({
   targetSection: z.string().trim().nullable().optional().default(null),
 });
 
+const authProfileUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(50).optional(),
+  avatar: z.string().trim().max(500).optional(),
+  notificationPreferences: notificationPreferencesSchema.optional(),
+});
+
+const planningActionSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('set_task_status'),
+    weekId: z.string().trim().min(1),
+    taskId: z.string().trim().min(1),
+    status: z.enum(['planned', 'done', 'backlog']),
+  }),
+  z.object({
+    action: z.literal('move_task_to_backlog'),
+    weekId: z.string().trim().min(1),
+    taskId: z.string().trim().min(1),
+    reason: z.enum(['timeline_overflow', 'future_enhancement', 'dependency_blocked']).optional().default('timeline_overflow'),
+  }),
+  z.object({
+    action: z.literal('restore_backlog_item'),
+    backlogItemId: z.string().trim().min(1),
+    weekId: z.string().trim().min(1),
+  }),
+  z.object({
+    action: z.literal('update_goals'),
+    weekId: z.string().trim().min(1),
+    goals: z.array(z.string().trim().min(1)).max(2),
+  }),
+  z.object({
+    action: z.literal('update_notifications'),
+    notificationDefaults: notificationPreferencesSchema,
+  }),
+]);
+
 module.exports = {
+  notificationPreferencesSchema,
   registerSchema,
   loginSchema,
   refreshSchema,
@@ -224,4 +274,6 @@ module.exports = {
   tripBundlePortalSchema,
   proposalEtaSchema,
   chatEtaSchema,
+  authProfileUpdateSchema,
+  planningActionSchema,
 };

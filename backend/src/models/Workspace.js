@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+} = require('../services/notifications/notificationPreferences');
 
 const workspaceMemberSchema = new mongoose.Schema(
   {
@@ -107,6 +110,20 @@ const workspaceSchema = new mongoose.Schema(
       type: String,
       enum: ['free', 'standard', 'pro'],
       default: 'free',
+    },
+    notificationDefaults: {
+      enabled: {
+        type: Boolean,
+        default: DEFAULT_NOTIFICATION_PREFERENCES.enabled,
+      },
+      channels: {
+        type: [String],
+        default: () => [...DEFAULT_NOTIFICATION_PREFERENCES.channels],
+      },
+      events: {
+        type: [String],
+        default: () => [...DEFAULT_NOTIFICATION_PREFERENCES.events],
+      },
     },
     members: {
       type: [workspaceMemberSchema],

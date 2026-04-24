@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   Download,
@@ -42,6 +42,8 @@ import PresenceStack from '@/components/workspace/PresenceStack'
 import CommentsSidebar from '@/components/comments/CommentsSidebar'
 import CommentMarker from '@/components/comments/CommentMarker'
 import ApprovalBadge from '@/components/comments/ApprovalBadge'
+import DeliveryPlanSection from '@/components/proposal/DeliveryPlanSection'
+import { useWorkspace } from '@/hooks/useWorkspace'
 
 function ProposalResult() {
   const { id } = useParams()
@@ -59,6 +61,9 @@ function ProposalResult() {
   const [hasOpenedChat, setHasOpenedChat] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
   const [comments, setComments] = useState([])
+  const [deliveryPlan, setDeliveryPlan] = useState(null)
+  const [assignedTo, setAssignedTo] = useState('')
+  const { fullWorkspace } = useWorkspace(true)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024)
@@ -146,9 +151,42 @@ function ProposalResult() {
   const isViewer = proposal?.accessRole === 'viewer'
   const { viewers } = usePresence(proposal?.proposalId, proposal?.workspace?.id, Boolean(proposal?.workspace?.id))
 
+  const planningMutation = useMutation({
+    mutationFn: (payload) => api.patch(`/proposals/${id}/planning`, payload).then((response) => response.data),
+    onSuccess: (data) => {
+      setDeliveryPlan(data.deliveryPlan)
+      queryClient.invalidateQueries({ queryKey: ['proposal', id] })
+      queryClient.invalidateQueries({ queryKey: ['proposal', id, 'versions'] })
+      toast.success('Delivery plan updated.')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Unable to update the delivery plan.')
+    },
+  })
+
+  const assignmentMutation = useMutation({
+    mutationFn: (payload) => api.patch(`/proposals/${id}/assignment`, payload).then((response) => response.data),
+    onSuccess: (data) => {
+      setAssignedTo(data.assignedTo || '')
+      queryClient.invalidateQueries({ queryKey: ['proposal', id] })
+      toast.success(data.assignedTo ? 'Proposal assignment updated.' : 'Proposal assignment cleared.')
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.error || 'Unable to update proposal assignment.')
+    },
+  })
+
   useEffect(() => {
     setComments(proposal?.comments || [])
   }, [proposal?.comments])
+
+  useEffect(() => {
+    setDeliveryPlan(proposal?.delivery_plan || null)
+  }, [proposal?.delivery_plan])
+
+  useEffect(() => {
+    setAssignedTo(proposal?.assignedTo || '')
+  }, [proposal?.assignedTo])
 
   const unresolvedCommentCounts = useMemo(() => {
     return comments.reduce((accumulator, comment) => {
@@ -462,6 +500,36 @@ function ProposalResult() {
         </div>
       ) : null}
 
+      {proposal.workspace ? (
+        <div className="mb-6 rounded-2xl border border-border bg-background/30 px-4 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm font-medium">Assignment</div>
+              <div className="text-xs text-muted-foreground">Route delivery follow-up to a teammate and notify them immediately.</div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <select
+                value={assignedTo || ''}
+                onChange={(event) => {
+                  const nextValue = event.target.value
+                  setAssignedTo(nextValue)
+                  assignmentMutation.mutate({ assignedTo: nextValue || null })
+                }}
+                disabled={isViewer || assignmentMutation.isPending}
+                className="rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                <option value="">Unassigned</option>
+                {(fullWorkspace?.members || []).map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {member.name} ({member.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <ErrorBoundary>
         <SectionUpdateOverlay
           sectionKey="summary"
@@ -630,6 +698,25 @@ function ProposalResult() {
           </ErrorBoundary>
         </div>
       </SectionUpdateOverlay>
+
+      {deliveryPlan ? (
+        <div className="mb-8">
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-semibold">Delivery Plan</h2>
+            <CommentMarker count={unresolvedCommentCounts.timeline || 0} />
+          </div>
+          <DeliveryPlanSection
+            deliveryPlan={deliveryPlan}
+            canEdit={!isViewer}
+            isSaving={planningMutation.isPending}
+            onSetTaskStatus={(weekId, taskId, status) => planningMutation.mutate({ action: 'set_task_status', weekId, taskId, status })}
+            onMoveToBacklog={(weekId, taskId) => planningMutation.mutate({ action: 'move_task_to_backlog', weekId, taskId })}
+            onRestoreBacklog={(backlogItemId, weekId) => planningMutation.mutate({ action: 'restore_backlog_item', backlogItemId, weekId })}
+            onSaveGoals={(weekId, goals) => planningMutation.mutate({ action: 'update_goals', weekId, goals })}
+            onSaveNotifications={(notificationDefaults) => planningMutation.mutate({ action: 'update_notifications', notificationDefaults })}
+          />
+        </div>
+      ) : null}
 
       {proposal.market.length > 0 && (
         <ErrorBoundary>

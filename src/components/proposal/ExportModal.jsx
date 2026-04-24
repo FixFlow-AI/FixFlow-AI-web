@@ -26,6 +26,10 @@ async function getExportErrorMessage(error) {
 
 export default function ExportModal({ proposalId, onClose }) {
   const [format, setFormat] = useState('pdf')
+  const [layout, setLayout] = useState('delivery')
+  const [includeRoadmap, setIncludeRoadmap] = useState(true)
+  const [includeBacklog, setIncludeBacklog] = useState(true)
+  const [includeNotifications, setIncludeNotifications] = useState(true)
   const [isDownloading, setIsDownloading] = useState(false)
 
   const handleExport = async () => {
@@ -34,7 +38,7 @@ export default function ExportModal({ proposalId, onClose }) {
     try {
       const response = await api.post(
         `/proposals/${proposalId}/export`,
-        { format },
+        { format, layout, includeRoadmap, includeBacklog, includeNotifications },
         { responseType: 'blob' }
       )
 
@@ -66,7 +70,7 @@ export default function ExportModal({ proposalId, onClose }) {
         <div>
           <h2 className="text-lg font-semibold">Export Proposal</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Choose a download format for the current revision.
+            Choose a structured delivery export or fall back to the classic report layout.
           </p>
         </div>
 
@@ -84,6 +88,47 @@ export default function ExportModal({ proposalId, onClose }) {
             >
               {value.toUpperCase()}
             </button>
+          ))}
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-border bg-background/30 p-4">
+          <div className="text-sm font-medium">Layout</div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: 'delivery', label: 'Structured Delivery' },
+              { value: 'classic', label: 'Classic' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setLayout(option.value)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium transition-colors ${
+                  layout === option.value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background hover:bg-muted'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-2xl border border-border bg-background/30 p-4">
+          <div className="text-sm font-medium">Include in export</div>
+          {[
+            { value: includeRoadmap, label: 'Roadmap', setter: setIncludeRoadmap },
+            { value: includeBacklog, label: 'Backlog', setter: setIncludeBacklog },
+            { value: includeNotifications, label: 'Notifications', setter: setIncludeNotifications },
+          ].map((option) => (
+            <label key={option.label} className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-3 py-3 text-sm">
+              <span>{option.label}</span>
+              <input
+                type="checkbox"
+                checked={option.value}
+                onChange={(event) => option.setter(event.target.checked)}
+              />
+            </label>
           ))}
         </div>
 

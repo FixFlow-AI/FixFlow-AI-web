@@ -22,6 +22,7 @@ const { assertWorkspaceMembership } = require('../services/workspace/workspaceSe
 const { upsertTripProposal } = require('../services/trips/tripService');
 const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
 const { getEditableProposal } = require('../services/proposal/proposalAccess');
+const { ensureDeliveryPlan } = require('../services/proposal/deliveryPlanService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
@@ -150,7 +151,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
         sendEvent('chunk', { content: chunk });
       }
 
-      const validatedProposal = await validateAndRepair(fullBuffer);
+      const validatedProposal = ensureDeliveryPlan(await validateAndRepair(fullBuffer));
       const s3Key = await s3Service.uploadProposalJSON(
         req.user.userId,
         proposalId,

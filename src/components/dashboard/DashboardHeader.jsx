@@ -1,9 +1,10 @@
-import { Search, Bell, Settings, LogOut, Menu } from 'lucide-react'
+import { Search, Settings, LogOut, Menu } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import useAuthStore from '@/stores/authStore'
+import NotificationCenter from '@/components/notifications/NotificationCenter'
 
 function DashboardHeader({ onOpenSidebar }) {
   const navigate = useNavigate()
@@ -49,18 +50,12 @@ function DashboardHeader({ onOpenSidebar }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex"
-          >
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
-          </motion.button>
+          <NotificationCenter />
 
           <motion.button 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/settings')}
             className="p-2 hover:bg-muted rounded-lg transition-colors hidden sm:inline-flex"
           >
             <Settings className="h-5 w-5 text-muted-foreground" />

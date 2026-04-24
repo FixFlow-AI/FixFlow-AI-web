@@ -24,6 +24,63 @@ const TimelineSchema = z.object({
   dependencies: z.array(z.string()).default([]),
 });
 
+const DeliveryTaskSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  owner: z.enum(['team', 'client', 'shared']),
+  status: z.enum(['planned', 'done', 'backlog']),
+  notify: z.boolean(),
+});
+
+const DeliveryWeekSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  startWeek: z.coerce.number().int().min(1),
+  endWeek: z.coerce.number().int().min(1),
+  sourcePhase: z.string().min(1),
+  goals: z.array(z.string().min(1)).min(1),
+  tasks: z.array(DeliveryTaskSchema).default([]),
+  deliverables: z.array(z.string().min(1)).default([]),
+  dependencies: z.array(z.string()).default([]),
+});
+
+const DeliveryRoadmapSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  targetWeek: z.coerce.number().int().min(1),
+  sourceWeekIds: z.array(z.string().min(1)).default([]),
+  status: z.enum(['planned', 'done']).default('planned'),
+});
+
+const DeliveryBacklogSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  sourceWeekId: z.string().min(1).nullable().default(null),
+  reason: z.enum(['timeline_overflow', 'future_enhancement', 'dependency_blocked']).default('future_enhancement'),
+  status: z.enum(['backlog']).default('backlog'),
+});
+
+const NotificationDefaultsSchema = z.object({
+  enabled: z.boolean().default(true),
+  channels: z.array(z.enum(['in_app', 'email'])).default(['in_app', 'email']),
+  events: z
+    .array(z.enum(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']))
+    .default(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']),
+});
+
+const DeliveryPlanSchema = z.object({
+  mode: z.literal('weekly').default('weekly'),
+  generatedFrom: z.enum(['llm', 'derived']).default('llm'),
+  weeks: z.array(DeliveryWeekSchema).min(1),
+  roadmap: z.array(DeliveryRoadmapSchema).default([]),
+  backlog: z.array(DeliveryBacklogSchema).default([]),
+  notificationDefaults: NotificationDefaultsSchema.default({
+    enabled: true,
+    channels: ['in_app', 'email'],
+    events: ['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved'],
+  }),
+});
+
 const EffortSchema = z.object({
   label: z.string().min(1),
   percentage: z.coerce.number().min(0).max(100),
@@ -50,6 +107,7 @@ const ProposalSchema = z.object({
   features: z.array(FeatureSchema).min(1),
   risks: z.array(RiskSchema).min(1),
   timeline: z.array(TimelineSchema).min(1),
+  delivery_plan: DeliveryPlanSchema.optional(),
   effort: z.array(EffortSchema).min(1),
   market: z.array(MarketSchema).default([]),
   impact: z.array(ImpactSchema).default([]),
@@ -101,6 +159,7 @@ async function validateAndRepair(rawText) {
 
 module.exports = {
   ProposalSchema,
+  DeliveryPlanSchema,
   validateAndRepair,
   stripCodeFences,
   extractJsonObject,

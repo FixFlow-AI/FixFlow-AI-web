@@ -10,6 +10,7 @@ const {
   githubExchangeSchema,
   forgotPasswordRequestSchema,
   forgotPasswordVerifySchema,
+  authProfileUpdateSchema,
 } = require('../models/schemas');
 const { UnauthorizedError, ConflictError, BadRequestError } = require('../utils/errors');
 const { authMiddleware } = require('../middleware/auth');
@@ -17,6 +18,7 @@ const { authLimiter } = require('../middleware/rateLimit');
 const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
 const { getPersonalCapabilities, normalizePlan } = require('../services/capabilities/capabilityService');
 const { buildAuthProfile } = require('../services/auth/profileService');
+const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
 
 const router = Router();
 
@@ -482,6 +484,35 @@ router.get('/me', authMiddleware, async (req, res, next) => {
       user.usageLimit = getPersonalCapabilities('pro').usageLimit;
       await user.save();
     }
+
+    const profile = await buildAuthProfile(user);
+    res.json(profile);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/me', authMiddleware, async (req, res, next) => {
+  try {
+    const payload = authProfileUpdateSchema.parse(req.body);
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    if (payload.name) {
+      user.name = payload.name;
+    }
+
+    if (typeof payload.avatar === 'string') {
+      user.avatar = payload.avatar;
+    }
+
+    if (payload.notificationPreferences) {
+      user.notificationPreferences = normalizeNotificationPreferences(payload.notificationPreferences);
+    }
+
+    await user.save();
 
     const profile = await buildAuthProfile(user);
     res.json(profile);

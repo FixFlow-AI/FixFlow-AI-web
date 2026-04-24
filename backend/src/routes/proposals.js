@@ -4,18 +4,21 @@ const { authMiddleware } = require('../middleware/auth');
 const Proposal = require('../models/Proposal');
 const {
   proposalExportSchema,
+  proposalAssignmentSchema,
   versionCompareSchema,
 } = require('../models/schemas');
 const s3Service = require('../services/storage/s3');
 const { generatePDF } = require('../services/export/pdfExport');
 const { buildMarkdownExport, sanitizeDownloadName } = require('../services/export/formatters');
-const { NotFoundError } = require('../utils/errors');
+const { BadRequestError, ForbiddenError, NotFoundError } = require('../utils/errors');
 const {
   getProposalAccessContext,
   getEditableProposal,
   getProposalJSONForRecord,
   listAccessibleProposals,
 } = require('../services/proposal/proposalAccess');
+const { ensureDeliveryPlan } = require('../services/proposal/deliveryPlanService');
+const { createNotifications } = require('../services/notifications/notificationService');
 
 const router = express.Router();
 const diffPatcher = createJsonDiffPatch();
@@ -84,8 +87,8 @@ router.get('/:id/versions/compare', authMiddleware, async (req, res, next) => {
     const toVersion = getVersionNumber(proposal, to);
 
     const [fromData, toData] = await Promise.all([
-      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, fromVersion)),
-      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, toVersion)),
+      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, fromVersion)).then(ensureDeliveryPlan),
+      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, toVersion)).then(ensureDeliveryPlan),
     ]);
 
     const diff = diffPatcher.diff(fromData, toData) || {};
@@ -100,7 +103,7 @@ router.get('/:id/versions/:version', authMiddleware, async (req, res, next) => {
     const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
     const version = getVersionNumber(proposal, req.params.version);
     const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
-    const data = await s3Service.getProposalJSON(s3Key);
+    const data = ensureDeliveryPlan(await s3Service.getProposalJSON(s3Key));
 
     res.json({
       ...proposal.toObject(),
@@ -124,14 +127,15 @@ router.get('/:id/versions/:version', authMiddleware, async (req, res, next) => {
 router.post('/:id/export', authMiddleware, async (req, res, next) => {
   try {
     const proposal = await getOwnedProposal(req.user.userId, req.params.id);
-    const { format } = proposalExportSchema.parse(req.body);
+    const exportOptions = proposalExportSchema.parse(req.body);
+    const { format } = exportOptions;
     const version = getVersionNumber(proposal, req.query.version || proposal.versionCount);
     const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
-    const proposalData = await s3Service.getProposalJSON(s3Key);
+    const proposalData = ensureDeliveryPlan(await s3Service.getProposalJSON(s3Key));
     const fileName = `${sanitizeDownloadName(proposal.title)}-v${version}`;
 
     if (format === 'pdf') {
-      const pdfBuffer = await generatePDF(proposalData);
+      const pdfBuffer = await generatePDF(proposalData, exportOptions);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}.pdf"`);
       res.send(pdfBuffer);
@@ -139,7 +143,7 @@ router.post('/:id/export', authMiddleware, async (req, res, next) => {
     }
 
     if (format === 'md') {
-      const markdown = buildMarkdownExport(proposalData);
+      const markdown = buildMarkdownExport(proposalData, exportOptions);
       res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${fileName}.md"`);
       res.send(markdown);
@@ -149,6 +153,47 @@ router.post('/:id/export', authMiddleware, async (req, res, next) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}.json"`);
     res.send(JSON.stringify(proposalData, null, 2));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/:id/assignment', authMiddleware, async (req, res, next) => {
+  try {
+    const payload = proposalAssignmentSchema.parse(req.body);
+    const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
+
+    if (!workspace) {
+      throw new BadRequestError('Assignments are only available for workspace proposals.');
+    }
+
+    if (!['owner', 'editor'].includes(role)) {
+      throw new ForbiddenError('Your workspace role does not allow assignment changes.');
+    }
+
+    if (payload.assignedTo && !workspace.members.some((member) => member.userId.toString() === payload.assignedTo)) {
+      throw new BadRequestError('The selected assignee is not a workspace member.');
+    }
+
+    proposal.assignedTo = payload.assignedTo || null;
+    await proposal.save();
+
+    if (payload.assignedTo) {
+      const proposalJSON = proposal.s3Key ? await getProposalJSONForRecord(proposal) : null;
+      await createNotifications({
+        userIds: [payload.assignedTo],
+        workspace,
+        proposalId: proposal.proposalId,
+        type: 'assignment',
+        title: 'Proposal assignment updated',
+        body: `${proposal.title} has been assigned to you for delivery follow-up.`,
+        deliveryDefaults: proposalJSON?.delivery_plan?.notificationDefaults,
+      }).catch(() => null);
+    }
+
+    res.json({
+      assignedTo: proposal.assignedTo ? proposal.assignedTo.toString() : null,
+    });
   } catch (error) {
     next(error);
   }

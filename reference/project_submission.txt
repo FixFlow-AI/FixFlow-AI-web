@@ -1,0 +1,41 @@
+Final Submission
+
+GitHub Repository *
+https://github.com/Suvam-paul145/Proplytics
+
+Live Demo URL *
+https://main.d22glq95zibf1w.amplifyapp.com
+
+Video Walkthrough URL *
+[Insert your Loom or YouTube link here]
+
+Documentation & Process *
+Approach: Most AI proposal tools generate long text first and structure it later. Proplytics reverses this by generating schema-constrained JSON first via Gemini 1.50, and progressively rendering interactive proposal UI from that structured output using streaming Server-Sent Events (SSE). 
+
+Challenges faced: 
+- Streaming structured JSON progressively via SSE required careful partial section extraction to ensure UI rendering didn't break.
+- Maintaining strict validation across versions was solved using Zod schemas and fallback repair strategies.
+- Setting up the cloud architecture involved seamless orchestration of AWS ECS for the Node backend and AWS Amplify for the React frontend, handling environment variables securely via SSM Parameter Store.
+
+How to run the project:
+1. Ensure Node.js and Docker are installed.
+2. Clone the repo: `git clone https://github.com/Suvam-paul145/Proplytics.git`
+3. Install backend dependencies: `npm --prefix backend install`
+4. Install frontend dependencies: `npm install`
+5. Configure `.env` and `backend/.env` files with `GEMINI_API_KEY`, AWS, and MongoDB credentials.
+6. Start backend: `npm --prefix backend run dev` (Runs on http://localhost:5000)
+7. Start frontend: `npm run dev` (Runs on http://localhost:3001)
+
+Architecture & Cost Analysis *
+Tech stack:
+- Frontend: React 18, Vite 5, Tailwind CSS, Framer Motion, Zustand, Three.js
+- Backend: Node.js, Express 5.2, MongoDB Atlas, Puppeteer (for PDF export), `@google/genai` (Gemini API)
+- Infrastructure: AWS Amplify (Frontend), AWS ECS / Fargate (Backend Container), AWS ECR, AWS S3 (Brief & version storage), AWS CloudFront (Distribution), AWS SSM (Secrets)
+
+Infrastructure Cost Breakdown:
+- AWS Amplify (Frontend Hosting): Pay-as-you-go based on build minutes and outbound bandwidth (mostly covered by Free Tier for low traffic).
+- AWS ECS (Fargate) + ECR: Billed per vCPU and memory per hour for the backend container.
+- AWS S3 & CloudFront: Storage/bandwidth costs for brief documents, versioned JSONs, and API distribution. Minimal cost (under $1/month for basic usage).
+- MongoDB Atlas: Covered by Free tier (M0 cluster).
+- Google Gemini API: Costs scale based on input/output tokens per proposal generated. Free tier provides base allowance.
+Total estimated cost for initial production/low-moderate usage: $5 - $20/month.

@@ -5,6 +5,7 @@ import { useWorkspace } from '@/hooks/useWorkspace'
 import InviteModal from '@/components/workspace/InviteModal'
 import MemberList from '@/components/workspace/MemberList'
 import InviteHistoryList from '@/components/workspace/InviteHistoryList'
+import NotificationPreferencesCard from '@/components/settings/NotificationPreferencesCard'
 import api from '@/config/api'
 
 export default function WorkspaceSettings() {
@@ -19,6 +20,16 @@ export default function WorkspaceSettings() {
       refetch()
     } catch (error) {
       toast.error(error.response?.data?.error || 'Unable to remove member.')
+    }
+  }
+
+  const handleSaveNotifications = async (notificationDefaults) => {
+    try {
+      await api.patch('/workspaces/current', { notificationDefaults })
+      toast.success('Workspace notifications updated.')
+      refetch()
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Unable to update workspace notifications.')
     }
   }
 
@@ -48,6 +59,14 @@ export default function WorkspaceSettings() {
           <MemberList members={fullWorkspace?.members || []} canManage={currentWorkspace?.currentUserRole === 'owner'} onRemove={handleRemove} />
         </div>
       </div>
+
+      <NotificationPreferencesCard
+        title="Workspace Notifications"
+        description="Control how the team hears about invites, comments, approvals, assignments, goal completion, and backlog movement."
+        value={fullWorkspace?.notificationDefaults || currentWorkspace?.notificationDefaults}
+        onSave={handleSaveNotifications}
+        disabled={currentWorkspace?.currentUserRole !== 'owner'}
+      />
 
       <div className="glass-card rounded-[28px] p-6">
         <h2 className="text-xl font-semibold">Invitations</h2>

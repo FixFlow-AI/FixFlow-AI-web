@@ -3,6 +3,9 @@ const User = require('../../models/User');
 const Workspace = require('../../models/Workspace');
 const { normalizePlan, getWorkspaceCapabilities } = require('../capabilities/capabilityService');
 const { sendWorkspaceInviteEmail } = require('./inviteEmailService');
+const {
+  normalizeNotificationPreferences,
+} = require('../notifications/notificationPreferences');
 const { BadRequestError, ConflictError, ForbiddenError, NotFoundError } = require('../../utils/errors');
 
 function slugify(value = '') {
@@ -32,6 +35,7 @@ function buildWorkspaceSummary(workspace, currentUserId = null) {
     memberCount: workspace.members.length,
     pendingInviteCount: (workspace.invitePending || []).filter((invite) => invite.status === 'pending').length,
     currentUserRole: member?.role || null,
+    notificationDefaults: normalizeNotificationPreferences(workspace.notificationDefaults),
     capabilities: getWorkspaceCapabilities(workspace.plan),
   };
 }
@@ -102,6 +106,7 @@ async function createWorkspace({ user, name, plan }) {
     slug,
     ownerId: user._id || user.id,
     plan: normalizedPlan,
+    notificationDefaults: normalizeNotificationPreferences(),
     members: [
       {
         userId: user._id || user.id,
@@ -269,7 +274,7 @@ async function acceptInvite({ user, rawToken }) {
   user.defaultEntryMode = 'team';
   await user.save();
 
-  return workspace;
+  return { workspace, invite };
 }
 
 async function removeWorkspaceMember({ workspace, memberUserId }) {

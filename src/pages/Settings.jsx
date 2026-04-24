@@ -4,6 +4,8 @@ import { Mail, User, ShieldCheck, Sun, Moon, Monitor } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 import useThemeStore from '../stores/themeStore';
 import toast from 'react-hot-toast';
+import api from '@/config/api';
+import NotificationPreferencesCard from '@/components/settings/NotificationPreferencesCard';
 
 const AVATARS = [
   '/avatar.png',
@@ -17,10 +19,13 @@ const AVATARS = [
 export default function Settings() {
   const user = useAuthStore((s) => s.user);
   const currentWorkspace = useAuthStore((s) => s.currentWorkspace);
-  const updateUser = useAuthStore((s) => s.updateUser);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setCurrentWorkspace = useAuthStore((s) => s.setCurrentWorkspace);
   
   const [name, setName] = useState(user?.name || '');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATARS[0]);
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
@@ -30,14 +35,43 @@ export default function Settings() {
     if (user?.avatar) setSelectedAvatar(user.avatar);
   }, [user]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast.error('Name cannot be empty.');
       return;
     }
-    updateUser({ name, avatar: selectedAvatar });
-    toast.success('Settings updated successfully!');
+
+    setIsSavingProfile(true)
+    try {
+      const { data } = await api.patch('/auth/me', {
+        name,
+        avatar: selectedAvatar,
+      })
+      setUser(data.user)
+      setCurrentWorkspace(data.currentWorkspace || null)
+      toast.success('Settings updated successfully!')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not save your profile settings.')
+    } finally {
+      setIsSavingProfile(false)
+    }
   };
+
+  const handleSaveNotifications = async (notificationPreferences) => {
+    setIsSavingNotifications(true)
+    try {
+      const { data } = await api.patch('/auth/me', {
+        notificationPreferences,
+      })
+      setUser(data.user)
+      setCurrentWorkspace(data.currentWorkspace || null)
+      toast.success('Notification preferences updated.')
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not save notification preferences.')
+    } finally {
+      setIsSavingNotifications(false)
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -169,11 +203,20 @@ export default function Settings() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-colors mt-6 shadow-sm flex items-center gap-2"
+            disabled={isSavingProfile}
           >
             <ShieldCheck className="h-4 w-4" />
-            Save Changes
+            {isSavingProfile ? 'Saving...' : 'Save Changes'}
           </motion.button>
         </div>
+
+        <NotificationPreferencesCard
+          title="Personal Notifications"
+          description="Keep delivery-plan changes, comments, approvals, and assignments visible in the app and optionally in email."
+          value={user?.notificationPreferences}
+          onSave={handleSaveNotifications}
+          isSaving={isSavingNotifications}
+        />
       </div>
     </div>
   );

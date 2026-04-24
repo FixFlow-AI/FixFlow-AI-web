@@ -17,6 +17,8 @@ const {
   removeWorkspaceMember,
 } = require('../services/workspace/workspaceService');
 const { buildAuthProfile } = require('../services/auth/profileService');
+const { createNotifications } = require('../services/notifications/notificationService');
+const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
 const { NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
@@ -35,6 +37,7 @@ async function buildWorkspaceDetails(workspace) {
 
   return {
     ...workspace.toObject(),
+    notificationDefaults: normalizeNotificationPreferences(workspace.notificationDefaults),
     members: workspace.members.map((member) => ({
       userId: member.userId.toString(),
       role: member.role,
@@ -115,6 +118,9 @@ router.patch('/current', authMiddleware, async (req, res, next) => {
     if (payload.plan) {
       workspace.plan = payload.plan;
     }
+    if (payload.notificationDefaults) {
+      workspace.notificationDefaults = normalizeNotificationPreferences(payload.notificationDefaults);
+    }
     await workspace.save();
 
     if (payload.defaultEntryMode) {
@@ -141,6 +147,27 @@ router.post('/current/invites', authMiddleware, async (req, res, next) => {
     }
     const { workspace: scopedWorkspace } = await assertWorkspaceMembership(req.user.userId, workspace._id, ['owner', 'editor']);
     const result = await inviteToWorkspace({ workspace: scopedWorkspace, inviter: user, email: payload.email, role: payload.role });
+
+    const existingInvitee = await User.findOne({ email: payload.email.trim().toLowerCase() });
+    const inviteRecipients = [
+      existingInvitee?._id?.toString(),
+      req.user.userId,
+    ].filter(Boolean);
+
+    await createNotifications({
+      userIds: inviteRecipients,
+      workspace: scopedWorkspace,
+      type: 'invite',
+      title: `Workspace invite sent`,
+      body: existingInvitee
+        ? `${user.name} invited ${existingInvitee.email} to ${scopedWorkspace.name} as ${payload.role}.`
+        : `${payload.email} was invited to join ${scopedWorkspace.name} as ${payload.role}.`,
+      metadata: {
+        email: payload.email,
+        role: payload.role,
+      },
+    }).catch(() => null);
+
     res.status(201).json({
       ...result,
       workspace: buildWorkspaceSummary(scopedWorkspace, req.user.userId),
@@ -163,8 +190,25 @@ router.get('/join/:token', async (req, res, next) => {
 router.post('/join/:token', authMiddleware, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.userId);
-    const workspace = await acceptInvite({ user, rawToken: req.params.token });
+    const { workspace, invite } = await acceptInvite({ user, rawToken: req.params.token });
     const profile = await buildAuthProfile(user);
+
+    const acceptedRecipients = [...new Set([
+      workspace.ownerId?.toString(),
+      invite?.inviterId?.toString(),
+    ].filter((value) => value && value !== req.user.userId.toString()))];
+
+    await createNotifications({
+      userIds: acceptedRecipients,
+      workspace,
+      type: 'invite',
+      title: `Workspace invite accepted`,
+      body: `${user.name} joined ${workspace.name} as ${invite?.role || 'member'}.`,
+      metadata: {
+        acceptedBy: req.user.userId,
+        role: invite?.role || 'editor',
+      },
+    }).catch(() => null);
 
     res.json({
       workspace: buildWorkspaceSummary(workspace, req.user.userId),

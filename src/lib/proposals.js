@@ -16,15 +16,24 @@ function getRiskColor(severity) {
 }
 
 function estimateWeeks(duration) {
-  const numbers = String(duration || '')
-    .match(/\d+/g)
-    ?.map((value) => Number(value)) || []
+  const normalized = String(duration || '').toLowerCase()
+  const numbers = normalized.match(/\d+(?:\.\d+)?/g)?.map((value) => Number(value)) || []
 
   if (!numbers.length) {
     return 0
   }
 
-  return numbers.reduce((sum, value) => sum + value, 0) / numbers.length
+  const average = numbers.reduce((sum, value) => sum + value, 0) / numbers.length
+
+  if (normalized.includes('month')) {
+    return average * 4
+  }
+
+  if (normalized.includes('day')) {
+    return Math.max(1, average / 5)
+  }
+
+  return average
 }
 
 export function calculateOverallConfidence(features = []) {
@@ -55,6 +64,7 @@ export function normalizeProposalRecord(record = {}) {
     ...phase,
     id: phase.id || buildId('phase', index, phase.phase),
   }))
+  const deliveryPlan = data.delivery_plan || null
   const effort = (data.effort || []).map((item, index) => ({
     ...item,
     id: item.id || buildId('effort', index, item.label),
@@ -88,6 +98,7 @@ export function normalizeProposalRecord(record = {}) {
     comments: record.comments || [],
     createdBy: record.createdBy || null,
     assignedTo: record.assignedTo || null,
+    delivery_plan: deliveryPlan,
     features,
     risks,
     timeline,

@@ -7,6 +7,7 @@
 
 const { SECTION_SCHEMAS, SECTION_JSON_KEYS } = require('../../schemas/sectionSchemas');
 const s3Service = require('../storage/s3');
+const { deriveDeliveryPlan, ensureDeliveryPlan } = require('./deliveryPlanService');
 
 /**
  * Parse and validate the LLM's mutation output against the section's Zod schema.
@@ -78,11 +79,27 @@ function validateSectionOutput(rawOutput, targetSection) {
  */
 function mergeSectionUpdate(proposalJSON, targetSection, newSectionData) {
   const jsonKey = SECTION_JSON_KEYS[targetSection] || targetSection;
-
-  return {
+  const merged = {
     ...proposalJSON,
     [jsonKey]: newSectionData,
   };
+
+  if (targetSection === 'timeline') {
+    const refreshed = deriveDeliveryPlan({
+      ...merged,
+      delivery_plan: {
+        ...(merged.delivery_plan || {}),
+        notificationDefaults: merged.delivery_plan?.notificationDefaults,
+      },
+    });
+
+    return {
+      ...merged,
+      delivery_plan: refreshed,
+    };
+  }
+
+  return ensureDeliveryPlan(merged);
 }
 
 /**

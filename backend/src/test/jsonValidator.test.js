@@ -31,6 +31,30 @@ const sampleProposal = {
       dependencies: [],
     },
   ],
+  delivery_plan: {
+    mode: 'weekly',
+    generatedFrom: 'llm',
+    weeks: [
+      {
+        id: 'week-1',
+        label: 'Week 1',
+        startWeek: 1,
+        endWeek: 1,
+        sourcePhase: 'Discovery',
+        goals: ['Lock discovery agenda'],
+        tasks: [{ id: 'task-1', title: 'Stakeholder interviews', owner: 'team', status: 'planned', notify: true }],
+        deliverables: ['Discovery notes'],
+        dependencies: [],
+      },
+    ],
+    roadmap: [],
+    backlog: [],
+    notificationDefaults: {
+      enabled: true,
+      channels: ['in_app', 'email'],
+      events: ['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved'],
+    },
+  },
   effort: [
     {
       label: 'Planning',
@@ -59,4 +83,5 @@ test('validateAndRepair extracts JSON from surrounding text', async () => {
   const noisy = `Here is your proposal.\n${JSON.stringify(sampleProposal)}\nThank you.`;
   const parsed = await validateAndRepair(noisy);
   assert.equal(parsed.timeline[0].phase, 'Discovery');
+  assert.equal(parsed.delivery_plan.weeks[0].label, 'Week 1');
 });
