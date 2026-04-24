@@ -68,9 +68,9 @@ function Dashboard() {
         >
           {[
             { label: 'Total Proposals', value: proposals.length },
-            { label: 'Completed', value: proposals.filter((proposal) => proposal.status === 'complete').length },
-            { label: 'Generating', value: proposals.filter((proposal) => proposal.status === 'generating').length },
-            { label: 'Failed', value: proposals.filter((proposal) => proposal.status === 'failed').length },
+            { label: 'Won', value: proposals.filter((proposal) => proposal.dealStatus === 'won').length },
+            { label: 'Negotiating', value: proposals.filter((proposal) => proposal.dealStatus === 'negotiating').length },
+            { label: 'Pending', value: proposals.filter((proposal) => proposal.dealStatus === 'pending').length },
           ].map((stat) => (
             <div key={stat.label} className="p-4 rounded-xl border border-border bg-card/50">
               <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>

@@ -6,21 +6,18 @@ const {
   uploadUrlSchema,
 } = require('../models/schemas');
 const Proposal = require('../models/Proposal');
-const { parseFile } = require('../services/fileParser');
 const { buildPrompt } = require('../services/llm/promptBuilder');
 const { streamProposal } = require('../services/llm/client');
 const { validateAndRepair } = require('../services/llm/jsonValidator');
+const {
+  inferInputType,
+  hydrateBriefText,
+  assertSufficientBriefLength,
+} = require('../services/brief/briefHydrationService');
 const s3Service = require('../services/storage/s3');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
-
-function inferInputType({ briefText, fileKey }) {
-  if (fileKey?.endsWith('.pdf')) return 'pdf';
-  if (fileKey?.endsWith('.docx')) return 'docx';
-  if (fileKey?.endsWith('.txt')) return 'txt';
-  return briefText ? 'text' : 'text';
-}
 
 function buildTitle(projectSummary) {
   const firstSentence = String(projectSummary || '')
@@ -31,28 +28,15 @@ function buildTitle(projectSummary) {
   return (firstSentence || 'Generated proposal').slice(0, 100);
 }
 
-async function hydrateBriefText(userId, briefText, fileKey) {
-  if (fileKey) {
-    s3Service.assertOwnedBriefKey(userId, fileKey);
-    const fileBuffer = await s3Service.getFile(fileKey);
-    const mimeType = s3Service.getMimeTypeFromKey(fileKey);
-    return parseFile(fileBuffer, mimeType);
-  }
-
-  return String(briefText || '').trim();
-}
-
 router.post('/', authMiddleware, async (req, res, next) => {
   let proposalRecord = null;
 
   try {
     const payload = proposalGenerateSchema.parse(req.body);
     const inputType = inferInputType(payload);
-    const hydratedText = await hydrateBriefText(req.user.userId, payload.briefText, payload.fileKey);
-
-    if (!hydratedText || hydratedText.trim().length < 50) {
-      throw new BadRequestError('Brief is too short. Provide at least 50 characters.');
-    }
+    const hydratedText = assertSufficientBriefLength(
+      await hydrateBriefText(req.user.userId, payload.briefText, payload.fileKey)
+    );
 
     let proposalId = payload.proposalId || uuidv4();
     let nextVersion = 1;
@@ -78,6 +62,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
         versionCount: 1,
         inputType,
         sourceFileKey: payload.fileKey || '',
+        briefScore: payload.briefScore || null,
       });
       await proposalRecord.save();
     }
@@ -107,6 +92,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
         proposalRecord.generationError = '';
         proposalRecord.inputType = inputType;
         proposalRecord.sourceFileKey = payload.fileKey || proposalRecord.sourceFileKey || '';
+        proposalRecord.briefScore = payload.briefScore || proposalRecord.briefScore || null;
         await proposalRecord.save();
       }
 
@@ -136,6 +122,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
         generationTimeMs: Date.now() - startTime,
         generationError: '',
         sourceFileKey: payload.fileKey || proposalRecord.sourceFileKey || '',
+        briefScore: payload.briefScore || proposalRecord.briefScore || null,
       });
       await proposalRecord.save();
 

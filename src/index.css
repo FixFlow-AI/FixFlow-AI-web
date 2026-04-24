@@ -1,47 +1,127 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Base dark theme */
-  --background: #0a0a0f;
-  --foreground: #f5f5f7;
-  --card: #141419;
-  --card-foreground: #f5f5f7;
-  --border: #27272a;
-  --muted: #1c1c22;
-  --muted-foreground: #a1a1aa;
+:root, .theme-modern-dark {
+  --background: #071018;
+  --foreground: #eef7fb;
+  --card: #0d1821;
+  --card-foreground: #eef7fb;
+  --border: rgba(111, 196, 220, 0.16);
+  --muted: #0e1f2b;
+  --muted-foreground: #8ea5b5;
+
+  --primary: #3fd7ff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #12222f;
+  --secondary-foreground: #f5f5f7;
+
+  --accent: #00b8d9;
+  --accent-foreground: #ffffff;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --proplytics-glow: rgba(63, 215, 255, 0.22);
+  --confidence-high: #26d07c;
+  --confidence-medium: #f7b955;
+  --confidence-low: #ff6b6b;
+
+  --glass-bg: rgba(14, 28, 39, 0.72);
+  --glass-border: rgba(111, 196, 220, 0.14);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  --glass-card-bg:
+    linear-gradient(180deg, rgba(16, 34, 46, 0.82) 0%, rgba(9, 22, 31, 0.78) 100%);
+  --glass-card-shadow:
+    0 20px 50px rgba(2, 12, 18, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(63, 215, 255, 0.04);
+
+  --gradient-start: #f4fbff;
+  --gradient-end: #86b4c5;
+  --radius: 0.75rem;
+}
+
+.theme-light {
+  --background: #f8f9fa;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: #e2e8f0;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
   
-  /* Primary accent - Purple */
   --primary: #8b5cf6;
   --primary-foreground: #ffffff;
   
-  /* Secondary */
-  --secondary: #1c1c22;
-  --secondary-foreground: #f5f5f7;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
   
-  /* Accent */
   --accent: #6366f1;
   --accent-foreground: #ffffff;
   
-  /* Destructive */
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   
-  /* Proplytics specific */
-  --proplytics-glow: rgba(139, 92, 246, 0.4);
-  --confidence-high: #22c55e;
-  --confidence-medium: #f59e0b;
-  --confidence-low: #ef4444;
+  --proplytics-glow: rgba(139, 92, 246, 0.2);
+  --confidence-high: #16a34a;
+  --confidence-medium: #d97706;
+  --confidence-low: #dc2626;
   
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.05);
+  /* Glassmorphism for light mode */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  --glass-card-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02), inset 0 1px 0 0 var(--glass-highlight);
+  
+  /* Text gradient */
+  --gradient-start: #0f172a;
+  --gradient-end: #64748b;
   
   --radius: 0.75rem;
+}
+
+.theme-vscode-dark {
+  --background: #1e1e1e;
+  --foreground: #cccccc;
+  --card: #252526;
+  --card-foreground: #cccccc;
+  --border: #333333;
+  --muted: #2d2d30;
+  --muted-foreground: #858585;
+  
+  --primary: #0e639c;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #2d2d30;
+  --secondary-foreground: #cccccc;
+  
+  --accent: #1177bb;
+  --accent-foreground: #ffffff;
+  
+  --destructive: #f14c4c;
+  --destructive-foreground: #ffffff;
+  
+  --proplytics-glow: rgba(14, 99, 156, 0.4);
+  --confidence-high: #89d185;
+  --confidence-medium: #cca700;
+  --confidence-low: #f14c4c;
+  
+  /* Glassmorphism adapted for VS Code */
+  --glass-bg: rgba(37, 37, 38, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-highlight: rgba(255, 255, 255, 0.02);
+  --glass-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.1) 100%);
+  --glass-card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 var(--glass-highlight);
+  
+  /* Text gradient */
+  --gradient-start: #cccccc;
+  --gradient-end: #858585;
+  
+  --radius: 0.4rem; /* VS Code has tighter borders */
 }
 
 * {
@@ -52,19 +132,21 @@
 
 html {
   background-color: var(--background);
-  color-scheme: dark;
   scroll-behavior: smooth;
   scroll-padding-top: 100px;
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  background-image:
+    radial-gradient(circle at top left, rgba(63, 215, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(38, 208, 124, 0.06), transparent 24%);
 }
 
 /* Scrollbar styling */
@@ -91,7 +173,6 @@ body {
 
 ::-webkit-scrollbar-corner {
   background: var(--muted);
-  background: var(--muted-foreground);
 }
 
 /* Glassmorphism utility classes */
@@ -104,18 +185,11 @@ body {
   }
   
   .glass-card {
-    background: linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.02) 100%
-    );
+    background: var(--glass-card-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
-    box-shadow: 
-      0 4px 6px -1px rgba(0, 0, 0, 0.2),
-      0 2px 4px -2px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 0 var(--glass-highlight);
+    box-shadow: var(--glass-card-shadow);
   }
   
   .gradient-border {
@@ -144,11 +218,11 @@ body {
   .glow-effect {
     box-shadow: 
       0 0 20px var(--proplytics-glow),
-      0 0 40px rgba(139, 92, 246, 0.2);
+      0 0 40px rgba(63, 215, 255, 0.12);
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, #f5f5f7 0%, #a1a1aa 100%);
+    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -172,6 +246,16 @@ body {
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
   }
+
+  .workspace-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(143, 179, 194, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(143, 179, 194, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black 30%, transparent 85%);
+  }
 }
 
 /* Focus styles */
@@ -182,7 +266,7 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(139, 92, 246, 0.3);
+  background: rgba(63, 215, 255, 0.3);
   color: var(--foreground);
 }
 
@@ -210,5 +294,15 @@ section {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }

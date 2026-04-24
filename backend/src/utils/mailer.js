@@ -28,10 +28,7 @@ function getTransporter() {
 }
 
 async function sendPasswordResetOtp({ to, otp }) {
-  const client = getTransporter();
-
-  await client.sendMail({
-    from: env.SMTP_FROM,
+  await sendTransactionalMail({
     to,
     subject: 'Proplytics Password Reset OTP',
     text: `Your Proplytics OTP is ${otp}. It will expire in 10 minutes.`,
@@ -48,7 +45,20 @@ async function sendPasswordResetOtp({ to, otp }) {
   });
 }
 
+async function sendTransactionalMail({ to, subject, text, html, from = env.SMTP_FROM }) {
+  const client = getTransporter();
+
+  await client.sendMail({
+    from,
+    to,
+    subject,
+    text,
+    html,
+  });
+}
+
 module.exports = {
   isSmtpConfigured,
   sendPasswordResetOtp,
+  sendTransactionalMail,
 };

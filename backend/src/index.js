@@ -8,9 +8,13 @@ const { corsMiddleware } = require('./middleware/cors');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth');
+const briefScoreRoutes = require('./routes/briefScore');
 const generateRoutes = require('./routes/generate');
 const proposalRoutes = require('./routes/proposals');
 const proposalChatRoutes = require('./routes/proposalChat');
+const portalRoutes = require('./routes/portals');
+const publicPortalRoutes = require('./routes/publicPortal');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 
@@ -33,9 +37,13 @@ app.get('/api/health', (_req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/brief', briefScoreRoutes);
 app.use('/api/generate', generateRoutes);
 app.use('/api/proposals', proposalRoutes);
+app.use('/api/proposals', portalRoutes);
 app.use('/api/proposal', proposalChatRoutes);
+app.use('/api/portal', publicPortalRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 handler
 app.use((_req, res) => {

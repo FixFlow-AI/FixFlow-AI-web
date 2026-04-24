@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Download,
   Share2,
+  Gauge,
   Layers,
   AlertTriangle,
   Target,
@@ -23,10 +24,16 @@ import DetailDrawer from '@/components/proposal/DetailDrawer'
 import SectionSkeleton from '@/components/proposal/SectionSkeleton'
 import ExportModal from '@/components/proposal/ExportModal'
 import RevisionHistory from '@/components/proposal/RevisionHistory'
-import ProposalChatSidebar from '@/components/proposalChat/ProposalChatSidebar'
+import ProposalChatPane from '@/components/proposalChat/ProposalChatPane'
 import SectionUpdateOverlay from '@/components/proposalChat/SectionUpdateOverlay'
+import ShareModal from '@/components/portal/ShareModal'
+import PortalAnalyticsPanel from '@/components/portal/PortalAnalyticsPanel'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import StatusSelector from '@/components/winloss/StatusSelector'
+import WonOutcomeModal from '@/components/winloss/WonOutcomeModal'
+import LostOutcomeModal from '@/components/winloss/LostOutcomeModal'
 import api from '@/config/api'
+import { cn } from '@/lib/utils'
 import { normalizeProposalRecord, summarizeChangedSections, calculateOverallConfidence, calculateEstimatedDuration } from '@/lib/proposals'
 import { useProposalChat } from '@/hooks/useProposalChat'
 
@@ -36,8 +43,20 @@ function ProposalResult() {
   const [selectedFeature, setSelectedFeature] = useState(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
+  const [isWonOutcomeOpen, setIsWonOutcomeOpen] = useState(false)
+  const [isLostOutcomeOpen, setIsLostOutcomeOpen] = useState(false)
+  const [isUpdatingDealStatus, setIsUpdatingDealStatus] = useState(false)
+  const [dealStatus, setDealStatus] = useState('pending')
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [hasOpenedChat, setHasOpenedChat] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Section-level state for live patching from mutations
   const [sectionOverrides, setSectionOverrides] = useState({})
@@ -63,6 +82,12 @@ function ProposalResult() {
   const versionsQuery = useQuery({
     queryKey: ['proposal', id, 'versions'],
     queryFn: () => api.get(`/proposals/${id}/versions`).then((response) => response.data),
+    enabled: Boolean(id),
+  })
+
+  const portalQuery = useQuery({
+    queryKey: ['proposal', id, 'portal'],
+    queryFn: () => api.get(`/proposals/${id}/portal`).then((response) => response.data.portal),
     enabled: Boolean(id),
   })
 
@@ -115,6 +140,11 @@ function ProposalResult() {
     () => summarizeChangedSections(compareQuery.data?.diff),
     [compareQuery.data?.diff]
   )
+
+  useEffect(() => {
+    if (!proposal?.dealStatus) return
+    setDealStatus(proposal.dealStatus)
+  }, [proposal?.dealStatus])
 
   // Handle section updates from chat mutations
   useEffect(() => {
@@ -200,12 +230,37 @@ function ProposalResult() {
     setIsDrawerOpen(true)
   }
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    setIsShareOpen(true)
+  }
+
+  const handleDealStatusChange = async (nextStatus) => {
+    const previousStatus = dealStatus
+    setDealStatus(nextStatus)
+    setIsUpdatingDealStatus(true)
+
     try {
-      await navigator.clipboard.writeText(window.location.href)
-      toast.success('Proposal link copied to clipboard.')
-    } catch {
-      toast.error('Unable to copy the share link right now.')
+      await api.patch(`/proposals/${id}/deal-status`, {
+        dealStatus: nextStatus,
+      })
+
+      toast.success(`Deal status updated to ${nextStatus}.`)
+      queryClient.invalidateQueries({ queryKey: ['proposal', id] })
+      queryClient.invalidateQueries({ queryKey: ['proposals'] })
+      queryClient.invalidateQueries({ queryKey: ['proposal-analytics'] })
+
+      if (nextStatus === 'won') {
+        setIsWonOutcomeOpen(true)
+      }
+
+      if (nextStatus === 'lost') {
+        setIsLostOutcomeOpen(true)
+      }
+    } catch (statusError) {
+      setDealStatus(previousStatus)
+      toast.error(statusError.response?.data?.error || 'Unable to update deal status.')
+    } finally {
+      setIsUpdatingDealStatus(false)
     }
   }
 
@@ -256,8 +311,16 @@ function ProposalResult() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div className="flex min-h-screen">
+      <motion.div 
+        animate={{ 
+          marginRight: isChatOpen && !isMobile ? '400px' : '0px',
+          paddingRight: isChatOpen && !isMobile ? '40px' : '0px'
+        }}
+        transition={{ type: 'spring', damping: 30, stiffness: 200 }}
+        className="flex-1 max-w-6xl mx-auto w-full"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <Link to="/dashboard">
             <Button variant="ghost" size="sm">
@@ -281,6 +344,15 @@ function ProposalResult() {
             >
               Generated proposal with AI-powered analysis and export-ready sections
             </motion.p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <StatusSelector value={dealStatus} onChange={handleDealStatusChange} isLoading={isUpdatingDealStatus} />
+              {proposal.briefScore?.overallScore ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/35 px-3 py-1.5 text-xs text-muted-foreground">
+                  <Gauge className="h-3.5 w-3.5 text-primary" />
+                  BriefScore {proposal.briefScore.overallScore}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -289,35 +361,39 @@ function ProposalResult() {
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-3"
         >
-          <Button variant="outline" size="sm" onClick={handleShare}>
+          <Button data-testid="open-share-modal" variant="outline" size="sm" onClick={handleShare} className="h-9">
             <Share2 className="h-4 w-4 mr-2" />
-            Share
+            Share Portal
           </Button>
-          <Button size="sm" className="glow-effect" onClick={() => setIsExportOpen(true)}>
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
+          <Button size="sm" className="glow-effect h-10 px-5" onClick={() => setIsExportOpen(true)}>
+            <Download className="h-5 w-5 mr-2" />
+            <span className="font-semibold">Export PDF</span>
           </Button>
           <div className="relative">
             <Button
               size="sm"
-              variant="outline"
-              onClick={handleOpenChat}
-              className="border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+              variant={isChatOpen ? "secondary" : "outline"}
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className={cn(
+                "h-10 px-5 border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all relative overflow-visible",
+                isChatOpen && "bg-primary/10 border-primary/50 text-primary"
+              )}
             >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Negotiate & Refine
+              <MessageSquare className="h-5 w-5 mr-2" />
+              <span className="font-semibold">Negotiate & Refine</span>
+              
+              {/* Pulsing indicator - now better aligned */}
+              {!hasOpenedChat && !isChatOpen && (
+                <motion.span
+                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary shadow-lg shadow-primary/50 border-2 border-background"
+                  animate={{
+                    scale: [1, 1.4, 1],
+                    opacity: [1, 0.8, 1],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              )}
             </Button>
-            {/* Pulsing indicator on first load */}
-            {!hasOpenedChat && (
-              <motion.span
-                className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary"
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [1, 0.7, 1],
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-              />
-            )}
           </div>
         </motion.div>
       </div>
@@ -379,6 +455,8 @@ function ProposalResult() {
         </div>
       </ErrorBoundary>
 
+      <PortalAnalyticsPanel portal={portalQuery.data} />
+
       <SectionUpdateOverlay
         sectionKey="features"
         isUpdating={updatingSections.features}
@@ -439,7 +517,7 @@ function ProposalResult() {
           <div>
             <h2 className="text-lg font-semibold mb-4">Effort Estimation</h2>
             <ErrorBoundary>
-              <EffortCard efforts={proposal.effort} />
+              <EffortCard efforts={proposal.effort} totalDuration={proposal.estimatedDuration} />
             </ErrorBoundary>
           </div>
         </SectionUpdateOverlay>
@@ -520,19 +598,75 @@ function ProposalResult() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
       />
+      </motion.div>
 
       {isExportOpen && (
         <ExportModal proposalId={proposal.proposalId} onClose={() => setIsExportOpen(false)} />
       )}
 
-      <ProposalChatSidebar
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        messages={chatMessages}
-        isStreaming={isChatStreaming}
-        currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
-        onSendMessage={handleSendChatMessage}
+      <ShareModal
+        proposalId={proposal.proposalId}
+        portal={portalQuery.data}
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['proposal', id, 'portal'] })
+        }}
       />
+
+      <WonOutcomeModal
+        proposalId={proposal.proposalId}
+        isOpen={isWonOutcomeOpen}
+        onClose={() => setIsWonOutcomeOpen(false)}
+      />
+
+      <LostOutcomeModal
+        proposalId={proposal.proposalId}
+        isOpen={isLostOutcomeOpen}
+        defaultLossReason={proposal.lossReason}
+        onClose={() => setIsLostOutcomeOpen(false)}
+      />
+
+      {/* Persistent Chat Pane for Split View (Desktop) */}
+      {!isMobile && (
+        <div 
+          className={cn(
+            "fixed top-[73px] right-0 bottom-0 z-40 transition-all duration-500 ease-in-out",
+            isChatOpen ? "w-[400px] opacity-100 translate-x-0" : "w-0 opacity-0 translate-x-full"
+          )}
+        >
+          <ProposalChatPane
+            messages={chatMessages}
+            isStreaming={isChatStreaming}
+            currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
+            onSendMessage={handleSendChatMessage}
+            onClose={() => setIsChatOpen(false)}
+            showClose={true}
+          />
+        </div>
+      )}
+
+      {/* Mobile Drawer */}
+      {isMobile && isChatOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsChatOpen(false)} />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            className="absolute bottom-0 left-0 right-0 h-[80vh] rounded-t-3xl overflow-hidden"
+          >
+            <ProposalChatPane
+              messages={chatMessages}
+              isStreaming={isChatStreaming}
+              currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
+              onSendMessage={handleSendChatMessage}
+              onClose={() => setIsChatOpen(false)}
+              showClose={true}
+            />
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

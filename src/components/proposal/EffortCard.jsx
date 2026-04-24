@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-function EffortCard({ efforts }) {
+function EffortCard({ efforts, totalDuration = 'TBD' }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -53,7 +53,7 @@ function EffortCard({ efforts }) {
       <div className="mt-6 pt-4 border-t border-border">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Estimated Total Duration</span>
-          <span className="text-lg font-bold text-primary">18-22 weeks</span>
+          <span className="text-lg font-bold text-primary">{totalDuration}</span>
         </div>
       </div>
     </motion.div>

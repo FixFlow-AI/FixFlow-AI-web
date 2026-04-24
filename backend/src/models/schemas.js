@@ -46,6 +46,17 @@ const proposalGenerateSchema = z
     briefText: z.string().trim().max(150000, 'Brief must be under 150000 characters').optional().default(''),
     fileKey: z.string().trim().max(1024).nullable().optional().default(null),
     proposalId: z.string().trim().max(128).nullable().optional().default(null),
+    briefScore: z.unknown().nullable().optional().default(null),
+  })
+  .refine((data) => data.briefText || data.fileKey, {
+    message: 'Provide a brief or upload a file',
+    path: ['briefText'],
+  });
+
+const briefScoreRequestSchema = z
+  .object({
+    briefText: z.string().trim().max(150000, 'Brief must be under 150000 characters').optional().default(''),
+    fileKey: z.string().trim().max(1024).nullable().optional().default(null),
   })
   .refine((data) => data.briefText || data.fileKey, {
     message: 'Provide a brief or upload a file',
@@ -78,6 +89,51 @@ const proposalChatSchema = z.object({
   ).optional().default([]),
 });
 
+const portalSections = ['summary', 'features', 'risks', 'timeline', 'effort', 'market', 'impact'];
+
+const portalUpsertSchema = z
+  .object({
+    expiryDays: z.union([z.literal(0), z.literal(7), z.literal(30)]).default(7),
+    pinEnabled: z.boolean().default(false),
+    pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits').nullable().optional().default(null),
+  });
+
+const portalVerifySchema = z.object({
+  pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits').nullable().optional().default(null),
+});
+
+const portalEventSchema = z.object({
+  events: z
+    .array(
+      z.object({
+        section: z.enum(portalSections),
+        dwellMs: z.coerce.number().min(0).max(600000).default(0),
+        views: z.coerce.number().int().min(0).max(25).default(1),
+      })
+    )
+    .min(1)
+    .max(50),
+});
+
+const portalFeedbackSchema = z.object({
+  message: z.string().trim().min(5, 'Feedback must be at least 5 characters').max(5000),
+});
+
+const dealStatusSchema = z.object({
+  dealStatus: z.enum(['pending', 'negotiating', 'won', 'lost']),
+  lossReason: z.string().trim().max(1000).optional().default(''),
+});
+
+const outcomeRequestSchema = z.object({
+  dealStatus: z.enum(['won', 'lost']),
+  lossReason: z.string().trim().max(1000).optional().default(''),
+});
+
+const outcomeSendSchema = z.object({
+  recipientEmail: z.string().email('Recipient email is invalid'),
+  emailKey: z.string().trim().min(1).max(32),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -86,8 +142,17 @@ module.exports = {
   forgotPasswordRequestSchema,
   forgotPasswordVerifySchema,
   proposalGenerateSchema,
+  briefScoreRequestSchema,
   uploadUrlSchema,
   proposalExportSchema,
   versionCompareSchema,
   proposalChatSchema,
+  portalSections,
+  portalUpsertSchema,
+  portalVerifySchema,
+  portalEventSchema,
+  portalFeedbackSchema,
+  dealStatusSchema,
+  outcomeRequestSchema,
+  outcomeSendSchema,
 };

@@ -16,7 +16,7 @@ export function useStreamingProposal() {
   const resetStream = useProposalStore((state) => state.resetStream)
 
   const generate = useCallback(
-    async (briefText, fileKey = null, existingProposalId = null) => {
+    async (briefText, fileKey = null, existingProposalId = null, briefScore = null) => {
       startStream()
 
       const accessToken = localStorage.getItem('accessToken')
@@ -35,6 +35,7 @@ export function useStreamingProposal() {
             briefText,
             fileKey,
             proposalId: existingProposalId,
+            briefScore,
           }),
         })
 

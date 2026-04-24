@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, User, ShieldCheck } from 'lucide-react';
+import { Mail, User, ShieldCheck, Sun, Moon, Monitor } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
+import useThemeStore from '../stores/themeStore';
 import toast from 'react-hot-toast';
 
 const AVATARS = [
@@ -19,6 +20,9 @@ export default function Settings() {
   
   const [name, setName] = useState(user?.name || '');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATARS[0]);
+
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
 
   useEffect(() => {
     if (user?.name) setName(user.name);
@@ -67,6 +71,39 @@ export default function Settings() {
                 />
               </motion.button>
             ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Appearance</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={() => setTheme('light')}
+              className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
+                theme === 'light' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
+              }`}
+            >
+              <div className="p-3 rounded-full bg-background shadow-sm"><Sun className="w-6 h-6 text-yellow-500" /></div>
+              <span className="font-medium">Light</span>
+            </button>
+            <button
+              onClick={() => setTheme('modern-dark')}
+              className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
+                theme === 'modern-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
+              }`}
+            >
+              <div className="p-3 rounded-full bg-background shadow-sm"><Moon className="w-6 h-6 text-purple-500" /></div>
+              <span className="font-medium">Modern Dark</span>
+            </button>
+            <button
+              onClick={() => setTheme('vscode-dark')}
+              className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
+                theme === 'vscode-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
+              }`}
+            >
+              <div className="p-3 rounded-full bg-background shadow-sm"><Monitor className="w-6 h-6 text-blue-500" /></div>
+              <span className="font-medium">VS Code Dark</span>
+            </button>
           </div>
         </div>
 

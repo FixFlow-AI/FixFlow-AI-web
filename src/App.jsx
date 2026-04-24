@@ -1,19 +1,23 @@
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import Landing from './pages/Landing'
-import Dashboard from './pages/Dashboard'
-import NewProposal from './pages/NewProposal'
-import ProposalResult from './pages/ProposalResult'
-import Settings from './pages/Settings'
-import Help from './pages/Help'
-import Login from './pages/Login'
-import Register from './pages/Register'
 import DashboardLayout from './components/layout/DashboardLayout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import useAuthStore from './stores/authStore'
+import { PageLoader } from './components/ui/PageLoader'
+
+const Landing = lazy(() => import('./pages/Landing'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const NewProposal = lazy(() => import('./pages/NewProposal'))
+const ProposalResult = lazy(() => import('./pages/ProposalResult'))
+const ProposalPortal = lazy(() => import('./pages/ProposalPortal'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Help = lazy(() => import('./pages/Help'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,10 +64,12 @@ function AppRoutes() {
   return (
     <RouteTransition>
       <AnimatePresence mode="wait">
+        <Suspense fallback={<PageLoader />}>
         <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/p/:token" element={<ProposalPortal />} />
         <Route
           path="/dashboard"
           element={
@@ -105,6 +111,16 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Analytics />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/help"
           element={
             <ProtectedRoute>
@@ -115,14 +131,34 @@ function AppRoutes() {
           }
         />
       </Routes>
+      </Suspense>
     </AnimatePresence>
     </RouteTransition>
   )
 }
 
+import useThemeStore from './stores/themeStore'
+
+function ThemeController() {
+  const theme = useThemeStore((s) => s.theme)
+  
+  useEffect(() => {
+    // Remove all previous theme classes
+    document.documentElement.classList.remove('theme-light', 'theme-vscode-dark', 'theme-modern-dark')
+    // Add new theme class
+    document.documentElement.classList.add(`theme-${theme}`)
+    
+    // Update color-scheme for native elements
+    document.documentElement.style.colorScheme = theme === 'light' ? 'light' : 'dark'
+  }, [theme])
+  
+  return null
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeController />
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
@@ -130,9 +166,9 @@ function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--foreground))',
-            border: '1px solid hsl(var(--border))',
+            background: 'var(--card)',
+            color: 'var(--foreground)',
+            border: '1px solid var(--border)',
           },
         }}
       />

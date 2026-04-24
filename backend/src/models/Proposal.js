@@ -34,6 +34,34 @@ const proposalSchema = new mongoose.Schema(
       enum: ['generating', 'complete', 'failed'],
       default: 'generating',
     },
+    dealStatus: {
+      type: String,
+      enum: ['pending', 'negotiating', 'won', 'lost'],
+      default: 'pending',
+      index: true,
+    },
+    dealStatusUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+    lossReason: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 1000,
+    },
+    briefScore: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    wonOutcome: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    lostOutcome: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     versionCount: {
       type: Number,
       default: 1,
@@ -64,5 +92,6 @@ const proposalSchema = new mongoose.Schema(
 
 proposalSchema.index({ userId: 1, createdAt: -1 });
 proposalSchema.index({ userId: 1, proposalId: 1 });
+proposalSchema.index({ userId: 1, dealStatus: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Proposal', proposalSchema);

@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   FileText,
   PlusCircle,
+  BarChart3,
   Settings,
   HelpCircle,
   Sparkles,
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'New Proposal', href: '/new', icon: PlusCircle },
   { name: 'Proposals', href: '/dashboard', icon: FileText },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
 ]
 
 const secondaryNav = [
