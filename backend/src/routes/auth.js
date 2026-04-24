@@ -19,6 +19,7 @@ const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
 const { getPersonalCapabilities, normalizePlan } = require('../services/capabilities/capabilityService');
 const { buildAuthProfile } = require('../services/auth/profileService');
 const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
+const { buildFrontendUrl, isAllowedFrontendOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
 
 const router = Router();
 
@@ -190,13 +191,43 @@ async function issueTokensForUser(user) {
 }
 
 function safeFrontendRedirect(path, params) {
-  const url = new URL(path, env.FRONTEND_URL);
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
-  return url.toString();
+  return buildFrontendUrl(path, params);
+}
+
+function decodeOAuthState(state) {
+  if (!state) {
+    return {};
+  }
+
+  try {
+    const decoded = Buffer.from(state, 'base64').toString('utf8');
+    const parsed = JSON.parse(decoded);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function resolveFrontendBaseUrl(state) {
+  const payload = decodeOAuthState(state);
+  const originCandidate =
+    typeof payload.frontendOrigin === 'string'
+      ? payload.frontendOrigin
+      : typeof payload.frontendUrl === 'string'
+        ? payload.frontendUrl
+        : '';
+
+  const normalizedOrigin = normalizeOrigin(originCandidate);
+  if (normalizedOrigin && isAllowedFrontendOrigin(normalizedOrigin, { allowLoopback: true })) {
+    return normalizedOrigin;
+  }
+
+  return env.FRONTEND_URL;
+}
+
+function resolveEntryMode(state) {
+  const payload = decodeOAuthState(state);
+  return payload.entryMode === 'team' ? 'team' : 'individual';
 }
 
 function createOtpCode() {
@@ -269,14 +300,17 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
     const profile = await fetchGithubProfile(githubAccessToken);
     const user = await findOrCreateUserFromGithub(profile);
     const authResult = await issueTokensForUser(user);
+    const redirectBaseUrl = resolveFrontendBaseUrl(state);
+    const entryMode = resolveEntryMode(state);
 
-    const redirectUrl = safeFrontendRedirect('/login', {
+    const redirectUrl = buildFrontendUrl('/login', {
       provider: 'github',
       state,
+      mode: entryMode,
       accessToken: authResult.accessToken,
       refreshToken: authResult.refreshToken,
       user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
-    });
+    }, { baseUrl: redirectBaseUrl });
 
     res.redirect(302, redirectUrl);
   } catch (err) {

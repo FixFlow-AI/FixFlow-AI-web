@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import api from '../config/api';
 
+function encodeOAuthState(payload) {
+  return window.btoa(JSON.stringify(payload));
+}
+
 const useAuthStore = create((set, get) => ({
   user: null,
   currentWorkspace: null,
@@ -47,8 +51,16 @@ const useAuthStore = create((set, get) => ({
     return data;
   },
 
-  startGithubLogin: async () => {
-    const { data } = await api.get('/auth/github/url');
+  startGithubLogin: async (entryMode = 'individual') => {
+    const state = encodeOAuthState({
+      frontendOrigin: window.location.origin,
+      entryMode: entryMode === 'team' ? 'team' : 'individual',
+    });
+
+    const { data } = await api.get('/auth/github/url', {
+      params: { state },
+    });
+
     if (!data?.authUrl) {
       throw new Error('GitHub login is not available right now.');
     }

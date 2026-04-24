@@ -50,6 +50,7 @@ function AppRoutes() {
     const accessToken = params.get('accessToken')
     const refreshToken = params.get('refreshToken')
     const encodedUser = params.get('user')
+    const entryMode = params.get('mode') === 'team' ? 'team' : 'individual'
 
     if (!accessToken || !refreshToken) {
       return
@@ -58,7 +59,7 @@ function AppRoutes() {
     try {
       const user = encodedUser ? JSON.parse(atob(encodedUser)) : null
       completeOAuthLogin({ accessToken, refreshToken, user })
-      navigate('/dashboard', { replace: true })
+      navigate(entryMode === 'team' ? '/workspace' : '/dashboard', { replace: true })
     } catch {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')

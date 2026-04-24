@@ -56,6 +56,22 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Sync hosted frontend and OAuth callback URLs to SSM
+        run: |
+          aws ssm put-parameter \
+            --name "/proplytics/dev/FRONTEND_URL" \
+            --type String \
+            --value "https://main.d22glq95zibf1w.amplifyapp.com" \
+            --overwrite \
+            --region "${{ secrets.AWS_REGION }}"
+
+          aws ssm put-parameter \
+            --name "/proplytics/dev/GITHUB_CALLBACK_URL" \
+            --type String \
+            --value "https://d6opkcrsagj0v.cloudfront.net/api/auth/github/callback" \
+            --overwrite \
+            --region "${{ secrets.AWS_REGION }}"
+
       - name: Build and push backend image
         run: |
           docker build -t "${{ secrets.ECR_REPOSITORY }}:latest" ./backend

@@ -17,6 +17,20 @@ In your GitHub OAuth App, set:
 
 - **Authorization callback URL** = value of `GITHUB_CALLBACK_URL`
 
+For the current hosted environment, that value should be:
+
+- `https://d6opkcrsagj0v.cloudfront.net/api/auth/github/callback`
+
+## Multi-environment behavior
+
+The backend callback stays fixed on the backend domain, while the frontend origin is carried through OAuth `state`.
+
+That means one GitHub OAuth callback can safely serve:
+
+- local frontend: `http://localhost:3001`
+- testing frontend: `https://testing.d22glq95zibf1w.amplifyapp.com`
+- main frontend: `https://main.d22glq95zibf1w.amplifyapp.com`
+
 ## Available endpoints
 
 Base path: `/api/auth`

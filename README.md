@@ -491,6 +491,10 @@ npm run build
 npm run preview
 ```
 
+### Environment URL Reference
+
+For the exact local, testing, and main URLs now used by the app, plus the GitHub OAuth callback and auth endpoint matrix, see [reference/ENVIRONMENT_URLS.md](/C:/Users/suvam/Desktop/VS%20code/Projects/Proplytics/reference/ENVIRONMENT_URLS.md).
+
 ---
 
 ## 🧩 AI Pipeline — How It Works

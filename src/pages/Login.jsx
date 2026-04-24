@@ -70,7 +70,7 @@ export default function Login() {
 
   async function handleGithubLogin() {
     try {
-      await startGithubLogin();
+      await startGithubLogin(entryMode);
     } catch (err) {
       toast.error(err.message || 'Unable to start GitHub login.');
     }

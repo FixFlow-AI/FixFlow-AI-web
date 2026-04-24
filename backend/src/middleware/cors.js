@@ -1,36 +1,6 @@
 const cors = require('cors');
 const { env } = require('../config/env');
-
-const allowedOrigins = [
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://main.d22glq95zibf1w.amplifyapp.com',
-  'https://testing.d22glq95zibf1w.amplifyapp.com',
-  env.FRONTEND_URL,
-].filter(Boolean);
-
-function normalizeOrigin(origin) {
-  try {
-    return new URL(origin).origin;
-  } catch {
-    return origin;
-  }
-}
-
-function isLoopbackOrigin(origin) {
-  try {
-    const parsed = new URL(origin);
-    const isHttp = parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    const isLoopbackHost = ['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname);
-    return isHttp && isLoopbackHost;
-  } catch {
-    return false;
-  }
-}
-
-const uniqueAllowedOrigins = new Set(allowedOrigins.map((origin) => normalizeOrigin(origin)));
+const { getAllowedFrontendOrigins, isLoopbackOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
 
 const corsOptions = {
   origin(origin, callback) {
@@ -40,7 +10,7 @@ const corsOptions = {
     }
 
     const normalizedOrigin = normalizeOrigin(origin);
-    if (uniqueAllowedOrigins.has(normalizedOrigin)) {
+    if (getAllowedFrontendOrigins().has(normalizedOrigin)) {
       return callback(null, true);
     }
 
