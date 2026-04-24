@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   createGeminiGuard,
+  extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
   isGeminiAuthError,
@@ -40,6 +41,28 @@ test('builds a unique ordered model candidate list', () => {
     ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
   );
   assert.deepEqual(getGeminiModelCandidates('gemini-2.5-flash', 'gemini-2.5-flash'), ['gemini-2.5-flash']);
+  assert.deepEqual(
+    getGeminiModelCandidates('gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview, gemini-2.5-flash'),
+    ['gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-flash']
+  );
+});
+
+test('extracts provider retry delays from Gemini quota errors', () => {
+  assert.equal(
+    extractRetryDelayMs({
+      error: {
+        details: [{ retryDelay: '14s' }],
+      },
+    }),
+    14_000
+  );
+
+  assert.equal(
+    extractRetryDelayMs({
+      message: 'Quota exceeded. Please retry in 14.321563957s.',
+    }),
+    14_322
+  );
 });
 
 test('gemini guard blocks repeated hard failures during cooldown', () => {

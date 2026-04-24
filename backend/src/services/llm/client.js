@@ -1,4 +1,3 @@
-const { GoogleGenAI } = require('@google/genai');
 const { env } = require('../../config/env');
 const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
 const {
@@ -9,21 +8,10 @@ const {
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('./geminiGuard');
+const { geminiModelCoordinator } = require('./modelCoordinator');
+const { getGeminiClient } = require('./provider');
 
-let geminiClient = null;
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
-
-function getGeminiClient() {
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
-
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  }
-
-  return geminiClient;
-}
 
 function buildGeminiAuthError(error, model) {
   const message = getGeminiAuthErrorMessage(error, { model });
@@ -48,7 +36,7 @@ function buildGeminiRequest(system, userMessage, model) {
   };
 }
 
-async function* streamGeminiModel(system, userMessage, model, retryCount = 0) {
+async function* streamGeminiModel(system, userMessage, model) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
 
@@ -66,21 +54,6 @@ async function* streamGeminiModel(system, userMessage, model, retryCount = 0) {
       }
     }
   } catch (error) {
-    if (isGeminiQuotaError(error) && retryCount < 3) {
-      const waitMs = Math.pow(2, retryCount) * 1000;
-      console.log(
-        JSON.stringify({
-          event: 'LLM_RETRY',
-          model,
-          attempt: retryCount + 1,
-          waitMs,
-        })
-      );
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      yield* streamGeminiModel(system, userMessage, model, retryCount + 1);
-      return;
-    }
-
     if (error?.name === 'AbortError') {
       throw new Error(`LLM request timed out after ${env.STREAM_TIMEOUT_MS}ms.`);
     }
@@ -229,45 +202,104 @@ async function* streamProposal(system, userMessage) {
 
   geminiGuard.assertAvailable();
 
-  const models = getGeminiModelCandidates(env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL);
+  const models = getGeminiModelCandidates(
+    env.GEMINI_MODEL,
+    env.GEMINI_FALLBACK_MODEL,
+    env.GEMINI_MODEL_FALLBACKS
+  );
   let lastError = null;
+  let waitCycles = 0;
 
-  for (let index = 0; index < models.length; index += 1) {
-    const model = models[index];
-    let emittedChunk = false;
+  while (waitCycles <= models.length) {
+    let attemptedModel = false;
 
-    try {
-      for await (const chunk of streamGeminiModel(system, userMessage, model)) {
-        emittedChunk = true;
-        yield chunk;
-      }
-      return;
-    } catch (error) {
-      lastError = error;
+    for (let index = 0; index < models.length; index += 1) {
+      const model = models[index];
+      const reservation = await geminiModelCoordinator.acquire(model);
 
-      if (error?.code === 'GEMINI_AUTH_ERROR') {
-        throw error;
-      }
-
-      if (!emittedChunk && index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
-        console.log(
-          JSON.stringify({
-            event: 'LLM_MODEL_FALLBACK',
-            from: model,
-            to: models[index + 1],
-            reason: error.message,
-          })
-        );
+      if (!reservation.ok) {
         continue;
       }
 
-      throw error;
+      attemptedModel = true;
+      let emittedChunk = false;
+
+      if (reservation.waitMs > 0) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_MODEL_WAIT',
+            model,
+            waitMs: reservation.waitMs,
+          })
+        );
+      }
+
+      try {
+        for await (const chunk of streamGeminiModel(system, userMessage, model)) {
+          emittedChunk = true;
+          yield chunk;
+        }
+        return;
+      } catch (error) {
+        lastError = error;
+
+        if (error?.code === 'GEMINI_AUTH_ERROR') {
+          throw error;
+        }
+
+        if (isGeminiQuotaError(error)) {
+          const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          console.log(
+            JSON.stringify({
+              event: 'LLM_MODEL_COOLDOWN',
+              model,
+              retryMs,
+            })
+          );
+        }
+
+        if (!emittedChunk && index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
+          console.log(
+            JSON.stringify({
+              event: 'LLM_MODEL_FALLBACK',
+              from: model,
+              to: models[index + 1],
+              reason: error.message,
+            })
+          );
+          continue;
+        }
+
+        throw error;
+      }
     }
+
+    if (!attemptedModel) {
+      const waitMs = geminiModelCoordinator.getEarliestAvailabilityDelayMs(models);
+      if (waitMs > 0 && waitMs <= env.GEMINI_MAX_QUEUE_WAIT_MS) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_GLOBAL_WAIT',
+            waitMs,
+            models,
+          })
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        waitCycles += 1;
+        continue;
+      }
+    }
+
+    break;
   }
 
   if (lastError) {
     throw lastError;
   }
+
+  throw new Error(
+    `All configured Gemini models are currently rate-limited beyond the local queue window (${env.GEMINI_MAX_QUEUE_WAIT_MS}ms). Try again shortly or enable billing in Google AI Studio.`
+  );
 }
 
 module.exports = { streamProposal, buildMockProposal };

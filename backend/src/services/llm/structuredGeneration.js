@@ -1,4 +1,3 @@
-const { GoogleGenAI } = require('@google/genai');
 const { env } = require('../../config/env');
 const {
   createGeminiGuard,
@@ -8,21 +7,10 @@ const {
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('./geminiGuard');
+const { geminiModelCoordinator } = require('./modelCoordinator');
+const { getGeminiClient } = require('./provider');
 
-let geminiClient = null;
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
-
-function getGeminiClient() {
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
-
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  }
-
-  return geminiClient;
-}
 
 function extractJsonText(response) {
   if (typeof response?.text === 'string' && response.text.trim()) {
@@ -58,35 +46,90 @@ async function generateStructuredJSON({
 }) {
   geminiGuard.assertAvailable();
 
-  const models = getGeminiModelCandidates(env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL);
+  const models = getGeminiModelCandidates(
+    env.GEMINI_STRUCTURED_MODEL || env.GEMINI_FALLBACK_MODEL,
+    env.GEMINI_STRUCTURED_FALLBACKS,
+    env.GEMINI_MODEL_FALLBACKS
+  );
   let lastError = null;
+  let waitCycles = 0;
 
-  for (let index = 0; index < models.length; index += 1) {
-    const model = models[index];
+  while (waitCycles <= models.length) {
+    let attemptedModel = false;
 
-    try {
-      return await runStructuredRequest({
-        model,
-        system,
-        user,
-        jsonSchema,
-        temperature,
-        maxOutputTokens,
-      });
-    } catch (error) {
-      lastError = error;
+    for (let index = 0; index < models.length; index += 1) {
+      const model = models[index];
+      const reservation = await geminiModelCoordinator.acquire(model);
 
-      if (isGeminiAuthError(error)) {
-        geminiGuard.markHardFailure(error);
-        throw new Error(getGeminiAuthErrorMessage(error, { model }));
-      }
-
-      if (index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
+      if (!reservation.ok) {
         continue;
       }
 
-      throw error;
+      attemptedModel = true;
+
+      if (reservation.waitMs > 0) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_MODEL_WAIT',
+            model,
+            waitMs: reservation.waitMs,
+          })
+        );
+      }
+
+      try {
+        return await runStructuredRequest({
+          model,
+          system,
+          user,
+          jsonSchema,
+          temperature,
+          maxOutputTokens,
+        });
+      } catch (error) {
+        lastError = error;
+
+        if (isGeminiAuthError(error)) {
+          geminiGuard.markHardFailure(error);
+          throw new Error(getGeminiAuthErrorMessage(error, { model }));
+        }
+
+        if (isGeminiQuotaError(error)) {
+          const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          console.log(
+            JSON.stringify({
+              event: 'LLM_MODEL_COOLDOWN',
+              model,
+              retryMs,
+            })
+          );
+        }
+
+        if (index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
+          continue;
+        }
+
+        throw error;
+      }
     }
+
+    if (!attemptedModel) {
+      const waitMs = geminiModelCoordinator.getEarliestAvailabilityDelayMs(models);
+      if (waitMs > 0 && waitMs <= env.GEMINI_MAX_QUEUE_WAIT_MS) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_GLOBAL_WAIT',
+            waitMs,
+            models,
+          })
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        waitCycles += 1;
+        continue;
+      }
+    }
+
+    break;
   }
 
   if (lastError) {

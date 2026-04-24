@@ -320,11 +320,42 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 | 💬 | **Negotiate & Refine Chat** | Proposal Q&A and section-level mutation with automatic new versions | ✅ Live |
 | 🌐 | **Client Share Portal** | Public tokenized portal with optional PIN + expiry windows | ✅ Live |
 | 📈 | **Portal + Outcome Analytics** | Section dwell tracking, feedback capture, win/loss and confidence analytics | ✅ Live |
+| 🧠 | **Agency Brain** | Pattern extraction, calibration insights, and pre-generation prompt steering | ✅ Live |
+| 🪜 | **TriProposal** | Lean, Standard, and Premium strategy generation with side-by-side comparison | ✅ Live |
+| 👥 | **Team Workspace** | Shared workspace, invite flow, role-aware access, comments, and live presence | ✅ Live |
+| 🧩 | **Plan & Mode Gating** | Individual vs Team entry mode plus Free / Standard / Pro capability enforcement | ✅ Live |
 | 📧 | **Outcome Email Sending** | Send kickoff or follow-up sequence emails from won/lost flows | 🟡 SMTP-dependent |
-| 👥 | **Team workspaces** | Multi-user collaboration and org-level sharing | 📅 Planned |
-| 💳 | **Usage tiers / billing** | Free/Pro/Agency monetization and enforcement | 💡 Future |
+| 💳 | **Usage tiers / billing** | Metadata-driven pricing tiers and access controls without payment processing yet | 🟡 Pricing live, billing future |
 
 </div>
+
+---
+
+## 🧭 Modes & Plans
+
+<div align="center">
+
+| Mode | Plan | Price | Unlocks |
+|:---:|:---|:---:|:---|
+| **Individual** | Free | **$0/mo** | Core brief scoring, single proposal generation, dashboard, chat, export, client portal |
+| **Individual** | Standard | **$10/mo** | Agency Brain insights + calibration-aware generation |
+| **Individual** | Pro | **$25/mo** | TriProposal generation + bundle portal sharing |
+| **Team** | Free | **$0/mo** | Shared workspace, comments, presence, invite flow, 2-member cap |
+| **Team** | Standard | **$10/mo** | Agency Brain for workspace corpus, calibration-aware generation, 5-member cap |
+| **Team** | Pro | **$25/mo** | TriProposal, bundle sharing, 10-member cap |
+
+</div>
+
+The app now supports **two entry contexts** on landing/auth:
+- **Individual mode** routes into `/dashboard` and uses the user's personal proposal history and plan.
+- **Team mode** routes into `/workspace` and applies capabilities from the active workspace plan.
+
+Core new routes:
+- `/agency-brain`
+- `/tri/:tripId`
+- `/workspace`
+- `/workspace/settings`
+- `/join/:token`
 
 ---
 
@@ -339,31 +370,43 @@ proplytics/
 │   ├── 📁 pages/
 │   │   ├── Landing.jsx                 ← Marketing landing + 3D hero
 │   │   ├── Dashboard.jsx               ← Proposal pipeline overview
-│   │   ├── NewProposal.jsx             ← Brief intake + BriefScore + streaming preview
-│   │   ├── ProposalResult.jsx          ← Full workspace (export/chat/revisions/share)
-│   │   ├── ProposalPortal.jsx          ← Public client portal `/p/:token`
+│   │   ├── NewProposal.jsx             ← Brief intake + BriefScore + Agency Brain + TriProposal launch
+│   │   ├── ProposalResult.jsx          ← Full workspace (export/chat/revisions/share/comments/presence)
+│   │   ├── ProposalPortal.jsx          ← Public client portal `/p/:token` (single or bundle)
 │   │   ├── Analytics.jsx               ← Outcome + confidence analytics
+│   │   ├── AgencyBrain.jsx             ← Institutional proposal intelligence dashboard
+│   │   ├── TriProposal.jsx             ← Lean / Standard / Premium comparison view
+│   │   ├── Workspace.jsx               ← Team proposal feed and activity
+│   │   ├── WorkspaceSettings.jsx       ← Workspace plan, members, and invite controls
+│   │   ├── JoinWorkspace.jsx           ← Invite redemption flow
 │   │   ├── Login.jsx / Register.jsx    ← Auth pages
 │   │   ├── Settings.jsx                ← Theme/profile UI preferences
 │   │   └── Help.jsx                    ← In-app FAQ
 │   ├── 📁 components/
+│   │   ├── agencyBrain/                ← Insight cards, calibration UI, pattern strength indicators
 │   │   ├── analytics/                  ← Win-rate and comparison visualizations
 │   │   ├── auth/                       ← Route guards and auth helpers
 │   │   ├── briefScore/                 ← Brief scoring cards and diagnostics
+│   │   ├── comments/                   ← Section comments, approvals, review threads
 │   │   ├── dashboard/                  ← Proposal cards + empty states
 │   │   ├── landing/                    ← Hero and marketing sections
 │   │   ├── layout/                     ← Sidebar/navbar shell
 │   │   ├── portal/                     ← Share modal, portal metrics, feedback UI
 │   │   ├── proposal/                   ← Confidence/risk/effort/timeline/export/revision UI
 │   │   ├── proposalChat/               ← Negotiate/refine chat pane + update overlays
+│   │   ├── triproposal/                ← Strategy toggles, loading columns, comparison components
+│   │   ├── workspace/                  ← Presence stack, invites, members, activity feed
 │   │   ├── winloss/                    ← Deal status + won/lost outcome modals
 │   │   └── ui/                         ← Reusable design primitives
 │   ├── 📁 hooks/
-│   │   ├── useStreamingProposal.js     ← `/api/generate` stream parser
+│   │   ├── useStreamingProposal.js     ← `/api/generate` stream parser with strategy/calibration support
 │   │   ├── useBriefScore.js            ← Intake quality scoring hook
 │   │   ├── useProposalChat.js          ← Chat stream + section mutation events
-│   │   └── usePortalTracking.js        ← Public portal dwell/event tracking
-│   ├── 📁 stores/                      ← Zustand stores (`auth`, `proposal`, `theme`)
+│   │   ├── usePortalTracking.js        ← Public portal dwell/event tracking
+│   │   ├── useTriGeneration.js         ← Parallel strategy generation orchestration
+│   │   ├── usePresence.js              ← Workspace proposal presence heartbeat/polling
+│   │   └── useWorkspace.js             ← Workspace summary/profile hydration
+│   ├── 📁 stores/                      ← Zustand stores (`auth`, `proposal`, `theme`, `agencyBrain`, `workspace`)
 │   ├── 📁 lib/                         ← Proposal normalizers, streaming helpers, utils
 │   └── 📁 config/
 │       └── api.js                      ← Axios instance + token refresh interceptor
@@ -374,9 +417,9 @@ proplytics/
 │   │   ├── config/env.js               ← Environment validation
 │   │   ├── db/mongoose.js              ← Mongo connection
 │   │   ├── middleware/                 ← auth/cors/rate-limit/error handlers
-│   │   ├── models/                     ← User, Proposal, Portal schemas
-│   │   ├── routes/                     ← auth, generate, proposals, chat, portal, analytics
-│   │   ├── services/                   ← LLM, brief score, S3, export, portal, lifecycle logic
+│   │   ├── models/                     ← User, Proposal, Portal, Workspace, Trip, AgencyPattern, Presence schemas
+│   │   ├── routes/                     ← auth, generate, proposals, chat, portal, analytics, agency-brain, trips, workspaces
+│   │   ├── services/                   ← LLM, brief score, S3, export, portal, lifecycle, workspace, agency brain logic
 │   │   ├── prompts/                    ← Prompt templates for generation/outcomes
 │   │   ├── schemas/                    ← Zod schemas + section contracts
 │   │   └── test/                       ← Node test suite for core services
@@ -437,10 +480,13 @@ npm run dev
 # 7. Run backend tests
 npm --prefix backend test
 
-# 8. Optional end-to-end tests
+# 8. Run the standard repo verification
+npm run check
+
+# 9. Optional end-to-end tests
 npm run test:e2e
 
-# 9. Build for production
+# 10. Build for production
 npm run build
 npm run preview
 ```
@@ -547,8 +593,8 @@ npm run preview
 | **Authentication** | Access/refresh JWT flow with token rotation, plus GitHub OAuth option |
 | **Credential Storage** | Passwords hashed with bcrypt before persistence |
 | **Password Recovery** | OTP reset flow via email (enabled when SMTP config is present) |
-| **Authorization** | Strict per-user ownership checks for proposal CRUD, version access, and portal management |
-| **Public Sharing Controls** | Tokenized portal URLs with optional PIN + expiry windows |
+| **Authorization** | Personal ownership checks plus workspace membership/role enforcement for shared proposals |
+| **Public Sharing Controls** | Tokenized single-proposal and bundle portal URLs with optional PIN + expiry windows |
 | **File Upload Safety** | Whitelisted MIME types/extensions (PDF/DOCX/TXT) + signed upload URLs |
 | **Input Validation** | Zod validation on request payloads and generated JSON contracts |
 | **API Hardening** | Helmet headers, CORS middleware, global and auth-specific rate limiting |
@@ -576,11 +622,15 @@ npm run preview
 | ✅ Done | Client share portal (token, PIN, expiry, feedback, section telemetry) | Released |
 | ✅ Done | Deal lifecycle tracking (`pending`, `negotiating`, `won`, `lost`) + outcome packs | Released |
 | ✅ Done | Analytics page (win rate, confidence comparison, brief score comparison, feature leaderboard) | Released |
+| ✅ Done | Individual vs Team entry mode and plan-gated routing | Released |
+| ✅ Done | Agency Brain insight extraction + calibration injection | Released |
+| ✅ Done | TriProposal parallel generation + comparison page | Released |
+| ✅ Done | Team workspace collaboration, comments, approvals, and presence | Released |
+| ✅ Done | Bundle sharing portals for multi-strategy proposal delivery | Released |
 | 🚧 In Progress | Hardening SMTP-backed OTP and outcome email delivery across environments | Active |
 | 🚧 In Progress | Profile/settings persistence beyond local store state | Active |
-| 📅 Planned | Team workspace collaboration + shared proposal ownership | Planned |
 | 📅 Planned | Brand templates and white-label export customization | Planned |
-| 💡 Future | Billing/usage tiers and seat-based access controls | Future |
+| 💡 Future | Stripe-backed billing and subscription lifecycle automation | Future |
 | 💡 Future | Deeper longitudinal proposal performance benchmarking | Future |
 
 </div>

@@ -1,6 +1,16 @@
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
-const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-3.1-flash-lite-preview';
+const DEFAULT_GEMINI_MODEL_FALLBACKS = 'gemini-2.5-flash,gemini-2.5-flash-lite';
+const DEFAULT_GEMINI_STRUCTURED_MODEL = 'gemini-3.1-flash-lite-preview';
+const DEFAULT_GEMINI_STRUCTURED_FALLBACKS = 'gemini-2.5-flash-lite,gemini-3-flash-preview,gemini-2.5-flash';
 const DEFAULT_GEMINI_KEY_GUARD_MS = 15 * 60 * 1000;
+const DEFAULT_GEMINI_MAX_QUEUE_WAIT_MS = 20_000;
+const DEFAULT_GEMINI_RPM_BY_MODEL = Object.freeze({
+  'gemini-3-flash-preview': 5,
+  'gemini-3.1-flash-lite-preview': 15,
+  'gemini-2.5-flash': 5,
+  'gemini-2.5-flash-lite': 10,
+});
 
 const AUTH_ERROR_PATTERNS = [
   /api key/i,
@@ -93,8 +103,81 @@ function isGeminiModelError(error) {
   return [400, 404].includes(status) || matchesAny(MODEL_ERROR_PATTERNS, message);
 }
 
-function getGeminiModelCandidates(primaryModel = DEFAULT_GEMINI_MODEL, fallbackModel = DEFAULT_GEMINI_FALLBACK_MODEL) {
-  return [...new Set([primaryModel, fallbackModel].map((model) => String(model || '').trim()).filter(Boolean))];
+function parseModelList(...sources) {
+  return sources
+    .flatMap((source) => {
+      if (Array.isArray(source)) {
+        return parseModelList(...source);
+      }
+
+      return String(source || '')
+        .split(',')
+        .map((model) => model.trim())
+        .filter(Boolean);
+    });
+}
+
+function getGeminiModelCandidates(...sources) {
+  return [...new Set(parseModelList(...sources))];
+}
+
+function parseRetryDelayValue(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const secondsMatch = value.match(/([\d.]+)\s*s/i);
+  if (secondsMatch) {
+    return Math.ceil(Number(secondsMatch[1]) * 1000);
+  }
+
+  const millisMatch = value.match(/(\d+)\s*ms/i);
+  if (millisMatch) {
+    return Number(millisMatch[1]);
+  }
+
+  return null;
+}
+
+function extractRetryDelayMs(error) {
+  const details = [
+    ...(Array.isArray(error?.details) ? error.details : []),
+    ...(Array.isArray(error?.error?.details) ? error.error.details : []),
+    ...(Array.isArray(error?.response?.data?.error?.details) ? error.response.data.error.details : []),
+  ];
+
+  for (const detail of details) {
+    const retryDelay = parseRetryDelayValue(detail?.retryDelay);
+    if (retryDelay != null) {
+      return retryDelay;
+    }
+  }
+
+  const message = getErrorMessage(error);
+  const retryMatch = message.match(/retry in\s+([\d.]+)s/i);
+  if (retryMatch) {
+    return Math.ceil(Number(retryMatch[1]) * 1000);
+  }
+
+  return null;
+}
+
+function parseGeminiModelRpmOverrides(raw = '') {
+  const overrides = { ...DEFAULT_GEMINI_RPM_BY_MODEL };
+
+  for (const entry of String(raw || '').split(/[,\n;]/)) {
+    const [model, rpm] = entry.split(':').map((item) => item?.trim());
+    if (!model || !rpm) {
+      continue;
+    }
+
+    const parsedRpm = Number(rpm);
+    if (Number.isFinite(parsedRpm) && parsedRpm > 0) {
+      overrides[model] = parsedRpm;
+    }
+  }
+
+  return overrides;
 }
 
 function getGeminiAuthErrorMessage(error, { model } = {}) {
@@ -149,8 +232,14 @@ function createGeminiGuard({ cooldownMs = DEFAULT_GEMINI_KEY_GUARD_MS, now = Dat
 module.exports = {
   DEFAULT_GEMINI_MODEL,
   DEFAULT_GEMINI_FALLBACK_MODEL,
+  DEFAULT_GEMINI_MODEL_FALLBACKS,
+  DEFAULT_GEMINI_STRUCTURED_MODEL,
+  DEFAULT_GEMINI_STRUCTURED_FALLBACKS,
   DEFAULT_GEMINI_KEY_GUARD_MS,
+  DEFAULT_GEMINI_MAX_QUEUE_WAIT_MS,
+  DEFAULT_GEMINI_RPM_BY_MODEL,
   createGeminiGuard,
+  extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
   getErrorMessage,
@@ -159,4 +248,5 @@ module.exports = {
   isGeminiLeakedKeyError,
   isGeminiModelError,
   isGeminiQuotaError,
+  parseGeminiModelRpmOverrides,
 };

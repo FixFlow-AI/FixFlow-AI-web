@@ -15,29 +15,20 @@ const { validateSectionOutput, mergeSectionUpdate, persistMutation } = require('
 const { shouldReclassifyAsMutation, classifyIntent } = require('../services/proposal/intentClassifier');
 const { VALID_SECTIONS } = require('../schemas/sectionSchemas');
 const { env } = require('../config/env');
-const { GoogleGenAI } = require('@google/genai');
 const { ForbiddenError } = require('../utils/errors');
 const {
   createGeminiGuard,
   isGeminiAuthError,
+  isGeminiModelError,
   isGeminiQuotaError,
   getGeminiAuthErrorMessage,
+  getGeminiModelCandidates,
 } = require('../services/llm/geminiGuard');
+const { geminiModelCoordinator } = require('../services/llm/modelCoordinator');
+const { getGeminiClient } = require('../services/llm/provider');
 
 const router = express.Router();
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
-
-let geminiClient = null;
-
-function getGeminiClient() {
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  }
-  return geminiClient;
-}
 
 /**
  * Stream from Gemini for chat responses.
@@ -48,46 +39,131 @@ function getGeminiClient() {
  */
 async function* streamGeminiChat(system, userMessage, options = {}) {
   const { temperature = 0.3, jsonMode = false } = options;
-  const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
+  const models = getGeminiModelCandidates(
+    env.GEMINI_MODEL,
+    env.GEMINI_FALLBACK_MODEL,
+    env.GEMINI_MODEL_FALLBACKS
+  );
+  let lastError = null;
+  let waitCycles = 0;
 
-  try {
-    const gemini = getGeminiClient();
+  while (waitCycles <= models.length) {
+    let attemptedModel = false;
 
-    const config = {
-      temperature,
-      maxOutputTokens: 8000,
-      systemInstruction: system,
-    };
+    for (let index = 0; index < models.length; index += 1) {
+      const model = models[index];
+      const reservation = await geminiModelCoordinator.acquire(model);
 
-    if (jsonMode) {
-      config.responseMimeType = 'application/json';
-    }
+      if (!reservation.ok) {
+        continue;
+      }
 
-    const stream = await gemini.models.generateContentStream({
-      model,
-      contents: userMessage,
-      config: { ...config, abortSignal: controller.signal },
-    });
+      attemptedModel = true;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), env.STREAM_TIMEOUT_MS);
 
-    for await (const chunk of stream) {
-      if (chunk.text) {
-        yield chunk.text;
+      if (reservation.waitMs > 0) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_MODEL_WAIT',
+            model,
+            waitMs: reservation.waitMs,
+          })
+        );
+      }
+
+      try {
+        const gemini = getGeminiClient();
+
+        const config = {
+          temperature,
+          maxOutputTokens: 8000,
+          systemInstruction: system,
+        };
+
+        if (jsonMode) {
+          config.responseMimeType = 'application/json';
+        }
+
+        const stream = await gemini.models.generateContentStream({
+          model,
+          contents: userMessage,
+          config: { ...config, abortSignal: controller.signal },
+        });
+
+        for await (const chunk of stream) {
+          if (chunk.text) {
+            yield chunk.text;
+          }
+        }
+
+        clearTimeout(timeout);
+        return;
+      } catch (error) {
+        clearTimeout(timeout);
+        lastError = error;
+
+        if (error?.name === 'AbortError') {
+          throw new Error('LLM_TIMEOUT: Chat request timed out.');
+        }
+        if (isGeminiAuthError(error)) {
+          geminiGuard.markHardFailure(error);
+          throw new Error(`GEMINI_AUTH_ERROR: ${getGeminiAuthErrorMessage(error, { model })}`);
+        }
+
+        if (isGeminiQuotaError(error)) {
+          const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          console.log(
+            JSON.stringify({
+              event: 'LLM_MODEL_COOLDOWN',
+              model,
+              retryMs,
+            })
+          );
+        }
+
+        if (index < models.length - 1 && (isGeminiQuotaError(error) || isGeminiModelError(error))) {
+          console.log(
+            JSON.stringify({
+              event: 'LLM_MODEL_FALLBACK',
+              from: model,
+              to: models[index + 1],
+              reason: error.message,
+            })
+          );
+          continue;
+        }
+
+        throw error;
       }
     }
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new Error('LLM_TIMEOUT: Chat request timed out.');
+
+    if (!attemptedModel) {
+      const waitMs = geminiModelCoordinator.getEarliestAvailabilityDelayMs(models);
+      if (waitMs > 0 && waitMs <= env.GEMINI_MAX_QUEUE_WAIT_MS) {
+        console.log(
+          JSON.stringify({
+            event: 'LLM_GLOBAL_WAIT',
+            waitMs,
+            models,
+          })
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        waitCycles += 1;
+        continue;
+      }
     }
-    if (isGeminiAuthError(error)) {
-      geminiGuard.markHardFailure(error);
-      throw new Error(`GEMINI_AUTH_ERROR: ${getGeminiAuthErrorMessage(error, { model })}`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+
+    break;
   }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  throw new Error(
+    `STREAM_ERROR: All configured Gemini models are currently rate-limited beyond the local queue window (${env.GEMINI_MAX_QUEUE_WAIT_MS}ms).`
+  );
 }
 
 /**
