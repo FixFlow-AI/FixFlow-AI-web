@@ -89,6 +89,7 @@ export default function Settings() {
             {AVATARS.map((avatar, index) => (
               <motion.button
                 key={index}
+                type="button"
                 onClick={() => setSelectedAvatar(avatar)}
                 whileHover={{ scale: 1.1, rotateY: 15, rotateX: 5 }}
                 whileTap={{ scale: 0.95 }}
@@ -131,6 +132,7 @@ export default function Settings() {
           <h2 className="text-xl font-semibold">Appearance</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
+              type="button"
               onClick={() => setTheme('light')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'light' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
@@ -140,6 +142,7 @@ export default function Settings() {
               <span className="font-medium">Light</span>
             </button>
             <button
+              type="button"
               onClick={() => setTheme('modern-dark')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'modern-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
@@ -149,6 +152,7 @@ export default function Settings() {
               <span className="font-medium">Modern Dark</span>
             </button>
             <button
+              type="button"
               onClick={() => setTheme('vscode-dark')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'vscode-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
@@ -199,6 +203,7 @@ export default function Settings() {
           </div>
 
           <motion.button 
+            type="button"
             onClick={handleSave}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

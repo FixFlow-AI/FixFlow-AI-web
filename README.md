@@ -11,6 +11,8 @@
 
 ### *Paste a brief. Get a proposal. Close faster.*
 
+![Landing Interface](./public/web-interface/landing.png)
+
 <br/>
 
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
@@ -157,6 +159,8 @@ Most AI proposal tools generate long text first and try to structure it later. P
 
 ### The Confidence Grid — Signature Feature
 
+![Proposal Output Interface](./public/web-interface/proposal-section.png)
+
 <div align="center">
 
 | | Feature | Confidence | Complexity | What It Means |
@@ -173,6 +177,8 @@ Most AI proposal tools generate long text first and try to structure it later. P
 </div>
 
 Every feature card in the proposal has a **colour-coded left accent**, a **confidence score bar**, and a **complexity badge** — all derived directly from the LLM's structured JSON output. This is what makes Proplytics proposals feel *premium*.
+
+![Negotiation & Refinement Interface](./public/web-interface/nogotiate-refinement.png)
 
 ### What Makes Us Different
 
@@ -194,19 +200,21 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 ## 🏗️ Architecture
 
-### Visual Architecture Overview (Mermaid)
+![Proplytics System Architecture](./public/web-interface/hero-architecture.png)
+
+### Visual Architecture Overview
 
 #### 1) System Architecture Map
 
-![System Architecture Map](./public/diagrams/system-architecture.svg)
+![System Architecture Map](./public/web-interface/architecture-map.png)
 
 #### 2) Proposal Generation Flow (End-to-End)
 
-![Proposal Generation Flow](./public/diagrams/proposal-generation-flow.svg)
+![Proposal Generation Flow](./public/web-interface/proposal-flow.png)
 
 #### 3) Proposal Lifecycle Workflow
 
-![Proposal Lifecycle Workflow](./public/diagrams/proposal-lifecycle-workflow.svg)
+![Proposal Lifecycle Workflow](./public/web-interface/lifecycle-workflow.png)
 
 <div align="center">
 

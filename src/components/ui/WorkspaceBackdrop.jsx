@@ -71,10 +71,14 @@ function AnimatedShapes() {
 
 export default function WorkspaceBackdrop() {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
       {/* 3D Background layer */}
-      <div className="absolute inset-0 z-0 opacity-60">
-        <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+      <div className="absolute inset-0 z-0 opacity-60 pointer-events-none">
+        <Canvas
+          camera={{ position: [0, 0, 5], fov: 45 }}
+          style={{ pointerEvents: 'none' }}
+          gl={{ antialias: true }}
+        >
           <AnimatedShapes />
         </Canvas>
       </div>
