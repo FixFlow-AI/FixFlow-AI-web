@@ -1,13 +1,36 @@
-import { useState, useRef, useEffect } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIntentClassifier } from '@/hooks/useIntentClassifier'
+import api from '@/config/api'
+import ChatEtaHint from './ChatEtaHint'
 
-function ChatInputBar({ onSend, isStreaming }) {
+function ChatInputBar({ onSend, isStreaming, proposalId }) {
   const [input, setInput] = useState('')
+  const [streamStartedAt, setStreamStartedAt] = useState(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [activeEta, setActiveEta] = useState(null)
   const textareaRef = useRef(null)
   const { intent, targetSection, intentLabel, classify } = useIntentClassifier()
+  const deferredInput = useDeferredValue(input)
+
+  const etaQuery = useQuery({
+    queryKey: ['chat-eta', proposalId, deferredInput, intent, targetSection],
+    queryFn: () =>
+      api
+        .post('/eta/chat', {
+          proposalId,
+          message: deferredInput,
+          intent,
+          targetSection,
+        })
+        .then((response) => response.data),
+    enabled: Boolean(proposalId && deferredInput.trim().length >= 6 && !isStreaming),
+    staleTime: 30_000,
+    retry: 0,
+  })
 
   // Auto-resize textarea
   useEffect(() => {
@@ -18,6 +41,24 @@ function ChatInputBar({ onSend, isStreaming }) {
     }
   }, [input])
 
+  useEffect(() => {
+    if (!isStreaming || !streamStartedAt) {
+      if (!isStreaming) {
+        setElapsedSeconds(0)
+        setActiveEta(null)
+        setStreamStartedAt(null)
+      }
+      return
+    }
+
+    setElapsedSeconds(Math.max(0, Math.floor((Date.now() - streamStartedAt) / 1000)))
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - streamStartedAt) / 1000)))
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [isStreaming, streamStartedAt])
+
   const handleInputChange = (e) => {
     setInput(e.target.value)
     classify(e.target.value)
@@ -27,6 +68,8 @@ function ChatInputBar({ onSend, isStreaming }) {
     const trimmed = input.trim()
     if (!trimmed || isStreaming) return
 
+    setActiveEta(etaQuery.data || null)
+    setStreamStartedAt(Date.now())
     onSend(trimmed, intent, targetSection)
     setInput('')
 
@@ -42,6 +85,12 @@ function ChatInputBar({ onSend, isStreaming }) {
       handleSend()
     }
   }
+
+  const displayEta = isStreaming
+    ? activeEta
+    : input.trim()
+      ? etaQuery.data
+      : null
 
   return (
     <div className="p-4 space-y-3 bg-gradient-to-t from-card/80 to-transparent">
@@ -73,6 +122,8 @@ function ChatInputBar({ onSend, isStreaming }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ChatEtaHint eta={displayEta} elapsedSeconds={elapsedSeconds} isStreaming={isStreaming} />
 
       {/* Input area */}
       <div className="flex items-end gap-2 bg-muted/40 backdrop-blur-md border border-border/50 rounded-2xl p-1.5 shadow-inner transition-all duration-300 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10">

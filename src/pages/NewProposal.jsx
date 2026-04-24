@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight, Gauge } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import BriefInput from '@/components/proposal/BriefInput'
 import FileUpload from '@/components/proposal/FileUpload'
 import StreamingDisplay from '@/components/proposal/StreamingDisplay'
+import EtaCard from '@/components/proposal/EtaCard'
 import { useStreamingProposal } from '@/hooks/useStreamingProposal'
 import { useBriefScore } from '@/hooks/useBriefScore'
 import BriefScorePanel from '@/components/briefScore/BriefScorePanel'
@@ -27,11 +28,14 @@ function NewProposal() {
   const [fileKey, setFileKey] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isTriMode, setIsTriMode] = useState(false)
+  const [generationStartedAt, setGenerationStartedAt] = useState(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const { generate, parsedSections, isGenerating, error, proposalId, resetStream } = useStreamingProposal()
   const triGeneration = useTriGeneration()
   const { briefScore, isLoading: isScoring, error: briefScoreError, canAnalyze, wordCount } = useBriefScore(briefText, fileKey)
   const hydrateInsights = useAgencyBrainStore((state) => state.hydrateInsights)
   const buildCalibrationContext = useAgencyBrainStore((state) => state.buildCalibrationContext)
+  const deferredBriefText = useDeferredValue(briefText)
 
   const canSubmit = briefText.trim().length > 50 || fileKey !== null
   const workspaceId = user?.defaultEntryMode === 'team' ? currentWorkspace?.id || null : null
@@ -49,6 +53,23 @@ function NewProposal() {
         .then((response) => response.data),
     enabled: canUseAgencyBrain && canAnalyze && (briefText.trim().length > 60 || fileKey !== null),
     retry: 1,
+  })
+
+  const etaQuery = useQuery({
+    queryKey: ['proposal-eta', workspaceId, deferredBriefText, fileKey, isTriMode],
+    queryFn: () =>
+      api
+        .post('/eta/proposal', {
+          briefText: deferredBriefText,
+          fileKey,
+          strategy: 'standard',
+          isTriMode,
+          workspaceId,
+        })
+        .then((response) => response.data),
+    enabled: Boolean((deferredBriefText.trim().length > 50 || fileKey !== null) && !isUploading),
+    staleTime: 30_000,
+    retry: 0,
   })
 
   useEffect(() => {
@@ -72,8 +93,35 @@ function NewProposal() {
 
   useEffect(() => () => resetStream(), [resetStream])
 
+  useEffect(() => {
+    const isBusy = isGenerating || triGeneration.isGenerating
+
+    if (!isBusy || !generationStartedAt) {
+      if (!isBusy) {
+        setElapsedSeconds(0)
+      }
+      return
+    }
+
+    setElapsedSeconds(Math.max(0, Math.floor((Date.now() - generationStartedAt) / 1000)))
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - generationStartedAt) / 1000)))
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [generationStartedAt, isGenerating, triGeneration.isGenerating])
+
+  useEffect(() => {
+    if (isGenerating || triGeneration.isGenerating) {
+      return
+    }
+
+    setGenerationStartedAt(null)
+  }, [isGenerating, triGeneration.isGenerating])
+
   const handleGenerate = async () => {
     const calibrationContext = canUseAgencyBrain ? buildCalibrationContext(calibrationQuery.data?.insights || []) : ''
+    setGenerationStartedAt(Date.now())
 
     if (isTriMode) {
       const nextTripId = crypto.randomUUID()
@@ -149,6 +197,12 @@ function NewProposal() {
           {canUseTriProposal && (
             <StrategyToggle enabled={isTriMode} onChange={setIsTriMode} disabled={isGenerating || triGeneration.isGenerating} />
           )}
+
+          <EtaCard
+            eta={canSubmit || isGenerating || triGeneration.isGenerating ? etaQuery.data : null}
+            elapsedSeconds={elapsedSeconds}
+            isActive={isGenerating || triGeneration.isGenerating}
+          />
 
           <div className="pt-4">
             <Button

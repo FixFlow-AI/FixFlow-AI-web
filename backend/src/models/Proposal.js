@@ -179,6 +179,14 @@ const proposalSchema = new mongoose.Schema(
       type: [proposalCommentSchema],
       default: [],
     },
+    chatTimingStats: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => ({
+        question: { count: 0, totalMs: 0, lastMs: null },
+        mutate: { count: 0, totalMs: 0, lastMs: null },
+        sections: {},
+      }),
+    },
   },
   { timestamps: true }
 );

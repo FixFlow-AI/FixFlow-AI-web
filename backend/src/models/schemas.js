@@ -179,6 +179,21 @@ const tripBundlePortalSchema = z.object({
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits').nullable().optional().default(null),
 });
 
+const proposalEtaSchema = z.object({
+  briefText: z.string().trim().max(150000).optional().default(''),
+  fileKey: z.string().trim().max(1024).nullable().optional().default(null),
+  strategy: z.enum(['lean', 'standard', 'premium']).optional().default('standard'),
+  isTriMode: z.boolean().optional().default(false),
+  workspaceId: z.string().trim().max(128).nullable().optional().default(null),
+});
+
+const chatEtaSchema = z.object({
+  proposalId: z.string().trim().min(1, 'proposalId is required'),
+  message: z.string().trim().max(5000).optional().default(''),
+  intent: z.enum(['question', 'mutate']).optional().default('question'),
+  targetSection: z.string().trim().nullable().optional().default(null),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -207,4 +222,6 @@ module.exports = {
   proposalCommentResolveSchema,
   proposalPresenceSchema,
   tripBundlePortalSchema,
+  proposalEtaSchema,
+  chatEtaSchema,
 };

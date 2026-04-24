@@ -26,6 +26,7 @@ const {
 } = require('../services/llm/geminiGuard');
 const { geminiModelCoordinator } = require('../services/llm/modelCoordinator');
 const { getGeminiClient } = require('../services/llm/provider');
+const { recordChatTiming } = require('../services/eta/etaService');
 
 const router = express.Router();
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
@@ -271,6 +272,7 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
     res.flushHeaders?.();
 
     const keepAlive = setInterval(() => res.write(': keepalive\n\n'), 20000);
+    const startTime = Date.now();
 
     const sendEvent = (event, data = {}) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -336,12 +338,25 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
             section: targetSection,
             newVersion,
           }));
+
+          await recordChatTiming({
+            proposal,
+            intent,
+            targetSection,
+            durationMs: Date.now() - startTime,
+          }).catch(() => null);
         } catch (validationError) {
           sendEvent('error', {
             code: 'SCHEMA_INVALID',
             message: `Mutation validation failed: ${validationError.message}`,
           });
         }
+      } else {
+        await recordChatTiming({
+          proposal,
+          intent,
+          durationMs: Date.now() - startTime,
+        }).catch(() => null);
       }
 
       sendEvent('done', { fullResponse: intent === 'question' ? fullBuffer : undefined });

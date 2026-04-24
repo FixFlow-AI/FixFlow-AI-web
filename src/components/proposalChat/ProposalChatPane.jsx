@@ -27,6 +27,7 @@ function Header3D() {
  * or a persistent split-view pane.
  */
 function ProposalChatPane({
+  proposalId,
   messages,
   isStreaming,
   currentVersion,
@@ -72,7 +73,7 @@ function ProposalChatPane({
 
       {/* Input Bar */}
       <div className="p-4 border-t border-border">
-        <ChatInputBar onSend={onSendMessage} isStreaming={isStreaming} />
+        <ChatInputBar proposalId={proposalId} onSend={onSendMessage} isStreaming={isStreaming} />
       </div>
     </div>
   )

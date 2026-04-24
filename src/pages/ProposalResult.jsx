@@ -735,6 +735,7 @@ function ProposalResult() {
             />
           ) : (
             <ProposalChatPane
+              proposalId={id}
               messages={chatMessages}
               isStreaming={isChatStreaming}
               currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}
@@ -769,6 +770,7 @@ function ProposalResult() {
               />
             ) : (
               <ProposalChatPane
+                proposalId={id}
                 messages={chatMessages}
                 isStreaming={isChatStreaming}
                 currentVersion={chatVersion || versionsQuery.data?.currentVersion || proposal.versionCount}

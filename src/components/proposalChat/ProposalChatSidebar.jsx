@@ -24,6 +24,7 @@ function Header3D() {
  * ProposalChatSidebar
  */
 function ProposalChatSidebar({
+  proposalId,
   isOpen,
   onClose,
   messages,
@@ -59,7 +60,7 @@ function ProposalChatSidebar({
         <ChatMessageThread messages={messages} />
 
         {/* Input Bar (pinned to bottom) */}
-        <ChatInputBar onSend={onSendMessage} isStreaming={isStreaming} />
+        <ChatInputBar proposalId={proposalId} onSend={onSendMessage} isStreaming={isStreaming} />
       </div>
     </Sheet>
   )
