@@ -200,8 +200,11 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 ## 🏗️ Architecture
 
+<<<<<<< HEAD
 ![FixFlowAI System Architecture](./public/web-interface/hero-architecture.png)
 
+=======
+>>>>>>> a9a1c7305033d6c1ca4b3de0c1f141b6bef4f189
 ### Visual Architecture Overview
 
 #### 1) System Architecture Map
