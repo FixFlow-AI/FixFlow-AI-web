@@ -40,7 +40,7 @@ export default function PricingSection() {
           className="text-center"
         >
           <p className="text-xs uppercase tracking-[0.24em] text-primary">Pricing</p>
-          <h2 className="mt-4 text-3xl font-bold sm:text-4xl">Choose your Proplytics operating mode</h2>
+          <h2 className="mt-4 text-3xl font-bold sm:text-4xl">Choose your FixFlowAI operating mode</h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground">
             The pricing is intentionally simple right now: the same three tiers for individual operators and team workspaces.
           </p>

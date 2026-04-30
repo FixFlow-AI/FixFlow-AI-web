@@ -8,7 +8,7 @@ export default function InsufficientDataState({ sampleSize = 0 }) {
       </div>
       <h2 className="mt-6 text-2xl font-semibold">Agency Brain is still learning</h2>
       <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
-        You have {sampleSize} completed won or lost proposals in this scope. Add a few more closed-loop proposals and Proplytics will start surfacing stronger pattern intelligence.
+        You have {sampleSize} completed won or lost proposals in this scope. Add a few more closed-loop proposals and FixFlowAI will start surfacing stronger pattern intelligence.
       </p>
     </div>
   )

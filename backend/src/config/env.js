@@ -32,7 +32,7 @@ const envSchema = z.object({
   GEMINI_MAX_QUEUE_WAIT_MS: z.coerce.number().default(20_000),
   GEMINI_KEY_GUARD_MS: z.coerce.number().default(15 * 60 * 1000),
   AWS_REGION: z.string().default('us-east-1'),
-  S3_BUCKET: z.string().default('proplytics-assets-dev'),
+  S3_BUCKET: z.string().default('fixflowai-assets-dev'),
   STREAM_TIMEOUT_MS: z.coerce.number().default(120000),
   PUPPETEER_EXECUTABLE_PATH: z.string().default(''),
   USE_FAKE_LLM: z

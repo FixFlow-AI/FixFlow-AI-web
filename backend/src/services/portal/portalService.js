@@ -118,7 +118,7 @@ async function getPortalPublicMeta(shareToken) {
       shareToken: portal.shareToken,
       portalType: 'bundle',
       proposalTitle: primary?.title || 'Proposal bundle',
-      agencyName: workspace?.name || owner?.name || 'Proplytics',
+      agencyName: workspace?.name || owner?.name || 'FixFlowAI',
       bundleStrategies: proposals.map((proposal) => ({
         proposalId: proposal.proposalId,
         title: proposal.title,
@@ -243,7 +243,7 @@ async function submitPortalFeedback(shareToken, message) {
           <h2 style="margin-bottom: 12px;">Client feedback received</h2>
           <p style="margin-bottom: 16px;">Proposal: <strong>${proposal.title}</strong></p>
           <div style="padding: 16px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; white-space: pre-wrap;">${message}</div>
-          <p style="margin-top: 16px;"><a href="${new URL(`/proposal/${proposal.proposalId}`, env.FRONTEND_URL).toString()}">Open proposal in Proplytics</a></p>
+          <p style="margin-top: 16px;"><a href="${new URL(`/proposal/${proposal.proposalId}`, env.FRONTEND_URL).toString()}">Open proposal in FixFlowAI</a></p>
         </div>
       `,
     });

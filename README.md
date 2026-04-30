@@ -62,7 +62,7 @@ The typical proposal workflow looks like this:
 
 ---
 
-## 🧠 Why We Built Proplytics
+## 🧠 Why We Built FixFlowAI
 
 <div align="center">
 
@@ -84,7 +84,7 @@ The Real Problem We Solved
 
     ══════════════════════════════════════════════════════════════
 
-    With Proplytics:
+    With FixFlowAI:
 
     "We need an AI dashboard         → Paste the brief
      integrated with Salesforce       → Press Generate
@@ -99,9 +99,9 @@ The Real Problem We Solved
 
 <br/>
 
-We built Proplytics because the intersection of **streaming LLMs** and **structured JSON output** finally makes it possible to transform raw client briefs into complete, confidence-scored technical proposals — not with a chatbot that guesses, but with a pipeline that extracts, structures, validates, and presents.
+We built FixFlowAI because the intersection of **streaming LLMs** and **structured JSON output** finally makes it possible to transform raw client briefs into complete, confidence-scored technical proposals — not with a chatbot that guesses, but with a pipeline that extracts, structures, validates, and presents.
 
-This is not a template filler. Proplytics is a **deterministic analysis pipeline** where the LLM acts as an elite consultant, extracting features, risks, and effort estimates from the client's own words. **The Confidence Grid shows exactly how sure the AI is about every recommendation.**
+This is not a template filler. FixFlowAI is a **deterministic analysis pipeline** where the LLM acts as an elite consultant, extracting features, risks, and effort estimates from the client's own words. **The Confidence Grid shows exactly how sure the AI is about every recommendation.**
 
 ---
 
@@ -109,12 +109,12 @@ This is not a template filler. Proplytics is a **deterministic analysis pipeline
 
 ### The Core Insight
 
-Most AI proposal tools generate long text first and try to structure it later. Proplytics does the reverse: **generate schema-constrained JSON first, then render interactive proposal UI from that structured output.**
+Most AI proposal tools generate long text first and try to structure it later. FixFlowAI does the reverse: **generate schema-constrained JSON first, then render interactive proposal UI from that structured output.**
 
 <div align="center">
 
 ```
-                    PROPLYTICS DELIVERY PIPELINE
+                    FIXFLOWAI DELIVERY PIPELINE
     ╔════════════════════════════════════════════════════════════╗
     ║                                                            ║
     ║  Brief Input (Text or PDF/DOCX upload)                    ║
@@ -176,7 +176,7 @@ Most AI proposal tools generate long text first and try to structure it later. P
 
 </div>
 
-Every feature card in the proposal has a **colour-coded left accent**, a **confidence score bar**, and a **complexity badge** — all derived directly from the LLM's structured JSON output. This is what makes Proplytics proposals feel *premium*.
+Every feature card in the proposal has a **colour-coded left accent**, a **confidence score bar**, and a **complexity badge** — all derived directly from the LLM's structured JSON output. This is what makes FixFlowAI proposals feel *premium*.
 
 ![Negotiation & Refinement Interface](./public/web-interface/nogotiate-refinement.png)
 
@@ -184,7 +184,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 <div align="center">
 
-| Competitor Approach | Proplytics Approach |
+| Competitor Approach | FixFlowAI Approach |
 |:---|:---|
 | One-shot generation with no intake quality check | BriefScore preflight + improvement prompts before generation |
 | Generic blocks of AI text | Strict schema-constrained JSON from the model |
@@ -200,7 +200,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 
 ## 🏗️ Architecture
 
-![Proplytics System Architecture](./public/web-interface/hero-architecture.png)
+![FixFlowAI System Architecture](./public/web-interface/hero-architecture.png)
 
 ### Visual Architecture Overview
 
@@ -384,7 +384,7 @@ Core new routes:
 ## 📂 Project Structure
 
 ```
-proplytics/
+fixflowai/
 │
 ├── 📁 src/
 │   ├── App.jsx                         ← Router + auth check + route transitions
@@ -478,8 +478,8 @@ mongo --version        # Optional local Mongo shell (Atlas recommended)
 
 ```bash
 # 1. Clone
-git clone https://github.com/Suvam-paul145/Proplytics.git
-cd Proplytics
+git clone https://github.com/Suvam-paul145/FixFlowAI.git
+cd FixFlowAI
 
 # 2. Install frontend dependencies
 npm install
@@ -515,7 +515,7 @@ npm run preview
 
 ### Environment URL Reference
 
-For the exact local, testing, and main URLs now used by the app, plus the GitHub OAuth callback and auth endpoint matrix, see [reference/ENVIRONMENT_URLS.md](/C:/Users/suvam/Desktop/VS%20code/Projects/Proplytics/reference/ENVIRONMENT_URLS.md).
+For the exact local, testing, and main URLs now used by the app, plus the GitHub OAuth callback and auth endpoint matrix, see [reference/ENVIRONMENT_URLS.md](/C:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/reference/ENVIRONMENT_URLS.md).
 
 ---
 
@@ -568,7 +568,7 @@ For the exact local, testing, and main URLs now used by the app, plus the GitHub
 | Average time per proposal (manual) | **15 hours** | Proposify State of Proposals |
 | Average cost per proposal | **~$1,200** | U.S. BLS (analyst hourly rate) |
 | Win rate with fast turnaround (<24h) | **40% higher** | Proposify |
-| Cost per Proplytics proposal | **< $0.05** | LLM API pricing |
+| Cost per FixFlowAI proposal | **< $0.05** | LLM API pricing |
 
 </div>
 
@@ -692,10 +692,10 @@ Built with obsession · Designed for agencies · Powered by structured AI
         "The fastest proposal wins the deal."
 
   ─────────────────────────────────────────────────────────────
-  Proplytics · github.com/Suvam-paul145/Proplytics · MIT
+    FixFlowAI · github.com/Suvam-paul145/FixFlowAI · MIT
   ─────────────────────────────────────────────────────────────
 ```
 
-[![Star this repo](https://img.shields.io/github/stars/Suvam-paul145/Proplytics?style=social)](https://github.com/Suvam-paul145/Proplytics)
+[![Star this repo](https://img.shields.io/github/stars/Suvam-paul145/FixFlowAI?style=social)](https://github.com/Suvam-paul145/FixFlowAI)
 
 </div>

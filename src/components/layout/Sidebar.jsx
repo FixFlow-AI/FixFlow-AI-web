@@ -70,7 +70,7 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
             <div className="absolute inset-0 bg-primary/30 blur-lg rounded-full" />
             <Sparkles className="h-7 w-7 text-primary relative" />
           </div>
-          {!isCollapsed && <span className="text-lg font-bold">Proplytics</span>}
+          {!isCollapsed && <span className="text-lg font-bold">FixFlowAI</span>}
         </Link>
 
         {!mobile && (

@@ -41,7 +41,7 @@ function Navbar() {
                 <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full group-hover:bg-primary/50 transition-colors" />
                 <Sparkles className="h-8 w-8 text-primary relative" />
               </div>
-              <span className="text-xl font-bold text-gradient">Proplytics</span>
+              <span className="text-xl font-bold text-gradient">FixFlowAI</span>
             </Link>
 
             {/* Desktop Navigation */}

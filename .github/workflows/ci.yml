@@ -10,7 +10,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      MONGODB_URI: mongodb://localhost:27017/proplytics-ci
+      MONGODB_URI: mongodb://localhost:27017/fixflowai-ci
       JWT_SECRET: 1234567890abcdef1234567890abcdef
       JWT_REFRESH_SECRET: abcdef1234567890abcdef1234567890
     steps:

@@ -36,7 +36,7 @@ function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <Sparkles className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">Proplytics</span>
+              <span className="text-lg font-bold">FixFlowAI</span>
             </Link>
             <p className="text-sm text-muted-foreground mb-4">
               Transform client briefs into execution-ready proposals with AI.
@@ -111,7 +111,7 @@ function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Proplytics. All rights reserved.
+            &copy; {new Date().getFullYear()} FixFlowAI. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
             Built with AI for modern teams

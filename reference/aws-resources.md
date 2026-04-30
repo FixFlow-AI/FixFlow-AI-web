@@ -1,6 +1,6 @@
 # AWS Resources Architecture
 
-This document outlines the AWS services utilized in the Proplytics project, detailing what they are, where they are used, and why they were chosen for the infrastructure.
+This document outlines the AWS services utilized in the FixFlowAI project, detailing what they are, where they are used, and why they were chosen for the infrastructure.
 
 ## 1. AWS Amplify (Frontend Hosting)
 - **What**: Fully managed hosting service for static web apps and frontend frameworks.
@@ -9,12 +9,12 @@ This document outlines the AWS services utilized in the Proplytics project, deta
 
 ## 2. Amazon Elastic Container Registry (ECR)
 - **What**: A fully managed Docker container registry.
-- **Where**: Stores the `proplytics-backend` Docker images built from the `backend/` folder.
+- **Where**: Stores the `fixflowai-backend` Docker images built from the `backend/` folder.
 - **Why**: Provides a secure, scalable, and highly available registry to store backend container images before they are pulled by ECS for deployment.
 
 ## 3. Amazon Elastic Container Service (ECS)
 - **What**: A highly scalable, high-performance container orchestration service.
-- **Where**: Runs the Node.js backend application (`proplytics-backend-service` in the `proplytics-cluster`).
+- **Where**: Runs the Node.js backend application (`fixflowai-backend-service` in the `fixflowai-cluster`).
 - **Why**: Allows us to run the backend as a containerized microservice without managing underlying servers (via Fargate). Crucial for handling long-running AI streaming requests (SSE) which might timeout on standard serverless functions like AWS Lambda (which has a 29s timeout).
 
 ## 4. Amazon CloudFront (CDN)
@@ -24,7 +24,7 @@ This document outlines the AWS services utilized in the Proplytics project, deta
 
 ## 5. AWS Systems Manager (SSM) Parameter Store
 - **What**: Provides secure, hierarchical storage for configuration data management and secrets management.
-- **Where**: Stores the `GEMINI_API_KEY` (`/proplytics/dev/GEMINI_API_KEY`) which is accessed by the backend during runtime.
+- **Where**: Stores the `GEMINI_API_KEY` (`/fixflowai/dev/GEMINI_API_KEY`) which is accessed by the backend during runtime.
 - **Why**: Keeps sensitive API keys out of the source code and environment files. It allows the ECS containers to securely fetch secrets dynamically.
 
 ## 6. Amazon EC2 / Elastic Network Interfaces (ENI)

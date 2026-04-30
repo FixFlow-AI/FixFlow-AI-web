@@ -1,12 +1,12 @@
-# Proplytics: Features & Novelty
+# FixFlowAI: Features & Novelty
 
-Proplytics is not just another text-generating chatbot. It is a **deterministic analysis pipeline** designed to transform unstructured client briefs into highly structured, confidence-scored technical proposals. This document details the core features, characteristics, and the novelty of the platform.
+FixFlowAI is not just another text-generating chatbot. It is a **deterministic analysis pipeline** designed to transform unstructured client briefs into highly structured, confidence-scored technical proposals. This document details the core features, characteristics, and the novelty of the platform.
 
 ## Core Features & Characteristics
 
 ### 1. AI-Powered Brief Ingestion & Analysis
 - **Feature**: Users can paste raw client briefs (or upload documents like PDFs/DOCX). The system ingests this unstructured text and performs a deep analysis.
-- **Characteristic**: Unlike standard LLMs that generate block text, Proplytics parses the intent, identifies required features, assesses risks, and calculates effort estimates.
+- **Characteristic**: Unlike standard LLMs that generate block text, FixFlowAI parses the intent, identifies required features, assesses risks, and calculates effort estimates.
 - **Novelty**: It acts as an "elite consultant" rather than a template-filler, extracting raw data directly from the client's own words and structuring it.
 
 ### 2. The Confidence Grid (Signature Feature)
@@ -36,6 +36,6 @@ Proplytics is not just another text-generating chatbot. It is a **deterministic 
 
 ## Summary of Novelty
 
-The true novelty of Proplytics lies in its approach to the problem. While competitors build "fill-in-the-blank" templates or rely on generic LLM text generation, Proplytics builds a **data pipeline**. 
+The true novelty of FixFlowAI lies in its approach to the problem. While competitors build "fill-in-the-blank" templates or rely on generic LLM text generation, FixFlowAI builds a **data pipeline**. 
 
 It forces the LLM to output structured data (JSON), validates it, scores it for confidence, and uses the frontend exclusively for rendering. This approach collapses 10-15 hours of manual analysis, estimation, and document writing into less than 30 seconds, fundamentally changing how digital agencies handle incoming project requests.

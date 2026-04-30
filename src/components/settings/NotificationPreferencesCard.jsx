@@ -9,7 +9,7 @@ import {
 
 export default function NotificationPreferencesCard({
   title = 'Notifications',
-  description = 'Choose how and when Proplytics should keep you updated.',
+  description = 'Choose how and when FixFlowAI should keep you updated.',
   value,
   onSave,
   isSaving = false,

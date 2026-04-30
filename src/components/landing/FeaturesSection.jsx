@@ -21,7 +21,7 @@ const features = [
   {
     icon: Calculator,
     title: 'Confidence-Led Delivery',
-    description: 'Keep the original Proplytics strengths: BriefScore, confidence grids, lifecycle tracking, export, and client portals.',
+    description: 'Keep the original FixFlowAI strengths: BriefScore, confidence grids, lifecycle tracking, export, and client portals.',
   },
 ]
 
@@ -87,7 +87,7 @@ function FeaturesSection() {
             <span className="text-gradient-primary">Modern Teams</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Proplytics now spans single-user delivery, agency memory, strategic proposal options, and team collaboration.
+            FixFlowAI now spans single-user delivery, agency memory, strategic proposal options, and team collaboration.
           </p>
         </motion.div>
 

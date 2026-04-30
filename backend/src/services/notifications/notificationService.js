@@ -25,12 +25,12 @@ async function sendNotificationEmail({ user, notification }) {
     await sendTransactionalMail({
       to: user.email,
       subject: notification.title,
-      text: `${notification.body}\n\nOpen Proplytics to review the latest update.`,
+      text: `${notification.body}\n\nOpen FixFlowAI to review the latest update.`,
       html: `
         <div style="font-family: Arial, sans-serif; color: #0f172a;">
           <h2 style="margin-bottom: 12px;">${notification.title}</h2>
           <p style="margin: 0 0 16px 0;">${notification.body}</p>
-          <p style="color: #475569; margin: 0;">Open Proplytics to review the latest update.</p>
+          <p style="color: #475569; margin: 0;">Open FixFlowAI to review the latest update.</p>
         </div>
       `,
     });

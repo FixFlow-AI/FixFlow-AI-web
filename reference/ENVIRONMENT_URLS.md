@@ -1,6 +1,6 @@
-# Proplytics Environment URLs and Auth Endpoints
+# FixFlowAI Environment URLs and Auth Endpoints
 
-This file is the single source of truth for the URLs and callback endpoints you should use for Proplytics in local development and on AWS.
+This file is the single source of truth for the URLs and callback endpoints you should use for FixFlowAI in local development and on AWS.
 
 ## Active deployed URLs
 
@@ -81,7 +81,7 @@ Use this in your GitHub OAuth App:
 
 ## Important note about GitHub login across local, testing, and main
 
-Proplytics now carries the active frontend origin through the OAuth `state` payload. That means:
+FixFlowAI now carries the active frontend origin through the OAuth `state` payload. That means:
 
 - You can start GitHub login from `http://localhost:3001`, `https://testing.d22glq95zibf1w.amplifyapp.com`, or `https://main.d22glq95zibf1w.amplifyapp.com`.
 - GitHub still redirects back to the single backend callback URL: `https://d6opkcrsagj0v.cloudfront.net/api/auth/github/callback`.

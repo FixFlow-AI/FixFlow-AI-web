@@ -34,7 +34,7 @@ function BenefitsGrid() {
         >
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             <span className="text-gradient">Why Choose</span>{' '}
-            <span className="text-gradient-primary">Proplytics</span>
+            <span className="text-gradient-primary">FixFlowAI</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Built for modern teams who want to win more deals with better proposals.

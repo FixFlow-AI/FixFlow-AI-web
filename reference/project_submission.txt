@@ -1,7 +1,7 @@
 Final Submission
 
 GitHub Repository *
-https://github.com/Suvam-paul145/Proplytics
+https://github.com/Suvam-paul145/FixFlowAI
 
 Live Demo URL *
 https://main.d22glq95zibf1w.amplifyapp.com
@@ -10,7 +10,7 @@ Video Walkthrough URL *
 [Insert your Loom or YouTube link here]
 
 Documentation & Process *
-Approach: Most AI proposal tools generate long text first and structure it later. Proplytics reverses this by generating schema-constrained JSON first via Gemini 1.50, and progressively rendering interactive proposal UI from that structured output using streaming Server-Sent Events (SSE). 
+Approach: Most AI proposal tools generate long text first and structure it later. FixFlowAI reverses this by generating schema-constrained JSON first via Gemini 1.50, and progressively rendering interactive proposal UI from that structured output using streaming Server-Sent Events (SSE). 
 
 Challenges faced: 
 - Streaming structured JSON progressively via SSE required careful partial section extraction to ensure UI rendering didn't break.
@@ -19,7 +19,7 @@ Challenges faced:
 
 How to run the project:
 1. Ensure Node.js and Docker are installed.
-2. Clone the repo: `git clone https://github.com/Suvam-paul145/Proplytics.git`
+2. Clone the repo: `git clone https://github.com/Suvam-paul145/FixFlowAI.git`
 3. Install backend dependencies: `npm --prefix backend install`
 4. Install frontend dependencies: `npm install`
 5. Configure `.env` and `backend/.env` files with `GEMINI_API_KEY`, AWS, and MongoDB credentials.

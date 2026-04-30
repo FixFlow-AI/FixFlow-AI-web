@@ -2,14 +2,14 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 export function PageLoader() {
-  const [loadingText, setLoadingText] = useState('Initializing Proplytics...')
+  const [loadingText, setLoadingText] = useState('Initializing FixFlowAI...')
 
   useEffect(() => {
     const texts = [
       'Connecting to Neural Net...',
       'Loading Quantum Models...',
       'Synthesizing UI...',
-      'Readying Proplytics...',
+      'Readying FixFlowAI...',
     ]
     let index = 0
     const interval = setInterval(() => {
@@ -57,7 +57,7 @@ export function PageLoader() {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-2"
         >
-          PROPLYTICS
+          FIXFLOWAI
         </motion.h1>
 
         {/* Loading text sequence */}

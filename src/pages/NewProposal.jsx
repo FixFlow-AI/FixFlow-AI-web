@@ -155,7 +155,7 @@ function NewProposal() {
         </div>
         <h1 className="text-3xl font-bold mb-2">Create New Proposal</h1>
         <p className="max-w-3xl text-muted-foreground">
-          Paste a client brief or upload a discovery file. Proplytics will score the input first, then generate the proposal with the brief-quality snapshot attached.
+          Paste a client brief or upload a discovery file. FixFlowAI will score the input first, then generate the proposal with the brief-quality snapshot attached.
         </p>
       </motion.div>
 

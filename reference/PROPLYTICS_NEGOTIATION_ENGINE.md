@@ -1,4 +1,4 @@
-# 🧠 Proplytics — New Feature Plan
+# 🧠 FixFlowAI — New Feature Plan
 ## **ProposalChat: The Contextual Negotiation & Section Mutation Engine**
 ### *The feature that turns a static proposal into a live negotiation partner*
 
@@ -15,7 +15,7 @@
 Every proposal that lands in a client's inbox immediately generates questions.
 *"Why does this take 3 months?" "Can we do this without the Salesforce connector?" "What if we halved the budget?"*
 
-Right now, Proplytics generates the proposal and stops. The agency is back to manual work — rewriting sections, re-estimating effort, reformatting docs — just to answer scope questions.
+Right now, FixFlowAI generates the proposal and stops. The agency is back to manual work — rewriting sections, re-estimating effort, reformatting docs — just to answer scope questions.
 
 **ProposalChat closes this loop entirely.**
 After generation, the agency (or even the client, in a shareable view) can ask anything about the proposal, and get streaming, contextually aware responses — or trigger targeted regeneration of specific sections without touching the rest of the document.
@@ -267,7 +267,7 @@ The sidebar has three zones:
 
 **Zone 1 — Header:** "Proposal Chat" title + current version indicator ("v2") + "Close" button
 
-**Zone 2 — Message Thread:** Scrollable. User messages appear on the right with a neutral background. AI responses appear on the left with the Proplytics accent color as a left border strip — matching the Confidence Grid visual language. Mutation confirmations appear as full-width banners in green.
+**Zone 2 — Message Thread:** Scrollable. User messages appear on the right with a neutral background. AI responses appear on the left with the FixFlowAI accent color as a left border strip — matching the Confidence Grid visual language. Mutation confirmations appear as full-width banners in green.
 
 **Zone 3 — Input Bar:** Full-width textarea (grows to 3 lines max). Below it, a small intent chip auto-updates as the user types: "Question detected" or "Mutation detected — will update: Timeline". This real-time classification gives users confidence that the AI understood their intent before they hit send.
 
@@ -407,7 +407,7 @@ If the backend receives intent="question" but the Gemini response starts with a 
 |:---|:---|
 | **No competitor has it** | Proposify, PandaDoc, Qwilr — all static documents. This is the first conversational proposal layer. |
 | **Natural sales workflow** | Every proposal triggers 5–10 scope questions. This eliminates the back-and-forth entirely. |
-| **Increases proposal stickiness** | Agencies will spend 10x more time inside Proplytics revising than generating. That's 10x more engagement. |
+| **Increases proposal stickiness** | Agencies will spend 10x more time inside FixFlowAI revising than generating. That's 10x more engagement. |
 | **Premium tier justification** | "Unlimited chat + mutations" becomes the core Pro/Agency differentiator. Free tier gets 3 chat messages per proposal. |
 | **Reinforces the Confidence Grid** | Users naturally ask "why is this Low confidence?" — and the chat answers it. The two features create a feedback loop. |
 | **Shareable client link potential** | Future feature: share a read-only chat link with the client, letting them ask questions directly. This becomes a sales multiplier. |

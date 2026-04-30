@@ -9,7 +9,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      MONGODB_URI: mongodb://localhost:27017/proplytics-ci
+      MONGODB_URI: mongodb://localhost:27017/fixflowai-ci
       JWT_SECRET: 1234567890abcdef1234567890abcdef
       JWT_REFRESH_SECRET: abcdef1234567890abcdef1234567890
     steps:
@@ -59,14 +59,14 @@ jobs:
       - name: Sync hosted frontend and OAuth callback URLs to SSM
         run: |
           aws ssm put-parameter \
-            --name "/proplytics/dev/FRONTEND_URL" \
+            --name "/fixflowai/dev/FRONTEND_URL" \
             --type String \
             --value "https://testing.d22glq95zibf1w.amplifyapp.com" \
             --overwrite \
             --region "${{ secrets.AWS_REGION }}"
 
           aws ssm put-parameter \
-            --name "/proplytics/dev/GITHUB_CALLBACK_URL" \
+            --name "/fixflowai/dev/GITHUB_CALLBACK_URL" \
             --type String \
             --value "https://d6opkcrsagj0v.cloudfront.net/api/auth/github/callback" \
             --overwrite \
@@ -79,7 +79,7 @@ jobs:
 
       - name: Update ECS task definition with testing image
         run: |
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition proplytics-backend --query taskDefinition)
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition fixflowai-backend --query taskDefinition)
           NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           NEW_TASK_DEF=$(echo $NEW_TASK_DEF | jq '.containerDefinitions[0].image = "${{ secrets.ECR_REPOSITORY }}:testing"')
           
@@ -89,17 +89,17 @@ jobs:
           NEW_TASK_REVISION=$(echo $NEW_TASK_INFO | jq -r '.taskDefinition.revision')
           
           aws ecs update-service \
-            --cluster proplytics-cluster \
-            --service proplytics-backend-service \
-            --task-definition proplytics-backend:$NEW_TASK_REVISION \
+            --cluster fixflowai-cluster \
+            --service fixflowai-backend-service \
+            --task-definition fixflowai-backend:$NEW_TASK_REVISION \
             --force-new-deployment \
             --region "${{ secrets.AWS_REGION }}"
 
       - name: Wait for ECS service stability
         run: |
           aws ecs wait services-stable \
-            --cluster proplytics-cluster \
-            --services proplytics-backend-service \
+            --cluster fixflowai-cluster \
+            --services fixflowai-backend-service \
             --region "${{ secrets.AWS_REGION }}"
 
       - name: Resolve backend URL
@@ -109,8 +109,8 @@ jobs:
           BACKEND_CF_DOMAIN="d6opkcrsagj0v.cloudfront.net"
 
           TASK_ARN=$(aws ecs list-tasks \
-            --cluster proplytics-cluster \
-            --service-name proplytics-backend-service \
+            --cluster fixflowai-cluster \
+            --service-name fixflowai-backend-service \
             --desired-status RUNNING \
             --region "${{ secrets.AWS_REGION }}" \
             --query 'taskArns[0]' \

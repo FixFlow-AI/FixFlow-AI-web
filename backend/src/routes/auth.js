@@ -50,7 +50,7 @@ async function exchangeGithubCodeForToken(code) {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      'User-Agent': 'Proplytics-Backend',
+      'User-Agent': 'FixFlowAI-Backend',
     },
     body: JSON.stringify({
       client_id: env.GITHUB_CLIENT_ID,
@@ -80,7 +80,7 @@ async function fetchGithubProfile(accessToken) {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
     Accept: 'application/vnd.github+json',
-    'User-Agent': 'Proplytics-Backend',
+    'User-Agent': 'FixFlowAI-Backend',
   };
 
   const userResponse = await fetch('https://api.github.com/user', { headers });

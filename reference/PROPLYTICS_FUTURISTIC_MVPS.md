@@ -1,5 +1,5 @@
-# 🔭 Proplytics — Futuristic MVP Roadmap
-## *Three Features That Turn Proplytics from a Tool into a Platform*
+# 🔭 FixFlowAI — Futuristic MVP Roadmap
+## *Three Features That Turn FixFlowAI from a Tool into a Platform*
 ### *Beyond the Roadmap · Category-Defining · 7-Day Execution Window*
 
 ---
@@ -13,7 +13,7 @@
 
 ## Why These Three — The Strategic Logic
 
-The current Proplytics roadmap completes the **single-user proposal lifecycle** with near-total coverage. Every stage from intake scoring to win/loss email follow-up is built or nearly built.
+The current FixFlowAI roadmap completes the **single-user proposal lifecycle** with near-total coverage. Every stage from intake scoring to win/loss email follow-up is built or nearly built.
 
 The next evolution is not adding more stages. It is deepening the **intelligence layer** and expanding the **unit of operation** from a single user to an agency as an intelligent organism.
 
@@ -36,7 +36,7 @@ the proposal alone                      role-based access, invite clients
                                         and colleagues in
 ```
 
-Together they transform Proplytics from a **productivity tool** into an **agency intelligence platform** — the kind of product that agencies become structurally dependent on, not just habitually reliant on.
+Together they transform FixFlowAI from a **productivity tool** into an **agency intelligence platform** — the kind of product that agencies become structurally dependent on, not just habitually reliant on.
 
 ---
 ---
@@ -54,7 +54,7 @@ Together they transform Proplytics from a **productivity tool** into an **agency
 
 ## The Core Insight
 
-Every proposal Proplytics has ever generated for an agency is a data point. Currently those data points exist in S3 and MongoDB but are only surfaced on the Analytics page as aggregate win-rate charts.
+Every proposal FixFlowAI has ever generated for an agency is a data point. Currently those data points exist in S3 and MongoDB but are only surfaced on the Analytics page as aggregate win-rate charts.
 
 The Agency Brain turns every past proposal into a **calibration input** for the next one.
 
@@ -64,7 +64,7 @@ Every agency has systematic blind spots in their estimation patterns. They consi
 
 Over 20 proposals, these patterns become statistically observable. Over 50, they are predictive. The Agency Brain surfaces them, quantifies them, and injects them directly into the next proposal generation as calibration context.
 
-The result: every new proposal Proplytics generates is not just based on the client brief. It is based on the brief filtered through the accumulated institutional knowledge of that specific agency's bidding history, win patterns, and estimation accuracy.
+The result: every new proposal FixFlowAI generates is not just based on the client brief. It is based on the brief filtered through the accumulated institutional knowledge of that specific agency's bidding history, win patterns, and estimation accuracy.
 
 **No general-purpose AI tool can replicate this because it requires your specific data.**
 
@@ -330,7 +330,7 @@ src/
 
 ## Why This Feature Has No Competitor
 
-No proposal tool on the market learns from your proposal history and feeds that learning back into your next generation. Proposify, PandaDoc, Qwilr, and every AI writing tool treat each proposal as a fresh start. Agency Brain is the first feature in the category that creates **compounding value** — the platform becomes more accurate and more useful the more you use it. After 50 proposals, your Proplytics is meaningfully better than a competitor's Proplytics. After 200 proposals, it is practically a different product. That is a structural competitive moat that cannot be copied without the data.
+No proposal tool on the market learns from your proposal history and feeds that learning back into your next generation. Proposify, PandaDoc, Qwilr, and every AI writing tool treat each proposal as a fresh start. Agency Brain is the first feature in the category that creates **compounding value** — the platform becomes more accurate and more useful the more you use it. After 50 proposals, your FixFlowAI is meaningfully better than a competitor's FixFlowAI. After 200 proposals, it is practically a different product. That is a structural competitive moat that cannot be copied without the data.
 
 ---
 ---
@@ -342,7 +342,7 @@ No proposal tool on the market learns from your proposal history and feeds that 
 > **Build time: 2 days**
 > **Depends on: existing /api/generate pipeline, existing S3 versioning, existing ProposalResult page components**
 > **New infrastructure: zero**
-> **This is the feature that repositions Proplytics from 'proposal generator' to 'strategic advisor'**
+> **This is the feature that repositions FixFlowAI from 'proposal generator' to 'strategic advisor'**
 
 ---
 
@@ -350,7 +350,7 @@ No proposal tool on the market learns from your proposal history and feeds that 
 
 Every client brief contains a negotiable core. The features the client asked for are not the minimum they will accept or the maximum they would love. There is a band — a Lean version that delivers the outcome without the extras, a Standard version that matches the brief exactly, and a Premium version that exceeds expectations and positions the agency as strategic rather than just executional.
 
-Right now Proplytics generates one proposal per brief. The agency gets the Standard interpretation by default. They never know if the Lean version would have won on price, or if the Premium version would have unlocked a bigger scope conversation.
+Right now FixFlowAI generates one proposal per brief. The agency gets the Standard interpretation by default. They never know if the Lean version would have won on price, or if the Premium version would have unlocked a bigger scope conversation.
 
 **TriProposal generates all three in parallel, in one click.**
 
@@ -555,22 +555,22 @@ The strategic three-tier proposal is a well-established sales technique in profe
 
 # MVP F3 — Team Workspace
 ## **Real-Time Proposal Collaboration with Role-Based Access**
-### *"Your agency's proposals are a team sport. Proplytics becomes the pitch room."*
+### *"Your agency's proposals are a team sport. FixFlowAI becomes the pitch room."*
 
 > **Build time: 2 days**
 > **Addresses: the #1 "Planned" item on the official roadmap**
 > **New infrastructure: zero (WebSocket via existing Express, MongoDB for membership)**
-> **This is the feature that makes Proplytics a team-priced product, not a per-seat one**
+> **This is the feature that makes FixFlowAI a team-priced product, not a per-seat one**
 
 ---
 
 ## The Core Insight
 
-The current Proplytics is a single-user system. One person generates a proposal, one person negotiates it via chat, one person shares it. In the real agency world, proposals involve at minimum three people: the business development person (writes the brief), the technical lead (validates the estimates), and the account manager (approves the pricing and strategy). Often a fourth — a copywriter or creative director — polishes the language before it goes to the client.
+The current FixFlowAI is a single-user system. One person generates a proposal, one person negotiates it via chat, one person shares it. In the real agency world, proposals involve at minimum three people: the business development person (writes the brief), the technical lead (validates the estimates), and the account manager (approves the pricing and strategy). Often a fourth — a copywriter or creative director — polishes the language before it goes to the client.
 
 All four of these people are currently locked out. There is no way to share a proposal internally, leave a comment, request a review, or see what your colleague changed.
 
-**Team Workspace gives Proplytics a workspace model.** Proposals become shared assets with access control, not private documents.
+**Team Workspace gives FixFlowAI a workspace model.** Proposals become shared assets with access control, not private documents.
 
 This is also the unlock for the Agency plan pricing tier: $149/month is justified by unlimited users, and unlimited users requires a workspace model.
 
@@ -590,7 +590,7 @@ The workspace has three roles:
 | **Editor** | Generate proposals, negotiate via chat, export, share via portal, update deal status |
 | **Viewer** | View all proposals and analytics in read-only mode; cannot generate or export |
 
-Invitations are sent via email (Nodemailer, already in the stack). The invite link contains a signed JWT that pre-authenticates the join action — the new member clicks the link, sets a password if new to Proplytics, and lands directly in the workspace.
+Invitations are sent via email (Nodemailer, already in the stack). The invite link contains a signed JWT that pre-authenticates the join action — the new member clicks the link, sets a password if new to FixFlowAI, and lands directly in the workspace.
 
 All proposals created by any workspace member are visible to all other members according to their role. The MongoDB proposal ownership model expands from `userId` to `workspaceId + userId`.
 
@@ -656,7 +656,7 @@ Backend:
   1. Generate invite token: crypto.randomUUID()
   2. Hash token, store in workspace.invitePending with 72hr expiry
   3. Send invite email via Nodemailer:
-     Subject: "[Owner Name] invited you to Proplytics workspace"
+    Subject: "[Owner Name] invited you to FixFlowAI workspace"
      Body:    "Join link: /join/{rawToken}"
       │
       ▼
@@ -826,7 +826,7 @@ src/
 
 ## Why This Feature Unlocks Revenue
 
-Without Team Workspace, Proplytics is a personal productivity tool. The Agency pricing tier ($149/month) currently has no hard technical enforcement — a single user could subscribe and use all features. Team Workspace creates the structural requirement for the Agency plan: multiple users require a workspace, and workspace access requires the Agency tier. This converts the pricing model from "nice to have unlimited proposals" to "we structurally need the Agency tier to collaborate." That is the difference between a soft upsell and a hard adoption driver.
+Without Team Workspace, FixFlowAI is a personal productivity tool. The Agency pricing tier ($149/month) currently has no hard technical enforcement — a single user could subscribe and use all features. Team Workspace creates the structural requirement for the Agency plan: multiple users require a workspace, and workspace access requires the Agency tier. This converts the pricing model from "nice to have unlimited proposals" to "we structurally need the Agency tier to collaborate." That is the difference between a soft upsell and a hard adoption driver.
 
 ---
 ---
@@ -872,7 +872,7 @@ DAY 7  ────────────────────────�
 
 ---
 
-# What Proplytics Looks Like After All This
+# What FixFlowAI Looks Like After All This
 
 ```
 STAGE           CURRENT (already built)          AFTER THESE 3 MVPs

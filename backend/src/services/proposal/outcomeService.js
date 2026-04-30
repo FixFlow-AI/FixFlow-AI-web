@@ -30,6 +30,7 @@ function buildMockWonOutcome(proposalJSON) {
     kickoffEmail: {
       subject: `Kickoff next steps for ${topFeature}`,
       body: `Hi team,\n\nWe’re excited to get started. Based on the approved proposal, our first focus will be ${phases[0]?.phase || 'discovery and delivery planning'} so we can move into execution with the right context and access in place.\n\nIn the kickoff session we’ll confirm stakeholders, timelines, priority scope, and the integrations or dependencies we need from your side. We’ll then share the finalized phase-one plan and cadence for demos and status updates.\n\nPlease send over any required access or scheduling preferences, and we’ll take it from there.\n\nBest,\nThe Proplytics delivery team`,
+        body: `Hi team,\n\nWe’re excited to get started. Based on the approved proposal, our first focus will be ${phases[0]?.phase || 'discovery and delivery planning'} so we can move into execution with the right context and access in place.\n\nIn the kickoff session we’ll confirm stakeholders, timelines, priority scope, and the integrations or dependencies we need from your side. We’ll then share the finalized phase-one plan and cadence for demos and status updates.\n\nPlease send over any required access or scheduling preferences, and we’ll take it from there.\n\nBest,\nThe FixFlowAI delivery team`,
     },
   });
 }
@@ -44,16 +45,19 @@ function buildMockLostOutcome(proposalJSON, lossReason = '') {
       sendTiming: 'Same day',
       subject: 'Thank you for considering our proposal',
       body: `Hi,\n\nThank you again for reviewing our proposal. ${reasonLine}We appreciated the opportunity to think through the project with you.\n\nOne thing we still believe strongly is that ${summary.charAt(0).toLowerCase()}${summary.slice(1)}\n\nIf you’re open to it, we’d value a short conversation on what made the difference in your decision so we can keep improving.\n\nBest,\nThe Proplytics team`,
+        body: `Hi,\n\nThank you again for reviewing our proposal. ${reasonLine}We appreciated the opportunity to think through the project with you.\n\nOne thing we still believe strongly is that ${summary.charAt(0).toLowerCase()}${summary.slice(1)}\n\nIf you’re open to it, we’d value a short conversation on what made the difference in your decision so we can keep improving.\n\nBest,\nThe FixFlowAI team`,
     },
     email2: {
       sendTiming: 'One week later',
       subject: 'A flexible option if timing or scope was the blocker',
       body: `Hi,\n\nI wanted to follow up with one practical thought. If the hesitation was around delivery risk or investment, we could restructure the work into a tighter first phase with a smaller commitment and clearer checkpoints.\n\nIn our original proposal we called out ${primaryRisk?.label || 'implementation risk'} and recommended ${primaryRisk?.mitigation || 'early validation before scaling scope'}. That same approach could be used to de-risk a leaner phase one.\n\nIf it would help, I’m happy to sketch an alternative option.\n\nBest,\nThe Proplytics team`,
+        body: `Hi,\n\nI wanted to follow up with one practical thought. If the hesitation was around delivery risk or investment, we could restructure the work into a tighter first phase with a smaller commitment and clearer checkpoints.\n\nIn our original proposal we called out ${primaryRisk?.label || 'implementation risk'} and recommended ${primaryRisk?.mitigation || 'early validation before scaling scope'}. That same approach could be used to de-risk a leaner phase one.\n\nIf it would help, I’m happy to sketch an alternative option.\n\nBest,\nThe FixFlowAI team`,
     },
     email3: {
       sendTiming: 'One month later',
       subject: 'Sharing one idea if this project comes back into focus',
       body: `Hi,\n\nWanted to check in once more in case this initiative is resurfacing. We’ve continued seeing teams move faster when they start with a focused first release tied to one measurable outcome instead of trying to launch everything at once.\n\nIf it’s useful, I’d be happy to share a few lessons learned from similar delivery programs and how we’d scope the first milestone today.\n\nAll the best,\nThe Proplytics team`,
+        body: `Hi,\n\nWanted to check in once more in case this initiative is resurfacing. We’ve continued seeing teams move faster when they start with a focused first release tied to one measurable outcome instead of trying to launch everything at once.\n\nIf it’s useful, I’d be happy to share a few lessons learned from similar delivery programs and how we’d scope the first milestone today.\n\nAll the best,\nThe FixFlowAI team`,
     },
   });
 }

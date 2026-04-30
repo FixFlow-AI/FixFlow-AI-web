@@ -1,15 +1,15 @@
 {
-  "family": "proplytics-backend",
+  "family": "fixflowai-backend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "1024",
-  "taskRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-task-role",
-  "executionRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::034476915822:role/fixflowai-ecs-task-role",
+  "executionRoleArn": "arn:aws:iam::034476915822:role/fixflowai-ecs-execution-role",
   "containerDefinitions": [
     {
-      "name": "proplytics-backend",
-      "image": "034476915822.dkr.ecr.us-east-1.amazonaws.com/proplytics-backend:latest",
+      "name": "fixflowai-backend",
+      "image": "034476915822.dkr.ecr.us-east-1.amazonaws.com/fixflowai-backend:latest",
       "essential": true,
       "portMappings": [
         {
@@ -20,63 +20,63 @@
       "secrets": [
         {
           "name": "MONGODB_URI",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/MONGODB_URI"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/MONGODB_URI"
         },
         {
           "name": "JWT_SECRET",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_SECRET"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/JWT_SECRET"
         },
         {
           "name": "JWT_REFRESH_SECRET",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_REFRESH_SECRET"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/JWT_REFRESH_SECRET"
         },
         {
           "name": "GEMINI_API_KEY",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GEMINI_API_KEY"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/GEMINI_API_KEY"
         },
         {
           "name": "FRONTEND_URL",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/FRONTEND_URL"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/FRONTEND_URL"
         },
         {
           "name": "GITHUB_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GITHUB_CLIENT_ID"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/GITHUB_CLIENT_ID"
         },
         {
           "name": "GITHUB_CLIENT_SECRET",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GITHUB_CLIENT_SECRET"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/GITHUB_CLIENT_SECRET"
         },
         {
           "name": "GITHUB_CALLBACK_URL",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GITHUB_CALLBACK_URL"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/GITHUB_CALLBACK_URL"
         },
         {
           "name": "GITHUB_OAUTH_SCOPE",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/GITHUB_OAUTH_SCOPE"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/GITHUB_OAUTH_SCOPE"
         },
         {
           "name": "SMTP_HOST",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_HOST"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_HOST"
         },
         {
           "name": "SMTP_PORT",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_PORT"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_PORT"
         },
         {
           "name": "SMTP_SECURE",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_SECURE"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_SECURE"
         },
         {
           "name": "SMTP_USER",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_USER"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_USER"
         },
         {
           "name": "SMTP_PASS",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_PASS"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_PASS"
         },
         {
           "name": "SMTP_FROM",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_FROM"
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/fixflowai/dev/SMTP_FROM"
         }
       ],
       "environment": [
@@ -94,13 +94,13 @@
         },
         {
           "name": "S3_BUCKET",
-          "value": "proplytics-assets-dev"
+          "value": "fixflowai-assets-dev"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/proplytics-backend",
+          "awslogs-group": "/ecs/fixflowai-backend",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }

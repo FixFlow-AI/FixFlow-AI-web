@@ -30,8 +30,8 @@ function getTransporter() {
 async function sendPasswordResetOtp({ to, otp }) {
   await sendTransactionalMail({
     to,
-    subject: 'Proplytics Password Reset OTP',
-    text: `Your Proplytics OTP is ${otp}. It will expire in 10 minutes.`,
+    subject: 'FixFlowAI Password Reset OTP',
+    text: `Your FixFlowAI OTP is ${otp}. It will expire in 10 minutes.`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #0f172a;">
         <h2 style="margin-bottom: 8px;">Password Reset OTP</h2>

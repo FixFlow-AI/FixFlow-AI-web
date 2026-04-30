@@ -8,7 +8,7 @@ const useThemeStore = create(
       setTheme: (newTheme) => set({ theme: newTheme }),
     }),
     {
-      name: 'proplytics-theme',
+      name: 'fixflowai-theme',
     }
   )
 );

@@ -127,7 +127,7 @@ export default function Login() {
             <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
-            <span className="text-xl font-bold text-foreground">Proplytics</span>
+            <span className="text-xl font-bold text-foreground">FixFlowAI</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
           <p className="text-muted-foreground mt-1">Sign in to your account</p>

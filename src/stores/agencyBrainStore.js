@@ -29,7 +29,7 @@ const useAgencyBrainStore = create(
           .join('\n'),
     }),
     {
-      name: 'proplytics-agency-brain',
+      name: 'fixflowai-agency-brain',
     }
   )
 )
