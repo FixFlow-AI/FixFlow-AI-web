@@ -3,10 +3,21 @@ const { BadRequestError } = require('../../utils/errors');
 const { buildFrontendUrl } = require('../../utils/frontendOrigin');
 const { decryptSecret, encryptSecret, signState, verifyState } = require('./secretCrypto');
 
+const SLACK_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
 function ensureSlackConfigured() {
   if (!env.SLACK_CLIENT_ID || !env.SLACK_CLIENT_SECRET) {
     throw new BadRequestError('Slack integration is not configured on the server.');
   }
+}
+
+function validateSlackState(state, now = Date.now()) {
+  const payload = verifyState(state);
+  const createdAt = Number(payload.createdAt);
+  if (!Number.isFinite(createdAt) || now - createdAt > SLACK_OAUTH_STATE_TTL_MS || createdAt - now > 60 * 1000) {
+    throw new BadRequestError('Slack OAuth state expired. Please restart the install.');
+  }
+  return payload;
 }
 
 function buildSlackInstallUrl({ workspaceId, userId }) {
@@ -177,5 +188,6 @@ module.exports = {
   installSlackOnWorkspace,
   sendSlackWebhook,
   sendWorkspaceSlackNotification,
+  validateSlackState,
   verifyState,
 };

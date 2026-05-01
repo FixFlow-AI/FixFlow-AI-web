@@ -15,7 +15,7 @@ const {
   exchangeSlackCode,
   installSlackOnWorkspace,
   sendSlackWebhook,
-  verifyState,
+  validateSlackState,
 } = require('../services/integrations/slackService');
 const { decryptSecret } = require('../services/integrations/secretCrypto');
 
@@ -57,7 +57,7 @@ router.get('/callback', async (req, res, next) => {
       throw new BadRequestError('Missing Slack OAuth callback fields.');
     }
 
-    const payload = verifyState(state);
+    const payload = validateSlackState(state);
     const workspace = await Workspace.findById(payload.workspaceId);
     if (!workspace) {
       throw new NotFoundError('Workspace not found.');

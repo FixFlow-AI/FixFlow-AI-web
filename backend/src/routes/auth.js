@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const crypto = require('crypto');
+const { isValidObjectId } = require('mongoose');
 const User = require('../models/User');
 const { env } = require('../config/env');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
@@ -285,6 +286,10 @@ router.post('/github/exchange', authLimiter, async (req, res, next) => {
 // GET /api/auth/avatar/:userId/:fileName
 router.get('/avatar/:userId/:fileName', async (req, res, next) => {
   try {
+    if (!isValidObjectId(req.params.userId)) {
+      throw new BadRequestError('Avatar not found.');
+    }
+
     const user = await User.findById(req.params.userId).lean();
     const expectedFileName = decodeURIComponent(req.params.fileName || '');
 

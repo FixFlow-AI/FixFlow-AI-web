@@ -62,14 +62,9 @@ function getUploadExtension(fileType, fileName) {
 
 function getAvatarUploadExtension(fileType, fileName) {
   const mapped = ALLOWED_AVATAR_UPLOADS.get(fileType);
-  const extension = normalizeExtension(fileName);
 
   if (mapped) {
     return mapped;
-  }
-
-  if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
-    return extension === 'jpeg' ? 'jpg' : extension;
   }
 
   throw new BadRequestError('Unsupported avatar file type. Upload a PNG, JPG, or WEBP image.');

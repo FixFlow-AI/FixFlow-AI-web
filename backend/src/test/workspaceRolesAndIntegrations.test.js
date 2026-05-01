@@ -16,6 +16,7 @@ const {
 } = require('../services/integrations/secretCrypto');
 const {
   buildSlackMessage,
+  validateSlackState,
 } = require('../services/integrations/slackService');
 const s3Service = require('../services/storage/s3');
 const {
@@ -52,9 +53,10 @@ test('workspace role normalization preserves defaults and custom permissions', a
   assert.equal(memberHasPermission(workspace, workspace.members[1], 'roles.manage'), false);
 });
 
-test('avatar upload helpers enforce image ownership and supported types', () => {
+test('avatar upload helpers enforce image ownership and supported types', async () => {
   assert.doesNotThrow(() => s3Service.assertOwnedAvatarKey('user-1', 'avatars/user-1/123.webp'));
   assert.throws(() => s3Service.assertOwnedAvatarKey('user-1', 'avatars/user-2/123.webp'));
+  await assert.rejects(() => s3Service.generateAvatarUploadUrl('user-1', 'application/octet-stream', 'avatar.png'));
   assert.equal(s3Service.getAvatarMimeTypeFromKey('avatars/user-1/123.png'), 'image/png');
   assert.equal(s3Service.buildAvatarUrl('user-1', 'avatars/user-1/123.jpg'), '/api/auth/avatar/user-1/123.jpg');
 });
@@ -80,4 +82,21 @@ test('Slack message builder includes accessible fallback text and action link', 
   assert.match(message.text, /Proposal assignment updated/);
   assert.ok(message.blocks.some((block) => block.type === 'actions'));
   assert.equal(message.unfurl_links, false);
+});
+
+test('Slack state validation rejects expired install state', () => {
+  const now = Date.now();
+  const validState = signState({ workspaceId: 'workspace-1', userId: 'user-1', createdAt: now });
+  assert.deepEqual(validateSlackState(validState, now), {
+    workspaceId: 'workspace-1',
+    userId: 'user-1',
+    createdAt: now,
+  });
+
+  const expiredState = signState({
+    workspaceId: 'workspace-1',
+    userId: 'user-1',
+    createdAt: now - 11 * 60 * 1000,
+  });
+  assert.throws(() => validateSlackState(expiredState, now), /expired/);
 });
