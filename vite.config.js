@@ -12,4 +12,17 @@ export default defineConfig({
   server: {
     port: 3001,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query', 'axios', 'zustand'],
+          motion: ['framer-motion'],
+          three: ['three', '@react-three/fiber', '@react-three/drei'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+  },
 })

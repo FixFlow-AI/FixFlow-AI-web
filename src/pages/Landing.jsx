@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
 import Navbar from '@/components/layout/Navbar'
 import HeroSection from '@/components/landing/HeroSection'
-import FeaturesSection from '@/components/landing/FeaturesSection'
-import HowItWorks from '@/components/landing/HowItWorks'
-import BenefitsGrid from '@/components/landing/BenefitsGrid'
-import PricingSection from '@/components/landing/PricingSection'
+import ProjectsTimeline from '@/components/landing/ProjectsTimeline'
+import TechnicalSchematic from '@/components/landing/TechnicalSchematic'
+import MasonryVanguard from '@/components/landing/MasonryVanguard'
+import FuturePlansSplit from '@/components/landing/FuturePlansSplit'
 import Footer from '@/components/landing/Footer'
 
 function Landing() {
@@ -19,10 +19,10 @@ function Landing() {
       <Navbar />
       <main>
         <HeroSection />
-        <FeaturesSection />
-        <HowItWorks />
-        <BenefitsGrid />
-        <PricingSection />
+        <ProjectsTimeline />
+        <TechnicalSchematic />
+        <MasonryVanguard />
+        <FuturePlansSplit />
       </main>
       <Footer />
     </motion.div>

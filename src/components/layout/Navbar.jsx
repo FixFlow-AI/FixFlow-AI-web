@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
-  { label: 'Features', href: '#features' },
-  { label: 'How it Works', href: '#how-it-works' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Flow', href: '#flow' },
+  { label: 'Capabilities', href: '#schematic' },
+  { label: 'Architecture', href: '#evidence' },
+  { label: 'Roadmap', href: '#roadmap' },
 ]
 
 function Navbar() {
@@ -67,7 +68,7 @@ function Navbar() {
               </Link>
               <Link to="/register?mode=individual&plan=free">
                 <Button size="sm" className="glow-effect">
-                  Get Started
+                  Connect GitHub
                 </Button>
               </Link>
             </div>
@@ -107,7 +108,7 @@ function Navbar() {
                 </Link>
                 <Link to="/register?mode=individual&plan=free">
                   <Button size="sm" className="w-full justify-center">
-                    Get Started
+                    Connect GitHub
                   </Button>
                 </Link>
               </div>

@@ -10,6 +10,12 @@ import {
   Settings,
   HelpCircle,
   Sparkles,
+  BriefcaseBusiness,
+  Fingerprint,
+  HandCoins,
+  Mail,
+  Network,
+  Radar,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -20,7 +26,7 @@ import { Sheet } from '@/components/ui/Sheet'
 
 function NavLinks({ items, isCollapsed, location, onNavigate }) {
   return items.map((item) => {
-    const isActive = location.pathname === item.href
+    const isActive = item.matchPrefix ? location.pathname.startsWith(item.href) : location.pathname === item.href
 
     return (
       <Link
@@ -54,9 +60,16 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
     { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
     { name: 'Workspace', href: '/workspace', icon: Users },
+    { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true },
   ]
 
   const secondaryNav = [
+    { name: 'Niches', href: '/freelancer/niches', icon: Radar },
+    { name: 'Leads', href: '/freelancer/leads', icon: Network },
+    { name: 'Outreach', href: '/freelancer/outreach', icon: Mail },
+    { name: 'Escrows', href: '/freelancer/escrows', icon: HandCoins },
+    { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint },
+    { name: 'OS Settings', href: '/freelancer/settings', icon: Settings },
     ...(currentWorkspace ? [{ name: 'Workspace Settings', href: '/workspace/settings', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
     { name: 'Help', href: '/help', icon: HelpCircle },

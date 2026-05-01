@@ -23,6 +23,14 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const FreelancerFlowBoard = lazy(() => import('./pages/freelancer/FlowBoard'))
+const FreelancerNiches = lazy(() => import('./pages/freelancer/NicheAnalysis'))
+const FreelancerLeads = lazy(() => import('./pages/freelancer/LeadPipeline'))
+const FreelancerOutreach = lazy(() => import('./pages/freelancer/OutreachQueue'))
+const FreelancerEscrows = lazy(() => import('./pages/freelancer/Escrows'))
+const FreelancerIdentity = lazy(() => import('./pages/freelancer/IdentityVault'))
+const FreelancerSettings = lazy(() => import('./pages/freelancer/FreelancerSettings'))
+const FreelancerOnboarding = lazy(() => import('./pages/freelancer/Onboarding'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -173,6 +181,86 @@ function AppRoutes() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Help />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerFlowBoard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/onboarding"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerOnboarding />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/niches"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerNiches />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/leads"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerLeads />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/outreach"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerOutreach />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/escrows"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerEscrows />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/identity"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerIdentity />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/freelancer/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <FreelancerSettings />
               </DashboardLayout>
             </ProtectedRoute>
           }
