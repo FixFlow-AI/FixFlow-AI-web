@@ -4,7 +4,11 @@ const {
   proposalCommentCreateSchema,
   proposalCommentResolveSchema,
 } = require('../models/schemas');
-const { getProposalAccessContext, getProposalJSONForRecord } = require('../services/proposal/proposalAccess');
+const {
+  getEmbeddedProposalJSON,
+  getProposalAccessContext,
+  getProposalJSONForRecord,
+} = require('../services/proposal/proposalAccess');
 const {
   buildProposalRecipientIds,
   createNotifications,
@@ -36,7 +40,9 @@ router.post('/:id/comments', authMiddleware, async (req, res, next) => {
       workspace,
       excludeUserId: workspace ? req.user.userId : null,
     });
-    const proposalJSON = proposal.s3Key ? await getProposalJSONForRecord(proposal) : null;
+    const proposalJSON = proposal.s3Key || getEmbeddedProposalJSON(proposal)
+      ? await getProposalJSONForRecord(proposal)
+      : null;
 
     await createNotifications({
       userIds: recipientIds,
@@ -101,7 +107,7 @@ router.patch('/:id/comments/:commentId', authMiddleware, async (req, res, next) 
           section: comment.section,
           commentId: comment._id.toString(),
         },
-        deliveryDefaults: proposal.s3Key
+        deliveryDefaults: proposal.s3Key || getEmbeddedProposalJSON(proposal)
           ? (await getProposalJSONForRecord(proposal)).delivery_plan?.notificationDefaults
           : null,
       }).catch(() => null);

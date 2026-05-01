@@ -21,7 +21,10 @@ const { getPersonalCapabilities, getWorkspaceCapabilities, assertCapability } = 
 const { assertWorkspaceMembership } = require('../services/workspace/workspaceService');
 const { upsertTripProposal } = require('../services/trips/tripService');
 const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
-const { getEditableProposal } = require('../services/proposal/proposalAccess');
+const {
+  getEditableProposal,
+  upsertEmbeddedProposalVersion,
+} = require('../services/proposal/proposalAccess');
 const { ensureDeliveryPlan } = require('../services/proposal/deliveryPlanService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 
@@ -158,6 +161,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
         nextVersion,
         validatedProposal
       );
+
+      upsertEmbeddedProposalVersion(proposalRecord, nextVersion, validatedProposal, s3Key);
 
       proposalRecord.set({
         s3Key,

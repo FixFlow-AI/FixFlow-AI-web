@@ -8,6 +8,7 @@
 const { SECTION_SCHEMAS, SECTION_JSON_KEYS } = require('../../schemas/sectionSchemas');
 const s3Service = require('../storage/s3');
 const { deriveDeliveryPlan, ensureDeliveryPlan } = require('./deliveryPlanService');
+const { upsertEmbeddedProposalVersion } = require('./proposalAccess');
 
 /**
  * Parse and validate the LLM's mutation output against the section's Zod schema.
@@ -126,6 +127,7 @@ async function persistMutation(userId, proposalId, mergedProposal, proposalRecor
     versionCount: newVersion,
     status: 'complete',
   });
+  upsertEmbeddedProposalVersion(proposalRecord, newVersion, mergedProposal, s3Key);
   await proposalRecord.save();
 
   return { newVersion, s3Key };

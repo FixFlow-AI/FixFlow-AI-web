@@ -17,6 +17,18 @@ const ALLOWED_UPLOADS = new Map([
 
 const s3 = new S3Client({ region: env.AWS_REGION });
 
+function isStorageObjectMissingError(error) {
+  return ['NoSuchKey', 'NotFound'].includes(error?.Code || error?.name);
+}
+
+function isStorageBucketMissingError(error) {
+  return ['NoSuchBucket', 'PermanentRedirect'].includes(error?.Code || error?.name);
+}
+
+function isRecoverableStorageError(error) {
+  return isStorageObjectMissingError(error) || isStorageBucketMissingError(error);
+}
+
 function normalizeExtension(fileName) {
   return path.extname(fileName || '').replace('.', '').toLowerCase();
 }
@@ -99,14 +111,27 @@ async function getFile(fileKey) {
 async function uploadProposalJSON(userId, proposalId, version, data) {
   const s3Key = makeProposalKey(userId, proposalId, version);
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: env.S3_BUCKET,
-      Key: s3Key,
-      Body: JSON.stringify(data, null, 2),
-      ContentType: 'application/json',
-    })
-  );
+  try {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: s3Key,
+        Body: JSON.stringify(data, null, 2),
+        ContentType: 'application/json',
+      })
+    );
+  } catch (error) {
+    if (!isRecoverableStorageError(error)) {
+      throw error;
+    }
+
+    if (env.NODE_ENV !== 'production') {
+      console.warn(
+        `S3 upload skipped for ${s3Key}: ${error.Code || error.name || error.message}. ` +
+          'Proposal JSON will be served from MongoDB fallback storage.'
+      );
+    }
+  }
 
   return s3Key;
 }
@@ -151,6 +176,7 @@ module.exports = {
   getFile,
   getMimeTypeFromKey,
   getProposalJSON,
+  isRecoverableStorageError,
   makeProposalKey,
   uploadProposalJSON,
 };

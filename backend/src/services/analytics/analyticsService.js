@@ -1,6 +1,8 @@
 const Proposal = require('../../models/Proposal');
-const { calculateProposalConfidence } = require('../proposal/proposalAccess');
-const s3Service = require('../storage/s3');
+const {
+  calculateProposalConfidence,
+  getProposalJSONForRecord,
+} = require('../proposal/proposalAccess');
 
 function average(numbers) {
   if (!numbers.length) {
@@ -30,16 +32,8 @@ async function getAnalytics(userId) {
 
   const proposalDetails = await Promise.all(
     proposals.map(async (proposal) => {
-      if (!proposal.s3Key) {
-        return {
-          proposal,
-          confidenceScore: 0,
-          features: [],
-        };
-      }
-
       try {
-        const data = await s3Service.getProposalJSON(proposal.s3Key);
+        const data = await getProposalJSONForRecord(proposal);
         return {
           proposal,
           confidenceScore: calculateProposalConfidence(data),

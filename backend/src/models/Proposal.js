@@ -64,6 +64,34 @@ const proposalSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    proposalData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    proposalVersions: {
+      type: [
+        {
+          version: {
+            type: Number,
+            required: true,
+          },
+          s3Key: {
+            type: String,
+            trim: true,
+            default: '',
+          },
+          data: {
+            type: mongoose.Schema.Types.Mixed,
+            default: null,
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
     title: {
       type: String,
       required: true,

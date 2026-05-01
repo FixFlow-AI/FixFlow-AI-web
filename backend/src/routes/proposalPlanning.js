@@ -1,7 +1,11 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const { planningActionSchema } = require('../models/schemas');
-const { getProposalAccessContext, getProposalJSONForRecord } = require('../services/proposal/proposalAccess');
+const {
+  getProposalAccessContext,
+  getProposalJSONForRecord,
+  upsertEmbeddedProposalVersion,
+} = require('../services/proposal/proposalAccess');
 const { applyPlanningOperation } = require('../services/proposal/deliveryPlanService');
 const s3Service = require('../services/storage/s3');
 const {
@@ -48,6 +52,7 @@ router.patch('/:id/planning', authMiddleware, async (req, res, next) => {
     proposal.s3Key = s3Key;
     proposal.versionCount = newVersion;
     proposal.status = 'complete';
+    upsertEmbeddedProposalVersion(proposal, newVersion, updatedProposalJSON, s3Key);
     await proposal.save();
 
     if (event) {

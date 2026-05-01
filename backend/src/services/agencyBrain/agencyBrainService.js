@@ -1,7 +1,9 @@
 const Proposal = require('../../models/Proposal');
 const AgencyPattern = require('../../models/AgencyPattern');
-const s3Service = require('../storage/s3');
-const { calculateProposalConfidence } = require('../proposal/proposalAccess');
+const {
+  calculateProposalConfidence,
+  getProposalJSONForRecord,
+} = require('../proposal/proposalAccess');
 const { inferSignalsFromProposal, buildBriefSignals } = require('./briefSignalService');
 const { techStackWinRate } = require('../../utils/patternExtractors/techStackWinRate');
 const { effortCalibrationDelta } = require('../../utils/patternExtractors/effortCalibrationDelta');
@@ -25,7 +27,7 @@ async function loadProposalRecords(proposals) {
   return Promise.all(
     proposals.map(async (proposal) => {
       try {
-        const proposalJSON = proposal.s3Key ? await s3Service.getProposalJSON(proposal.s3Key) : {};
+        const proposalJSON = await getProposalJSONForRecord(proposal);
         const signals = inferSignalsFromProposal(proposal, proposalJSON);
 
         return {

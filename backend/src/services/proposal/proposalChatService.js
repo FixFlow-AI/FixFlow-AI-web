@@ -4,11 +4,14 @@
  * Core logic: fetch proposal from S3, build prompts, manage conversation context.
  */
 
-const s3Service = require('../storage/s3');
 const { buildQuestionPrompt } = require('../../prompts/chatSystemPrompt');
 const { buildMutationPrompt } = require('../../prompts/mutationPrompt');
 const { NotFoundError } = require('../../utils/errors');
-const { getProposalAccessContext } = require('./proposalAccess');
+const {
+  getEmbeddedProposalJSON,
+  getProposalAccessContext,
+  getProposalJSONForRecord,
+} = require('./proposalAccess');
 const { ensureDeliveryPlan } = require('./deliveryPlanService');
 
 const MAX_HISTORY_TURNS = 6;
@@ -23,11 +26,11 @@ const MAX_HISTORY_TURNS = 6;
 async function fetchProposalContext(userId, proposalId) {
   const { proposal, role } = await getProposalAccessContext(userId, proposalId);
 
-  if (!proposal.s3Key) {
+  if (!proposal.s3Key && !getEmbeddedProposalJSON(proposal)) {
     throw new NotFoundError('Proposal data not yet available');
   }
 
-  const proposalJSON = ensureDeliveryPlan(await s3Service.getProposalJSON(proposal.s3Key));
+  const proposalJSON = ensureDeliveryPlan(await getProposalJSONForRecord(proposal));
 
   return { proposal, proposalJSON, role };
 }

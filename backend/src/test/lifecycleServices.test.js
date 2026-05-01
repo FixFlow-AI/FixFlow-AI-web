@@ -10,6 +10,10 @@ const Proposal = require('../models/Proposal');
 const s3Service = require('../services/storage/s3');
 const { createSectionMetrics, buildShareUrl } = require('../services/portal/portalService');
 const { buildMockWonOutcome, buildMockLostOutcome } = require('../services/proposal/outcomeService');
+const {
+  getProposalJSONForRecord,
+  upsertEmbeddedProposalVersion,
+} = require('../services/proposal/proposalAccess');
 const { getAnalytics } = require('../services/analytics/analyticsService');
 
 test('createSectionMetrics initializes all tracked portal sections', () => {
@@ -110,4 +114,79 @@ test('getAnalytics aggregates deal outcomes and proposal detail signals', async 
   assert.equal(analytics.briefScoreComparison.won, 86);
   assert.equal(analytics.briefScoreComparison.lost, 54);
   assert.equal(analytics.topWinningFeatures[0].title, 'Portal');
+});
+
+test('getProposalJSONForRecord falls back to embedded MongoDB data when S3 bucket is missing', async (t) => {
+  t.mock.method(s3Service, 'getProposalJSON', async () => {
+    const error = new Error('The specified bucket does not exist');
+    error.Code = 'NoSuchBucket';
+    throw error;
+  });
+
+  const proposal = {
+    s3Key: 'output/user-1/proposal-1/v1.json',
+    versionCount: 1,
+    proposalData: {
+      project_summary: 'Fallback proposal',
+      features: [{ title: 'Portal', confidence_pct: 91 }],
+      timeline: [],
+    },
+    proposalVersions: [],
+  };
+
+  const data = await getProposalJSONForRecord(proposal);
+
+  assert.equal(data.project_summary, 'Fallback proposal');
+  assert.equal(data.features[0].title, 'Portal');
+  assert.equal(data.storage_unavailable, undefined);
+  assert.ok(data.delivery_plan);
+});
+
+test('getProposalJSONForRecord returns safe unavailable payload for legacy S3-only records', async (t) => {
+  t.mock.method(s3Service, 'getProposalJSON', async () => {
+    const error = new Error('The specified bucket does not exist');
+    error.Code = 'NoSuchBucket';
+    throw error;
+  });
+
+  const proposal = {
+    s3Key: 'output/user-1/proposal-legacy/v2.json',
+    versionCount: 2,
+    projectSummary: 'Legacy proposal summary',
+    proposalData: null,
+    proposalVersions: [],
+  };
+
+  const data = await getProposalJSONForRecord(proposal);
+
+  assert.equal(data.project_summary, 'Legacy proposal summary');
+  assert.equal(data.storage_unavailable, true);
+  assert.equal(data.requested_version, 2);
+  assert.ok(data.delivery_plan);
+});
+
+test('upsertEmbeddedProposalVersion stores latest and versioned proposal data', () => {
+  const proposal = {
+    proposalVersions: [],
+    markModified() {},
+  };
+
+  upsertEmbeddedProposalVersion(
+    proposal,
+    1,
+    { project_summary: 'Version one' },
+    'output/user-1/proposal-1/v1.json'
+  );
+
+  upsertEmbeddedProposalVersion(
+    proposal,
+    2,
+    { project_summary: 'Version two' },
+    'output/user-1/proposal-1/v2.json'
+  );
+
+  assert.equal(proposal.proposalData.project_summary, 'Version two');
+  assert.equal(proposal.proposalVersions.length, 2);
+  assert.equal(proposal.proposalVersions[0].data.project_summary, 'Version one');
+  assert.equal(proposal.proposalVersions[1].s3Key, 'output/user-1/proposal-1/v2.json');
 });

@@ -2,7 +2,11 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/auth');
 const { tripBundlePortalSchema } = require('../models/schemas');
 const { getOwnedTrip } = require('../services/trips/tripService');
-const { getProposalAccessContext, getProposalJSONForRecord } = require('../services/proposal/proposalAccess');
+const {
+  getEmbeddedProposalJSON,
+  getProposalAccessContext,
+  getProposalJSONForRecord,
+} = require('../services/proposal/proposalAccess');
 const { upsertBundlePortal } = require('../services/portal/portalService');
 const { getPersonalCapabilities, getWorkspaceCapabilities, assertCapability } = require('../services/capabilities/capabilityService');
 
@@ -14,7 +18,9 @@ router.get('/:tripId', authMiddleware, async (req, res, next) => {
     const proposals = await Promise.all(
       trip.proposals.map(async (entry) => {
         const { proposal, workspace } = await getProposalAccessContext(req.user.userId, entry.proposalId);
-        const data = proposal.s3Key ? await getProposalJSONForRecord(proposal) : null;
+        const data = proposal.s3Key || getEmbeddedProposalJSON(proposal)
+          ? await getProposalJSONForRecord(proposal)
+          : null;
         return {
           proposalId: proposal.proposalId,
           title: proposal.title,

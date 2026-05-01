@@ -12,6 +12,7 @@ const { generatePDF } = require('../services/export/pdfExport');
 const { buildMarkdownExport, sanitizeDownloadName } = require('../services/export/formatters');
 const { BadRequestError, ForbiddenError, NotFoundError } = require('../utils/errors');
 const {
+  getEmbeddedProposalJSON,
   getProposalAccessContext,
   getEditableProposal,
   getProposalJSONForRecord,
@@ -87,8 +88,8 @@ router.get('/:id/versions/compare', authMiddleware, async (req, res, next) => {
     const toVersion = getVersionNumber(proposal, to);
 
     const [fromData, toData] = await Promise.all([
-      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, fromVersion)).then(ensureDeliveryPlan),
-      s3Service.getProposalJSON(s3Service.makeProposalKey(proposal.userId, proposal.proposalId, toVersion)).then(ensureDeliveryPlan),
+      getProposalJSONForRecord(proposal, fromVersion).then(ensureDeliveryPlan),
+      getProposalJSONForRecord(proposal, toVersion).then(ensureDeliveryPlan),
     ]);
 
     const diff = diffPatcher.diff(fromData, toData) || {};
@@ -102,8 +103,7 @@ router.get('/:id/versions/:version', authMiddleware, async (req, res, next) => {
   try {
     const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
     const version = getVersionNumber(proposal, req.params.version);
-    const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
-    const data = ensureDeliveryPlan(await s3Service.getProposalJSON(s3Key));
+    const data = ensureDeliveryPlan(await getProposalJSONForRecord(proposal, version));
 
     res.json({
       ...proposal.toObject(),
@@ -130,8 +130,7 @@ router.post('/:id/export', authMiddleware, async (req, res, next) => {
     const exportOptions = proposalExportSchema.parse(req.body);
     const { format } = exportOptions;
     const version = getVersionNumber(proposal, req.query.version || proposal.versionCount);
-    const s3Key = s3Service.makeProposalKey(proposal.userId, proposal.proposalId, version);
-    const proposalData = ensureDeliveryPlan(await s3Service.getProposalJSON(s3Key));
+    const proposalData = ensureDeliveryPlan(await getProposalJSONForRecord(proposal, version));
     const fileName = `${sanitizeDownloadName(proposal.title)}-v${version}`;
 
     if (format === 'pdf') {
@@ -179,7 +178,9 @@ router.patch('/:id/assignment', authMiddleware, async (req, res, next) => {
     await proposal.save();
 
     if (payload.assignedTo) {
-      const proposalJSON = proposal.s3Key ? await getProposalJSONForRecord(proposal) : null;
+      const proposalJSON = proposal.s3Key || getEmbeddedProposalJSON(proposal)
+        ? await getProposalJSONForRecord(proposal)
+        : null;
       await createNotifications({
         userIds: [payload.assignedTo],
         workspace,
@@ -203,7 +204,7 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
   try {
     const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
 
-    if (!proposal.s3Key) {
+    if (!proposal.s3Key && !getEmbeddedProposalJSON(proposal)) {
       res.json({
         ...proposal.toObject(),
         accessRole: role,

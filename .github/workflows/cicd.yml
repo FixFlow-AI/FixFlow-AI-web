@@ -32,9 +32,9 @@ env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AMPLIFY_APP_ID: d22glq95zibf1w
   BACKEND_API_URL: https://d6opkcrsagj0v.cloudfront.net/api
-  ECS_CLUSTER: fixflowai-cluster
-  ECS_SERVICE: fixflowai-backend-service
-  CONTAINER_NAME: fixflowai-backend
+  ECS_CLUSTER: proplytics-cluster
+  ECS_SERVICE: proplytics-backend-service
+  CONTAINER_NAME: proplytics-backend
 
 jobs:
   ci:
@@ -128,14 +128,14 @@ jobs:
       - name: Sync hosted frontend and OAuth callback URLs to SSM
         run: |
           aws ssm put-parameter \
-            --name "/fixflowai/dev/FRONTEND_URL" \
+            --name "/proplytics/dev/FRONTEND_URL" \
             --type String \
             --value "${{ steps.deploy-context.outputs.frontend_url }}" \
             --overwrite \
             --region "${{ env.AWS_REGION }}"
 
           aws ssm put-parameter \
-            --name "/fixflowai/dev/GITHUB_CALLBACK_URL" \
+            --name "/proplytics/dev/GITHUB_CALLBACK_URL" \
             --type String \
             --value "${{ env.BACKEND_API_URL }}/auth/github/callback" \
             --overwrite \
