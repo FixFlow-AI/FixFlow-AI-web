@@ -1,4 +1,4 @@
-const NOTIFICATION_CHANNELS = ['in_app', 'email'];
+const NOTIFICATION_CHANNELS = ['in_app', 'email', 'slack'];
 const NOTIFICATION_EVENTS = [
   'invite',
   'comment',
@@ -6,11 +6,15 @@ const NOTIFICATION_EVENTS = [
   'assignment',
   'goal_completed',
   'backlog_moved',
+  'freelancer_lead',
+  'freelancer_niche',
+  'freelancer_outreach',
+  'freelancer_escrow',
 ];
 
 const DEFAULT_NOTIFICATION_PREFERENCES = Object.freeze({
   enabled: true,
-  channels: [...NOTIFICATION_CHANNELS],
+  channels: ['in_app', 'email'],
   events: [...NOTIFICATION_EVENTS],
 });
 

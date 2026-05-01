@@ -1,4 +1,17 @@
 import { cn } from '@/lib/utils'
+import { API_BASE_URL } from '@/config/api'
+
+function resolveAvatarSrc(src) {
+  if (!src || src.startsWith('http') || src.startsWith('data:') || src.startsWith('/avatar')) {
+    return src
+  }
+
+  if (src.startsWith('/api/')) {
+    return `${API_BASE_URL.replace(/\/api$/, '')}${src}`
+  }
+
+  return src
+}
 
 function Avatar({ src, alt, fallback, size = 'md', className }) {
   const sizes = {
@@ -17,7 +30,7 @@ function Avatar({ src, alt, fallback, size = 'md', className }) {
     >
       {src ? (
         <img
-          src={src}
+          src={resolveAvatarSrc(src)}
           alt={alt || ''}
           className="aspect-square h-full w-full object-cover"
         />

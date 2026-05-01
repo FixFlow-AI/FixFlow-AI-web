@@ -2,11 +2,33 @@ const { z } = require('zod');
 
 const notificationPreferencesSchema = z.object({
   enabled: z.boolean().optional().default(true),
-  channels: z.array(z.enum(['in_app', 'email'])).optional().default(['in_app', 'email']),
+  channels: z.array(z.enum(['in_app', 'email', 'slack'])).optional().default(['in_app', 'email']),
   events: z
-    .array(z.enum(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']))
+    .array(z.enum([
+      'invite',
+      'comment',
+      'approval',
+      'assignment',
+      'goal_completed',
+      'backlog_moved',
+      'freelancer_lead',
+      'freelancer_niche',
+      'freelancer_outreach',
+      'freelancer_escrow',
+    ]))
     .optional()
-    .default(['invite', 'comment', 'approval', 'assignment', 'goal_completed', 'backlog_moved']),
+    .default([
+      'invite',
+      'comment',
+      'approval',
+      'assignment',
+      'goal_completed',
+      'backlog_moved',
+      'freelancer_lead',
+      'freelancer_niche',
+      'freelancer_outreach',
+      'freelancer_escrow',
+    ]),
 });
 
 const registerSchema = z.object({
@@ -98,6 +120,10 @@ const versionCompareSchema = z.object({
   to: z.coerce.number().int().min(1),
 });
 
+const proposalAssignmentSchema = z.object({
+  assignedTo: z.string().trim().max(128).nullable().optional().default(null),
+});
+
 const proposalChatSchema = z.object({
   message: z.string().trim().min(1, 'Message is required').max(5000, 'Message must be under 5000 characters'),
   intent: z.enum(['question', 'mutate']).default('question'),
@@ -169,7 +195,23 @@ const workspaceUpdateSchema = z.object({
 
 const workspaceInviteSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['editor', 'viewer']),
+  role: z.string().trim().min(2).max(64),
+});
+
+const rolePermissionSchema = z.string().trim().min(2).max(80);
+
+const workspaceRoleCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  permissions: z.array(rolePermissionSchema).optional().default([]),
+});
+
+const workspaceRoleUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+  permissions: z.array(rolePermissionSchema).optional(),
+});
+
+const workspaceMemberRoleSchema = z.object({
+  role: z.string().trim().min(2).max(64),
 });
 
 const proposalCommentCreateSchema = z.object({
@@ -214,6 +256,10 @@ const authProfileUpdateSchema = z.object({
   notificationPreferences: notificationPreferencesSchema.optional(),
 });
 
+const avatarCommitSchema = z.object({
+  fileKey: z.string().trim().min(1).max(1024),
+});
+
 const planningActionSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('set_task_status'),
@@ -256,6 +302,7 @@ module.exports = {
   uploadUrlSchema,
   proposalExportSchema,
   versionCompareSchema,
+  proposalAssignmentSchema,
   proposalChatSchema,
   portalSections,
   portalUpsertSchema,
@@ -268,6 +315,9 @@ module.exports = {
   workspaceCreateSchema,
   workspaceUpdateSchema,
   workspaceInviteSchema,
+  workspaceRoleCreateSchema,
+  workspaceRoleUpdateSchema,
+  workspaceMemberRoleSchema,
   proposalCommentCreateSchema,
   proposalCommentResolveSchema,
   proposalPresenceSchema,
@@ -275,5 +325,6 @@ module.exports = {
   proposalEtaSchema,
   chatEtaSchema,
   authProfileUpdateSchema,
+  avatarCommitSchema,
   planningActionSchema,
 };

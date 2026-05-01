@@ -15,6 +15,14 @@ const ALLOWED_UPLOADS = new Map([
   ['text/plain', 'txt'],
 ]);
 
+const ALLOWED_AVATAR_UPLOADS = new Map([
+  ['image/png', 'png'],
+  ['image/jpeg', 'jpg'],
+  ['image/webp', 'webp'],
+]);
+
+const MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024;
+
 const s3 = new S3Client({ region: env.AWS_REGION });
 
 function isStorageObjectMissingError(error) {
@@ -52,6 +60,21 @@ function getUploadExtension(fileType, fileName) {
   throw new BadRequestError('Unsupported file type. Upload a PDF, DOCX, or TXT file.');
 }
 
+function getAvatarUploadExtension(fileType, fileName) {
+  const mapped = ALLOWED_AVATAR_UPLOADS.get(fileType);
+  const extension = normalizeExtension(fileName);
+
+  if (mapped) {
+    return mapped;
+  }
+
+  if (['png', 'jpg', 'jpeg', 'webp'].includes(extension)) {
+    return extension === 'jpeg' ? 'jpg' : extension;
+  }
+
+  throw new BadRequestError('Unsupported avatar file type. Upload a PNG, JPG, or WEBP image.');
+}
+
 function getMimeTypeFromKey(fileKey) {
   const extension = normalizeExtension(fileKey);
 
@@ -70,6 +93,24 @@ function getMimeTypeFromKey(fileKey) {
   throw new BadRequestError('Unsupported uploaded file type.');
 }
 
+function getAvatarMimeTypeFromKey(fileKey) {
+  const extension = normalizeExtension(fileKey);
+
+  if (extension === 'png') {
+    return 'image/png';
+  }
+
+  if (extension === 'jpg' || extension === 'jpeg') {
+    return 'image/jpeg';
+  }
+
+  if (extension === 'webp') {
+    return 'image/webp';
+  }
+
+  throw new BadRequestError('Unsupported avatar file type.');
+}
+
 function makeProposalKey(userId, proposalId, version) {
   return `output/${userId}/${proposalId}/v${version}.json`;
 }
@@ -78,6 +119,21 @@ function assertOwnedBriefKey(userId, fileKey) {
   if (!fileKey.startsWith(`briefs/${userId}/`)) {
     throw new ForbiddenError('You do not have access to this uploaded file.');
   }
+}
+
+function assertOwnedAvatarKey(userId, fileKey) {
+  if (!fileKey.startsWith(`avatars/${userId}/`)) {
+    throw new ForbiddenError('You do not have access to this uploaded avatar.');
+  }
+}
+
+function getAvatarFileNameFromKey(fileKey) {
+  return path.basename(fileKey || '');
+}
+
+function buildAvatarUrl(userId, fileKey) {
+  const fileName = encodeURIComponent(getAvatarFileNameFromKey(fileKey));
+  return `/api/auth/avatar/${userId}/${fileName}`;
 }
 
 async function generateUploadUrl(userId, fileType, fileName) {
@@ -95,6 +151,28 @@ async function generateUploadUrl(userId, fileType, fileName) {
   );
 
   return { uploadUrl, fileKey };
+}
+
+async function generateAvatarUploadUrl(userId, fileType, fileName) {
+  const extension = getAvatarUploadExtension(fileType, fileName);
+  const fileKey = `avatars/${userId}/${Date.now()}.${extension}`;
+
+  const uploadUrl = await getSignedUrl(
+    s3,
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: fileKey,
+      ContentType: fileType,
+    }),
+    { expiresIn: 300 }
+  );
+
+  return {
+    uploadUrl,
+    fileKey,
+    avatarUrl: buildAvatarUrl(userId, fileKey),
+    maxBytes: MAX_AVATAR_UPLOAD_BYTES,
+  };
 }
 
 async function getFile(fileKey) {
@@ -169,10 +247,17 @@ async function deleteProposalVersions(userId, proposalId, versionCount) {
 
 module.exports = {
   ALLOWED_UPLOADS,
+  ALLOWED_AVATAR_UPLOADS,
+  MAX_AVATAR_UPLOAD_BYTES,
   assertOwnedBriefKey,
+  assertOwnedAvatarKey,
+  buildAvatarUrl,
   deleteObject,
   deleteProposalVersions,
+  generateAvatarUploadUrl,
   generateUploadUrl,
+  getAvatarFileNameFromKey,
+  getAvatarMimeTypeFromKey,
   getFile,
   getMimeTypeFromKey,
   getProposalJSON,

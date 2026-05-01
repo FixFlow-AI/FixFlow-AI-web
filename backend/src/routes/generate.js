@@ -18,7 +18,7 @@ const {
 const s3Service = require('../services/storage/s3');
 const { buildBriefSignals, buildBriefSnapshot } = require('../services/agencyBrain/briefSignalService');
 const { getPersonalCapabilities, getWorkspaceCapabilities, assertCapability } = require('../services/capabilities/capabilityService');
-const { assertWorkspaceMembership } = require('../services/workspace/workspaceService');
+const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
 const { upsertTripProposal } = require('../services/trips/tripService');
 const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
 const {
@@ -51,7 +51,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     let workspaceContext = null;
     if (payload.workspaceId) {
-      workspaceContext = await assertWorkspaceMembership(req.user.userId, payload.workspaceId, ['owner', 'editor']);
+      workspaceContext = await assertWorkspacePermission(
+        req.user.userId,
+        payload.workspaceId,
+        payload.proposalId ? 'proposals.edit' : 'proposals.create'
+      );
     }
 
     if (payload.calibrationContext) {

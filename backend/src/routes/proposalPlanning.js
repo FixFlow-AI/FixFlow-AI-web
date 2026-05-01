@@ -12,6 +12,7 @@ const {
   buildProposalRecipientIds,
   createNotifications,
 } = require('../services/notifications/notificationService');
+const { memberHasPermission } = require('../services/workspace/workspaceService');
 const { ForbiddenError } = require('../utils/errors');
 
 const router = express.Router();
@@ -34,7 +35,7 @@ router.patch('/:id/planning', authMiddleware, async (req, res, next) => {
     const action = planningActionSchema.parse(req.body);
     const { proposal, role, workspace } = await getProposalAccessContext(req.user.userId, req.params.id);
 
-    if (!['owner', 'editor'].includes(role)) {
+    if (workspace && !memberHasPermission(workspace, { role }, 'proposals.edit')) {
       throw new ForbiddenError('Your workspace role does not allow planning updates.');
     }
 

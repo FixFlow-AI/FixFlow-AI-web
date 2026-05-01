@@ -8,6 +8,8 @@ const {
   loginSchema,
   refreshSchema,
   githubExchangeSchema,
+  uploadUrlSchema,
+  avatarCommitSchema,
   forgotPasswordRequestSchema,
   forgotPasswordVerifySchema,
   authProfileUpdateSchema,
@@ -20,6 +22,7 @@ const { getPersonalCapabilities, normalizePlan } = require('../services/capabili
 const { buildAuthProfile } = require('../services/auth/profileService');
 const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
 const { buildFrontendUrl, isAllowedFrontendOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
+const s3Service = require('../services/storage/s3');
 
 const router = Router();
 
@@ -274,6 +277,58 @@ router.post('/github/exchange', authLimiter, async (req, res, next) => {
       provider: 'github',
       state: data.state || null,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/avatar/:userId/:fileName
+router.get('/avatar/:userId/:fileName', async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.userId).lean();
+    const expectedFileName = decodeURIComponent(req.params.fileName || '');
+
+    if (!user?.avatarKey || s3Service.getAvatarFileNameFromKey(user.avatarKey) !== expectedFileName) {
+      throw new BadRequestError('Avatar not found.');
+    }
+
+    const buffer = await s3Service.getFile(user.avatarKey);
+    res.setHeader('Content-Type', s3Service.getAvatarMimeTypeFromKey(user.avatarKey));
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/avatar/upload-url
+router.post('/avatar/upload-url', authMiddleware, async (req, res, next) => {
+  try {
+    const { fileName, fileType } = uploadUrlSchema.parse(req.body);
+    res.json(await s3Service.generateAvatarUploadUrl(req.user.userId, fileType, fileName));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/avatar/commit
+router.post('/avatar/commit', authMiddleware, async (req, res, next) => {
+  try {
+    const { fileKey } = avatarCommitSchema.parse(req.body);
+    s3Service.assertOwnedAvatarKey(req.user.userId, fileKey);
+    s3Service.getAvatarMimeTypeFromKey(fileKey);
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
+    user.avatarKey = fileKey;
+    user.avatar = s3Service.buildAvatarUrl(user._id.toString(), fileKey);
+    await user.save();
+
+    const profile = await buildAuthProfile(user);
+    res.json(profile);
   } catch (err) {
     next(err);
   }
@@ -540,6 +595,7 @@ router.patch('/me', authMiddleware, async (req, res, next) => {
 
     if (typeof payload.avatar === 'string') {
       user.avatar = payload.avatar;
+      user.avatarKey = payload.avatar.startsWith('/api/auth/avatar/') ? user.avatarKey : '';
     }
 
     if (payload.notificationPreferences) {

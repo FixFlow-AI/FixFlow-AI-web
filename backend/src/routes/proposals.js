@@ -20,6 +20,7 @@ const {
 } = require('../services/proposal/proposalAccess');
 const { ensureDeliveryPlan } = require('../services/proposal/deliveryPlanService');
 const { createNotifications } = require('../services/notifications/notificationService');
+const { memberHasPermission } = require('../services/workspace/workspaceService');
 
 const router = express.Router();
 const diffPatcher = createJsonDiffPatch();
@@ -166,7 +167,7 @@ router.patch('/:id/assignment', authMiddleware, async (req, res, next) => {
       throw new BadRequestError('Assignments are only available for workspace proposals.');
     }
 
-    if (!['owner', 'editor'].includes(role)) {
+    if (workspace && !memberHasPermission(workspace, { role }, 'proposals.edit')) {
       throw new ForbiddenError('Your workspace role does not allow assignment changes.');
     }
 

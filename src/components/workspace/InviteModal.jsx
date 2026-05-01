@@ -1,14 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import Modal from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import api from '@/config/api'
 
-export default function InviteModal({ isOpen, onClose, onInvited }) {
+export default function InviteModal({ isOpen, onClose, onInvited, roles = [] }) {
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('editor')
+  const availableRoles = useMemo(
+    () => roles.filter((item) => item.roleId !== 'owner'),
+    [roles],
+  )
+  const [role, setRole] = useState(availableRoles[0]?.roleId || 'editor')
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (availableRoles.length && !availableRoles.some((item) => item.roleId === role)) {
+      setRole(availableRoles[0].roleId)
+    }
+  }, [availableRoles, role])
 
   const handleInvite = async () => {
     setIsSaving(true)
@@ -34,8 +44,12 @@ export default function InviteModal({ isOpen, onClose, onInvited }) {
           value={role}
           onChange={(event) => setRole(event.target.value)}
         >
-          <option value="editor">Editor</option>
-          <option value="viewer">Viewer</option>
+          {(availableRoles.length ? availableRoles : [
+            { roleId: 'editor', name: 'Editor' },
+            { roleId: 'viewer', name: 'Viewer' },
+          ]).map((item) => (
+            <option key={item.roleId} value={item.roleId}>{item.name}</option>
+          ))}
         </select>
         <Button className="w-full" onClick={handleInvite} isLoading={isSaving}>
           Send Invite

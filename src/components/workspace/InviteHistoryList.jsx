@@ -52,7 +52,7 @@ export default function InviteHistoryList({ invites = [] }) {
               <div className="space-y-1">
                 <div className="font-medium">{invite.email}</div>
                 <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {invite.role} invitation
+                  {invite.roleName || invite.role} invitation
                 </div>
               </div>
               <Badge variant={status.variant}>{status.label}</Badge>

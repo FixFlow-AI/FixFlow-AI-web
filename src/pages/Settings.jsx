@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, User, ShieldCheck, Sun, Moon, Monitor } from 'lucide-react';
+import { ImageUp, Mail, User, ShieldCheck, Sun, Moon, Monitor } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
 import useThemeStore from '../stores/themeStore';
 import toast from 'react-hot-toast';
@@ -15,6 +15,8 @@ const AVATARS = [
   '/avatar5.png',
   '/avatar6.png',
 ];
+const AVATAR_UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
 export default function Settings() {
   const user = useAuthStore((s) => s.user);
@@ -24,6 +26,8 @@ export default function Settings() {
   
   const [name, setName] = useState(user?.name || '');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATARS[0]);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingNotifications, setIsSavingNotifications] = useState(false)
 
@@ -35,6 +39,38 @@ export default function Settings() {
     if (user?.avatar) setSelectedAvatar(user.avatar);
   }, [user]);
 
+  useEffect(() => () => {
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+  }, [avatarPreview]);
+
+  const handleAvatarUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!AVATAR_UPLOAD_TYPES.includes(file.type)) {
+      toast.error('Upload a PNG, JPG, or WEBP image.');
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error('Avatar image must be 2 MB or smaller.');
+      return;
+    }
+
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarFile(file);
+    setAvatarPreview(previewUrl);
+    setSelectedAvatar(previewUrl);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error('Name cannot be empty.');
@@ -43,12 +79,41 @@ export default function Settings() {
 
     setIsSavingProfile(true)
     try {
+      let committedUploadedAvatar = false;
+      if (avatarFile) {
+        const { data: upload } = await api.post('/auth/avatar/upload-url', {
+          fileName: avatarFile.name,
+          fileType: avatarFile.type,
+        });
+
+        const uploadResponse = await fetch(upload.uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': avatarFile.type,
+          },
+          body: avatarFile,
+        });
+        if (!uploadResponse.ok) {
+          throw new Error('Avatar upload failed before it could be saved.');
+        }
+
+        await api.post('/auth/avatar/commit', {
+          fileKey: upload.fileKey,
+        });
+        committedUploadedAvatar = true;
+      }
+
       const { data } = await api.patch('/auth/me', {
         name,
-        avatar: selectedAvatar,
+        ...(committedUploadedAvatar ? {} : { avatar: selectedAvatar }),
       })
       setUser(data.user)
       setCurrentWorkspace(data.currentWorkspace || null)
+      setAvatarFile(null)
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview)
+        setAvatarPreview('')
+      }
       toast.success('Settings updated successfully!')
     } catch (error) {
       toast.error(error.response?.data?.error || 'Could not save your profile settings.')
@@ -90,7 +155,14 @@ export default function Settings() {
               <motion.button
                 key={index}
                 type="button"
-                onClick={() => setSelectedAvatar(avatar)}
+                onClick={() => {
+                  setAvatarFile(null)
+                  if (avatarPreview) {
+                    URL.revokeObjectURL(avatarPreview)
+                    setAvatarPreview('')
+                  }
+                  setSelectedAvatar(avatar)
+                }}
                 whileHover={{ scale: 1.1, rotateY: 15, rotateX: 5 }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
@@ -107,7 +179,29 @@ export default function Settings() {
                 />
               </motion.button>
             ))}
+            <label
+              className={`relative flex h-[4.5rem] w-[4.5rem] cursor-pointer items-center justify-center rounded-full border border-dashed border-border bg-background/50 outline-none transition-shadow hover:border-primary ${
+                avatarFile ? 'ring-4 ring-primary ring-offset-2 ring-offset-card shadow-lg shadow-primary/20' : ''
+              }`}
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Uploaded avatar preview" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <span className="flex flex-col items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <ImageUp className="h-5 w-5 text-primary" />
+                  Upload
+                </span>
+              )}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                data-testid="avatar-upload-input"
+                onChange={handleAvatarUpload}
+              />
+            </label>
           </div>
+          <p className="mt-3 text-xs text-muted-foreground">Upload PNG, JPG, or WEBP. Maximum size 2 MB.</p>
         </div>
 
         <div className="space-y-4">

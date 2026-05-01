@@ -12,8 +12,8 @@ const workspaceMemberSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['owner', 'editor', 'viewer'],
       required: true,
+      trim: true,
     },
     joinedAt: {
       type: Date,
@@ -43,8 +43,8 @@ const workspaceInviteSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['editor', 'viewer'],
       required: true,
+      trim: true,
     },
     tokenHash: {
       type: String,
@@ -87,6 +87,30 @@ const workspaceInviteSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const workspaceRoleSchema = new mongoose.Schema(
+  {
+    roleId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    permissions: {
+      type: [String],
+      default: [],
+    },
+    system: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const workspaceSchema = new mongoose.Schema(
   {
     name: {
@@ -123,6 +147,59 @@ const workspaceSchema = new mongoose.Schema(
       events: {
         type: [String],
         default: () => [...DEFAULT_NOTIFICATION_PREFERENCES.events],
+      },
+    },
+    roleDefinitions: {
+      type: [workspaceRoleSchema],
+      default: [],
+    },
+    slack: {
+      teamId: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      teamName: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      channelId: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      channelName: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      webhookUrlEncrypted: {
+        type: String,
+        default: '',
+      },
+      installedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      installedAt: {
+        type: Date,
+        default: null,
+      },
+      status: {
+        type: String,
+        enum: ['disconnected', 'connected', 'error'],
+        default: 'disconnected',
+      },
+      lastDeliveryStatus: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      lastDeliveryAt: {
+        type: Date,
+        default: null,
       },
     },
     members: {

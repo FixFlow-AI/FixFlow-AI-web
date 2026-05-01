@@ -5,13 +5,22 @@ import { useWorkspace } from '@/hooks/useWorkspace'
 import InviteModal from '@/components/workspace/InviteModal'
 import MemberList from '@/components/workspace/MemberList'
 import InviteHistoryList from '@/components/workspace/InviteHistoryList'
+import RoleManager from '@/components/workspace/RoleManager'
+import SlackIntegrationCard from '@/components/workspace/SlackIntegrationCard'
 import NotificationPreferencesCard from '@/components/settings/NotificationPreferencesCard'
+import { WORKSPACE_NOTIFICATION_CHANNEL_OPTIONS } from '@/lib/notificationPreferences'
 import api from '@/config/api'
 
 export default function WorkspaceSettings() {
   const { currentWorkspace, fullWorkspace, refetch } = useWorkspace(true)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
-  const canManage = ['owner', 'editor'].includes(currentWorkspace?.currentUserRole)
+  const permissions = currentWorkspace?.permissions || []
+  const canInvite = permissions.includes('members.invite')
+  const canRemove = permissions.includes('members.remove')
+  const canAssignRole = permissions.includes('members.role.assign')
+  const canManageRoles = permissions.includes('roles.manage')
+  const canManageNotifications = permissions.includes('notifications.manage') || permissions.includes('workspace.settings.manage')
+  const canManageSlack = permissions.includes('slack.manage')
 
   const handleRemove = async (member) => {
     try {
@@ -20,6 +29,16 @@ export default function WorkspaceSettings() {
       refetch()
     } catch (error) {
       toast.error(error.response?.data?.error || 'Unable to remove member.')
+    }
+  }
+
+  const handleRoleChange = async (member, role) => {
+    try {
+      await api.patch(`/workspaces/current/members/${member.userId}/role`, { role })
+      toast.success('Member role updated.')
+      refetch()
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Unable to update member role.')
     }
   }
 
@@ -43,7 +62,7 @@ export default function WorkspaceSettings() {
             Manage team members, collaboration roles, and your workspace plan.
           </p>
         </div>
-        <Button onClick={() => setIsInviteOpen(true)} disabled={!canManage}>
+        <Button onClick={() => setIsInviteOpen(true)} disabled={!canInvite}>
           Invite Member
         </Button>
       </div>
@@ -56,16 +75,48 @@ export default function WorkspaceSettings() {
       <div className="glass-card rounded-[28px] p-6">
         <h2 className="text-xl font-semibold">Members</h2>
         <div className="mt-5">
-          <MemberList members={fullWorkspace?.members || []} canManage={currentWorkspace?.currentUserRole === 'owner'} onRemove={handleRemove} />
+          <MemberList
+            members={fullWorkspace?.members || []}
+            roles={fullWorkspace?.roles || []}
+            canManage={canRemove}
+            canAssignRole={canAssignRole}
+            onRemove={handleRemove}
+            onRoleChange={handleRoleChange}
+          />
         </div>
       </div>
+
+      <RoleManager
+        roles={fullWorkspace?.roles || []}
+        permissions={[
+          'workspace.view',
+          'workspace.settings.manage',
+          'members.invite',
+          'members.remove',
+          'members.role.assign',
+          'roles.manage',
+          'proposals.create',
+          'proposals.edit',
+          'proposals.comment',
+          'proposals.share',
+          'freelancer.view',
+          'freelancer.manage',
+          'slack.manage',
+          'notifications.manage',
+        ]}
+        canManage={canManageRoles}
+        onChanged={() => refetch()}
+      />
+
+      <SlackIntegrationCard canManage={canManageSlack} />
 
       <NotificationPreferencesCard
         title="Workspace Notifications"
         description="Control how the team hears about invites, comments, approvals, assignments, goal completion, and backlog movement."
         value={fullWorkspace?.notificationDefaults || currentWorkspace?.notificationDefaults}
         onSave={handleSaveNotifications}
-        disabled={currentWorkspace?.currentUserRole !== 'owner'}
+        channelOptions={WORKSPACE_NOTIFICATION_CHANNEL_OPTIONS}
+        disabled={!canManageNotifications}
       />
 
       <div className="glass-card rounded-[28px] p-6">
@@ -82,6 +133,7 @@ export default function WorkspaceSettings() {
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
         onInvited={() => refetch()}
+        roles={fullWorkspace?.roles || []}
       />
     </div>
   )

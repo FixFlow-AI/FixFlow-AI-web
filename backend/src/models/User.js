@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    avatarKey: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     plan: {
       type: String,
       enum: PERSONAL_PLANS,

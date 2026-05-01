@@ -13,6 +13,7 @@ const {
   buildProposalRecipientIds,
   createNotifications,
 } = require('../services/notifications/notificationService');
+const { memberHasPermission } = require('../services/workspace/workspaceService');
 const { ForbiddenError, NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
@@ -24,6 +25,10 @@ router.post('/:id/comments', authMiddleware, async (req, res, next) => {
 
     if (!workspace && proposal.userId.toString() !== req.user.userId) {
       throw new ForbiddenError('You do not have access to comment on this proposal.');
+    }
+
+    if (workspace && !memberHasPermission(workspace, { role }, 'proposals.comment')) {
+      throw new ForbiddenError('Your workspace role does not allow comments.');
     }
 
     proposal.comments.push({
@@ -78,7 +83,8 @@ router.patch('/:id/comments/:commentId', authMiddleware, async (req, res, next) 
       throw new NotFoundError('Comment not found.');
     }
 
-    const canResolve = ['owner', 'editor'].includes(role)
+    const canResolve = (workspace && memberHasPermission(workspace, { role }, 'proposals.comment'))
+      || ['owner', 'editor'].includes(role)
       || comment.authorId.toString() === req.user.userId.toString();
     if (!canResolve) {
       throw new ForbiddenError('You cannot resolve this comment.');

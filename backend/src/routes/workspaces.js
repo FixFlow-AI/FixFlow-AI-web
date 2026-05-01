@@ -5,16 +5,28 @@ const {
   workspaceCreateSchema,
   workspaceUpdateSchema,
   workspaceInviteSchema,
+  workspaceRoleCreateSchema,
+  workspaceRoleUpdateSchema,
+  workspaceMemberRoleSchema,
 } = require('../models/schemas');
 const {
   createWorkspace,
   getCurrentWorkspaceForUser,
   buildWorkspaceSummary,
   assertWorkspaceMembership,
+  assertWorkspacePermission,
   inviteToWorkspace,
   previewInvite,
   acceptInvite,
   removeWorkspaceMember,
+  createWorkspaceRole,
+  updateWorkspaceRole,
+  deleteWorkspaceRole,
+  assignWorkspaceMemberRole,
+  WORKSPACE_PERMISSIONS,
+  normalizeRoleDefinitions,
+  getRoleName,
+  getRolePermissions,
 } = require('../services/workspace/workspaceService');
 const { buildAuthProfile } = require('../services/auth/profileService');
 const { createNotifications } = require('../services/notifications/notificationService');
@@ -28,6 +40,12 @@ async function buildWorkspaceDetails(workspace) {
     return null;
   }
 
+  const workspaceObject = workspace.toObject();
+  delete workspaceObject.invitePending;
+  if (workspaceObject.slack?.webhookUrlEncrypted) {
+    delete workspaceObject.slack.webhookUrlEncrypted;
+  }
+
   const memberIds = workspace.members.map((member) => member.userId);
   const inviteActorIds = (workspace.invitePending || [])
     .flatMap((invite) => [invite.inviterId, invite.acceptedBy])
@@ -36,11 +54,14 @@ async function buildWorkspaceDetails(workspace) {
   const userMap = new Map(users.map((user) => [user._id.toString(), user]));
 
   return {
-    ...workspace.toObject(),
+    ...workspaceObject,
     notificationDefaults: normalizeNotificationPreferences(workspace.notificationDefaults),
+    roles: normalizeRoleDefinitions(workspace.roleDefinitions),
     members: workspace.members.map((member) => ({
       userId: member.userId.toString(),
       role: member.role,
+      roleName: getRoleName(workspace, member.role),
+      permissions: getRolePermissions(workspace, member.role),
       joinedAt: member.joinedAt,
       invitedBy: member.invitedBy ? member.invitedBy.toString() : null,
       name: userMap.get(member.userId.toString())?.name || 'Workspace member',
@@ -53,6 +74,7 @@ async function buildWorkspaceDetails(workspace) {
         inviteId: invite.inviteId,
         email: invite.email,
         role: invite.role,
+        roleName: getRoleName(workspace, invite.role),
         status: invite.status || 'pending',
         createdAt: invite.createdAt || null,
         expiresAt: invite.expiresAt || null,
@@ -110,7 +132,12 @@ router.patch('/current', authMiddleware, async (req, res, next) => {
       throw new NotFoundError('No active workspace found.');
     }
 
-    await assertWorkspaceMembership(req.user.userId, workspace._id, ['owner']);
+    const needsNotificationPermission = Boolean(payload.notificationDefaults) && !payload.name && !payload.plan && !payload.defaultEntryMode;
+    await assertWorkspacePermission(
+      req.user.userId,
+      workspace._id,
+      needsNotificationPermission ? 'notifications.manage' : 'workspace.settings.manage'
+    );
 
     if (payload.name) {
       workspace.name = payload.name;
@@ -145,7 +172,7 @@ router.post('/current/invites', authMiddleware, async (req, res, next) => {
     if (!workspace) {
       throw new NotFoundError('No active workspace found.');
     }
-    const { workspace: scopedWorkspace } = await assertWorkspaceMembership(req.user.userId, workspace._id, ['owner', 'editor']);
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'members.invite');
     const result = await inviteToWorkspace({ workspace: scopedWorkspace, inviter: user, email: payload.email, role: payload.role });
 
     const existingInvitee = await User.findOne({ email: payload.email.trim().toLowerCase() });
@@ -226,8 +253,115 @@ router.delete('/current/members/:memberUserId', authMiddleware, async (req, res,
     if (!workspace) {
       throw new NotFoundError('No active workspace found.');
     }
-    const { workspace: scopedWorkspace } = await assertWorkspaceMembership(req.user.userId, workspace._id, ['owner']);
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'members.remove');
     const updated = await removeWorkspaceMember({ workspace: scopedWorkspace, memberUserId: req.params.memberUserId });
+
+    res.json({
+      workspace: buildWorkspaceSummary(updated, req.user.userId),
+      fullWorkspace: await buildWorkspaceDetails(updated),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/current/roles', authMiddleware, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    const workspace = await getCurrentWorkspaceForUser(user);
+    if (!workspace) {
+      throw new NotFoundError('No active workspace found.');
+    }
+    await assertWorkspacePermission(req.user.userId, workspace._id, 'workspace.view');
+
+    res.json({
+      permissions: WORKSPACE_PERMISSIONS,
+      roles: normalizeRoleDefinitions(workspace.roleDefinitions),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/current/roles', authMiddleware, async (req, res, next) => {
+  try {
+    const payload = workspaceRoleCreateSchema.parse(req.body);
+    const user = await User.findById(req.user.userId);
+    const workspace = await getCurrentWorkspaceForUser(user);
+    if (!workspace) {
+      throw new NotFoundError('No active workspace found.');
+    }
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'roles.manage');
+    const updated = await createWorkspaceRole({ workspace: scopedWorkspace, ...payload });
+
+    res.status(201).json({
+      workspace: buildWorkspaceSummary(updated, req.user.userId),
+      fullWorkspace: await buildWorkspaceDetails(updated),
+      permissions: WORKSPACE_PERMISSIONS,
+      roles: normalizeRoleDefinitions(updated.roleDefinitions),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/current/roles/:roleId', authMiddleware, async (req, res, next) => {
+  try {
+    const payload = workspaceRoleUpdateSchema.parse(req.body);
+    const user = await User.findById(req.user.userId);
+    const workspace = await getCurrentWorkspaceForUser(user);
+    if (!workspace) {
+      throw new NotFoundError('No active workspace found.');
+    }
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'roles.manage');
+    const updated = await updateWorkspaceRole({ workspace: scopedWorkspace, roleId: req.params.roleId, ...payload });
+
+    res.json({
+      workspace: buildWorkspaceSummary(updated, req.user.userId),
+      fullWorkspace: await buildWorkspaceDetails(updated),
+      permissions: WORKSPACE_PERMISSIONS,
+      roles: normalizeRoleDefinitions(updated.roleDefinitions),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/current/roles/:roleId', authMiddleware, async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    const workspace = await getCurrentWorkspaceForUser(user);
+    if (!workspace) {
+      throw new NotFoundError('No active workspace found.');
+    }
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'roles.manage');
+    const updated = await deleteWorkspaceRole({ workspace: scopedWorkspace, roleId: req.params.roleId });
+
+    res.json({
+      workspace: buildWorkspaceSummary(updated, req.user.userId),
+      fullWorkspace: await buildWorkspaceDetails(updated),
+      permissions: WORKSPACE_PERMISSIONS,
+      roles: normalizeRoleDefinitions(updated.roleDefinitions),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/current/members/:memberUserId/role', authMiddleware, async (req, res, next) => {
+  try {
+    const payload = workspaceMemberRoleSchema.parse(req.body);
+    const user = await User.findById(req.user.userId);
+    const workspace = await getCurrentWorkspaceForUser(user);
+    if (!workspace) {
+      throw new NotFoundError('No active workspace found.');
+    }
+    const { workspace: scopedWorkspace } = await assertWorkspacePermission(req.user.userId, workspace._id, 'members.role.assign');
+    const updated = await assignWorkspaceMemberRole({
+      workspace: scopedWorkspace,
+      memberUserId: req.params.memberUserId,
+      roleId: payload.role,
+    });
 
     res.json({
       workspace: buildWorkspaceSummary(updated, req.user.userId),

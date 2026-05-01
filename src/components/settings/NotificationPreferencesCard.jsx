@@ -12,6 +12,7 @@ export default function NotificationPreferencesCard({
   description = 'Choose how and when FixFlowAI should keep you updated.',
   value,
   onSave,
+  channelOptions = NOTIFICATION_CHANNEL_OPTIONS,
   isSaving = false,
   disabled = false,
   className,
@@ -68,7 +69,7 @@ export default function NotificationPreferencesCard({
         <div>
           <div className="text-sm font-medium">Channels</div>
           <div className="mt-3 space-y-3">
-            {NOTIFICATION_CHANNEL_OPTIONS.map((channel) => (
+            {channelOptions.map((channel) => (
               <label key={channel.key} className="flex items-center justify-between rounded-2xl border border-border bg-background/30 px-4 py-3 text-sm">
                 <span>{channel.label}</span>
                 <input

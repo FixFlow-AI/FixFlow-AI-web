@@ -1,15 +1,16 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import useTheme3DPalette from '@/hooks/useTheme3DPalette'
 
 const WORKFLOW_NODES = [
-  { id: 'github', label: 'GitHub Scan', metric: 'signals', color: '#3fd7ff', position: [-2.6, 0.9, 0.2] },
-  { id: 'niche', label: 'Niche Intel', metric: 'fit 91', color: '#26d07c', position: [-1.35, 1.55, -0.15] },
-  { id: 'lead', label: 'Lead Scoring', metric: '4 active', color: '#3fd7ff', position: [0.12, 1.16, 0.12] },
-  { id: 'outreach', label: 'Outreach Draft', metric: '138 w', color: '#f7b955', position: [1.42, 0.52, -0.1] },
-  { id: 'escrow', label: 'Escrow Rails', metric: '$3.6k', color: '#26d07c', position: [2.35, -0.42, 0.15] },
-  { id: 'proof', label: 'Proof Vault', metric: '2 minted', color: '#8ea5b5', position: [0.86, -1.45, -0.18] },
-  { id: 'flowboard', label: 'FlowBoard', metric: 'ready', color: '#3fd7ff', position: [-0.9, -0.95, 0.12] },
+  { id: 'github', label: 'GitHub Scan', metric: 'signals', colorKey: 'primary', position: [-2.6, 0.9, 0.2] },
+  { id: 'niche', label: 'Niche Intel', metric: 'fit 91', colorKey: 'secondary', position: [-1.35, 1.55, -0.15] },
+  { id: 'lead', label: 'Lead Scoring', metric: '4 active', colorKey: 'primary', position: [0.12, 1.16, 0.12] },
+  { id: 'outreach', label: 'Outreach Draft', metric: '138 w', colorKey: 'accent', position: [1.42, 0.52, -0.1] },
+  { id: 'escrow', label: 'Escrow Rails', metric: '$3.6k', colorKey: 'secondary', position: [2.35, -0.42, 0.15] },
+  { id: 'proof', label: 'Proof Vault', metric: '2 minted', colorKey: 'muted', position: [0.86, -1.45, -0.18] },
+  { id: 'flowboard', label: 'FlowBoard', metric: 'ready', colorKey: 'primary', position: [-0.9, -0.95, 0.12] },
 ]
 
 const WORKFLOW_EDGES = [
@@ -32,7 +33,7 @@ const EDGE_ENDPOINTS = WORKFLOW_EDGES.map(([from, to], index) => ({
   phase: index / WORKFLOW_EDGES.length,
 }))
 
-function WorkflowTopology({ activeIndex }) {
+function WorkflowTopology({ activeIndex, palette }) {
   const groupRef = useRef(null)
   const coreRef = useRef(null)
   const ringRef = useRef(null)
@@ -79,7 +80,7 @@ function WorkflowTopology({ activeIndex }) {
       dummy.updateMatrix()
 
       nodeMeshRef.current.setMatrixAt(index, dummy.matrix)
-      nodeMeshRef.current.setColorAt(index, new THREE.Color(node.color))
+      nodeMeshRef.current.setColorAt(index, new THREE.Color(palette[node.colorKey] || palette.primary))
     })
 
     nodeMeshRef.current.instanceMatrix.needsUpdate = true
@@ -87,7 +88,7 @@ function WorkflowTopology({ activeIndex }) {
     if (nodeMeshRef.current.instanceColor) {
       nodeMeshRef.current.instanceColor.needsUpdate = true
     }
-  }, [activeIndex, dummy])
+  }, [activeIndex, dummy, palette])
 
   useFrame((state) => {
     const pointerX = state.pointer.x * 0.18
@@ -131,7 +132,7 @@ function WorkflowTopology({ activeIndex }) {
   return (
     <group ref={groupRef} scale={0.96} position={[0.05, -0.03, 0]}>
       <lineSegments geometry={lineGeometry}>
-        <lineBasicMaterial color="#6fc4dc" transparent opacity={0.22} />
+        <lineBasicMaterial color={palette.line} transparent opacity={palette.lineOpacity} />
       </lineSegments>
 
       <instancedMesh ref={nodeMeshRef} args={[undefined, undefined, WORKFLOW_NODES.length]}>
@@ -141,29 +142,30 @@ function WorkflowTopology({ activeIndex }) {
 
       <instancedMesh ref={packetMeshRef} args={[undefined, undefined, EDGE_ENDPOINTS.length]}>
         <sphereGeometry args={[0.035, 8, 6]} />
-        <meshBasicMaterial color="#e8fbff" transparent opacity={0.9} />
+        <meshBasicMaterial color={palette.accent} transparent opacity={0.9} />
       </instancedMesh>
 
       <mesh ref={coreRef} position={[-0.35, 0.05, 0]}>
         <icosahedronGeometry args={[0.58, 1]} />
-        <meshBasicMaterial color="#3fd7ff" wireframe transparent opacity={0.42} />
+        <meshBasicMaterial color={palette.primary} wireframe transparent opacity={palette.coreOpacity} />
       </mesh>
 
       <mesh ref={ringRef} rotation={[Math.PI / 2.4, 0, 0]} position={[-0.35, 0.05, 0]}>
         <torusGeometry args={[1.06, 0.01, 8, 72]} />
-        <meshBasicMaterial color="#26d07c" transparent opacity={0.34} />
+        <meshBasicMaterial color={palette.secondary} transparent opacity={palette.secondaryOpacity + 0.08} />
       </mesh>
 
       <mesh rotation={[0.9, 0.25, 0.4]} position={[-0.35, 0.05, 0]}>
         <torusGeometry args={[0.82, 0.008, 8, 64]} />
-        <meshBasicMaterial color="#8ea5b5" transparent opacity={0.24} />
+        <meshBasicMaterial color={palette.muted} transparent opacity={palette.lineOpacity} />
       </mesh>
     </group>
   )
 }
 
-function ActiveWorkflowBadge({ activeIndex }) {
+function ActiveWorkflowBadge({ activeIndex, palette }) {
   const activeNode = WORKFLOW_NODES[activeIndex]
+  const activeColor = palette[activeNode.colorKey] || palette.primary
 
   return (
     <div className="rounded-2xl border border-primary/15 bg-background/40 p-3 shadow-[var(--glass-card-shadow)] backdrop-blur-sm">
@@ -175,7 +177,7 @@ function ActiveWorkflowBadge({ activeIndex }) {
         <span className="flex min-w-0 items-center gap-2 text-foreground">
           <span
             className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: activeNode.color }}
+            style={{ backgroundColor: activeColor }}
             aria-hidden="true"
           />
           <span className="truncate">{activeNode.label}</span>
@@ -187,6 +189,7 @@ function ActiveWorkflowBadge({ activeIndex }) {
 }
 
 function Hero3DElement() {
+  const palette = useTheme3DPalette()
   const [enabled, setEnabled] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -221,8 +224,11 @@ function Hero3DElement() {
   if (!enabled) {
     return (
       <div className="pointer-events-none absolute inset-x-4 top-28 z-0 hidden sm:block lg:right-[5%] lg:left-auto lg:top-[13%] lg:w-[32%] lg:min-w-[330px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(63,215,255,0.10),transparent_58%)]" />
-        <ActiveWorkflowBadge activeIndex={activeIndex} />
+        <div
+          className="absolute inset-0"
+          style={{ background: `radial-gradient(circle at 50% 35%, ${palette.primary}26, transparent 58%)` }}
+        />
+        <ActiveWorkflowBadge activeIndex={activeIndex} palette={palette} />
       </div>
     )
   }
@@ -236,12 +242,12 @@ function Hero3DElement() {
           frameloop="always"
           gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
         >
-          <WorkflowTopology activeIndex={activeIndex} />
+          <WorkflowTopology activeIndex={activeIndex} palette={palette} />
         </Canvas>
       </div>
 
       <div className="pointer-events-none absolute right-[5%] top-[13%] z-0 hidden w-[32%] min-w-[330px] xl:block">
-        <ActiveWorkflowBadge activeIndex={activeIndex} />
+        <ActiveWorkflowBadge activeIndex={activeIndex} palette={palette} />
       </div>
     </>
   )

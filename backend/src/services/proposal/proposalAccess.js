@@ -4,9 +4,13 @@ const Workspace = require('../../models/Workspace');
 const s3Service = require('../storage/s3');
 const { ensureDeliveryPlan } = require('./deliveryPlanService');
 const { ForbiddenError, NotFoundError } = require('../../utils/errors');
-const { assertWorkspaceMembership, buildWorkspaceSummary } = require('../workspace/workspaceService');
+const {
+  assertWorkspaceMembership,
+  assertWorkspacePermission,
+  buildWorkspaceSummary,
+} = require('../workspace/workspaceService');
 
-async function getAccessibleProposal(userId, proposalId, allowedRoles = null) {
+async function getAccessibleProposal(userId, proposalId, { allowedRoles = null, permission = 'workspace.view' } = {}) {
   const proposal = await Proposal.findOne({ proposalId });
   if (!proposal) {
     throw new NotFoundError('Proposal not found');
@@ -28,7 +32,9 @@ async function getAccessibleProposal(userId, proposalId, allowedRoles = null) {
     };
   }
 
-  const { workspace, member } = await assertWorkspaceMembership(userId, proposal.workspaceId, allowedRoles);
+  const { workspace, member } = permission
+    ? await assertWorkspacePermission(userId, proposal.workspaceId, permission)
+    : await assertWorkspaceMembership(userId, proposal.workspaceId, allowedRoles);
 
   return {
     proposal,
@@ -38,17 +44,17 @@ async function getAccessibleProposal(userId, proposalId, allowedRoles = null) {
 }
 
 async function getOwnedProposal(userId, proposalId) {
-  const { proposal } = await getAccessibleProposal(userId, proposalId, ['owner', 'editor', 'viewer']);
+  const { proposal } = await getAccessibleProposal(userId, proposalId, { permission: 'workspace.view' });
   return proposal;
 }
 
 async function getEditableProposal(userId, proposalId) {
-  const { proposal } = await getAccessibleProposal(userId, proposalId, ['owner', 'editor']);
+  const { proposal } = await getAccessibleProposal(userId, proposalId, { permission: 'proposals.edit' });
   return proposal;
 }
 
 async function getProposalAccessContext(userId, proposalId) {
-  return getAccessibleProposal(userId, proposalId, ['owner', 'editor', 'viewer']);
+  return getAccessibleProposal(userId, proposalId, { permission: 'workspace.view' });
 }
 
 async function listAccessibleProposals(userId, { scope = 'personal', workspaceId = null, page = 1, limit = 20 } = {}) {
@@ -87,7 +93,7 @@ async function listAccessibleProposals(userId, { scope = 'personal', workspaceId
       };
     }
 
-    const { workspace } = await assertWorkspaceMembership(userId, resolvedWorkspaceId, ['owner', 'editor', 'viewer']);
+    const { workspace } = await assertWorkspacePermission(userId, resolvedWorkspaceId, 'workspace.view');
     const [proposals, total] = await Promise.all([
       Proposal.find({ workspaceId: resolvedWorkspaceId })
         .sort({ createdAt: -1 })

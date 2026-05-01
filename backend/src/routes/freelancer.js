@@ -7,6 +7,7 @@ const Escrow = require('../models/Escrow');
 const Invoice = require('../models/Invoice');
 const Credential = require('../models/Credential');
 const FreelancerProfile = require('../models/FreelancerProfile');
+const Workspace = require('../models/Workspace');
 const {
   buildDemoSeed,
   draftForLead,
@@ -22,6 +23,8 @@ const {
   updateLead,
   updateProfiles,
 } = require('../services/freelancer/freelancerService');
+const { createNotifications, buildWorkspaceRecipientIds } = require('../services/notifications/notificationService');
+const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 
 const router = express.Router();
@@ -71,10 +74,34 @@ function userFromRequest(req) {
   };
 }
 
+async function ensureFreelancerPermission(req, permission) {
+  if (req.user.defaultEntryMode === 'team' && req.user.currentWorkspaceId) {
+    await assertWorkspacePermission(req.user.userId, req.user.currentWorkspaceId, permission);
+  }
+}
+
+async function notifyFreelancerWorkspace(req, notification) {
+  if (req.user.defaultEntryMode !== 'team' || !req.user.currentWorkspaceId) {
+    return;
+  }
+
+  const workspace = await Workspace.findById(req.user.currentWorkspaceId);
+  if (!workspace) {
+    return;
+  }
+
+  await createNotifications({
+    userIds: buildWorkspaceRecipientIds(workspace, req.user.userId, req.user.userId),
+    workspace,
+    ...notification,
+  }).catch(() => null);
+}
+
 router.use(authMiddleware);
 
 router.get('/flowboard', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     res.json(await getFlowboard(userFromRequest(req)));
   } catch (error) {
     next(error);
@@ -83,6 +110,7 @@ router.get('/flowboard', async (req, res, next) => {
 
 router.post('/github/scan', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     res.json(await scanGithub(userFromRequest(req)));
   } catch (error) {
     next(error);
@@ -91,6 +119,7 @@ router.post('/github/scan', async (req, res, next) => {
 
 router.get('/niches', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     const { niches } = await getCollections(userFromRequest(req));
     res.json({ niches });
   } catch (error) {
@@ -100,6 +129,7 @@ router.get('/niches', async (req, res, next) => {
 
 router.post('/niches/analyze', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     const user = userFromRequest(req);
     await ensureFreelancerWorkspace(user);
     const seed = buildDemoSeed(user);
@@ -145,8 +175,18 @@ router.post('/niches/analyze', async (req, res, next) => {
 
 router.patch('/niches/:id', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     const payload = booleanPatchSchema.parse(req.body);
-    res.json({ niche: await setNicheAccepted(req.user.userId, req.params.id, payload.accepted) });
+    const niche = await setNicheAccepted(req.user.userId, req.params.id, payload.accepted);
+    if (payload.accepted) {
+      await notifyFreelancerWorkspace(req, {
+        type: 'freelancer_niche',
+        title: 'Freelancer niche accepted',
+        body: `${req.user.name || req.user.email} accepted ${niche.title || 'a niche'} for lead targeting.`,
+        metadata: { niche: niche.title || niche.id },
+      });
+    }
+    res.json({ niche });
   } catch (error) {
     next(error);
   }
@@ -154,6 +194,7 @@ router.patch('/niches/:id', async (req, res, next) => {
 
 router.get('/profiles', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     const { profile } = await getCollections(userFromRequest(req));
     res.json({ profile });
   } catch (error) {
@@ -163,6 +204,7 @@ router.get('/profiles', async (req, res, next) => {
 
 router.patch('/profiles', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const payload = profilesPatchSchema.parse(req.body);
     res.json({ profiles: await updateProfiles(req.user.userId, payload) });
@@ -173,6 +215,7 @@ router.patch('/profiles', async (req, res, next) => {
 
 router.post('/profiles/generate', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     res.json({ profiles: await generateProfiles(userFromRequest(req)) });
   } catch (error) {
     next(error);
@@ -181,6 +224,7 @@ router.post('/profiles/generate', async (req, res, next) => {
 
 router.get('/leads', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     const { leads } = await getCollections(userFromRequest(req));
     const status = typeof req.query.status === 'string' ? req.query.status : '';
     res.json({ leads: status ? leads.filter((lead) => lead.status === status) : leads });
@@ -191,8 +235,18 @@ router.get('/leads', async (req, res, next) => {
 
 router.patch('/leads/:id', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     const payload = leadPatchSchema.parse(req.body);
-    res.json({ lead: await updateLead(req.user.userId, req.params.id, payload) });
+    const lead = await updateLead(req.user.userId, req.params.id, payload);
+    if (payload.status) {
+      await notifyFreelancerWorkspace(req, {
+        type: 'freelancer_lead',
+        title: 'Freelancer lead updated',
+        body: `${lead.company || lead.name || 'Lead'} moved to ${payload.status}.`,
+        metadata: { status: payload.status, lead: lead.company || lead.name || lead.id },
+      });
+    }
+    res.json({ lead });
   } catch (error) {
     next(error);
   }
@@ -200,6 +254,7 @@ router.patch('/leads/:id', async (req, res, next) => {
 
 router.post('/leads/:id/draft', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     res.json({ draftMessage: await draftForLead(req.user.userId, req.params.id) });
   } catch (error) {
     next(error);
@@ -208,7 +263,15 @@ router.post('/leads/:id/draft', async (req, res, next) => {
 
 router.post('/leads/:id/send', async (req, res, next) => {
   try {
-    res.json(await sendLeadDraft(req.user.userId, req.params.id));
+    await ensureFreelancerPermission(req, 'freelancer.manage');
+    const result = await sendLeadDraft(req.user.userId, req.params.id);
+    await notifyFreelancerWorkspace(req, {
+      type: 'freelancer_outreach',
+      title: 'Freelancer outreach sent',
+      body: `${req.user.name || req.user.email} sent an outreach draft from the lead pipeline.`,
+      metadata: { leadId: req.params.id },
+    });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -216,6 +279,7 @@ router.post('/leads/:id/send', async (req, res, next) => {
 
 router.get('/outreach', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     const { leads } = await getCollections(userFromRequest(req));
     res.json({
       leads: leads.filter((lead) => ['new', 'qualified', 'contacted', 'replied'].includes(lead.status)),
@@ -227,6 +291,7 @@ router.get('/outreach', async (req, res, next) => {
 
 router.get('/escrows', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     const { escrows, invoices } = await getCollections(userFromRequest(req));
     res.json({ escrows, invoices });
   } catch (error) {
@@ -236,6 +301,7 @@ router.get('/escrows', async (req, res, next) => {
 
 router.post('/escrows/:id/release/:msIdx', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const escrow = await Escrow.findOne({ _id: req.params.id, userId: req.user.userId });
     if (!escrow) throw new NotFoundError('Escrow not found');
@@ -248,6 +314,12 @@ router.post('/escrows/:id/release/:msIdx', async (req, res, next) => {
     escrow.milestones[milestoneIndex].status = 'released';
     escrow.milestones[milestoneIndex].releasedAt = new Date();
     await escrow.save();
+    await notifyFreelancerWorkspace(req, {
+      type: 'freelancer_escrow',
+      title: 'Escrow milestone released',
+      body: `${escrow.client || 'Client'} milestone ${milestoneIndex + 1} was marked released.`,
+      metadata: { escrow: escrow.project || escrow._id.toString(), milestone: milestoneIndex + 1 },
+    });
 
     res.json({ txHash: `0xrelease${escrow._id.toString().slice(-8)}`, escrow: serialize(escrow) });
   } catch (error) {
@@ -257,6 +329,7 @@ router.post('/escrows/:id/release/:msIdx', async (req, res, next) => {
 
 router.post('/escrows/:id/dispute', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const escrow = await Escrow.findOne({ _id: req.params.id, userId: req.user.userId });
     if (!escrow) throw new NotFoundError('Escrow not found');
@@ -266,6 +339,12 @@ router.post('/escrows/:id/dispute', async (req, res, next) => {
       locked.status = 'disputed';
       await escrow.save();
     }
+    await notifyFreelancerWorkspace(req, {
+      type: 'freelancer_escrow',
+      title: 'Escrow dispute opened',
+      body: `${escrow.client || 'Client'} escrow was marked disputed.`,
+      metadata: { escrow: escrow.project || escrow._id.toString() },
+    });
 
     res.json({ ok: true, escrow: serialize(escrow) });
   } catch (error) {
@@ -275,6 +354,7 @@ router.post('/escrows/:id/dispute', async (req, res, next) => {
 
 router.get('/invoices', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const invoices = await Invoice.find({ userId: req.user.userId }).sort({ dueDate: 1 }).lean();
     res.json({ invoices: invoices.map(serialize) });
@@ -285,6 +365,7 @@ router.get('/invoices', async (req, res, next) => {
 
 router.get('/credentials', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const credentials = await Credential.find({ userId: req.user.userId }).sort({ mintedAt: -1 }).lean();
     res.json({ credentials: credentials.map(serialize) });
@@ -295,6 +376,7 @@ router.get('/credentials', async (req, res, next) => {
 
 router.post('/credentials/mint', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const profile = await FreelancerProfile.findOne({ userId: req.user.userId }).lean();
     const payload = z.object({ skill: z.string().trim().min(2).max(120).optional() }).parse(req.body || {});
@@ -317,6 +399,7 @@ router.post('/credentials/mint', async (req, res, next) => {
 
 router.patch('/settings/agents', async (req, res, next) => {
   try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
     await ensureFreelancerWorkspace(userFromRequest(req));
     const payload = agentConfigSchema.parse(req.body);
     res.json({ agentConfig: await updateAgentConfig(req.user.userId, payload) });

@@ -7,6 +7,7 @@ const {
   hasNotificationEvent,
   normalizeNotificationPreferences,
 } = require('./notificationPreferences');
+const { sendWorkspaceSlackNotification } = require('../integrations/slackService');
 
 function buildScope(workspaceId = null) {
   return workspaceId ? 'workspace' : 'personal';
@@ -57,6 +58,14 @@ async function createNotifications({
 
   const users = await User.find({ _id: { $in: recipientIds } });
   const created = [];
+  const workspacePreferences = normalizeNotificationPreferences(workspace?.notificationDefaults || {});
+  const deliveryPreferences = deliveryDefaults
+    ? mergeNotificationPreferences(null, workspacePreferences, deliveryDefaults)
+    : workspacePreferences;
+  const shouldSendSlack =
+    workspace &&
+    hasNotificationEvent(deliveryPreferences, type) &&
+    hasNotificationChannel(deliveryPreferences, 'slack');
 
   for (const user of users) {
     const effectivePreferences = mergeNotificationPreferences(
@@ -101,6 +110,16 @@ async function createNotifications({
     if (notification) {
       created.push(notification);
     }
+  }
+
+  if (shouldSendSlack) {
+    await sendWorkspaceSlackNotification({
+      workspace,
+      title,
+      body,
+      metadata,
+      frontendPath: proposalId ? `/proposal/${proposalId}` : '/workspace',
+    }).catch(() => null);
   }
 
   return created;

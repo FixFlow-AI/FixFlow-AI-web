@@ -33,6 +33,11 @@ const envSchema = z.object({
   GEMINI_KEY_GUARD_MS: z.coerce.number().default(15 * 60 * 1000),
   AWS_REGION: z.string().default('us-east-1'),
   S3_BUCKET: z.string().default('fixflowai-assets-dev'),
+  SLACK_CLIENT_ID: z.string().default(''),
+  SLACK_CLIENT_SECRET: z.string().default(''),
+  SLACK_REDIRECT_URI: z.string().url().default('http://localhost:5000/api/integrations/slack/callback'),
+  SLACK_SCOPES: z.string().default('incoming-webhook'),
+  INTEGRATION_SECRET: z.string().default(''),
   STREAM_TIMEOUT_MS: z.coerce.number().default(120000),
   PUPPETEER_EXECUTABLE_PATH: z.string().default(''),
   USE_FAKE_LLM: z
