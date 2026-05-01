@@ -3,6 +3,7 @@ import Navbar from '@/components/layout/Navbar'
 import HeroSection from '@/components/landing/HeroSection'
 import ProjectsTimeline from '@/components/landing/ProjectsTimeline'
 import TechnicalSchematic from '@/components/landing/TechnicalSchematic'
+import AudienceParallax from '@/components/landing/AudienceParallax'
 import MasonryVanguard from '@/components/landing/MasonryVanguard'
 import FuturePlansSplit from '@/components/landing/FuturePlansSplit'
 import Footer from '@/components/landing/Footer'
@@ -21,6 +22,7 @@ function Landing() {
         <HeroSection />
         <ProjectsTimeline />
         <TechnicalSchematic />
+        <AudienceParallax />
         <MasonryVanguard />
         <FuturePlansSplit />
       </main>

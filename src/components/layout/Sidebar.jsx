@@ -35,6 +35,7 @@ function NavLinks({ items, isCollapsed, location, onNavigate }) {
         onClick={onNavigate}
         className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+          item.level === 'child' && !isCollapsed && 'ml-5 border-l border-border/70 pl-4',
           isActive
             ? 'bg-primary/10 text-primary'
             : 'text-muted-foreground hover:text-foreground hover:bg-muted',
@@ -61,15 +62,12 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
     { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
     { name: 'Workspace', href: '/workspace', icon: Users },
     { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true },
-  ]
-
-  const secondaryNav = [
-    { name: 'Niches', href: '/freelancer/niches', icon: Radar },
-    { name: 'Leads', href: '/freelancer/leads', icon: Network },
-    { name: 'Outreach', href: '/freelancer/outreach', icon: Mail },
-    { name: 'Escrows', href: '/freelancer/escrows', icon: HandCoins },
-    { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint },
-    { name: 'OS Settings', href: '/freelancer/settings', icon: Settings },
+    { name: 'Niches', href: '/freelancer/niches', icon: Radar, level: 'child' },
+    { name: 'Leads', href: '/freelancer/leads', icon: Network, level: 'child' },
+    { name: 'Outreach', href: '/freelancer/outreach', icon: Mail, level: 'child' },
+    { name: 'Escrows', href: '/freelancer/escrows', icon: HandCoins, level: 'child' },
+    { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint, level: 'child' },
+    { name: 'OS Settings', href: '/freelancer/settings', icon: Settings, level: 'child' },
     ...(currentWorkspace ? [{ name: 'Workspace Settings', href: '/workspace/settings', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
     { name: 'Help', href: '/help', icon: HelpCircle },
@@ -103,10 +101,6 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <NavLinks items={navigation} isCollapsed={isCollapsed} location={location} onNavigate={onNavigate} />
       </nav>
-
-      <div className="p-4 border-t border-border space-y-1">
-        <NavLinks items={secondaryNav} isCollapsed={isCollapsed} location={location} onNavigate={onNavigate} />
-      </div>
 
       <div className="p-4 border-t border-border">
         <div className={cn('flex items-center gap-3 px-3 py-2', isCollapsed && 'justify-center px-0')}>

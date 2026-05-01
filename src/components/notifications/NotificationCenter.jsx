@@ -49,6 +49,7 @@ export default function NotificationCenter() {
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         className="relative p-2 hover:bg-muted rounded-lg transition-colors inline-flex"
+        aria-label="Open notifications"
       >
         <Bell className="h-5 w-5 text-muted-foreground" />
         {unreadCount ? (
@@ -59,8 +60,12 @@ export default function NotificationCenter() {
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-full z-50 mt-3 w-[420px] max-w-[calc(100vw-2rem)] rounded-3xl border border-border bg-card/95 p-5 shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-4">
+        <div className="absolute right-0 top-full z-50 mt-3 w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-3xl border border-primary/35 bg-card/70 p-5 shadow-2xl shadow-primary/10 backdrop-blur-md">
+          <div className="pointer-events-none absolute inset-0 workspace-grid opacity-35" />
+          <div className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full border border-primary/25 bg-primary/10 blur-sm" />
+          <div className="pointer-events-none absolute bottom-[-5rem] left-8 h-36 w-36 rounded-full border border-emerald-300/20 bg-emerald-400/10 blur-md" />
+
+          <div className="relative flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-semibold">Notifications</div>
               <div className="text-xs text-muted-foreground">Unread: {unreadCount}</div>
@@ -71,7 +76,7 @@ export default function NotificationCenter() {
             </Button>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="relative mt-4 flex flex-wrap gap-2">
             {FILTERS.map((filter) => (
               <button
                 key={filter.key}
@@ -89,7 +94,7 @@ export default function NotificationCenter() {
             ))}
           </div>
 
-          <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
+          <div className="relative mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
             {isLoading ? (
               <div className="rounded-2xl border border-border bg-background/20 p-4 text-sm text-muted-foreground">
                 Loading notifications...
