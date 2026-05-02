@@ -351,6 +351,12 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 | 🧩 | **Plan & Mode Gating** | Individual vs Team entry mode plus Free / Standard / Pro capability enforcement | ✅ Live |
 | 📧 | **Outcome Email Sending** | Send kickoff or follow-up sequence emails from won/lost flows | 🟡 SMTP-dependent |
 | 💳 | **Usage tiers / billing** | Metadata-driven pricing tiers and access controls without payment processing yet | 🟡 Pricing live, billing future |
+| 🗓️ | **Delivery Plan Editor** | Add phases, move milestones, and reorder steps within a proposal; each operation saves a new versioned snapshot | ✅ Live |
+| 🔔 | **Notification Center** | In-app notification feed scoped to personal or workspace events, per-item and bulk mark-read, 30-second auto-polling | ✅ Live |
+| ⏳ | **ETA Estimation** | Pre-generation time-range estimate derived from input type (text/PDF/DOCX), word count, and strategy; dedicated chat-operation ETA for question vs. mutation intents | ✅ Live |
+| 🔌 | **Slack Integration** | OAuth install flow for workspaces, webhook posting for proposal lifecycle events, status check, test-fire, and uninstall | ✅ Live |
+| 🧩 | **Intent-Aware Chat** | Client-side NLP classifies every chat message as a question or section mutation and auto-targets the relevant proposal section (features, risks, timeline, effort, summary, market, impact) | ✅ Live |
+| 🧑‍💻 | **Freelancer OS** | Full freelancer workflow: GitHub niche-depth scan, AI-scored lead pipeline (Kanban), AI-drafted outreach messages, milestone-based escrow tracking, and a DID-backed identity vault with verifiable credential minting | ✅ Live |
 
 </div>
 
@@ -375,12 +381,17 @@ The app now supports **two entry contexts** on landing/auth:
 - **Individual mode** routes into `/dashboard` and uses the user's personal proposal history and plan.
 - **Team mode** routes into `/workspace` and applies capabilities from the active workspace plan.
 
+After onboarding, users can also access the **Freelancer OS** at `/freelancer`, which is an independent workflow layer for niche discovery, lead management, outreach, escrow, and identity — available to both Individual and Team mode users.
+
 Core new routes:
 - `/agency-brain`
 - `/tri/:tripId`
 - `/workspace`
 - `/workspace/settings`
 - `/join/:token`
+- `/freelancer` (FlowBoard)
+- `/freelancer/niches` · `/freelancer/leads` · `/freelancer/outreach`
+- `/freelancer/escrows` · `/freelancer/identity` · `/freelancer/settings`
 
 ---
 
@@ -406,7 +417,16 @@ fixflowai/
 │   │   ├── JoinWorkspace.jsx           ← Invite redemption flow
 │   │   ├── Login.jsx / Register.jsx    ← Auth pages
 │   │   ├── Settings.jsx                ← Theme/profile UI preferences
-│   │   └── Help.jsx                    ← In-app FAQ
+│   │   ├── Help.jsx                    ← In-app FAQ
+│   │   └── 📁 freelancer/
+│   │       ├── FlowBoard.jsx           ← Freelancer OS operating dashboard (metrics, recent leads/niches)
+│   │       ├── Onboarding.jsx          ← GitHub scan boot sequence + niche seeding
+│   │       ├── NicheAnalysis.jsx       ← AI niche depth scoring and acceptance flow
+│   │       ├── LeadPipeline.jsx        ← Kanban lead board with drag-and-drop, AI-scored cards, outreach draft
+│   │       ├── OutreachQueue.jsx       ← AI-generated outreach messages per qualified lead
+│   │       ├── Escrows.jsx             ← Milestone-based escrow tracker with release and dispute actions
+│   │       ├── IdentityVault.jsx       ← DID identity, verifiable credential minting, profile reputation
+│   │       └── FreelancerSettings.jsx  ← AI agent toggles (lead hunter, outreach writer, escrow watcher, credential minter)
 │   ├── 📁 components/
 │   │   ├── agencyBrain/                ← Insight cards, calibration UI, pattern strength indicators
 │   │   ├── analytics/                  ← Win-rate and comparison visualizations
@@ -422,6 +442,8 @@ fixflowai/
 │   │   ├── triproposal/                ← Strategy toggles, loading columns, comparison components
 │   │   ├── workspace/                  ← Presence stack, invites, members, activity feed
 │   │   ├── winloss/                    ← Deal status + won/lost outcome modals
+│   │   ├── notifications/              ← Notification center panel with scope filters and mark-read
+│   │   ├── freelancer/                 ← FlowBoard primitives (ScoreRing, StatusPill, TechnicalPanel, SkeletonPanel, TimelineRail)
 │   │   └── ui/                         ← Reusable design primitives
 │   ├── 📁 hooks/
 │   │   ├── useStreamingProposal.js     ← `/api/generate` stream parser with strategy/calibration support
@@ -430,7 +452,10 @@ fixflowai/
 │   │   ├── usePortalTracking.js        ← Public portal dwell/event tracking
 │   │   ├── useTriGeneration.js         ← Parallel strategy generation orchestration
 │   │   ├── usePresence.js              ← Workspace proposal presence heartbeat/polling
-│   │   └── useWorkspace.js             ← Workspace summary/profile hydration
+│   │   ├── useWorkspace.js             ← Workspace summary/profile hydration
+│   │   ├── useFreelancer.js            ← Freelancer data queries (flowboard, niches, leads, escrows, credentials) + mutations
+│   │   ├── useNotifications.js         ← Notification center polling + mark-read mutations
+│   │   └── useIntentClassifier.js      ← Client-side NLP: classify chat message as question/mutation + section targeting
 │   ├── 📁 stores/                      ← Zustand stores (`auth`, `proposal`, `theme`, `agencyBrain`, `workspace`)
 │   ├── 📁 lib/                         ← Proposal normalizers, streaming helpers, utils
 │   └── 📁 config/
@@ -442,8 +467,8 @@ fixflowai/
 │   │   ├── config/env.js               ← Environment validation
 │   │   ├── db/mongoose.js              ← Mongo connection
 │   │   ├── middleware/                 ← auth/cors/rate-limit/error handlers
-│   │   ├── models/                     ← User, Proposal, Portal, Workspace, Trip, AgencyPattern, Presence schemas
-│   │   ├── routes/                     ← auth, generate, proposals, chat, portal, analytics, agency-brain, trips, workspaces
+│   │   ├── models/                     ← User, Proposal, Portal, Workspace, Trip, AgencyPattern, Presence, Notification, FreelancerProfile, Niche, Lead, Escrow, Invoice, Credential schemas
+│   │   ├── routes/                     ← auth, generate, proposals, chat, portal, analytics, agency-brain, trips, workspaces, eta, notifications, proposalComments, proposalPresence, proposalPlanning, freelancer, slackIntegration
 │   │   ├── services/                   ← LLM, brief score, S3, export, portal, lifecycle, workspace, agency brain logic
 │   │   ├── prompts/                    ← Prompt templates for generation/outcomes
 │   │   ├── schemas/                    ← Zod schemas + section contracts
@@ -656,6 +681,12 @@ For the exact local, testing, and main URLs now used by the app, plus the GitHub
 | ✅ Done | TriProposal parallel generation + comparison page | Released |
 | ✅ Done | Team workspace collaboration, comments, approvals, and presence | Released |
 | ✅ Done | Bundle sharing portals for multi-strategy proposal delivery | Released |
+| ✅ Done | Interactive delivery plan editor with phase/milestone versioned saves | Released |
+| ✅ Done | In-app notification center (personal + workspace scope, mark-read/all-read) | Released |
+| ✅ Done | ETA estimation for proposal generation and chat operations | Released |
+| ✅ Done | Slack workspace integration (OAuth install, webhook posting, lifecycle events) | Released |
+| ✅ Done | Intent-aware chat with client-side NLP (question vs. mutation, section targeting) | Released |
+| ✅ Done | Freelancer OS: GitHub niche scan, AI-scored lead pipeline, outreach drafting, escrow tracking, DID identity vault | Released |
 | 🚧 In Progress | Hardening SMTP-backed OTP and outcome email delivery across environments | Active |
 | 🚧 In Progress | Profile/settings persistence beyond local store state | Active |
 | 📅 Planned | Brand templates and white-label export customization | Planned |
