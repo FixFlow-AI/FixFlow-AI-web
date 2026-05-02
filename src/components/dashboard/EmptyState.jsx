@@ -13,7 +13,7 @@ function EmptyState() {
     >
       <div className="relative mb-6">
         <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-        <div className="relative h-20 w-20 rounded-2xl bg-card border border-border flex items-center justify-center">
+        <div className="relative h-20 w-20 rounded-2xl bg-transparent border border-border flex items-center justify-center transition-colors hover:bg-card focus-within:bg-card">
           <FileText className="h-10 w-10 text-muted-foreground" />
         </div>
       </div>

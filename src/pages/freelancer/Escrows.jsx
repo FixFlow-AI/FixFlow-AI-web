@@ -14,17 +14,17 @@ function EscrowFlow({ escrow, onRelease, onDispute, isBusy }) {
           <p className="mt-1 font-mono text-xs text-muted-foreground">{escrow.contractAddress}</p>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="rounded-lg border border-border bg-background/40 px-3 py-2 font-mono text-xs">Client</span>
+          <span className="rounded-lg border border-border bg-transparent px-3 py-2 font-mono text-xs transition-colors hover:bg-background/40 focus-within:bg-background/40">Client</span>
           <ArrowRight className="h-4 w-4 text-primary" />
           <span className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 font-mono text-xs text-primary">Smart lock</span>
           <ArrowRight className="h-4 w-4 text-primary" />
-          <span className="rounded-lg border border-border bg-background/40 px-3 py-2 font-mono text-xs">Freelancer</span>
+          <span className="rounded-lg border border-border bg-transparent px-3 py-2 font-mono text-xs transition-colors hover:bg-background/40 focus-within:bg-background/40">Freelancer</span>
         </div>
       </div>
 
       <div className="mt-5 space-y-3">
         {escrow.milestones.map((milestone, index) => (
-          <div key={milestone.name} className="rounded-xl border border-border/70 bg-background/35 p-4">
+          <div key={milestone.name} className="rounded-xl border border-border/70 bg-transparent p-4 transition-colors hover:bg-background/35 focus-within:bg-background/35">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium">{milestone.name}</p>
@@ -111,7 +111,7 @@ function Escrows() {
             </div>
             <div className="space-y-3">
               {invoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-lg border border-border/70 bg-background/35 p-3">
+                <div key={invoice.id} className="rounded-lg border border-border/70 bg-transparent p-3 transition-colors hover:bg-background/35 focus-within:bg-background/35">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium">{invoice.clientName}</p>
