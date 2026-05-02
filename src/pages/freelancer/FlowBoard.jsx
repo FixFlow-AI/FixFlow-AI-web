@@ -9,7 +9,7 @@ function LeadRow({ lead }) {
   return (
     <Link
       to="/freelancer/leads"
-      className="flex items-center gap-4 rounded-lg border border-border/70 bg-transparent p-3 transition-colors hover:border-primary/40 hover:bg-background/30 focus-within:bg-background/30"
+      className="flex items-center gap-4 rounded-lg border border-border/70 bg-background/30 p-3 transition-colors hover:border-primary/40 hover:bg-muted/30"
     >
       <ScoreRing score={lead.score} />
       <div className="min-w-0 flex-1">
@@ -26,7 +26,7 @@ function LeadRow({ lead }) {
 
 function NicheBar({ niche }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-transparent p-4 transition-colors hover:bg-background/30 focus-within:bg-background/30">
+    <div className="rounded-lg border border-border/70 bg-background/30 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-medium">{niche.name}</p>
@@ -136,7 +136,7 @@ function FlowBoard() {
           <h2 className="mt-1 text-xl font-semibold">{escrow ? `${escrow.totalAmount.toLocaleString()} ${escrow.currency}` : 'No active escrow'}</h2>
           <div className="mt-5 space-y-3">
             {(escrow?.milestones || []).map((milestone) => (
-              <div key={milestone.name} className="flex items-center justify-between gap-3 rounded-lg bg-transparent px-3 py-2 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+              <div key={milestone.name} className="flex items-center justify-between gap-3 rounded-lg bg-background/35 px-3 py-2">
                 <span className="text-sm">{milestone.name}</span>
                 <StatusPill status={milestone.status} />
               </div>

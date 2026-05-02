@@ -8,7 +8,7 @@ function getBarColor(score) {
 
 export default function DimensionBar({ dimension, index }) {
   return (
-    <div className="rounded-2xl border border-border bg-transparent p-4 transition-colors hover:bg-background/30 focus-within:bg-background/30">
+    <div className="rounded-2xl border border-border bg-background/30 p-4">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="text-sm font-medium">{dimension.name}</div>
         <div className="text-sm font-semibold" style={{ color: getBarColor(dimension.score) }}>

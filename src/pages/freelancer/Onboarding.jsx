@@ -58,7 +58,7 @@ function Onboarding() {
               const complete = index < activeStage
               const active = index === activeStage
               return (
-                <div key={stage} className="flex items-center gap-3 rounded-lg border border-border/70 bg-transparent px-4 py-3 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+                <div key={stage} className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/35 px-4 py-3">
                   {complete ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-300" />
                   ) : active ? (
@@ -78,7 +78,7 @@ function Onboarding() {
           <h2 className="mt-2 text-2xl font-semibold">{scan ? `${scan.commits} commits indexed` : 'Preparing scan'}</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {(scan?.repos || []).map((repo) => (
-              <div key={repo.name} className="rounded-xl border border-border/70 bg-transparent p-4 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+              <div key={repo.name} className="rounded-xl border border-border/70 bg-background/35 p-4">
                 <p className="font-mono text-xs text-primary">{repo.name}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{repo.language} · {repo.commits} commits · {repo.stars} stars</p>
               </div>
@@ -86,7 +86,7 @@ function Onboarding() {
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             {(scan?.languages || []).map((language) => (
-              <span key={language} className="rounded-full border border-border bg-transparent px-3 py-1 font-mono text-xs text-muted-foreground transition-colors hover:bg-background/40 focus-within:bg-background/40">
+              <span key={language} className="rounded-full border border-border bg-background/40 px-3 py-1 font-mono text-xs text-muted-foreground">
                 {language}
               </span>
             ))}

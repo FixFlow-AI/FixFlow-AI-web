@@ -24,7 +24,7 @@ function LeadCard({ lead, onSelect, onDragStart }) {
       draggable
       onDragStart={(event) => onDragStart(event, lead.id)}
       onClick={() => onSelect(lead)}
-      className="w-full rounded-lg border border-border/75 bg-transparent p-3 text-left transition-colors hover:border-primary/40 hover:bg-background/40 focus-visible:bg-background/40"
+      className="w-full rounded-lg border border-border/75 bg-background/40 p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
     >
       <div className="flex items-start gap-3">
         <ScoreRing score={lead.score} size={48} />
@@ -35,7 +35,7 @@ function LeadCard({ lead, onSelect, onDragStart }) {
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {(lead.company.stack || []).slice(0, 3).map((item) => (
-          <span key={item} className="rounded-full border border-border bg-transparent px-2 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-card">{item}</span>
+          <span key={item} className="rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{item}</span>
         ))}
       </div>
     </motion.button>
@@ -54,7 +54,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
       initial={{ x: 420, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 420, opacity: 0 }}
-      className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-border bg-transparent p-5 shadow-2xl transition-colors hover:bg-card"
+      className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-border bg-card p-5 shadow-2xl"
     >
       <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -82,7 +82,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             {(lead.company.stack || []).map((item) => (
-              <span key={item} className="rounded-full border border-border bg-transparent px-2.5 py-1 font-mono text-xs text-muted-foreground transition-colors hover:bg-background/40">{item}</span>
+              <span key={item} className="rounded-full border border-border bg-background/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">{item}</span>
             ))}
           </div>
         </TechnicalPanel>
@@ -91,7 +91,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
           <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">AI reasoning</p>
           <div className="mt-3 space-y-2">
             {(lead.reasoning || []).map((reason) => (
-              <div key={reason} className="rounded-lg bg-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-background/40">{reason}</div>
+              <div key={reason} className="rounded-lg bg-background/40 px-3 py-2 text-sm text-muted-foreground">{reason}</div>
             ))}
           </div>
         </TechnicalPanel>
@@ -101,7 +101,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">Outreach draft</p>
             <span className={wordCount > 150 ? 'font-mono text-xs text-rose-200' : 'font-mono text-xs text-muted-foreground'}>{wordCount}/150 words</span>
           </div>
-          <div className="mt-3 rounded-lg border border-border bg-transparent p-3 transition-colors hover:bg-background/50">
+          <div className="mt-3 rounded-lg border border-border bg-background/50 p-3">
             <p className="font-medium">{draft.subject || 'No subject yet'}</p>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{draft.body || 'Generate a draft to preview the message.'}</p>
           </div>

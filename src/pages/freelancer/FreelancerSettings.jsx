@@ -61,7 +61,7 @@ function FreelancerSettings() {
             </div>
             <div className="space-y-3">
               {agentLabels.map((agent) => (
-                <div key={agent.key} className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-transparent p-4 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+                <div key={agent.key} className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-background/35 p-4">
                   <div>
                     <p className="font-medium">{agent.label}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{agent.description}</p>
@@ -84,13 +84,13 @@ function FreelancerSettings() {
             </div>
             <div className="space-y-3">
               {Object.entries(profile?.walletAddresses || {}).map(([key, value]) => (
-                <div key={key} className="rounded-xl border border-border/70 bg-transparent p-4 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+                <div key={key} className="rounded-xl border border-border/70 bg-background/35 p-4">
                   <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">{key}</p>
                   <p className="mt-2 break-all font-mono text-sm text-foreground">{value}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-5 rounded-xl border border-border bg-transparent p-4 transition-colors hover:bg-background/35 focus-within:bg-background/35">
+            <div className="mt-5 rounded-xl border border-border bg-background/35 p-4">
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">DID</p>
               <p className="mt-2 break-all font-mono text-sm text-primary">{profile?.did}</p>
             </div>

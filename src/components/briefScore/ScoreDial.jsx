@@ -20,7 +20,7 @@ export default function ScoreDial({ score = 0, grade = 'Poor' }) {
   const offset = circumference - (safeScore / 100) * circumference
 
   return (
-    <div className="relative flex h-44 w-44 items-center justify-center rounded-full border border-border bg-transparent transition-colors hover:bg-background/50 focus-within:bg-background/50">
+    <div className="relative flex h-44 w-44 items-center justify-center rounded-full border border-border bg-background/50">
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 140 140">
         <circle cx="70" cy="70" r="54" stroke="rgba(255,255,255,0.07)" strokeWidth="8" fill="none" />
         <motion.circle

@@ -23,9 +23,9 @@ export function TechnicalPanel({ children, className, interactive = false, ...pr
     <div
       {...props}
       className={cn(
-        'relative overflow-hidden rounded-xl border border-border/80 bg-transparent shadow-none transition-colors hover:bg-card/75 hover:shadow-[var(--glass-card-shadow)] focus-within:bg-card/75 focus-within:shadow-[var(--glass-card-shadow)]',
+        'relative overflow-hidden rounded-xl border border-border/80 bg-card/75 shadow-[var(--glass-card-shadow)]',
         'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-primary/50 before:to-transparent',
-        interactive && 'hover:border-primary/45 focus-within:border-primary/45',
+        interactive && 'transition-colors hover:border-primary/45 hover:bg-card',
         className
       )}
     >
@@ -118,7 +118,7 @@ export function TimelineRail({ items }) {
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="flex items-center gap-3 rounded-lg border border-border/70 bg-transparent px-4 py-3 transition-colors hover:bg-background/35 focus-within:bg-background/35"
+            className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/35 px-4 py-3"
           >
             <Icon className={cn('h-4 w-4', done ? 'text-emerald-300' : waiting ? 'text-muted-foreground' : 'text-primary')} />
             <span className="text-sm">{item.label}</span>
