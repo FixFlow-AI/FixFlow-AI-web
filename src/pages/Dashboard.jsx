@@ -72,7 +72,7 @@ function Dashboard() {
               { label: 'Negotiating', value: proposals.filter((proposal) => proposal.dealStatus === 'negotiating').length },
               { label: 'Pending', value: proposals.filter((proposal) => proposal.dealStatus === 'pending').length },
             ].map((stat) => (
-              <div key={stat.label} className="p-4 rounded-xl border border-border bg-transparent transition-colors hover:bg-card/50 focus-within:bg-card/50">
+              <div key={stat.label} className="p-4 rounded-xl border border-border bg-transparent transition-colors hover:bg-card/50">
                 <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
                 <p className="text-2xl font-bold">{stat.value}</p>
               </div>
