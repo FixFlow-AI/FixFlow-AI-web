@@ -41,13 +41,13 @@ export default function BriefScorePanel({ briefScore, isLoading }) {
             Catch weak signals early, tighten discovery questions, and improve the confidence of the generated proposal.
           </p>
         </div>
-        <div className="rounded-full border border-border bg-background/40 px-4 py-2 text-sm text-muted-foreground">
+        <div className="rounded-full border border-border bg-transparent px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-background/40 focus-within:bg-background/40">
           Estimated confidence lift: <span className="font-semibold text-foreground">+{briefScore.estimatedConfidenceBoost}%</span>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <div className="flex flex-col items-center gap-4 rounded-[28px] border border-border bg-background/45 p-6">
+        <div className="flex flex-col items-center gap-4 rounded-[28px] border border-border bg-transparent p-6 transition-colors hover:bg-background/45 focus-within:bg-background/45">
           <ScoreDial score={briefScore.overallScore} grade={briefScore.grade} />
           <div className="text-center text-sm text-muted-foreground">
             {briefScore.readyToGenerate ? 'Brief is healthy enough to generate.' : 'Review gaps or generate with caution.'}

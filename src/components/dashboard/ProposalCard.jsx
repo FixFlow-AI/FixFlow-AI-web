@@ -60,7 +60,7 @@ function ProposalCard({ proposal, index }) {
       whileHover={{ y: -4 }}
       className="group"
     >
-      <div className="glass-card rounded-[24px] p-6 bg-card/50 backdrop-blur-md border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg shadow-black/5">
+      <div className="glass-card rounded-[24px] p-6 backdrop-blur-md border border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg shadow-black/5 hover:bg-card/50 focus-within:bg-card/50">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="h-11 w-11 rounded-2xl bg-primary/10 flex items-center justify-center">
             <FileText className="h-5 w-5 text-primary" />

@@ -274,7 +274,7 @@ function NewProposal() {
               'Include the launch window, deadlines, and budget if available.',
               'Name the approvers, operators, and target user groups.',
             ].map((tip, index) => (
-              <div key={tip} className="rounded-2xl border border-border bg-background/35 px-4 py-3 text-sm text-muted-foreground">
+              <div key={tip} className="rounded-2xl border border-border bg-transparent px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-background/35">
                 <span className="mr-3 text-primary">0{index + 1}</span>
                 {tip}
               </div>

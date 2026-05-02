@@ -22,7 +22,7 @@ function NicheCard({ niche, onToggle, isUpdating }) {
 
         <div className="mt-5 flex flex-wrap gap-2">
           {(niche.tags || []).map((tag) => (
-            <span key={tag} className="rounded-full border border-border bg-background/40 px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
+            <span key={tag} className="rounded-full border border-border bg-transparent px-2.5 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-background/40 focus-within:bg-background/40">
               {tag}
             </span>
           ))}
@@ -30,7 +30,7 @@ function NicheCard({ niche, onToggle, isUpdating }) {
 
         <div className="mt-5 space-y-2">
           {(niche.evidence || []).map((evidence) => (
-            <div key={`${niche.id}-${evidence.repo}`} className="rounded-lg border border-border/70 bg-background/35 p-3">
+            <div key={`${niche.id}-${evidence.repo}`} className="rounded-lg border border-border/70 bg-transparent p-3 transition-colors hover:bg-background/35 focus-within:bg-background/35">
               <p className="font-mono text-xs text-primary">{evidence.repo}</p>
               <p className="mt-1 text-sm text-muted-foreground">{evidence.signal || `${evidence.commits} commits, ${evidence.stars} stars`}</p>
             </div>

@@ -68,7 +68,9 @@ function OutreachQueue() {
                   onClick={() => setSelectedId(lead.id)}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
-                    selectedLead?.id === lead.id ? 'border-primary/50 bg-primary/10' : 'border-border/70 bg-background/35 hover:border-primary/35'
+                    selectedLead?.id === lead.id
+                      ? 'border-primary/50 bg-primary/10'
+                      : 'border-border/70 bg-transparent hover:border-primary/35 hover:bg-background/35 focus-within:bg-background/35'
                   )}
                 >
                   <ScoreRing score={lead.score} size={46} />
@@ -96,7 +98,7 @@ function OutreachQueue() {
                   </span>
                 </div>
 
-                <div className="my-5 rounded-xl border border-border bg-background/45 p-5 text-sm leading-7 text-muted-foreground">
+                <div className="my-5 rounded-xl border border-border bg-transparent p-5 text-sm leading-7 text-muted-foreground transition-colors hover:bg-background/45 focus-within:bg-background/45">
                   {highlightTokens(draft.body)}
                 </div>
 

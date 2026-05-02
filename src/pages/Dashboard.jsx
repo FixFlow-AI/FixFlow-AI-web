@@ -66,17 +66,17 @@ function Dashboard() {
           transition={{ delay: 0.2 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
         >
-          {[
-            { label: 'Total Proposals', value: proposals.length },
-            { label: 'Won', value: proposals.filter((proposal) => proposal.dealStatus === 'won').length },
-            { label: 'Negotiating', value: proposals.filter((proposal) => proposal.dealStatus === 'negotiating').length },
-            { label: 'Pending', value: proposals.filter((proposal) => proposal.dealStatus === 'pending').length },
-          ].map((stat) => (
-            <div key={stat.label} className="p-4 rounded-xl border border-border bg-card/50">
-              <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold">{stat.value}</p>
-            </div>
-          ))}
+            {[
+              { label: 'Total Proposals', value: proposals.length },
+              { label: 'Won', value: proposals.filter((proposal) => proposal.dealStatus === 'won').length },
+              { label: 'Negotiating', value: proposals.filter((proposal) => proposal.dealStatus === 'negotiating').length },
+              { label: 'Pending', value: proposals.filter((proposal) => proposal.dealStatus === 'pending').length },
+            ].map((stat) => (
+              <div key={stat.label} className="p-4 rounded-xl border border-border bg-transparent transition-colors hover:bg-card/50">
+                <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+                <p className="text-2xl font-bold">{stat.value}</p>
+              </div>
+            ))}
         </motion.div>
       )}
 
