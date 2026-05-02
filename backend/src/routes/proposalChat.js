@@ -27,9 +27,12 @@ const {
 const { geminiModelCoordinator } = require('../services/llm/modelCoordinator');
 const { getGeminiClient } = require('../services/llm/provider');
 const { recordChatTiming } = require('../services/eta/etaService');
+const { reportProviderError, reportProviderSuccess } = require('../services/rateLimit/rateLimitMonitor');
+const { fingerprintApiKey } = require('../services/rateLimit/rateLimitStateStore');
 
 const router = express.Router();
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
+const geminiKeyFingerprint = fingerprintApiKey(env.GEMINI_API_KEY);
 
 /**
  * Stream from Gemini for chat responses.
@@ -39,7 +42,7 @@ const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
  * @param {Object} options - { temperature, jsonMode }
  */
 async function* streamGeminiChat(system, userMessage, options = {}) {
-  const { temperature = 0.3, jsonMode = false } = options;
+  const { temperature = 0.3, jsonMode = false, context = {} } = options;
   const models = getGeminiModelCandidates(
     env.GEMINI_MODEL,
     env.GEMINI_FALLBACK_MODEL,
@@ -98,6 +101,15 @@ async function* streamGeminiChat(system, userMessage, options = {}) {
           }
         }
 
+        reportProviderSuccess({
+          provider: 'gemini',
+          apiKeyFingerprint: geminiKeyFingerprint,
+          userId: context.userId,
+          model,
+          requestId: context.requestId || null,
+          metadata: { path: 'proposalChat' },
+        });
+
         clearTimeout(timeout);
         return;
       } catch (error) {
@@ -114,6 +126,18 @@ async function* streamGeminiChat(system, userMessage, options = {}) {
 
         if (isGeminiQuotaError(error)) {
           const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          reportProviderError({
+            provider: 'gemini',
+            apiKeyFingerprint: geminiKeyFingerprint,
+            userId: context.userId,
+            statusCode: Number(error?.status || error?.response?.status || 429),
+            isQuotaError: true,
+            retryAfterSec: Math.ceil(retryMs / 1000) || null,
+            message: error?.message || '',
+            model,
+            requestId: context.requestId || null,
+            metadata: { path: 'proposalChat' },
+          });
           console.log(
             JSON.stringify({
               event: 'LLM_MODEL_COOLDOWN',
@@ -289,6 +313,7 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
         : streamGeminiChat(system, user, {
             temperature: intent === 'mutate' ? 0.2 : 0.3,
             jsonMode: intent === 'mutate',
+            context: { userId: req.user.userId, requestId: proposalId },
           });
 
       for await (const chunk of streamSource) {

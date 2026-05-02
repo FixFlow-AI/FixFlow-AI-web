@@ -1,8 +1,11 @@
 const { GoogleGenAI } = require('@google/genai');
 const { env } = require('../../config/env');
+const { fingerprintApiKey } = require('../rateLimit/rateLimitStateStore');
+const { handleApiKeyRotation } = require('../rateLimit/rateLimitMonitor');
 
 let geminiClient = null;
 let hasNormalizedGeminiEnv = false;
+let lastGeminiFingerprint = '';
 
 function normalizeGeminiEnvironment() {
   if (hasNormalizedGeminiEnv) {
@@ -22,6 +25,17 @@ function getGeminiClient() {
   if (!env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not configured.');
   }
+
+  const currentFingerprint = fingerprintApiKey(env.GEMINI_API_KEY);
+  if (lastGeminiFingerprint && currentFingerprint !== lastGeminiFingerprint) {
+    handleApiKeyRotation({
+      provider: 'gemini',
+      oldFingerprint: lastGeminiFingerprint,
+      newFingerprint: currentFingerprint,
+    });
+    geminiClient = null;
+  }
+  lastGeminiFingerprint = currentFingerprint;
 
   normalizeGeminiEnvironment();
 

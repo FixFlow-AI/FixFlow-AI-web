@@ -62,7 +62,7 @@ function buildMockLostOutcome(proposalJSON, lossReason = '') {
   });
 }
 
-async function generateWonOutcome(proposalJSON) {
+async function generateWonOutcome(proposalJSON, { userId } = {}) {
   const { system, user } = buildWonOutcomePrompt(proposalJSON);
   const raw = await generateStructuredJSON({
     system,
@@ -70,11 +70,12 @@ async function generateWonOutcome(proposalJSON) {
     jsonSchema: WON_OUTCOME_JSON_SCHEMA,
     temperature: 0.2,
     maxOutputTokens: 2500,
+    context: { userId, requestId: 'wonOutcome' },
   });
   return WonOutcomeSchema.parse(JSON.parse(raw));
 }
 
-async function generateLostOutcome(proposalJSON, lossReason) {
+async function generateLostOutcome(proposalJSON, lossReason, { userId } = {}) {
   const { system, user } = buildLostOutcomePrompt(proposalJSON, lossReason);
   const raw = await generateStructuredJSON({
     system,
@@ -82,6 +83,7 @@ async function generateLostOutcome(proposalJSON, lossReason) {
     jsonSchema: LOST_OUTCOME_JSON_SCHEMA,
     temperature: 0.35,
     maxOutputTokens: 3200,
+    context: { userId, requestId: 'lostOutcome' },
   });
   return LostOutcomeSchema.parse(JSON.parse(raw));
 }
@@ -101,7 +103,7 @@ async function generateOutcome({ userId, proposalId, dealStatus, lossReason = ''
 
   if (dealStatus === 'won') {
     try {
-      outcome = await generateWonOutcome(proposalJSON);
+      outcome = await generateWonOutcome(proposalJSON, { userId });
     } catch {
       outcome = buildMockWonOutcome(proposalJSON);
     }
@@ -110,7 +112,7 @@ async function generateOutcome({ userId, proposalId, dealStatus, lossReason = ''
     proposal.lostOutcome = null;
   } else {
     try {
-      outcome = await generateLostOutcome(proposalJSON, lossReason);
+      outcome = await generateLostOutcome(proposalJSON, lossReason, { userId });
     } catch {
       outcome = buildMockLostOutcome(proposalJSON, lossReason);
     }

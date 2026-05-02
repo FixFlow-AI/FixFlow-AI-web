@@ -153,7 +153,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
       });
       let fullBuffer = '';
 
-      for await (const chunk of streamProposal(system, user)) {
+      for await (const chunk of streamProposal(system, user, { userId: req.user.userId, requestId: proposalId })) {
         fullBuffer += chunk;
         sendEvent('chunk', { content: chunk });
       }

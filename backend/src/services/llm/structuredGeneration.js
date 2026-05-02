@@ -1,16 +1,21 @@
 const { env } = require('../../config/env');
 const {
   createGeminiGuard,
+  extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
+  getErrorStatus,
   isGeminiAuthError,
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('./geminiGuard');
 const { geminiModelCoordinator } = require('./modelCoordinator');
 const { getGeminiClient } = require('./provider');
+const { reportProviderError, reportProviderSuccess } = require('../rateLimit/rateLimitMonitor');
+const { fingerprintApiKey } = require('../rateLimit/rateLimitStateStore');
 
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
+const geminiKeyFingerprint = fingerprintApiKey(env.GEMINI_API_KEY);
 
 function extractJsonText(response) {
   if (typeof response?.text === 'string' && response.text.trim()) {
@@ -43,6 +48,7 @@ async function generateStructuredJSON({
   jsonSchema,
   temperature = 0.2,
   maxOutputTokens = 4000,
+  context = {},
 }) {
   geminiGuard.assertAvailable();
 
@@ -78,7 +84,7 @@ async function generateStructuredJSON({
       }
 
       try {
-        return await runStructuredRequest({
+        const result = await runStructuredRequest({
           model,
           system,
           user,
@@ -86,6 +92,15 @@ async function generateStructuredJSON({
           temperature,
           maxOutputTokens,
         });
+        reportProviderSuccess({
+          provider: 'gemini',
+          apiKeyFingerprint: geminiKeyFingerprint,
+          userId: context.userId,
+          model,
+          requestId: context.requestId || null,
+          metadata: { path: 'generateStructuredJSON' },
+        });
+        return result;
       } catch (error) {
         lastError = error;
 
@@ -96,6 +111,18 @@ async function generateStructuredJSON({
 
         if (isGeminiQuotaError(error)) {
           const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          reportProviderError({
+            provider: 'gemini',
+            apiKeyFingerprint: geminiKeyFingerprint,
+            userId: context.userId,
+            statusCode: getErrorStatus(error) || 429,
+            isQuotaError: true,
+            retryAfterSec: Math.ceil((extractRetryDelayMs(error) || retryMs || 0) / 1000) || null,
+            message: error?.message || '',
+            model,
+            requestId: context.requestId || null,
+            metadata: { path: 'generateStructuredJSON' },
+          });
           console.log(
             JSON.stringify({
               event: 'LLM_MODEL_COOLDOWN',

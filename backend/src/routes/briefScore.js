@@ -17,7 +17,7 @@ router.post('/score', authMiddleware, async (req, res, next) => {
       return;
     }
 
-    const score = await scoreBrief(briefText);
+    const score = await scoreBrief(briefText, { userId: req.user.userId });
     res.json(score);
   } catch (error) {
     next(error);

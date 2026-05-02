@@ -44,6 +44,16 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value.toLowerCase() === 'true'),
+  ADMIN_ALERT_EMAIL: z.string().default('suvampersonal555@gmail.com'),
+  RATE_LIMIT_MONITOR_ENABLED: z
+    .string()
+    .default('true')
+    .transform((value) => value.toLowerCase() === 'true'),
+  RATE_LIMIT_NEAR_THRESHOLD: z.coerce.number().default(0.85),
+  RATE_LIMIT_ALERT_COOLDOWN_SEC: z.coerce.number().default(10 * 60),
+  RATE_LIMIT_RESTORE_COOLDOWN_SEC: z.coerce.number().default(60),
+  RATE_LIMIT_RETRY_MAX_ATTEMPTS: z.coerce.number().default(5),
+  RATE_LIMIT_RETRY_BASE_DELAY_MS: z.coerce.number().default(1500),
 });
 
 function validateEnv() {

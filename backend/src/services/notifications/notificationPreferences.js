@@ -10,6 +10,9 @@ const NOTIFICATION_EVENTS = [
   'freelancer_niche',
   'freelancer_outreach',
   'freelancer_escrow',
+  'rate_limit_near',
+  'rate_limit_exceeded',
+  'rate_limit_restored',
 ];
 
 const DEFAULT_NOTIFICATION_PREFERENCES = Object.freeze({

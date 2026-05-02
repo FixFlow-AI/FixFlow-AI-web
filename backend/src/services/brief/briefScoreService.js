@@ -273,7 +273,7 @@ function buildHeuristicBriefScore(briefText) {
   });
 }
 
-async function scoreBriefWithAI(briefText) {
+async function scoreBriefWithAI(briefText, { userId } = {}) {
   const { system, user } = buildBriefScorePrompt(briefText);
   const raw = await generateStructuredJSON({
     system,
@@ -281,14 +281,15 @@ async function scoreBriefWithAI(briefText) {
     jsonSchema: BRIEF_SCORE_RESPONSE_JSON_SCHEMA,
     temperature: 0.1,
     maxOutputTokens: 2500,
+    context: { userId, requestId: 'briefScore' },
   });
 
   return BriefScoreSchema.parse(JSON.parse(raw));
 }
 
-async function scoreBrief(briefText) {
+async function scoreBrief(briefText, { userId } = {}) {
   try {
-    return await scoreBriefWithAI(briefText);
+    return await scoreBriefWithAI(briefText, { userId });
   } catch (error) {
     if (String(error?.message || '').includes('GEMINI')) {
       throw error;

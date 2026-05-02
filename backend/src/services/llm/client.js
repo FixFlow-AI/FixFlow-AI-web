@@ -2,16 +2,21 @@ const { env } = require('../../config/env');
 const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
 const {
   createGeminiGuard,
+  extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
+  getErrorStatus,
   isGeminiAuthError,
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('./geminiGuard');
 const { geminiModelCoordinator } = require('./modelCoordinator');
 const { getGeminiClient } = require('./provider');
+const { reportProviderError, reportProviderSuccess } = require('../rateLimit/rateLimitMonitor');
+const { fingerprintApiKey } = require('../rateLimit/rateLimitStateStore');
 
 const geminiGuard = createGeminiGuard({ cooldownMs: env.GEMINI_KEY_GUARD_MS });
+const geminiKeyFingerprint = fingerprintApiKey(env.GEMINI_API_KEY);
 
 function buildGeminiAuthError(error, model) {
   const message = getGeminiAuthErrorMessage(error, { model });
@@ -194,7 +199,7 @@ async function* streamMockProposal(userMessage) {
   }
 }
 
-async function* streamProposal(system, userMessage) {
+async function* streamProposal(system, userMessage, context = {}) {
   if (env.USE_FAKE_LLM) {
     yield* streamMockProposal(userMessage);
     return;
@@ -239,6 +244,14 @@ async function* streamProposal(system, userMessage) {
           emittedChunk = true;
           yield chunk;
         }
+        reportProviderSuccess({
+          provider: 'gemini',
+          apiKeyFingerprint: geminiKeyFingerprint,
+          userId: context.userId,
+          model,
+          requestId: context.requestId || null,
+          metadata: { path: 'streamProposal' },
+        });
         return;
       } catch (error) {
         lastError = error;
@@ -249,6 +262,18 @@ async function* streamProposal(system, userMessage) {
 
         if (isGeminiQuotaError(error)) {
           const retryMs = geminiModelCoordinator.markQuotaError(model, error);
+          reportProviderError({
+            provider: 'gemini',
+            apiKeyFingerprint: geminiKeyFingerprint,
+            userId: context.userId,
+            statusCode: getErrorStatus(error) || 429,
+            isQuotaError: true,
+            retryAfterSec: Math.ceil((extractRetryDelayMs(error) || retryMs || 0) / 1000) || null,
+            message: error?.message || '',
+            model,
+            requestId: context.requestId || null,
+            metadata: { path: 'streamProposal' },
+          });
           console.log(
             JSON.stringify({
               event: 'LLM_MODEL_COOLDOWN',

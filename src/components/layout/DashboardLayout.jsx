@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import Sidebar from './Sidebar'
 import DashboardHeader from '@/components/dashboard/DashboardHeader'
 import WorkspaceBackdrop from '@/components/ui/WorkspaceBackdrop'
+import { useNotificationStream } from '@/hooks/useNotificationStream'
 
 function DashboardLayout({ children }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  useNotificationStream()
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">

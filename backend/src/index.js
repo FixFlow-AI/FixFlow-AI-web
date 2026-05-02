@@ -25,8 +25,10 @@ const proposalPlanningRoutes = require('./routes/proposalPlanning');
 const notificationRoutes = require('./routes/notifications');
 const freelancerRoutes = require('./routes/freelancer');
 const slackIntegrationRoutes = require('./routes/slackIntegration');
+const { initRateLimitNotifier } = require('./services/rateLimit/rateLimitNotifier');
 
 const app = express();
+initRateLimitNotifier();
 
 // Security headers
 app.use(helmet());
