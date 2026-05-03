@@ -25,6 +25,7 @@ const proposalPlanningRoutes = require('./routes/proposalPlanning');
 const notificationRoutes = require('./routes/notifications');
 const freelancerRoutes = require('./routes/freelancer');
 const slackIntegrationRoutes = require('./routes/slackIntegration');
+const escrowLifecycleRoutes = require('./routes/escrowLifecycle');
 const { initRateLimitNotifier } = require('./services/rateLimit/rateLimitNotifier');
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/freelancer', freelancerRoutes);
 app.use('/api/integrations/slack', slackIntegrationRoutes);
+app.use('/api/escrows', escrowLifecycleRoutes);
 
 // 404 handler
 app.use((_req, res) => {
