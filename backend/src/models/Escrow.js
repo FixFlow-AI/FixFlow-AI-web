@@ -10,6 +10,7 @@ const milestoneSchema = new mongoose.Schema(
       default: 'pending',
     },
     releasedAt: { type: Date, default: null },
+    deadline: { type: Date, default: null },
   },
   { _id: false }
 );
@@ -30,6 +31,17 @@ const escrowSchema = new mongoose.Schema(
     },
     clientDid: { type: String, trim: true, default: '' },
     freelancerDid: { type: String, trim: true, default: '' },
+
+    buyerAddress: { type: String, trim: true, default: '' },
+    sellerAddress: { type: String, trim: true, default: '' },
+    state: {
+      type: String,
+      enum: ['CREATED', 'FUNDED', 'MILESTONE_SUBMITTED', 'MILESTONE_APPROVED', 'DISPUTED', 'RESOLVED', 'RELEASED', 'CANCELLED'],
+      default: 'CREATED',
+      index: true,
+    },
+    fundedAt: { type: Date, default: null },
+
     totalAmount: { type: Number, min: 0, default: 0 },
     currency: {
       type: String,
