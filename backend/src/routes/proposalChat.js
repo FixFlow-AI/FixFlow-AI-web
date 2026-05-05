@@ -26,6 +26,7 @@ const {
 } = require('../services/llm/geminiGuard');
 const { geminiModelCoordinator } = require('../services/llm/modelCoordinator');
 const { getGeminiClient } = require('../services/llm/provider');
+const { streamLlmChat } = require('../services/llm/client');
 const { recordChatTiming } = require('../services/eta/etaService');
 const { reportProviderError, reportProviderSuccess } = require('../services/rateLimit/rateLimitMonitor');
 const { fingerprintApiKey } = require('../services/rateLimit/rateLimitStateStore');
@@ -310,10 +311,11 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
         ? (intent === 'mutate'
             ? streamMockMutation(targetSection, proposalJSON)
             : streamMockQuestion(message))
-        : streamGeminiChat(system, user, {
+        : streamLlmChat(system, user, {
             temperature: intent === 'mutate' ? 0.2 : 0.3,
             jsonMode: intent === 'mutate',
             context: { userId: req.user.userId, requestId: proposalId },
+            path: 'proposalChat',
           });
 
       for await (const chunk of streamSource) {
@@ -387,7 +389,7 @@ router.post('/:id/chat', authMiddleware, async (req, res, next) => {
       sendEvent('done', { fullResponse: intent === 'question' ? fullBuffer : undefined });
     } catch (streamError) {
       const code = streamError.message.includes('TIMEOUT') ? 'LLM_TIMEOUT'
-        : streamError.message.includes('AUTH') ? 'GEMINI_AUTH_ERROR'
+        : streamError.message.includes('AUTH') ? 'LLM_AUTH_ERROR'
         : 'STREAM_ERROR';
 
       sendEvent('error', {

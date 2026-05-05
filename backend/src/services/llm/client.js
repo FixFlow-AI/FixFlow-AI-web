@@ -12,6 +12,13 @@ const {
 } = require('./geminiGuard');
 const { geminiModelCoordinator } = require('./modelCoordinator');
 const { getGeminiClient } = require('./provider');
+const { getConfiguredLlmProviders } = require('./providerRegistry');
+const {
+  isAuthProviderError,
+  isRetryableProviderError,
+  streamOllamaProvider,
+  streamOpenAiCompatibleProvider,
+} = require('./providerRequests');
 const { reportProviderError, reportProviderSuccess } = require('../rateLimit/rateLimitMonitor');
 const { fingerprintApiKey } = require('../rateLimit/rateLimitStateStore');
 
@@ -199,12 +206,7 @@ async function* streamMockProposal(userMessage) {
   }
 }
 
-async function* streamProposal(system, userMessage, context = {}) {
-  if (env.USE_FAKE_LLM) {
-    yield* streamMockProposal(userMessage);
-    return;
-  }
-
+async function* streamGeminiWithFallback(system, userMessage, context = {}) {
   geminiGuard.assertAvailable();
 
   const models = getGeminiModelCandidates(
@@ -327,4 +329,142 @@ async function* streamProposal(system, userMessage, context = {}) {
   );
 }
 
-module.exports = { streamProposal, buildMockProposal };
+function buildProviderAttempts(provider) {
+  if (provider.id === 'gemini') {
+    return [provider];
+  }
+
+  return (provider.models.length ? provider.models : [provider.primaryModel])
+    .filter(Boolean)
+    .map((model) => ({ ...provider, model }));
+}
+
+async function* streamProviderAttempt(provider, system, userMessage, options = {}) {
+  if (provider.id === 'gemini') {
+    yield* streamGeminiWithFallback(system, userMessage, options.context || {});
+    return;
+  }
+
+  if (provider.kind === 'ollama') {
+    yield* streamOllamaProvider(provider, {
+      system,
+      user: userMessage,
+      temperature: options.temperature,
+      maxOutputTokens: options.maxOutputTokens,
+      jsonMode: options.jsonMode,
+    });
+    return;
+  }
+
+  yield* streamOpenAiCompatibleProvider(provider, {
+    system,
+    user: userMessage,
+    temperature: options.temperature,
+    maxOutputTokens: options.maxOutputTokens,
+    jsonMode: options.jsonMode,
+  });
+}
+
+async function* streamLlmChat(system, userMessage, options = {}) {
+  const providers = getConfiguredLlmProviders();
+
+  if (!providers.length) {
+    throw new Error('No LLM provider is configured. Set GEMINI_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY, or OLLAMA_API_KEY.');
+  }
+
+  let lastError = null;
+  let lastProvider = null;
+
+  for (const provider of providers) {
+    const attempts = buildProviderAttempts(provider);
+
+    for (const attempt of attempts) {
+      let emittedChunk = false;
+      try {
+        for await (const chunk of streamProviderAttempt(attempt, system, userMessage, options)) {
+          emittedChunk = true;
+          yield chunk;
+        }
+
+        if (attempt.id !== 'gemini') {
+          reportProviderSuccess({
+            provider: attempt.id,
+            apiKeyFingerprint: fingerprintApiKey(attempt.apiKey),
+            userId: options.context?.userId,
+            model: attempt.model || attempt.primaryModel,
+            requestId: options.context?.requestId || null,
+            metadata: { path: options.path || 'streamLlmChat' },
+          });
+        }
+        return;
+      } catch (error) {
+        lastError = error;
+        lastProvider = attempt;
+
+        if (attempt.id !== 'gemini') {
+          reportProviderError({
+            provider: attempt.id,
+            apiKeyFingerprint: fingerprintApiKey(attempt.apiKey),
+            userId: options.context?.userId,
+            statusCode: Number(error?.status || 500),
+            isQuotaError: Number(error?.status) === 429,
+            message: error?.message || '',
+            model: attempt.model || attempt.primaryModel,
+            requestId: options.context?.requestId || null,
+            metadata: { path: options.path || 'streamLlmChat' },
+          });
+        }
+
+        if (emittedChunk) {
+          throw error;
+        }
+
+        const shouldTryNext =
+          attempt.id === 'gemini' ||
+          isAuthProviderError(error) ||
+          isRetryableProviderError(error);
+
+        console.log(
+          JSON.stringify({
+            event: 'LLM_PROVIDER_FALLBACK',
+            from: attempt.id,
+            model: attempt.model || attempt.primaryModel,
+            reason: error?.message || 'provider failed',
+            nextAllowed: shouldTryNext,
+          })
+        );
+
+        if (shouldTryNext) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(
+    `All configured LLM providers failed before streaming a complete response. Last provider: ${lastProvider?.label || lastProvider?.id || 'unknown'}. Last error: ${lastError?.message || 'unknown error'}`
+  );
+}
+
+async function* streamProposal(system, userMessage, context = {}) {
+  if (env.USE_FAKE_LLM) {
+    yield* streamMockProposal(userMessage);
+    return;
+  }
+
+  yield* streamLlmChat(system, userMessage, {
+    context,
+    jsonMode: true,
+    maxOutputTokens: 8000,
+    path: 'streamProposal',
+    temperature: 0.3,
+  });
+}
+
+module.exports = {
+  buildMockProposal,
+  streamLlmChat,
+  streamProposal,
+};

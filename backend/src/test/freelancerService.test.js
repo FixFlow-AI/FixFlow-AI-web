@@ -14,6 +14,8 @@ const {
   extractPersonalizationTokens,
   normalizeAgentConfig,
 } = require('../services/freelancer/freelancerService');
+const { evaluateProjectMatch } = require('../services/freelancer/profileMatchService');
+const { detectSource, normalizeOpportunity } = require('../services/freelancer/opportunityDiscoveryService');
 
 test('buildDemoSeed returns a complete deterministic freelancer workspace', () => {
   const seed = buildDemoSeed({ userId: 'user-1', email: 'founder@example.com', name: 'Founder' });
@@ -70,4 +72,40 @@ test('buildGeneratedProfiles uses accepted niche positioning', () => {
   assert.match(profiles.upwork.headline, /AI workflow engineering/i);
   assert.equal(profiles.upwork.rate, 155);
   assert.match(profiles.personal.tagline, /AI workflow engineering/i);
+});
+
+test('evaluateProjectMatch gates bids at the configured GitHub evidence threshold', () => {
+  const seed = buildDemoSeed({ userId: 'user-match', email: 'builder@example.com' });
+  const match = evaluateProjectMatch(
+    {
+      title: 'React Node AI workflow dashboard',
+      description: 'Need React, Node.js, MongoDB, AI workflow automation, SSE, and proposal dashboards.',
+      stack: ['React', 'Node.js', 'MongoDB', 'AI workflows'],
+    },
+    seed.profile,
+    seed.niches
+  );
+
+  assert.equal(match.eligible, true);
+  assert.equal(match.score >= match.threshold, true);
+  assert.ok(match.githubEvidence.length >= 1);
+});
+
+test('normalizeOpportunity maps marketplace URLs into lead-ready projects', () => {
+  const project = normalizeOpportunity(
+    {
+      title: 'Build a React proposal dashboard - Upwork',
+      url: 'https://www.upwork.com/jobs/~demo',
+      content: 'Need React, Node, MongoDB and AI automation.',
+      clientName: 'Client Team',
+    },
+    'tavily',
+    { profiles: { upwork: { rate: 120 } } }
+  );
+
+  assert.equal(detectSource(project.sourceUrl), 'upwork');
+  assert.equal(project.source, 'upwork');
+  assert.equal(project.company.name, 'Client Team');
+  assert.deepEqual(project.rateRange, [95, 155]);
+  assert.ok(project.company.stack.includes('react'));
 });

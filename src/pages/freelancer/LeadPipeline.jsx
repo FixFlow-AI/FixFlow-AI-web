@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { MessageSquareText, SendHorizonal, X } from 'lucide-react'
+import { ExternalLink, MessageSquareText, Search, SendHorizonal, ShieldCheck, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { FreelancerPageShell, ScoreRing, SkeletonPanel, StatusPill, TechnicalPanel } from '@/components/freelancer/FreelancerPrimitives'
 import { countWords, useFreelancerLeads, useFreelancerMutations } from '@/hooks/useFreelancer'
@@ -16,6 +16,9 @@ const columns = [
 ]
 
 function LeadCard({ lead, onSelect, onDragStart }) {
+  const matchScore = lead.match?.score ?? lead.score
+  const eligible = lead.match ? lead.match.eligible : matchScore >= 70
+
   return (
     <motion.button
       type="button"
@@ -34,6 +37,12 @@ function LeadCard({ lead, onSelect, onDragStart }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
+        <span className={eligible ? 'rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-100' : 'rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-muted-foreground'}>
+          {matchScore}% match
+        </span>
+        {lead.source && (
+          <span className="rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">{lead.source}</span>
+        )}
         {(lead.company.stack || []).slice(0, 3).map((item) => (
           <span key={item} className="rounded-full border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{item}</span>
         ))}
@@ -47,7 +56,10 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
 
   const draft = lead.draftMessage || {}
   const wordCount = draft.wordCount || countWords(draft.body)
-  const canSend = wordCount <= 150
+  const matchScore = lead.match?.score ?? lead.score
+  const threshold = lead.match?.threshold ?? 70
+  const eligible = lead.match ? lead.match.eligible : matchScore >= threshold
+  const canSend = wordCount <= 150 && eligible
 
   return (
     <motion.aside
@@ -79,10 +91,61 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
               <p className="text-xs text-muted-foreground">Rate range</p>
               <p className="font-medium">${lead.rateRange?.[0]}-{lead.rateRange?.[1]}/hr</p>
             </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Bid gate</p>
+              <p className={eligible ? 'font-medium text-emerald-200' : 'font-medium text-amber-100'}>{matchScore}% / {threshold}%</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Source</p>
+              <p className="font-medium uppercase">{lead.source || 'direct'}</p>
+            </div>
           </div>
+          {lead.sourceUrl && (
+            <a href={lead.sourceUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm text-primary hover:underline">
+              <ExternalLink className="h-4 w-4" />
+              View source
+            </a>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
             {(lead.company.stack || []).map((item) => (
               <span key={item} className="rounded-full border border-border bg-background/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">{item}</span>
+            ))}
+          </div>
+        </TechnicalPanel>
+
+        {lead.projectDescription && (
+          <TechnicalPanel className="p-4">
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">Client requirement</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">{lead.projectDescription}</p>
+          </TechnicalPanel>
+        )}
+
+        <TechnicalPanel className="p-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className={eligible ? 'h-4 w-4 text-emerald-300' : 'h-4 w-4 text-muted-foreground'} />
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">Eligibility evidence</p>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Matched skills</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(lead.match?.skillsMatched || []).map((item) => (
+                  <span key={item} className="rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-100">{item}</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Missing signals</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(lead.match?.skillsMissing || []).map((item) => (
+                  <span key={item} className="rounded-full border border-border bg-background/40 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{item}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            {(lead.match?.githubEvidence || []).map((item) => (
+              <div key={item} className="rounded-lg bg-background/40 px-3 py-2 text-sm text-muted-foreground">{item}</div>
             ))}
           </div>
         </TechnicalPanel>
@@ -112,7 +175,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
             </Button>
             <Button disabled={!canSend} isLoading={isSending} onClick={onSend}>
               <SendHorizonal className="h-4 w-4" />
-              Send
+              {eligible ? 'Send' : 'Blocked'}
             </Button>
           </div>
         </TechnicalPanel>
@@ -123,7 +186,7 @@ function LeadDetail({ lead, onClose, onDraft, onSend, isDrafting, isSending }) {
 
 function LeadPipeline() {
   const { data: leads = [], isLoading } = useFreelancerLeads()
-  const { updateLead, draftLead, sendLead } = useFreelancerMutations()
+  const { updateLead, draftLead, sendLead, discoverLeads } = useFreelancerMutations()
   const [selectedLead, setSelectedLead] = useState(null)
 
   const grouped = useMemo(() => {
@@ -168,11 +231,26 @@ function LeadPipeline() {
     }
   }
 
+  const handleDiscover = async () => {
+    try {
+      const result = await discoverLeads.mutateAsync({ limit: 8 })
+      toast.success(`${result.savedCount || 0} opportunities synced`)
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Unable to discover opportunities')
+    }
+  }
+
   return (
     <FreelancerPageShell
       data-testid="freelancer-leads"
       title="Lead Pipeline"
       description="AI-scored prospects move from discovery to contact, reply, and won revenue without leaving the freelancer workspace."
+      action={
+        <Button variant="outline" isLoading={discoverLeads.isPending} onClick={handleDiscover}>
+          <Search className="h-4 w-4" />
+          Find opportunities
+        </Button>
+      }
     >
       {isLoading ? (
         <div className="grid gap-4 lg:grid-cols-3">

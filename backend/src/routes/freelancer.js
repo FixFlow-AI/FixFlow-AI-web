@@ -10,11 +10,14 @@ const FreelancerProfile = require('../models/FreelancerProfile');
 const Workspace = require('../models/Workspace');
 const {
   buildDemoSeed,
+  discoverLeads,
   draftForLead,
   ensureFreelancerWorkspace,
   generateProfiles,
   getCollections,
   getFlowboard,
+  getSearchProviderStatus,
+  matchClientProject,
   scanGithub,
   sendLeadDraft,
   serialize,
@@ -26,6 +29,7 @@ const {
 const { createNotifications, buildWorkspaceRecipientIds } = require('../services/notifications/notificationService');
 const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
+const { getLlmProviderStatus } = require('../services/llm/providerRegistry');
 
 const router = express.Router();
 
@@ -65,6 +69,25 @@ const agentConfigSchema = z.object({
   outreachWriter: z.boolean().optional(),
   escrowWatcher: z.boolean().optional(),
   credentialMinter: z.boolean().optional(),
+});
+
+const discoverySchema = z.object({
+  query: z.string().trim().max(500).optional(),
+  limit: z.coerce.number().min(1).max(20).optional(),
+});
+
+const projectMatchSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  description: z.string().trim().min(10).max(5000).optional(),
+  role: z.string().trim().max(200).optional(),
+  stack: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+  company: z
+    .object({
+      name: z.string().trim().max(200).optional(),
+      mission: z.string().trim().max(1000).optional(),
+      stack: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+    })
+    .optional(),
 });
 
 function userFromRequest(req) {
@@ -228,6 +251,44 @@ router.get('/leads', async (req, res, next) => {
     const { leads } = await getCollections(userFromRequest(req));
     const status = typeof req.query.status === 'string' ? req.query.status : '';
     res.json({ leads: status ? leads.filter((lead) => lead.status === status) : leads });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/search/providers', async (req, res, next) => {
+  try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
+    res.json({ providers: getSearchProviderStatus() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/llm/providers', async (req, res, next) => {
+  try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
+    res.json({ providers: getLlmProviderStatus() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/leads/discover', async (req, res, next) => {
+  try {
+    await ensureFreelancerPermission(req, 'freelancer.manage');
+    const payload = discoverySchema.parse(req.body || {});
+    res.json(await discoverLeads(userFromRequest(req), payload));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/projects/match', async (req, res, next) => {
+  try {
+    await ensureFreelancerPermission(req, 'freelancer.view');
+    const payload = projectMatchSchema.parse(req.body || {});
+    res.json({ match: await matchClientProject(userFromRequest(req), payload) });
   } catch (error) {
     next(error);
   }

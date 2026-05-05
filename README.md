@@ -309,7 +309,7 @@ Every feature card in the proposal has a **colour-coded left accent**, a **confi
 | **Auth & Security** | JWT + bcryptjs + helmet + express-rate-limit | — | Access/refresh auth, hashing, headers, throttling |
 | **Data Layer** | Mongoose + MongoDB Atlas | 9.4 | Users, proposal metadata, portal metrics |
 | **File Parsing** | pdf-parse / mammoth | 2.4 / 1.12 | PDF/DOCX brief extraction |
-| **LLM Provider** | Google Gemini (`@google/genai`) | 1.50 | Structured JSON generation + chat refinement |
+| **LLM Provider** | Gemini + OpenRouter/xAI/Ollama fallback chain | Configurable | Structured JSON generation + chat refinement |
 | **Schema Validation** | Zod | 4.3 | Request validation + output contracts |
 | **Diff Engine** | jsondiffpatch | 0.7 | Version comparison for proposal history |
 | **PDF Engine** | Puppeteer | 24.42 | Browser-grade export rendering |
@@ -517,7 +517,7 @@ npm --prefix backend install
 
 # 4. Configure backend environment
 #   Copy backend/.env.example to backend/.env
-#   Fill required values (MongoDB URI, JWT secrets, S3 bucket, Gemini key)
+#   Fill required values (MongoDB URI, JWT secrets, S3 bucket, at least one LLM key)
 
 # 5. Start backend API
 npm --prefix backend run dev
@@ -544,6 +544,10 @@ npm run preview
 ### Environment URL Reference
 
 For the exact local, testing, and main URLs now used by the app, plus the GitHub OAuth callback and auth endpoint matrix, see [reference/ENVIRONMENT_URLS.md](/C:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/reference/ENVIRONMENT_URLS.md).
+
+### Provider Fallbacks
+
+The backend can run with `GEMINI_API_KEY` alone, but it now supports `LLM_PROVIDER_ORDER=gemini,openrouter,xai,ollama` plus `OPENROUTER_API_KEY`, `XAI_API_KEY`, and `OLLAMA_API_KEY` as backups. Freelancer opportunity discovery uses `OPPORTUNITY_SEARCH_PROVIDER_ORDER=apify,tavily,brave,serpapi`; Tavily or Brave is the simplest single-key web-search path, while Apify supports marketplace-specific actors for Upwork/Fiverr/Freelancer-style data. `BID_MATCH_THRESHOLD=70` gates bid sending against GitHub/profile evidence.
 
 ---
 

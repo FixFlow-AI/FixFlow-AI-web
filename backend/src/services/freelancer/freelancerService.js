@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { env } = require('../../config/env');
 const FreelancerProfile = require('../../models/FreelancerProfile');
 const Niche = require('../../models/Niche');
 const { Lead, leadStatuses } = require('../../models/Lead');
@@ -6,6 +7,8 @@ const Escrow = require('../../models/Escrow');
 const Invoice = require('../../models/Invoice');
 const Credential = require('../../models/Credential');
 const { BadRequestError, NotFoundError } = require('../../utils/errors');
+const { discoverOpportunities, getSearchProviderStatus } = require('./opportunityDiscoveryService');
+const { evaluateProjectMatch } = require('./profileMatchService');
 
 const DEFAULT_AGENT_CONFIG = {
   leadHunter: true,
@@ -345,6 +348,7 @@ async function getFlowboard(user) {
   const data = await getCollections(user);
   const acceptedNiches = data.niches.filter((niche) => niche.accepted);
   const qualifiedLeads = data.leads.filter((lead) => ['qualified', 'contacted', 'replied'].includes(lead.status));
+  const eligibleLeads = data.leads.filter((lead) => lead.match?.eligible || lead.score >= env.BID_MATCH_THRESHOLD);
   const activeEscrows = data.escrows.filter((escrow) =>
     escrow.milestones.some((milestone) => milestone.status === 'locked')
   );
@@ -361,12 +365,24 @@ async function getFlowboard(user) {
       nicheDepth: Math.round(acceptedNiches.reduce((sum, niche) => sum + niche.depth, 0) / Math.max(acceptedNiches.length, 1)),
       qualifiedLeads: qualifiedLeads.length,
       averageLeadScore: Math.round(data.leads.reduce((sum, lead) => sum + lead.score, 0) / Math.max(data.leads.length, 1)),
+      eligibleLeads: eligibleLeads.length,
       escrowBalance,
       reputationScore: Math.min(99, 70 + data.credentials.length * 8 + acceptedNiches.length * 3),
       activeAgents: Object.values(data.profile.agentConfig || {}).filter(Boolean).length,
     },
+    discovery: {
+      providers: getSearchProviderStatus(),
+      bidThreshold: env.BID_MATCH_THRESHOLD,
+      eligibleLeads: eligibleLeads.length,
+      lastDiscoveredAt: data.leads
+        .map((lead) => lead.discoveredAt)
+        .filter(Boolean)
+        .sort()
+        .at(-1) || null,
+    },
     tasks: [
       { id: 'task-niche', label: 'Accept or tune top niche positioning', status: acceptedNiches.length >= 2 ? 'done' : 'open' },
+      { id: 'task-discovery', label: 'Run live opportunity discovery', status: eligibleLeads.length ? 'done' : 'open' },
       { id: 'task-outreach', label: 'Review high-score outreach draft', status: qualifiedLeads.length ? 'open' : 'waiting' },
       { id: 'task-escrow', label: 'Confirm next escrow milestone', status: activeEscrows.length ? 'open' : 'waiting' },
     ],
@@ -421,12 +437,23 @@ async function sendLeadDraft(userId, leadId) {
     throw new NotFoundError('Lead not found');
   }
 
+  const threshold = Number(lead.match?.threshold || env.BID_MATCH_THRESHOLD || 70);
+  const matchScore = Number(lead.match?.score || lead.score || 0);
+  if (matchScore < threshold) {
+    throw new BadRequestError(`Bid blocked: this opportunity is ${matchScore}% matched, below the ${threshold}% eligibility threshold.`);
+  }
+
   if ((lead.draftMessage?.wordCount || 0) > 150) {
     throw new BadRequestError('Outreach draft must be 150 words or fewer before sending');
   }
 
   lead.status = 'contacted';
   lead.lastContactedAt = new Date();
+  lead.bid = {
+    ...(lead.bid?.toObject?.() || lead.bid || {}),
+    status: 'submitted',
+    submittedAt: lead.lastContactedAt,
+  };
   await lead.save();
   return { ok: true, sentAt: lead.lastContactedAt };
 }
@@ -511,6 +538,27 @@ async function scanGithub(user) {
   return serialize(profile).githubScan;
 }
 
+async function discoverLeads(user, options = {}) {
+  await ensureFreelancerWorkspace(user);
+  const result = await discoverOpportunities(user, options);
+
+  return {
+    ...result,
+    leads: result.leads.map(serialize),
+  };
+}
+
+async function matchClientProject(user, project = {}) {
+  await ensureFreelancerWorkspace(user);
+  const userId = user.userId || user._id?.toString();
+  const [profile, niches] = await Promise.all([
+    FreelancerProfile.findOne({ userId }).lean(),
+    Niche.find({ userId }).sort({ depth: -1 }).lean(),
+  ]);
+
+  return evaluateProjectMatch(project, profile || {}, niches || []);
+}
+
 module.exports = {
   DEFAULT_AGENT_CONFIG,
   buildDemoSeed,
@@ -518,12 +566,15 @@ module.exports = {
   buildGeneratedProfiles,
   buildOutreachDraft,
   countWords,
+  discoverLeads,
   draftForLead,
   ensureFreelancerWorkspace,
   extractPersonalizationTokens,
   generateProfiles,
   getCollections,
   getFlowboard,
+  getSearchProviderStatus,
+  matchClientProject,
   normalizeAgentConfig,
   scanGithub,
   sendLeadDraft,

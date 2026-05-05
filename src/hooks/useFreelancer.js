@@ -10,6 +10,8 @@ const freelancerKeys = {
   escrows: ['freelancer', 'escrows'],
   profile: ['freelancer', 'profile'],
   credentials: ['freelancer', 'credentials'],
+  searchProviders: ['freelancer', 'searchProviders'],
+  llmProviders: ['freelancer', 'llmProviders'],
 }
 
 function unwrap(key) {
@@ -65,6 +67,20 @@ export function useFreelancerCredentials() {
   })
 }
 
+export function useFreelancerSearchProviders() {
+  return useQuery({
+    queryKey: freelancerKeys.searchProviders,
+    queryFn: () => api.get('/freelancer/search/providers').then(unwrap('providers')),
+  })
+}
+
+export function useFreelancerLlmProviders() {
+  return useQuery({
+    queryKey: freelancerKeys.llmProviders,
+    queryFn: () => api.get('/freelancer/llm/providers').then(unwrap('providers')),
+  })
+}
+
 export function useFreelancerMutations() {
   const queryClient = useQueryClient()
   const invalidateAll = () => queryClient.invalidateQueries({ queryKey: freelancerKeys.all })
@@ -87,6 +103,15 @@ export function useFreelancerMutations() {
   const sendLead = useMutation({
     mutationFn: (id) => api.post(`/freelancer/leads/${id}/send`).then((response) => response.data),
     onSuccess: invalidateAll,
+  })
+
+  const discoverLeads = useMutation({
+    mutationFn: (payload = {}) => api.post('/freelancer/leads/discover', payload).then((response) => response.data),
+    onSuccess: invalidateAll,
+  })
+
+  const matchProject = useMutation({
+    mutationFn: (payload) => api.post('/freelancer/projects/match', payload).then(unwrap('match')),
   })
 
   const generateProfiles = useMutation({
@@ -117,12 +142,14 @@ export function useFreelancerMutations() {
 
   return {
     acceptNiche,
+    discoverLeads,
     disputeEscrow,
     draftLead,
     generateProfiles,
     mintCredential,
     releaseMilestone,
     sendLead,
+    matchProject,
     updateAgents,
     updateLead,
   }

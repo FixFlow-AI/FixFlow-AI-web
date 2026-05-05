@@ -11,6 +11,13 @@ const {
 } = require('./geminiGuard');
 const { geminiModelCoordinator } = require('./modelCoordinator');
 const { getGeminiClient } = require('./provider');
+const { getConfiguredLlmProviders } = require('./providerRegistry');
+const {
+  completeOllamaProvider,
+  completeOpenAiCompatibleProvider,
+  isAuthProviderError,
+  isRetryableProviderError,
+} = require('./providerRequests');
 const { reportProviderError, reportProviderSuccess } = require('../rateLimit/rateLimitMonitor');
 const { fingerprintApiKey } = require('../rateLimit/rateLimitStateStore');
 
@@ -42,7 +49,7 @@ async function runStructuredRequest({ model, system, user, jsonSchema, temperatu
   return extractJsonText(response);
 }
 
-async function generateStructuredJSON({
+async function generateGeminiStructuredJSON({
   system,
   user,
   jsonSchema,
@@ -164,6 +171,117 @@ async function generateStructuredJSON({
   }
 
   throw new Error('Structured Gemini generation failed without an explicit error.');
+}
+
+function buildProviderAttempts(provider) {
+  if (provider.id === 'gemini') {
+    return [provider];
+  }
+
+  return (provider.models.length ? provider.models : [provider.primaryModel])
+    .filter(Boolean)
+    .map((model) => ({ ...provider, model }));
+}
+
+async function runProviderStructuredJSON(provider, request) {
+  if (provider.id === 'gemini') {
+    return generateGeminiStructuredJSON(request);
+  }
+
+  const payload = {
+    system: request.system,
+    user: request.user,
+    temperature: request.temperature,
+    maxOutputTokens: request.maxOutputTokens,
+    jsonMode: true,
+  };
+
+  if (provider.kind === 'ollama') {
+    return completeOllamaProvider(provider, payload);
+  }
+
+  return completeOpenAiCompatibleProvider(provider, payload);
+}
+
+async function generateStructuredJSON({
+  system,
+  user,
+  jsonSchema,
+  temperature = 0.2,
+  maxOutputTokens = 4000,
+  context = {},
+}) {
+  const providers = getConfiguredLlmProviders();
+  if (!providers.length) {
+    throw new Error('No LLM provider is configured. Set GEMINI_API_KEY, OPENROUTER_API_KEY, XAI_API_KEY, or OLLAMA_API_KEY.');
+  }
+
+  const request = { system, user, jsonSchema, temperature, maxOutputTokens, context };
+  let lastError = null;
+  let lastProvider = null;
+
+  for (const provider of providers) {
+    for (const attempt of buildProviderAttempts(provider)) {
+      try {
+        const result = await runProviderStructuredJSON(attempt, request);
+
+        if (attempt.id !== 'gemini') {
+          reportProviderSuccess({
+            provider: attempt.id,
+            apiKeyFingerprint: fingerprintApiKey(attempt.apiKey),
+            userId: context.userId,
+            model: attempt.model || attempt.primaryModel,
+            requestId: context.requestId || null,
+            metadata: { path: 'generateStructuredJSON' },
+          });
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+        lastProvider = attempt;
+
+        if (attempt.id !== 'gemini') {
+          reportProviderError({
+            provider: attempt.id,
+            apiKeyFingerprint: fingerprintApiKey(attempt.apiKey),
+            userId: context.userId,
+            statusCode: Number(error?.status || 500),
+            isQuotaError: Number(error?.status) === 429,
+            message: error?.message || '',
+            model: attempt.model || attempt.primaryModel,
+            requestId: context.requestId || null,
+            metadata: { path: 'generateStructuredJSON' },
+          });
+        }
+
+        const shouldTryNext =
+          attempt.id === 'gemini' ||
+          isAuthProviderError(error) ||
+          isRetryableProviderError(error);
+
+        console.log(
+          JSON.stringify({
+            event: 'LLM_PROVIDER_FALLBACK',
+            from: attempt.id,
+            model: attempt.model || attempt.primaryModel,
+            reason: error?.message || 'provider failed',
+            nextAllowed: shouldTryNext,
+          })
+        );
+
+        if (shouldTryNext) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(
+    `All configured structured LLM providers failed. Last provider: ${lastProvider?.label || lastProvider?.id || 'unknown'}. Last error: ${lastError?.message || 'unknown error'}`
+  );
 }
 
 module.exports = {

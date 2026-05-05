@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BadgeDollarSign, BrainCircuit, CheckCircle2, RadioTower, ShieldCheck, Target } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { BadgeDollarSign, BrainCircuit, CheckCircle2, KeyRound, RadioTower, Search, ShieldCheck, Target } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { FreelancerPageShell, MetricTile, ScoreRing, SkeletonPanel, StatusPill, TechnicalPanel, TimelineRail } from '@/components/freelancer/FreelancerPrimitives'
-import { useFreelancerFlowboard } from '@/hooks/useFreelancer'
+import { useFreelancerFlowboard, useFreelancerMutations } from '@/hooks/useFreelancer'
 
 function LeadRow({ lead }) {
   return (
@@ -46,8 +47,23 @@ function NicheBar({ niche }) {
   )
 }
 
+function ProviderPill({ provider }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-background/35 px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{provider.label}</p>
+        <p className="truncate font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{provider.detail}</p>
+      </div>
+      <span className={provider.configured ? 'font-mono text-xs text-emerald-200' : 'font-mono text-xs text-muted-foreground'}>
+        {provider.configured ? 'Ready' : 'Missing key'}
+      </span>
+    </div>
+  )
+}
+
 function FlowBoard() {
   const { data, isLoading, isError, refetch } = useFreelancerFlowboard()
+  const { discoverLeads } = useFreelancerMutations()
 
   if (isLoading) {
     return (
@@ -74,9 +90,20 @@ function FlowBoard() {
   }
 
   const metrics = data.metrics || {}
+  const discovery = data.discovery || {}
   const topLeads = (data.leads || []).slice(0, 4)
   const acceptedNiches = (data.niches || []).filter((niche) => niche.accepted).slice(0, 3)
   const escrow = data.escrows?.[0]
+  const providers = discovery.providers || []
+
+  const handleDiscover = async () => {
+    try {
+      const result = await discoverLeads.mutateAsync({ limit: 8 })
+      toast.success(`${result.savedCount || 0} opportunities synced`)
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Unable to discover opportunities')
+    }
+  }
 
   return (
     <FreelancerPageShell
@@ -86,6 +113,10 @@ function FlowBoard() {
       action={
         <div className="flex flex-wrap gap-3">
           <Link to="/freelancer/onboarding"><Button variant="outline">Run scan</Button></Link>
+          <Button variant="outline" isLoading={discoverLeads.isPending} onClick={handleDiscover}>
+            <Search className="h-4 w-4" />
+            Find opportunities
+          </Button>
           <Link to="/freelancer/leads"><Button>Open pipeline</Button></Link>
         </div>
       }
@@ -93,9 +124,22 @@ function FlowBoard() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricTile label="Niche depth" value={metrics.nicheDepth || 0} detail="Accepted positioning strength" icon={BrainCircuit} />
         <MetricTile label="Qualified leads" value={metrics.qualifiedLeads || 0} detail={`${metrics.averageLeadScore || 0} average score`} icon={Target} tone="emerald" />
+        <MetricTile label="Eligible bids" value={metrics.eligibleLeads || 0} detail={`${discovery.bidThreshold || 70}% GitHub match gate`} icon={KeyRound} tone="emerald" />
         <MetricTile label="Escrow locked" value={`$${(metrics.escrowBalance || 0).toLocaleString()}`} detail="Milestone funds in motion" icon={BadgeDollarSign} />
-        <MetricTile label="Reputation" value={metrics.reputationScore || 0} detail={`${metrics.activeAgents || 0} agents enabled`} icon={ShieldCheck} tone="emerald" />
       </div>
+
+      <TechnicalPanel className="p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-primary">Search API readiness</p>
+            <h2 className="mt-1 text-xl font-semibold">Provider chain</h2>
+          </div>
+          <ShieldCheck className="h-5 w-5 text-primary" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {providers.map((provider) => <ProviderPill key={provider.id} provider={provider} />)}
+        </div>
+      </TechnicalPanel>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <TechnicalPanel className="p-5">
