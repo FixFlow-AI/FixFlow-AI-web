@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixFlowAI — 10X Master Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090d;
+    --surface: #0f1117;
+    --surface-2: #161923;
+    --border: #1e2535;
+    --border-accent: #2a3550;
+    --text: #e8eaf0;
+    --muted: #6b7a9a;
+    --accent: #4f8eff;
+    --accent-glow: rgba(79, 142, 255, 0.15);
+    --gold: #f5c842;
+    --gold-glow: rgba(245, 200, 66, 0.12);
+    --red: #ff4f6b;
+    --green: #3dffa0;
+    --green-dim: rgba(61, 255, 160, 0.08);
+    --purple: #b06cff;
+    --orange: #ff8c42;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-label::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 8vw, 96px);
+    letter-spacing: 0.02em;
+    line-height: 0.9;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .hero h1 span {
+    color: var(--gold);
+  }
+
+  .hero-sub {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--muted);
+    margin: 20px 0 32px;
+    line-height: 1.5;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .meta-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    border-radius: 2px;
+  }
+
+  /* SECTION STRUCTURE */
+  .section {
+    padding: 64px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .section-num {
+    color: var(--accent);
+    margin-right: 8px;
+  }
+
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: #fff;
+    margin-bottom: 32px;
+  }
+
+  h3 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 32px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h3::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  p { color: var(--muted); margin-bottom: 16px; }
+  p strong { color: var(--text); font-weight: 500; }
+  p em { color: var(--gold); font-style: normal; }
+
+  /* VERDICT BOX */
+  .verdict-box {
+    background: linear-gradient(135deg, #0b1428 0%, #0d1a35 100%);
+    border: 1px solid var(--accent);
+    border-left: 3px solid var(--accent);
+    padding: 28px 32px;
+    margin: 32px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verdict-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .verdict-box p { color: var(--text); margin: 0; font-size: 16px; line-height: 1.7; }
+
+  /* GOLD BOX */
+  .gold-box {
+    background: var(--gold-glow);
+    border: 1px solid rgba(245, 200, 66, 0.25);
+    border-left: 3px solid var(--gold);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+
+  .gold-box p { color: #d4a820; margin: 0; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 24px 0; }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .hero { padding: 40px 0 32px; }
+    .container { padding: 0 20px; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+    position: relative;
+  }
+
+  .card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.04em;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .card p { font-size: 12px; color: var(--muted); margin: 0; }
+
+  .card.accent { border-color: var(--accent); background: var(--accent-glow); }
+  .card.gold { border-color: rgba(245, 200, 66, 0.3); background: var(--gold-glow); }
+  .card.green { border-color: rgba(61, 255, 160, 0.2); background: var(--green-dim); }
+
+  /* PILL TAGS */
+  .tag { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; padding: 3px 8px; border-radius: 2px; margin: 2px; }
+  .tag-kill { background: rgba(255, 79, 107, 0.12); color: var(--red); border: 1px solid rgba(255, 79, 107, 0.25); }
+  .tag-keep { background: rgba(61, 255, 160, 0.08); color: var(--green); border: 1px solid rgba(61, 255, 160, 0.2); }
+  .tag-double { background: rgba(79, 142, 255, 0.1); color: var(--accent); border: 1px solid rgba(79, 142, 255, 0.25); }
+
+  /* NUMBERED LIST */
+  .num-list { list-style: none; counter-reset: item; }
+  .num-list li {
+    counter-increment: item;
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .num-list li:last-child { border-bottom: none; }
+  .num-list li::before {
+    content: counter(item, decimal-leading-zero);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    min-width: 28px;
+    padding-top: 2px;
+  }
+  .num-list li p { margin: 0; font-size: 14px; }
+  .num-list li strong { color: var(--text); }
+
+  /* TIMELINE */
+  .timeline { margin: 24px 0; }
+  .tl-phase {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .tl-phase::before {
+    content: '';
+    position: absolute;
+    left: 139px;
+    top: 0;
+    bottom: -24px;
+    width: 1px;
+    background: var(--border);
+  }
+  .tl-phase:last-child::before { display: none; }
+  .tl-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: right;
+    padding-right: 24px;
+    padding-top: 4px;
+  }
+  .tl-label .phase-name { color: var(--gold); display: block; font-size: 12px; margin-bottom: 4px; }
+  .tl-label .phase-time { color: var(--muted); }
+  .tl-content { padding-left: 24px; border-left: 2px solid var(--accent); }
+  .tl-content ul { list-style: none; }
+  .tl-content ul li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+  }
+  .tl-content ul li::before { content: '→'; color: var(--accent); flex-shrink: 0; }
+  .tl-content ul li strong { color: var(--text); }
+
+  /* MOAT TABLE */
+  .moat-table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 13px; }
+  .moat-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .moat-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--muted);
+  }
+  .moat-table td:first-child { color: var(--text); font-weight: 500; }
+  .moat-table tr:last-child td { border-bottom: none; }
+  .moat-table tr:hover td { background: var(--surface); }
+
+  /* STRENGTH BAR */
+  .strength-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+  .strength-label { font-size: 12px; color: var(--muted); min-width: 160px; }
+  .strength-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .strength-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .strength-val { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); min-width: 32px; text-align: right; }
+
+  /* FEATURE STACK */
+  .feature-item {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .feature-item:last-child { border-bottom: none; }
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .feature-title { font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: 14px; }
+  .feature-desc { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.6; }
+  .feature-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 6px;
+    display: block;
+  }
+
+  /* NORTH STAR */
+  .north-star {
+    background: linear-gradient(135deg, #0a0f1a 0%, #0d1428 50%, #0a0f1a 100%);
+    border: 1px solid var(--border-accent);
+    padding: 48px;
+    text-align: center;
+    margin: 32px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .north-star::before {
+    content: '★';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 80px;
+    color: var(--gold);
+    opacity: 0.06;
+  }
+  .north-star-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(18px, 3vw, 26px);
+    color: var(--text);
+    line-height: 1.5;
+    font-style: italic;
+    position: relative;
+  }
+  .north-star-text em { color: var(--gold); font-style: normal; }
+
+  /* KILL/KEEP */
+  .kkd-row { display: flex; gap: 16px; margin: 20px 0; flex-wrap: wrap; }
+  .kkd-col { flex: 1; min-width: 200px; }
+  .kkd-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .kkd-header.kill { color: var(--red); background: rgba(255, 79, 107, 0.08); border-left: 2px solid var(--red); }
+  .kkd-header.keep { color: var(--green); background: rgba(61, 255, 160, 0.06); border-left: 2px solid var(--green); }
+  .kkd-header.double { color: var(--accent); background: var(--accent-glow); border-left: 2px solid var(--accent); }
+  .kkd-col ul { list-style: none; }
+  .kkd-col ul li { font-size: 13px; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .kkd-col ul li::before { color: var(--muted); flex-shrink: 0; }
+  .kkd-col.kill ul li::before { content: '✕'; color: var(--red); }
+  .kkd-col.keep ul li::before { content: '✓'; color: var(--green); }
+  .kkd-col.double ul li::before { content: '↑↑'; color: var(--accent); }
+
+  /* FLYWHEEL */
+  .flywheel {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 24px 0;
+    border: 1px solid var(--border);
+  }
+  .fw-step {
+    padding: 20px;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .fw-step:last-child { border-right: none; }
+  .fw-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--border-accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .fw-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .fw-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .fw-arrow {
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 16px;
+    z-index: 1;
+    background: var(--bg);
+    padding: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .flywheel { grid-template-columns: 1fr 1fr; }
+    .fw-step:nth-child(2) { border-right: none; }
+    .fw-step:nth-child(3) { border-right: 1px solid var(--border); border-top: 1px solid var(--border); }
+    .fw-step:nth-child(4) { border-top: 1px solid var(--border); }
+    .fw-arrow { display: none; }
+    .north-star { padding: 32px 24px; }
+    .tl-phase { grid-template-columns: 1fr; }
+    .tl-phase::before { display: none; }
+    .tl-label { text-align: left; padding-right: 0; }
+  }
+
+  /* FINAL VERDICT */
+  .final-verdict {
+    padding: 48px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .final-verdict h2 {
+    font-size: clamp(32px, 5vw, 60px);
+    margin-bottom: 24px;
+  }
+
+  .final-verdict p {
+    max-width: 620px;
+    margin: 0 auto 16px;
+    font-size: 15px;
+    color: var(--muted);
+  }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
+    margin: 32px 0;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  .inline-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 2px;
+    color: var(--purple);
+  }
+
+  /* animate on scroll placeholder - static for now */
+  .fade-in { opacity: 1; }
+
+  .accent-text { color: var(--accent); }
+  .gold-text { color: var(--gold); }
+  .red-text { color: var(--red); }
+  .green-text { color: var(--green); }
+  .purple-text { color: var(--purple); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">Senior Product Strategy · AI Architecture · Startup CTO Review</div>
+    <h1>FIX<span>FLOW</span>AI<br>10X PLAN</h1>
+    <div class="hero-sub">From proposal generator to category-defining revenue intelligence platform.</div>
+    <div class="hero-meta">
+      <span class="meta-chip">Scope: Global Domination</span>
+      <span class="meta-chip">Horizon: 18 months</span>
+      <span class="meta-chip">Stack: React · Node.js · AWS · Gemini · Solidity</span>
+      <span class="meta-chip">Author: Strategic Synthesis</span>
+    </div>
+  </div>
+
+  <!-- NORTH STAR VISION -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">01</span> North Star Vision</div>
+    <h2>THE DESTINATION</h2>
+
+    <div class="north-star">
+      <div class="north-star-text">
+        FixFlowAI becomes the <em>revenue intelligence layer</em> for AI-era service businesses —
+        the system that knows what wins, auto-generates winning proposals, closes faster,
+        and learns from every outcome across every agency on the platform.
+      </div>
+    </div>
+
+    <p><strong>What this means concretely in 3–5 years:</strong></p>
+
+    <ul class="num-list">
+      <li><p><strong>Not a proposal writer.</strong> Every competitor is a proposal writer. FixFlowAI is a <em>deal prediction and optimization system</em> that happens to generate proposals. The product tells you what to propose, how to price it, which risks will kill the deal, and when to follow up — because it has seen 100,000 outcomes.</p></li>
+      <li><p><strong>Network effect locked.</strong> The platform's Agency Brain, calibrated across thousands of agencies with opt-in anonymous outcome data, creates the world's first <em>proposal intelligence commons</em>. The more agencies use it, the smarter every agency's proposals get. Impossible to replicate from scratch.</p></li>
+      <li><p><strong>Client-side gravity.</strong> Clients who interact with FixFlowAI portals, sign proposals, leave feedback, and make decisions on the platform create a bilateral network. Agencies bring clients; clients expect FixFlowAI-grade proposals. A new pull-loop that Notion, Jasper, and Proposify cannot match.</p></li>
+      <li><p><strong>Autonomous delivery.</strong> By year 3, the "generate proposal" step is a fallback. The system has enough agency context to proactively draft proposals for inbound briefs, notify the team, and request approval — not the other way around.</p></li>
+      <li><p><strong>Vertical dominance, not horizontal sprawl.</strong> Own the full revenue cycle for service businesses: brief → proposal → negotiation → delivery → payment → reputation. Not a general AI assistant. Not a document generator. A specialized command center for selling professional services.</p></li>
+    </ul>
+  </div>
+
+  <!-- HIDDEN LEVERAGE POINTS -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">02</span> Hidden Leverage · Codebase-Specific</div>
+    <h2>WHAT YOU ALREADY HAVE THAT OTHERS DON'T</h2>
+
+    <p>Most strategic analysis ignores the actual code. Here's what's uniquely exploitable in your architecture right now:</p>
+
+    <div class="feature-item">
+      <div class="feature-icon">⚡</div>
+      <div>
+        <div class="feature-title">Schema-First JSON Pipeline is an Architectural Moat</div>
+        <p class="feature-desc">Your <span class="inline-code">promptBuilder.js</span> + <span class="inline-code">jsonValidator.js</span> + Zod schema layer means proposal data is structured from birth — not extracted from prose after. This enables diffs (<span class="inline-code">jsondiffpatch</span>), versioning (S3 snapshots), analytics, and section-level mutations that text-first tools (Jasper, Notion AI) literally cannot do architecturally. <strong>This is not a feature — it's a paradigm.</strong> Lean into it hard.</p>
+        <span class="feature-tag">Leverage: Structural superiority</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🧠</div>
+      <div>
+        <div class="feature-title">Confidence Grid is a Dormant Calibration Engine</div>
+        <p class="feature-desc">Right now the Confidence Grid shows AI certainty scores. But your win/loss data + <span class="inline-code">outcomeService.js</span> + <span class="inline-code">agencyBrainService.js</span> creates the inputs for something far bigger: a <em>confidence calibration loop</em> — did features scored at 80% confidence actually ship on time? Did high-risk proposals get lost? Nobody in this market has this feedback loop architecturally wired up. You do.</p>
+        <span class="feature-tag">Leverage: Feedback loop → Prediction engine</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">👁️</div>
+      <div>
+        <div class="feature-title">Client Portal Telemetry is a Dormant CRM</div>
+        <p class="feature-desc">Your <span class="inline-code">publicPortal.js</span> tracks section views, access events, feedback, and PIN flows. You're a few analytics events away from knowing: "Client spent 4 minutes on pricing, skipped timeline, came back twice." That's deal intent data that Salesforce charges $50/seat/month for and still gets wrong. <strong>You have this natively baked in.</strong></p>
+        <span class="feature-tag">Leverage: Sales intelligence nobody else has</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">⚖️</div>
+      <div>
+        <div class="feature-title">TriProposal is Actually a Pricing Optimizer</div>
+        <p class="feature-desc">Lean/Standard/Premium from one brief isn't just "multiple proposals" — it's a <em>value-based pricing engine</em>. When you layer outcome data on top (which strategy tier wins most often for which industry/budget bracket), you have an algorithmic pricing advisor. No competitor offers this. Proposify sells templates. You're selling win-rate optimization.</p>
+        <span class="feature-tag">Leverage: Pricing intelligence layer</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🔗</div>
+      <div>
+        <div class="feature-title">The Freelancer OS is a Wedge, Not a Distraction</div>
+        <p class="feature-desc">Right now Freelancer OS is ~30% demo-backed (<span class="inline-code">buildDemoSeed</span>). But the <em>data models</em> are real: Lead, Niche, Escrow, Credential, Invoice. The strategic move is to keep these models hardened but hide the UX behind a separate product tier ("FixFlow Solo") and let the agency product breathe. <strong>Don't kill it — defer it.</strong></p>
+        <span class="feature-tag">Leverage: Future product line, not current distraction</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🏗️</div>
+      <div>
+        <div class="feature-title">ECS + Amplify CI/CD is Enterprise-Ready Infrastructure</div>
+        <p class="feature-desc">Your <span class="inline-code">cicd.yml</span> is impressively production-grade: parallel build/deploy, ECR image pinning, SSM parameter sync, Amplify branch deployment with status polling, ECS service stability waits, CloudFront health verification. Most YC-stage startups don't have this. <strong>You're operating infrastructure 12 months ahead of your product stage.</strong> Exploit this for enterprise sales ("SOC 2 ready architecture") immediately.</p>
+        <span class="feature-tag">Leverage: Credibility signal for enterprise buyers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10X PRODUCT STRATEGY -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">03</span> 10X Product Transformation</div>
+    <h2>STRATEGIC PILLARS</h2>
+
+    <h3>Pillar 1 · From Generator to Prediction Engine</h3>
+    <p><strong>Current state:</strong> You generate structured proposals from briefs. <strong>10X state:</strong> Before generating, the system tells you "based on 847 similar briefs, agencies with your profile win 61% of these at $28–$38K. Confidence is low on the third-party API integration — that section causes scope creep in 73% of cases." <em>That's not a proposal generator. That's a deal consultant.</em></p>
+
+    <div class="verdict-box">
+      <p>The migration path: <code style="color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 13px;">BriefScore → ConfidenceGrid → OutcomeData → AgencyBrain → PredictionLayer.</code> Every component exists. The loop is not yet closed. Close the loop and you have a compounding moat that improves every quarter.</p>
+    </div>
+
+    <h3>Pillar 2 · Client Portal → Deal Room</h3>
+    <p><strong>Current state:</strong> Tokenized read-only proposal view with PIN/expiry. <strong>10X state:</strong> A real-time collaborative deal room where the client can annotate sections, counter-propose scope, request modifications, and e-sign — while you get real-time engagement analytics, AI-generated negotiation suggestions, and automated follow-up triggers.</p>
+    <p>This creates a <strong>bilateral network effect</strong>: agencies bring clients onto FixFlowAI, clients who experience deal rooms prefer agencies who use FixFlowAI, those agencies refer other agencies. Your growth loop becomes structural.</p>
+
+    <h3>Pillar 3 · Agency Brain → Cross-Agency Intelligence Network</h3>
+    <p><strong>Current state:</strong> Agency Brain extracts patterns from one agency's history. <strong>10X state:</strong> Opt-in anonymized outcome data from all agencies on the platform creates a collective intelligence layer. "Agencies targeting fintech SaaS with teams under 5 win 44% of proposals under $50K but lose 71% of proposals over $100K." <em>No tool on earth has this data today.</em></p>
+    <p>This is your <strong>unfair advantage</strong>. Proposify has proposal templates. Jasper has writing. You will have win intelligence. The moat deepens every month.</p>
+
+    <h3>Pillar 4 · Single Product → Tiered Platform</h3>
+    <div class="grid-3">
+      <div class="card accent">
+        <div class="card-label">Core · Agencies</div>
+        <div class="card-value">STUDIO</div>
+        <p>Full proposal lifecycle, team workspace, Agency Brain, TriProposal, Deal Room portals.</p>
+      </div>
+      <div class="card gold">
+        <div class="card-label">Freelancers · Solo</div>
+        <div class="card-value">SOLO</div>
+        <p>Freelancer OS: lead discovery, outreach, escrow. Lighter proposal flow. GitHub identity.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">Enterprise</div>
+        <div class="card-value">SCALE</div>
+        <p>SSO, white-label, audit logs, custom AI fine-tuning, dedicated Agency Brain silo, SLA.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEXT-GEN FEATURES -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">04</span> Next-Gen Feature Stack</div>
+    <h2>NON-OBVIOUS, HIGH-LEVERAGE FEATURES</h2>
+
+    <p>Not "dark mode" or "more integrations." These are <strong>category-defining primitives</strong> that compound your moat:</p>
+
+    <div class="feature-item">
+      <div class="feature-icon">🎯</div>
+      <div>
+        <div class="feature-title">WinScore™ — Pre-Generation Deal Probability</div>
+        <p class="feature-desc">Before the user hits "Generate," show a WinScore based on brief quality, industry match, budget signals, and historical outcomes from Agency Brain. "Briefs like this win 58% of the time at your price point. Three signals are pulling the score down: vague timeline, no success criteria, first-time client type." This makes BriefScore 10x more actionable and creates a coaching loop that improves every proposal before generation.</p>
+        <span class="feature-tag">Built on: BriefScore + AgencyBrain + OutcomeService</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🔭</div>
+      <div>
+        <div class="feature-title">Scope Creep Radar</div>
+        <p class="feature-desc">Post-generation, a "Scope Creep Probability" overlay on the Confidence Grid. Features that historically caused scope expansion in similar projects are flagged with "⚠ 68% of agencies reported scope creep on this feature type." This is genuinely novel — no proposal tool does risk-calibrated estimation with historical validation. It directly addresses why agencies lose margin, making it a must-have, not a nice-to-have.</p>
+        <span class="feature-tag">Built on: AgencyPattern + ConfidenceGrid + effortCalibrationDelta</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">💬</div>
+      <div>
+        <div class="feature-title">Deal Room — Client-Side Collaboration</div>
+        <p class="feature-desc">Transform the public portal from read-only to collaborative. Client sees the proposal, can highlight a section and leave a comment ("Can we reduce Phase 2 scope?"), and the agency gets an AI-drafted response suggestion. Client can accept a TriProposal tier. Client can e-sign. Every interaction becomes a signal for follow-up automation. This converts your portal from a PDF replacement into a sales closing tool.</p>
+        <span class="feature-tag">Built on: PublicPortal + PortalTelemetry + ProposalChat</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">📡</div>
+      <div>
+        <div class="feature-title">Proposal Intelligence Feed</div>
+        <p class="feature-desc">A weekly/daily intelligence digest pushed to the workspace: "Your React dashboard proposals win 22% more often when timeline is under 8 weeks. Your fintech proposals lose at pricing 60% of the time. Your highest confidence proposals have 41% better win rate." Proactive, personalized, compounding. Delivered via email, Slack, and in-app. This makes FixFlowAI sticky even when users aren't actively generating proposals.</p>
+        <span class="feature-tag">Built on: Analytics + AgencyBrain + Slack integration</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🤖</div>
+      <div>
+        <div class="feature-title">Proposal Autopilot — Async Agent Mode</div>
+        <p class="feature-desc">Agency uploads a brief and selects "Autopilot." The system runs BriefScore, asks 3 clarifying questions to the client via email, waits for responses, generates proposal, sends to workspace for approval, and posts to Slack — all unattended. This is a true agentic workflow that directly saves hours. Priced as a premium feature. It's the most powerful use of your existing SSE streaming, Slack integration, and email infrastructure.</p>
+        <span class="feature-tag">Built on: All existing services orchestrated as an agent graph</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🏷️</div>
+      <div>
+        <div class="feature-title">White-Label Proposal Experience</div>
+        <p class="feature-desc">Agency clients see a portal branded as "Acme Agency's Proposal System," not FixFlowAI. The proposal export, portal URL, and email delivery all carry the agency's brand. This is the highest-converting enterprise feature — agencies pay a premium to give their clients a premium experience. The "Powered by FixFlowAI" attribution in the footer (togglable) becomes organic growth for you.</p>
+        <span class="feature-tag">Built on: Puppeteer export + portal tokens + brand templates</span>
+      </div>
+    </div>
+
+    <div class="feature-item">
+      <div class="feature-icon">🔑</div>
+      <div>
+        <div class="feature-title">Proposal API — Make Your Engine Embeddable</div>
+        <p class="feature-desc">Expose your core pipeline as an API: POST a brief, get back structured proposal JSON. Agencies build their own proposal UIs on top. CRM vendors embed FixFlowAI's generation into HubSpot, Pipedrive, Monday.com. This is your PLG distribution strategy for the enterprise tier and your API revenue line. The schema-first architecture makes this trivially clean to expose.</p>
+        <span class="feature-tag">Built on: /api/generate + /api/proposals — already REST-clean</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI EVOLUTION -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">05</span> AI Architecture Evolution</div>
+    <h2>FROM TOOL TO AUTONOMOUS SYSTEM</h2>
+
+    <div class="timeline">
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">CURRENT</span>
+          <span class="phase-time">Now</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Single-shot generation:</strong> brief → Gemini → schema-validated JSON</li>
+            <li><strong>Chat mutation:</strong> intent classification → section targeting → merge</li>
+            <li><strong>Agency Brain:</strong> pattern extraction from historical proposals</li>
+            <li><strong>Provider fallback:</strong> Gemini → OpenRouter → Ollama</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">PHASE 2</span>
+          <span class="phase-time">3–9m</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Prediction injection:</strong> Agency Brain patterns injected into prompt context at generation time — not just calibration, but active priors</li>
+            <li><strong>Multi-turn clarification agent:</strong> before generating, system asks 2–3 targeted questions based on brief gaps detected by BriefScore</li>
+            <li><strong>Confidence calibration model:</strong> compare predicted confidence vs. actual win/loss outcomes, retrain the scoring prompt quarterly</li>
+            <li><strong>Evaluation harness:</strong> automated proposal quality scoring against a rubric — run on every generated proposal, log results</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">PHASE 3</span>
+          <span class="phase-time">9–18m</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Agentic proposal graph:</strong> Brief intake → BriefScore → Clarification → Research (web) → Generation → Review request → Client delivery — orchestrated as a named agent, no human required per step</li>
+            <li><strong>Cross-agency intelligence:</strong> anonymized opt-in outcome data aggregated into a shared model; every agency's Agency Brain improves from the collective</li>
+            <li><strong>Fine-tuned domain model:</strong> fine-tune Gemini (or equivalent) on your proprietary proposal corpus for superior JSON quality and domain accuracy</li>
+            <li><strong>Delivery risk prediction:</strong> post-win, the system monitors delivery vs. proposal estimates and alerts when a project is deviating from its confidence profile</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">PHASE 4</span>
+          <span class="phase-time">18m+</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Autonomous proposal agent:</strong> receives brief via email/webhook, drafts proposal, seeks internal approval, sends to client — fully unattended</li>
+            <li><strong>Negotiation AI:</strong> during deal room phase, AI drafts counter-proposal language, suggests concessions with win-rate impact analysis</li>
+            <li><strong>Revenue forecasting:</strong> predict deal close probability and revenue pipeline from current proposal portfolio</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="gold-box">
+      <p><strong>Critical AI architecture decision:</strong> Your current LLM layer is provider-agnostic (<span class="inline-code">client.js</span> with Gemini/OpenRouter/xAI/Ollama). Keep this. But add a dedicated eval harness that scores every generation against a quality rubric and logs to MongoDB. Without eval data, you cannot prove improvement. With eval data, you have a proprietary benchmark for proposal quality — a product story no competitor can match.</p>
+    </div>
+  </div>
+
+  <!-- UX EVOLUTION -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">06</span> UX Evolution</div>
+    <h2>FROM UI TO DECISION ENGINE</h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">Current UX Model</div>
+        <div class="card-value" style="font-size: 18px; color: var(--muted);">Tool</div>
+        <p>User initiates every action. Generate → Review → Export. System is reactive. Each step requires explicit user intent. High-value features (Agency Brain, Analytics) are buried in nav.</p>
+      </div>
+      <div class="card accent">
+        <div class="card-label">Target UX Model</div>
+        <div class="card-value" style="font-size: 18px;">Command Center</div>
+        <p>System surfaces relevant intelligence proactively. Dashboard leads with actionable insights: "3 proposals need follow-up," "Your fintech win rate dropped 12%," "High-confidence brief ready to generate."</p>
+      </div>
+    </div>
+
+    <h3>Specific UX Transformations</h3>
+
+    <ul class="num-list">
+      <li><p><strong>Dashboard → Intelligence Hub.</strong> Replace the proposal list with a live revenue pulse: pipeline value, deals at risk, proposals overdue for follow-up, WinScore on pending deals, one-click AI-drafted follow-up messages. This makes opening FixFlowAI a daily habit, not a "when I need to write a proposal" event.</p></li>
+      <li><p><strong>Brief intake → guided interview.</strong> Instead of "paste your brief," walk the user through 5 structured questions if no file is uploaded. BriefScore improves automatically because the intake is structured. Reduces garbage-in dramatically and is faster than writing a 500-word brief for most users.</p></li>
+      <li><p><strong>Confidence Grid → interactive review layer.</strong> Every confidence bar should be tappable: click it and get "This score is based on 34 similar projects. 8 of them had scope creep. Here's what to clarify with the client." Transforms a visual indicator into a coaching moment.</p></li>
+      <li><p><strong>Proposal chat → negotiation mode.</strong> Add an explicit "Negotiation Mode" toggle. Client says "I want this for $20K less." You click Negotiation Mode, paste the client's response, and the AI drafts a counter-proposal with options. This is the missing link between generation and close.</p></li>
+      <li><p><strong>Analytics → proactive briefing.</strong> The Analytics page is currently pull (you go look). Add a push layer: every Monday, a "Weekly Proposal Intelligence" email with 3 data-backed actions. This is retention engineering disguised as product value.</p></li>
+    </ul>
+  </div>
+
+  <!-- MOAT DESIGN -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">07</span> Irreplaceability Blueprint</div>
+    <h2>MOAT DESIGN</h2>
+
+    <table class="moat-table">
+      <thead>
+        <tr>
+          <th>Moat Type</th>
+          <th>Mechanism</th>
+          <th>Time to Build</th>
+          <th>Defensibility</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Data Network Effect</td>
+          <td>Cross-agency outcome data feeds Agency Brain. More agencies → better predictions → more agencies. Opt-in, anonymized. Compounding.</td>
+          <td>12–18 months</td>
+          <td class="green-text">Extreme</td>
+        </tr>
+        <tr>
+          <td>Switching Cost (Workflow)</td>
+          <td>Agency Brain accumulates your estimation history, win patterns, client preferences, team styles. Switching means starting from zero on institutional knowledge.</td>
+          <td>3–6 months per user</td>
+          <td class="green-text">High</td>
+        </tr>
+        <tr>
+          <td>Bilateral Network Effect</td>
+          <td>Clients who interact with Deal Rooms expect them. Agencies using FixFlowAI win more pitches. Clients push other vendors to adopt FixFlowAI.</td>
+          <td>9–18 months</td>
+          <td class="accent-text">High</td>
+        </tr>
+        <tr>
+          <td>Schema Architecture</td>
+          <td>Structured proposal data enables diffs, analytics, mutations, calibration, API embedding. Text-first competitors cannot match these capabilities without architectural rewrites.</td>
+          <td>Already built</td>
+          <td class="accent-text">Medium-High</td>
+        </tr>
+        <tr>
+          <td>Calibration Model</td>
+          <td>Confidence scores validated against outcomes. The longer an agency uses FixFlowAI, the more accurate its confidence scores become. A self-improving estimation engine.</td>
+          <td>6–12 months</td>
+          <td class="gold-text">High</td>
+        </tr>
+        <tr>
+          <td>Workflow Integration</td>
+          <td>Slack integration + email delivery + Amplify-hosted portals + API access creates deep workflow embedding. Ripping out FixFlowAI disrupts team ops.</td>
+          <td>Already started</td>
+          <td class="accent-text">Medium</td>
+        </tr>
+        <tr>
+          <td>Proprietary Benchmark</td>
+          <td>An eval harness on every generated proposal creates the world's first "proposal quality score" dataset. This becomes a research asset, a PR story, and a fine-tuning corpus.</td>
+          <td>3–6 months</td>
+          <td class="gold-text">Long-term extreme</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Strength Assessment · Current State</h3>
+    <div class="strength-row">
+      <div class="strength-label">Schema architecture</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 85%; background: var(--green);"></div></div>
+      <div class="strength-val">85%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Agency Brain depth</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 40%; background: var(--gold);"></div></div>
+      <div class="strength-val">40%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Client portal intelligence</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 35%; background: var(--accent);"></div></div>
+      <div class="strength-val">35%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Cross-agency data network</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 5%; background: var(--red);"></div></div>
+      <div class="strength-val">5%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Calibration / eval loop</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 10%; background: var(--red);"></div></div>
+      <div class="strength-val">10%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Bilateral network effect</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 15%; background: var(--accent);"></div></div>
+      <div class="strength-val">15%</div>
+    </div>
+    <div class="strength-row">
+      <div class="strength-label">Monetization / billing</div>
+      <div class="strength-bar"><div class="strength-fill" style="width: 5%; background: var(--red);"></div></div>
+      <div class="strength-val">5%</div>
+    </div>
+  </div>
+
+  <!-- GROWTH ENGINE -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">08</span> Growth Engine</div>
+    <h2>DISTRIBUTION THAT COMPOUNDS</h2>
+
+    <p><strong>The core growth insight:</strong> Every proposal sent through FixFlowAI's client portal is a free marketing event. The proposal reaches a client who has never heard of FixFlowAI. If the portal is beautiful, fast, and smart, the client's first question is "What did you use to make this?" That's organic virality from B2B sales activity — a loop that Upwork and Proposify have never captured.</p>
+
+    <div class="flywheel">
+      <div class="fw-step">
+        <div class="fw-num">01</div>
+        <div class="fw-title">Agency wins deal using FixFlowAI</div>
+        <div class="fw-desc">Fast turnaround, high-confidence proposal beats competitor's PDF.</div>
+        <div class="fw-arrow">→</div>
+      </div>
+      <div class="fw-step">
+        <div class="fw-num">02</div>
+        <div class="fw-title">Client asks "What tool is this?"</div>
+        <div class="fw-desc">Deal Room portal impresses client. "Powered by FixFlowAI" attribution visible.</div>
+        <div class="fw-arrow">→</div>
+      </div>
+      <div class="fw-step">
+        <div class="fw-num">03</div>
+        <div class="fw-title">Client becomes an agency</div>
+        <div class="fw-desc">Client is also a service business. Signs up for FixFlowAI. Brings their clients.</div>
+        <div class="fw-arrow">→</div>
+      </div>
+      <div class="fw-step">
+        <div class="fw-num">04</div>
+        <div class="fw-title">Data network deepens</div>
+        <div class="fw-desc">More agencies → better Agency Brain → higher win rates → more referrals. Loop compounds.</div>
+      </div>
+    </div>
+
+    <h3>Distribution Channels, Ranked by Leverage</h3>
+
+    <ul class="num-list">
+      <li><p><strong>Proposal portal virality.</strong> Every sent portal is a cold outreach. Build: "Powered by FixFlowAI — Get Your Free Proposal Analysis" CTA in the portal footer (toggleable by plan). Free tier gives clients a 5-proposal trial. No paid ads needed for this loop.</p></li>
+      <li><p><strong>Slack App Directory.</strong> Your Slack integration (<span class="inline-code">slackService.js</span>) is already built. Submit to the Slack App Directory. Agencies discover you when searching for "proposal" tools in Slack. Zero-dollar distribution into enterprise Slack workspaces.</p></li>
+      <li><p><strong>API ecosystem play.</strong> Publish your API. Let HubSpot, Monday.com, and Pipedrive developers build FixFlowAI proposal generation into their CRM workflows. You become infrastructure. They do your distribution.</p></li>
+      <li><p><strong>Win Rate Content Marketing.</strong> Publish anonymized data insights: "The 2025 Agency Proposal Intelligence Report — What separates winning proposals from losing ones." This positions FixFlowAI as a research authority, not a tool vendor. Backlinks, trust, inbound SEO.</p></li>
+      <li><p><strong>Agency community embeds.</strong> Partner with freelancer communities, agency networks, and accelerators. Give their members 3 months free. These communities already aggregate your ICP. Cheaper than ads, stickier than Product Hunt launches.</p></li>
+    </ul>
+  </div>
+
+  <!-- MONETIZATION -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">09</span> Monetization Flywheel</div>
+    <h2>PRICING ARCHITECTURE</h2>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-label">Studio Free · Freemium</div>
+        <div class="card-value" style="color: var(--green);">$0</div>
+        <p>5 proposals/month, basic PDF export, no Agency Brain, FixFlowAI branding on portals. The hook. Designed to make the value visceral in the first session.</p>
+      </div>
+      <div class="card accent">
+        <div class="card-label">Studio Pro · Primary Revenue</div>
+        <div class="card-value">$49</div>
+        <p>/month. 50 proposals, Agency Brain, TriProposal, Deal Room portal, version history, Slack integration, white-label export, 5 seats. The core SMB plan.</p>
+      </div>
+      <div class="card gold">
+        <div class="card-label">Studio Agency · ARR Driver</div>
+        <div class="card-value" style="color: var(--gold);">$249</div>
+        <p>/month. Unlimited proposals, full white-label, cross-agency intelligence network access, Proposal API (1K calls/mo), SSO, audit logs, priority support, unlimited seats.</p>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 16px;">
+      <div class="card">
+        <div class="card-label">Scale · Enterprise</div>
+        <div class="card-value">Custom</div>
+        <p>Dedicated Agency Brain silo, custom model fine-tuning, white-glove onboarding, SLA, SAML, SOC 2 report access, MSA. $2K–$10K/month contracts.</p>
+      </div>
+      <div class="card">
+        <div class="card-label">API · Usage Revenue</div>
+        <div class="card-value">$0.08</div>
+        <p>/proposal via API. Embedded by CRM vendors and agency tooling platforms. Metered. Low CAC, high margin, grows with customer growth.</p>
+      </div>
+    </div>
+
+    <h3>Usage-Based Layer</h3>
+    <p>On top of seat-based plans, meter <strong>Agency Brain queries</strong> (after included quota), <strong>Autopilot proposals</strong> (agent execution is premium), and <strong>cross-agency intelligence requests</strong>. This lets heavy users pay proportionally while keeping predictable base revenue. Build token cost tracking into <span class="inline-code">generate.js</span> first — you need cost visibility before adding usage pricing.</p>
+
+    <div class="gold-box">
+      <p><strong>The single most important monetization move right now:</strong> Ship Stripe billing in the next 4 weeks. Plan-gated routing exists. Auth works. The product has premium features. Revenue is the only thing missing. Every week without Stripe is a week of giving away Agency plan value for free.</p>
+    </div>
+  </div>
+
+  <!-- EXECUTION ROADMAP -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">10</span> Execution Roadmap</div>
+    <h2>PHASE-BY-PHASE PLAN</h2>
+
+    <div class="timeline">
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">REVENUE GATE</span>
+          <span class="phase-time">0–3 months</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Ship Stripe billing</strong> — subscription lifecycle, plan enforcement, seat billing, trial state, upgrade prompts. Nothing else matters until revenue flows.</li>
+            <li><strong>Harden SMTP</strong> — outcome emails, OTP, follow-up triggers. Email is the retention backbone; fix it now.</li>
+            <li><strong>Profile/settings persistence</strong> — currently local store only. Move to backend. Basic production hygiene.</li>
+            <li><strong>Proposal eval harness</strong> — auto-score every generated proposal against a rubric, log to MongoDB. Start accumulating calibration data now.</li>
+            <li><strong>Deal Room v0</strong> — enable client annotations and tier selection in the public portal. No e-sign yet. Just bilateral interaction.</li>
+            <li><strong>Submit to Slack App Directory</strong> — distribution leverage already built, just unreleased.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">MOAT BUILDING</span>
+          <span class="phase-time">3–9 months</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>WinScore pre-generation signal</strong> — surface deal probability from Agency Brain + BriefScore before the user generates.</li>
+            <li><strong>Confidence calibration loop</strong> — map confidence scores against won/lost outcomes; surface calibration drift in Analytics.</li>
+            <li><strong>Scope Creep Radar</strong> — flag high-risk features based on historical outcome patterns.</li>
+            <li><strong>Proposal Intelligence Feed</strong> — weekly email/Slack digest of actionable analytics. Retention engineering.</li>
+            <li><strong>Proposal API public launch</strong> — metered API tier, documentation, partner integrations (HubSpot, Monday.com connectors).</li>
+            <li><strong>White-label portal + export</strong> — agency branding on portals and PDFs. Enables enterprise sales conversations.</li>
+            <li><strong>FixFlow Solo soft launch</strong> — separate landing page for freelancers. Feature-flag the Freelancer OS behind the Solo tier.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-phase">
+        <div class="tl-label">
+          <span class="phase-name">CATEGORY CREATION</span>
+          <span class="phase-time">9–18 months</span>
+        </div>
+        <div class="tl-content">
+          <ul>
+            <li><strong>Cross-agency intelligence network</strong> — opt-in anonymized outcome data aggregation; Agency Brain goes from single-agency to collective intelligence.</li>
+            <li><strong>Proposal Autopilot / Agent Mode</strong> — agentic workflow: inbound brief → clarification → generation → workspace approval → client delivery, unattended.</li>
+            <li><strong>Deal Room e-sign + milestone link</strong> — connect proposal acceptance directly to FixFlowEscrow contract (now production-hardened). Closes the full cycle.</li>
+            <li><strong>Revenue forecasting layer</strong> — predict pipeline revenue from current proposal portfolio with close probability.</li>
+            <li><strong>Enterprise SSO + audit + compliance</strong> — SAML, workspace audit logs, SOC 2 preparation.</li>
+            <li><strong>Publish "Agency Proposal Intelligence Report"</strong> — annual research report with anonymized platform data. Authority + SEO + inbound.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KILL/KEEP/DOUBLE-DOWN -->
+  <div class="section">
+    <div class="section-label"><span class="section-num">11</span> Brutal Prioritization</div>
+    <h2>KILL · KEEP · DOUBLE-DOWN</h2>
+
+    <div class="kkd-row">
+      <div class="kkd-col kill">
+        <div class="kkd-header kill">KILL — NOW</div>
+        <ul>
+          <li>Freelancer OS UX surface (keep data models, kill the active UI roadmap — too expensive to maintain)</li>
+          <li>xAI / Ollama / OpenRouter as visible user choices (keep as backend fallback, don't expose UI complexity)</li>
+          <li>Demo seed data in production code paths (buildDemoSeed should be a dev-only flag)</li>
+          <li>Web3 escrow marketing (the Solidity contract is alpha; don't claim it's a feature until audited and legally reviewed)</li>
+          <li>Feature parity with Proposify (templates, fonts, colors — not your battleground)</li>
+        </ul>
+      </div>
+
+      <div class="kkd-col keep">
+        <div class="kkd-header keep">KEEP — HARDENED</div>
+        <ul>
+          <li>Schema-first JSON pipeline — your structural advantage, protect it</li>
+          <li>BriefScore preflight — unique, defensible, visible quality gate</li>
+          <li>Proposal versioning + diff — professional workflow essential</li>
+          <li>TriProposal — pricing optimizer in disguise, double the analytics on it</li>
+          <li>Workspace collaboration — team product stickiness</li>
+          <li>Client portal telemetry — raw material for Deal Intelligence</li>
+          <li>Slack integration — fix it, ship it to the App Directory</li>
+        </ul>
+      </div>
+
+      <div class="kkd-col double">
+        <div class="kkd-header double">DOUBLE DOWN</div>
+        <ul>
+          <li>Agency Brain — your moat seed; invest engineering time proportionally to its strategic value</li>
+          <li>Confidence Grid → calibration loop → WinScore — the compound intelligence engine</li>
+          <li>Client portal → Deal Room — bilateral network effect is your growth engine</li>
+          <li>Proposal analytics → Intelligence Feed — retention and daily habit formation</li>
+          <li>Stripe billing — revenue is oxygen, ship it this month</li>
+          <li>Proposal Autopilot — the category-defining feature that separates you from every text tool</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL VERDICT -->
+  <div class="final-verdict">
+    <div class="section-label" style="text-align: center; margin-bottom: 16px;"><span class="section-num">12</span> Final Verdict</div>
+    <h2>WHAT THIS BECOMES</h2>
+
+    <div class="north-star" style="text-align: left; margin-bottom: 32px;">
+      <div class="north-star-text" style="font-style: normal; font-family: 'Geist', sans-serif; font-size: 15px; color: var(--muted); line-height: 1.8;">
+        Executed correctly, FixFlowAI becomes the <em>Bloomberg Terminal of service business revenue</em> — the essential intelligence layer that every serious agency and expert freelancer needs because it knows their win patterns, predicts deal outcomes, and incrementally improves with every proposal sent. Not a competitor to Proposify's template library. Not competing with Notion's writing assistant. A category of one: <em>Revenue Intelligence for Professional Services.</em>
+        <br><br>
+        The schema-first architecture is the founding competitive advantage. The Agency Brain is the compounding moat. The client portal is the growth engine. The confidence calibration loop is the proprietary model. All four exist in your codebase today in some form. The execution gap between "impressive hackathon build" and "category-defining platform" is not technical — it's sequencing, monetization, and closing the data loops. Everything else is already there.
+        <br><br>
+        <strong style="color: var(--text);">Ship Stripe. Close the confidence loop. Make the portal a Deal Room. Publish the Agency Brain's first insights. In 18 months, you won't have competitors — you'll have imitators.</strong>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card green">
+        <div class="card-label">The metric that matters most</div>
+        <div class="card-value" style="color: var(--green);">Win Rate Δ</div>
+        <p>Agencies must win more deals using FixFlowAI than without it. Measure it. Publish it. Make it the product promise.</p>
+      </div>
+      <div class="card gold">
+        <div class="card-label">The unfair advantage</div>
+        <div class="card-value" style="color: var(--gold); font-size: 18px;">Outcome Data</div>
+        <p>You will have the world's only structured dataset linking proposal content to deal outcomes. Protect it, anonymize it, compound it.</p>
+      </div>
+      <div class="card accent">
+        <div class="card-label">The category claim</div>
+        <div class="card-value" style="font-size: 16px;">Revenue Intel</div>
+        <p>Stop saying "proposal generator." Start saying "revenue intelligence for service businesses." Own the category before anyone names it.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <p style="text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.1em;">
+      FIXFLOWAI · MASTER STRATEGIC PLAN · SUVAM PAUL · 2025–2027
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
