@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { API_BASE_URL } from '@/config/api'
 import { extractPartialSections } from '@/lib/streaming'
 import useProposalStore from '@/stores/proposalStore'
+import useAuthStore from '@/stores/authStore'
 
 export function useStreamingProposal() {
   const parsedSections = useProposalStore((state) => state.parsedSections)
@@ -95,6 +96,7 @@ export function useStreamingProposal() {
               setParsedSections(extractPartialSections(rawBuffer))
             } else if (payload.type === 'complete') {
               finishStream(payload.proposalId)
+              useAuthStore.getState().checkAuth?.()
             } else if (payload.type === 'error') {
               throw new Error(payload.message || 'Proposal generation failed.')
             }

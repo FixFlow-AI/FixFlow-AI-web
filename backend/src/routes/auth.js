@@ -462,10 +462,11 @@ router.post('/register', authLimiter, async (req, res, next) => {
       email: data.email,
       passwordHash: data.password,
       name: data.name,
-      plan: data.plan,
-      teamPlanPreference: data.defaultEntryMode === 'team' ? data.plan : data.teamPlanPreference,
+      plan: 'free',
+      teamPlanPreference: 'free',
       defaultEntryMode: data.defaultEntryMode,
-      usageLimit: getPersonalCapabilities(data.plan).usageLimit,
+      usageLimit: getPersonalCapabilities('free').usageLimit,
+      proposalLimit: getPersonalCapabilities('free').proposalLimit,
     });
     await user.save();
 
@@ -511,7 +512,11 @@ router.post('/login', authLimiter, async (req, res, next) => {
     if (user.plan !== normalizedPlan) {
       user.plan = normalizedPlan;
     }
-    user.usageLimit = getPersonalCapabilities(user.plan).usageLimit;
+    const capabilities = getPersonalCapabilities(user.plan);
+    user.usageLimit = capabilities.usageLimit;
+    user.proposalLimit = capabilities.proposalLimit;
+    const normalizedTeamPlan = normalizePlan(user.teamPlanPreference || 'free');
+    user.teamPlanPreference = normalizedTeamPlan === 'solo' ? 'free' : normalizedTeamPlan;
 
     const payload = { userId: user._id.toString(), email: user.email };
     const accessToken = signAccessToken(payload);
@@ -573,9 +578,15 @@ router.get('/me', authMiddleware, async (req, res, next) => {
     if (!user) {
       throw new UnauthorizedError('User not found');
     }
-    if (user.plan === 'enterprise') {
-      user.plan = 'pro';
-      user.usageLimit = getPersonalCapabilities('pro').usageLimit;
+    const normalizedPlan = normalizePlan(user.plan);
+    const normalizedTeamPlanRaw = normalizePlan(user.teamPlanPreference || 'free');
+    const normalizedTeamPlan = normalizedTeamPlanRaw === 'solo' ? 'free' : normalizedTeamPlanRaw;
+    if (user.plan !== normalizedPlan || user.teamPlanPreference !== normalizedTeamPlan) {
+      user.plan = normalizedPlan;
+      user.teamPlanPreference = normalizedTeamPlan;
+      const capabilities = getPersonalCapabilities(normalizedPlan);
+      user.usageLimit = capabilities.usageLimit;
+      user.proposalLimit = capabilities.proposalLimit;
       await user.save();
     }
 
@@ -605,6 +616,14 @@ router.patch('/me', authMiddleware, async (req, res, next) => {
 
     if (payload.notificationPreferences) {
       user.notificationPreferences = normalizeNotificationPreferences(payload.notificationPreferences);
+    }
+
+    if (typeof payload.timezone === 'string') {
+      user.timezone = payload.timezone;
+    }
+
+    if (typeof payload.theme === 'string') {
+      user.theme = payload.theme;
     }
 
     await user.save();

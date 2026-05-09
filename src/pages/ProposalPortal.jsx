@@ -6,6 +6,7 @@ import WorkspaceBackdrop from '@/components/ui/WorkspaceBackdrop'
 import PortalBanner from '@/components/portal/PortalBanner'
 import PinGate from '@/components/portal/PinGate'
 import ClientFeedbackForm from '@/components/portal/ClientFeedbackForm'
+import DealRoomPanel from '@/components/portal/DealRoomPanel'
 import ProposalReadonlyView from '@/components/proposal/ProposalReadonlyView'
 import { usePortalTracking } from '@/hooks/usePortalTracking'
 import { normalizeProposalRecord } from '@/lib/proposals'
@@ -93,13 +94,14 @@ export default function ProposalPortal() {
 
     if (!portalPayload?.proposal) return null
     return normalizeProposalRecord({
+      proposalId: portalPayload.proposal.proposalId,
       title: portalPayload.proposal.title,
       projectSummary: portalPayload.proposal.projectSummary,
       data: portalPayload.proposal.data,
     })
   }, [portalPayload, selectedStrategyId])
 
-  const { registerSectionRef, flushPending } = usePortalTracking(token, Boolean(proposal))
+  const { registerSectionRef, flushPending, postAnnotation, postTierSelection } = usePortalTracking(token, Boolean(proposal))
 
   const handleVerify = async (pin) => {
     setIsVerifying(true)
@@ -181,31 +183,42 @@ export default function ProposalPortal() {
                 ))}
               </div>
             ) : null}
-            <ProposalReadonlyView
-              proposal={proposal}
-              sectionRefs={{
-                summary: registerSectionRef('summary'),
-                features: registerSectionRef('features'),
-                risks: registerSectionRef('risks'),
-                timeline: registerSectionRef('timeline'),
-                effort: registerSectionRef('effort'),
-                market: registerSectionRef('market'),
-                impact: registerSectionRef('impact'),
-              }}
-            />
-            <ClientFeedbackForm
-              onSubmit={handleFeedbackSubmit}
-              initialMessage={
-                portalPayload?.bundle?.proposals?.length
-                  ? `We want to move forward with the ${proposal.strategy} approach because `
-                  : ''
-              }
-              title={
-                portalPayload?.bundle?.proposals?.length
-                  ? 'Request this proposal strategy'
-                  : 'Send feedback directly to the agency'
-              }
-            />
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+              <div className="space-y-8">
+                <ProposalReadonlyView
+                  proposal={proposal}
+                  sectionRefs={{
+                    summary: registerSectionRef('summary'),
+                    features: registerSectionRef('features'),
+                    risks: registerSectionRef('risks'),
+                    timeline: registerSectionRef('timeline'),
+                    effort: registerSectionRef('effort'),
+                    market: registerSectionRef('market'),
+                    impact: registerSectionRef('impact'),
+                  }}
+                />
+                <ClientFeedbackForm
+                  onSubmit={handleFeedbackSubmit}
+                  initialMessage={
+                    portalPayload?.bundle?.proposals?.length
+                      ? `We want to move forward with the ${proposal.strategy} approach because `
+                      : ''
+                  }
+                  title={
+                    portalPayload?.bundle?.proposals?.length
+                      ? 'Request this proposal strategy'
+                      : 'Send feedback directly to the agency'
+                  }
+                />
+              </div>
+              <DealRoomPanel
+                proposal={proposal}
+                bundleProposals={portalPayload?.bundle?.proposals || []}
+                selectedStrategyId={selectedStrategyId}
+                postAnnotation={postAnnotation}
+                postTierSelection={postTierSelection}
+              />
+            </div>
           </>
         )}
       </div>

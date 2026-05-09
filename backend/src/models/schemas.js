@@ -42,9 +42,9 @@ const registerSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must not exceed 50 characters'),
-  plan: z.enum(['free', 'standard', 'pro']).optional().default('free'),
+  plan: z.enum(['free', 'pro', 'agency', 'solo', 'scale', 'standard', 'enterprise']).optional().default('free'),
   defaultEntryMode: z.enum(['individual', 'team']).optional().default('individual'),
-  teamPlanPreference: z.enum(['free', 'standard', 'pro']).optional().default('free'),
+  teamPlanPreference: z.enum(['free', 'pro', 'agency', 'scale', 'standard', 'enterprise']).optional().default('free'),
 });
 
 const loginSchema = z.object({
@@ -183,12 +183,12 @@ const outcomeSendSchema = z.object({
 
 const workspaceCreateSchema = z.object({
   name: z.string().trim().min(2).max(120),
-  plan: z.enum(['free', 'standard', 'pro']).optional().default('free'),
+  plan: z.enum(['free', 'pro', 'agency', 'scale', 'standard', 'enterprise']).optional().default('free'),
 });
 
 const workspaceUpdateSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
-  plan: z.enum(['free', 'standard', 'pro']).optional(),
+  plan: z.enum(['free', 'pro', 'agency', 'scale', 'standard', 'enterprise']).optional(),
   defaultEntryMode: z.enum(['individual', 'team']).optional(),
   notificationDefaults: notificationPreferencesSchema.optional(),
 });
@@ -253,7 +253,27 @@ const chatEtaSchema = z.object({
 const authProfileUpdateSchema = z.object({
   name: z.string().trim().min(2).max(50).optional(),
   avatar: z.string().trim().max(500).optional(),
+  timezone: z.string().trim().max(80).optional(),
+  theme: z.enum(['light', 'modern-dark', 'vscode-dark']).optional(),
   notificationPreferences: notificationPreferencesSchema.optional(),
+});
+
+const billingCheckoutSchema = z.object({
+  plan: z.enum(['pro', 'agency', 'solo']),
+});
+
+const dealRoomAnnotationSchema = z.object({
+  proposalId: z.string().trim().max(128).optional().default(''),
+  sectionName: z.enum(portalSections),
+  comment: z.string().trim().min(2).max(5000),
+  type: z.enum(['question', 'concern', 'approval']).default('question'),
+  clientEmail: z.string().trim().email().optional().or(z.literal('')).default(''),
+});
+
+const dealRoomTierSelectionSchema = z.object({
+  proposalId: z.string().trim().max(128).optional().default(''),
+  strategy: z.enum(['lean', 'standard', 'premium']),
+  clientEmail: z.string().trim().email().optional().or(z.literal('')).default(''),
 });
 
 const avatarCommitSchema = z.object({
@@ -325,6 +345,9 @@ module.exports = {
   proposalEtaSchema,
   chatEtaSchema,
   authProfileUpdateSchema,
+  billingCheckoutSchema,
+  dealRoomAnnotationSchema,
+  dealRoomTierSelectionSchema,
   avatarCommitSchema,
   planningActionSchema,
 };

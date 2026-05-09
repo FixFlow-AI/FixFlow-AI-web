@@ -15,10 +15,54 @@ function MetricCard({ label, value, hint }) {
   )
 }
 
+function AIQualityTrends({ data }) {
+  const trends = data?.trends || []
+  const latestScore = data?.latest?.totalEvalScore || 0
+
+  return (
+    <div className="glass-card rounded-[28px] p-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.24em] text-primary">AI Quality Trends</p>
+          <h2 className="mt-2 text-xl font-semibold">Proposal evaluation harness</h2>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl font-semibold">{latestScore || '—'}</div>
+          <div className="text-xs text-muted-foreground">latest score</div>
+        </div>
+      </div>
+
+      {!trends.length ? (
+        <div className="mt-6 rounded-2xl border border-border bg-background/30 p-5 text-sm text-muted-foreground">
+          Generate a few complete proposals to unlock AI quality trend lines.
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {trends.slice(-8).map((item) => (
+            <div key={item.date}>
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{item.date} · {item.count} proposal{item.count === 1 ? '' : 's'}</span>
+                <span className="font-semibold">{item.averageTotalScore}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, item.averageTotalScore)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Analytics() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['proposal-analytics'],
     queryFn: () => api.get('/analytics/proposals').then((response) => response.data),
+  })
+  const evalTrendsQuery = useQuery({
+    queryKey: ['proposal-eval-trends'],
+    queryFn: () => api.get('/analytics/eval-trends').then((response) => response.data),
   })
 
   if (isLoading) {
@@ -53,6 +97,8 @@ export default function Analytics() {
         <MetricCard label="Negotiating" value={data.statusBreakdown.negotiating} />
         <MetricCard label="Average Time to Close" value={`${data.timeToCloseDays || 0} days`} />
       </div>
+
+      <AIQualityTrends data={evalTrendsQuery.data} />
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <WinRateDonut winRate={data.winRate} />

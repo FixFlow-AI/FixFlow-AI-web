@@ -3,6 +3,11 @@ import { CheckCircle } from 'lucide-react'
 
 function TimelineStep({ phase, index, total, isActive = false }) {
   const isLast = index === total - 1
+  const tasks = Array.isArray(phase.tasks)
+    ? phase.tasks
+    : Array.isArray(phase.deliverables)
+      ? phase.deliverables
+      : []
 
   return (
     <motion.div
@@ -50,7 +55,7 @@ function TimelineStep({ phase, index, total, isActive = false }) {
           </div>
           
           <ul className="space-y-1.5">
-            {phase.tasks.map((task, i) => (
+            {tasks.map((task, i) => (
               <motion.li
                 key={i}
                 initial={{ opacity: 0, x: -10 }}

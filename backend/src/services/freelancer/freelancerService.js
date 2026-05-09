@@ -255,8 +255,14 @@ function serialize(doc) {
 
 async function ensureFreelancerWorkspace(user) {
   const userId = user.userId || user._id?.toString();
+  const existingProfile = await FreelancerProfile.findOne({ userId });
+
+  if (env.NODE_ENV !== 'development' && !env.ALLOW_DEMO_SEED && !existingProfile) {
+    throw new BadRequestError('Freelancer OS setup is not initialized. Run onboarding or enable explicit demo seeding in development.');
+  }
+
   const seed = buildDemoSeed({ ...user, userId });
-  let profile = await FreelancerProfile.findOne({ userId });
+  let profile = existingProfile;
 
   if (!profile) {
     profile = await FreelancerProfile.create({ userId, ...seed.profile });

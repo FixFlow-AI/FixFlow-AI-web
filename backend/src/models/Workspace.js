@@ -132,7 +132,7 @@ const workspaceSchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ['free', 'standard', 'pro'],
+      enum: ['free', 'pro', 'agency', 'scale', 'standard', 'enterprise'],
       default: 'free',
     },
     notificationDefaults: {

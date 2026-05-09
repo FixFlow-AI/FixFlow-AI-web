@@ -25,6 +25,7 @@ export default function Settings() {
   const setCurrentWorkspace = useAuthStore((s) => s.setCurrentWorkspace);
   
   const [name, setName] = useState(user?.name || '');
+  const [timezone, setTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATARS[0]);
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -37,6 +38,7 @@ export default function Settings() {
   useEffect(() => {
     if (user?.name) setName(user.name);
     if (user?.avatar) setSelectedAvatar(user.avatar);
+    if (user?.timezone) setTimezone(user.timezone);
   }, [user]);
 
   useEffect(() => () => {
@@ -105,6 +107,7 @@ export default function Settings() {
 
       const { data } = await api.patch('/auth/me', {
         name,
+        timezone,
         ...(committedUploadedAvatar ? {} : { avatar: selectedAvatar }),
       })
       setUser(data.user)
@@ -135,6 +138,17 @@ export default function Settings() {
       toast.error(error.response?.data?.error || 'Could not save notification preferences.')
     } finally {
       setIsSavingNotifications(false)
+    }
+  }
+
+  const handleThemeChange = async (nextTheme) => {
+    setTheme(nextTheme)
+    try {
+      const { data } = await api.patch('/users/me', { theme: nextTheme })
+      setUser(data.user)
+      setCurrentWorkspace(data.currentWorkspace || null)
+    } catch {
+      toast.error('Theme saved locally. Server sync will retry the next time you update settings.')
     }
   }
 
@@ -227,7 +241,7 @@ export default function Settings() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               type="button"
-              onClick={() => setTheme('light')}
+              onClick={() => handleThemeChange('light')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'light' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
               }`}
@@ -237,7 +251,7 @@ export default function Settings() {
             </button>
             <button
               type="button"
-              onClick={() => setTheme('modern-dark')}
+              onClick={() => handleThemeChange('modern-dark')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'modern-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
               }`}
@@ -247,7 +261,7 @@ export default function Settings() {
             </button>
             <button
               type="button"
-              onClick={() => setTheme('vscode-dark')}
+              onClick={() => handleThemeChange('vscode-dark')}
               className={`p-4 rounded-xl border flex flex-col items-center gap-3 transition-all ${
                 theme === 'vscode-dark' ? 'border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-card' : 'border-border bg-card hover:bg-muted'
               }`}
@@ -293,6 +307,21 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground mt-2">
                 Email address cannot be updated directly. It will be updated through OTP verification in mail.
               </p>
+            </div>
+
+            <div className="space-y-2 relative">
+              <label htmlFor="timezone" className="text-sm font-medium">Timezone</label>
+              <div className="relative">
+                <Monitor className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <input
+                  id="timezone"
+                  type="text"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full bg-background border border-input rounded-lg py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  placeholder="Asia/Calcutta"
+                />
+              </div>
             </div>
           </div>
 

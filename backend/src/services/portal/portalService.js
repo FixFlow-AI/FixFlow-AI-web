@@ -46,6 +46,7 @@ function sanitizePortal(portal) {
     lastViewedAt: portal.lastViewedAt,
     sectionMetrics: portal.sectionMetrics || createSectionMetrics(),
     latestFeedback: portal.feedback?.slice(-5).reverse() || [],
+    dealRoomTierSelection: portal.dealRoomTierSelection || null,
     updatedAt: portal.updatedAt,
   };
 }
@@ -195,6 +196,7 @@ async function verifyPortalAccess(shareToken, pin) {
   return {
     portal: sanitizePortal(portal.toObject()),
     proposal: {
+      proposalId: proposal.proposalId,
       title: proposal.title,
       data: proposalJSON,
       projectSummary: proposal.projectSummary,
@@ -304,6 +306,7 @@ module.exports = {
   buildShareUrl,
   createSectionMetrics,
   getPortalForProposal,
+  getPortalByToken,
   upsertPortal,
   getPortalPublicMeta,
   verifyPortalAccess,

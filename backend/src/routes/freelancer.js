@@ -30,6 +30,11 @@ const { createNotifications, buildWorkspaceRecipientIds } = require('../services
 const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
 const { getLlmProviderStatus } = require('../services/llm/providerRegistry');
+const {
+  assertCapability,
+  getPersonalCapabilities,
+  getWorkspaceCapabilities,
+} = require('../services/capabilities/capabilityService');
 
 const router = express.Router();
 
@@ -100,7 +105,18 @@ function userFromRequest(req) {
 async function ensureFreelancerPermission(req, permission) {
   if (req.user.defaultEntryMode === 'team' && req.user.currentWorkspaceId) {
     await assertWorkspacePermission(req.user.userId, req.user.currentWorkspaceId, permission);
+    const workspace = await Workspace.findById(req.user.currentWorkspaceId).select('plan').lean();
+    assertCapability(
+      getWorkspaceCapabilities(workspace?.plan || 'free').freelancerOS,
+      'Freelancer OS requires an Agency or Scale workspace plan.'
+    );
+    return;
   }
+
+  assertCapability(
+    getPersonalCapabilities(req.user.plan).freelancerOS,
+    'Freelancer OS requires the Solo, Agency, or Scale plan.'
+  );
 }
 
 async function notifyFreelancerWorkspace(req, notification) {

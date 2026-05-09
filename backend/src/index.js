@@ -26,6 +26,9 @@ const notificationRoutes = require('./routes/notifications');
 const freelancerRoutes = require('./routes/freelancer');
 const slackIntegrationRoutes = require('./routes/slackIntegration');
 const escrowLifecycleRoutes = require('./routes/escrowLifecycle');
+const { billingRouter, billingWebhookRouter } = require('./routes/billing');
+const userRoutes = require('./routes/users');
+const { publicDealRoomRouter, proposalDealRoomRouter } = require('./routes/dealRoom');
 const { initRateLimitNotifier } = require('./services/rateLimit/rateLimitNotifier');
 
 const app = express();
@@ -36,6 +39,9 @@ app.use(helmet());
 
 // CORS
 app.use(corsMiddleware);
+
+// Stripe webhooks need the raw body before JSON parsing.
+app.use('/api/billing', billingWebhookRouter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -57,8 +63,10 @@ app.use('/api/proposals', portalRoutes);
 app.use('/api/proposals', proposalCommentsRoutes);
 app.use('/api/proposals', proposalPresenceRoutes);
 app.use('/api/proposals', proposalPlanningRoutes);
+app.use('/api/proposals', proposalDealRoomRouter);
 app.use('/api/proposal', proposalChatRoutes);
 app.use('/api/portal', publicPortalRoutes);
+app.use('/api/portal', publicDealRoomRouter);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/eta', etaRoutes);
 app.use('/api/agency-brain', agencyBrainRoutes);
@@ -68,6 +76,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/freelancer', freelancerRoutes);
 app.use('/api/integrations/slack', slackIntegrationRoutes);
 app.use('/api/escrows', escrowLifecycleRoutes);
+app.use('/api/billing', billingRouter);
+app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use((_req, res) => {

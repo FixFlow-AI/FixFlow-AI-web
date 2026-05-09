@@ -113,6 +113,28 @@ const portalSchema = new mongoose.Schema(
       type: [feedbackEntrySchema],
       default: [],
     },
+    dealRoomTierSelection: {
+      proposalId: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      strategy: {
+        type: String,
+        enum: ['lean', 'standard', 'premium', ''],
+        default: '',
+      },
+      clientEmail: {
+        type: String,
+        default: '',
+        lowercase: true,
+        trim: true,
+      },
+      selectedAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   { timestamps: true }
 );

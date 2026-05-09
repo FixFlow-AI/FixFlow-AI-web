@@ -21,6 +21,8 @@ const { getPersonalCapabilities, getWorkspaceCapabilities, assertCapability } = 
 const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
 const { upsertTripProposal } = require('../services/trips/tripService');
 const { refreshAgencyPatternsForProposal } = require('../services/agencyBrain/agencyBrainService');
+const { assertCanCreateProposal, incrementProposalUsage } = require('../services/billing/planEnforcer');
+const { evaluate: evaluateProposal } = require('../services/eval/proposalEvalService');
 const {
   getEditableProposal,
   upsertEmbeddedProposalVersion,
@@ -47,6 +49,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
     const currentUser = await User.findById(req.user.userId);
     if (!currentUser) {
       throw new NotFoundError('User not found');
+    }
+    const isNewProposal = !req.body?.proposalId;
+    if (isNewProposal) {
+      await assertCanCreateProposal(currentUser);
     }
 
     let workspaceContext = null;
@@ -196,6 +202,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
         title: proposalRecord.title,
       });
       await refreshAgencyPatternsForProposal(proposalRecord).catch(() => null);
+      setImmediate(() => {
+        evaluateProposal(proposalRecord).catch((evalError) => {
+          console.error('Proposal evaluation failed:', evalError);
+        });
+      });
+      if (isNewProposal) {
+        await incrementProposalUsage(currentUser).catch(() => null);
+      }
 
       console.log(
         JSON.stringify({

@@ -29,6 +29,7 @@ import ProposalChatPane from '@/components/proposalChat/ProposalChatPane'
 import SectionUpdateOverlay from '@/components/proposalChat/SectionUpdateOverlay'
 import ShareModal from '@/components/portal/ShareModal'
 import PortalAnalyticsPanel from '@/components/portal/PortalAnalyticsPanel'
+import DealRoomAnnotationBadge from '@/components/portal/DealRoomAnnotationBadge'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import StatusSelector from '@/components/winloss/StatusSelector'
 import WonOutcomeModal from '@/components/winloss/WonOutcomeModal'
@@ -101,6 +102,12 @@ function ProposalResult() {
   const portalQuery = useQuery({
     queryKey: ['proposal', id, 'portal'],
     queryFn: () => api.get(`/proposals/${id}/portal`).then((response) => response.data.portal),
+    enabled: Boolean(id),
+  })
+
+  const dealRoomAnnotationsQuery = useQuery({
+    queryKey: ['proposal', id, 'deal-room-annotations'],
+    queryFn: () => api.get(`/proposals/${id}/deal-room/annotations`).then((response) => response.data.annotations),
     enabled: Boolean(id),
   })
 
@@ -592,6 +599,9 @@ function ProposalResult() {
       </ErrorBoundary>
 
       <PortalAnalyticsPanel portal={portalQuery.data} />
+      <div className="mb-8">
+        <DealRoomAnnotationBadge annotations={dealRoomAnnotationsQuery.data || []} />
+      </div>
 
       <SectionUpdateOverlay
         sectionKey="features"

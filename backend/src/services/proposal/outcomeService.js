@@ -151,14 +151,19 @@ async function sendOutcomeEmail({ userId, proposalId, recipientEmail, emailKey }
   const { proposal } = await getOwnedProposalWithJSON(userId, proposalId);
   const email = getOutcomeEmailPayload(proposal, emailKey);
 
-  await sendTransactionalMail({
-    to: recipientEmail,
-    subject: email.subject,
-    text: email.body,
-    html: `<div style="font-family: Arial, sans-serif; color: #0f172a; white-space: pre-wrap;">${email.body}</div>`,
-  });
+  try {
+    const result = await sendTransactionalMail({
+      to: recipientEmail,
+      subject: email.subject,
+      text: email.body,
+      html: `<div style="font-family: Arial, sans-serif; color: #0f172a; white-space: pre-wrap;">${email.body}</div>`,
+    });
 
-  return { success: true };
+    return { success: !result.skipped, emailStatus: result.skipped ? result.reason : 'sent' };
+  } catch (error) {
+    console.error('Outcome email failed:', error);
+    return { success: false, emailStatus: 'failed', error: error.message || 'Email delivery failed' };
+  }
 }
 
 module.exports = {

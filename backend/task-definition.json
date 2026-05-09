@@ -1,5 +1,5 @@
 {
-  "family": "proplytics-backend",
+  "family": "fixflowai-backend",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
@@ -8,8 +8,8 @@
   "executionRoleArn": "arn:aws:iam::034476915822:role/proplytics-ecs-execution-role",
   "containerDefinitions": [
     {
-      "name": "proplytics-backend",
-      "image": "034476915822.dkr.ecr.us-east-1.amazonaws.com/proplytics-backend:latest",
+      "name": "fixflowai-backend",
+      "image": "034476915822.dkr.ecr.us-east-1.amazonaws.com/fixflowai-backend:latest",
       "essential": true,
       "portMappings": [
         {
@@ -100,7 +100,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/proplytics-backend",
+          "awslogs-group": "/ecs/fixflowai-backend",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }

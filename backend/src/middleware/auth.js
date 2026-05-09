@@ -1,6 +1,7 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
 const { UnauthorizedError } = require('../utils/errors');
+const { normalizePlan } = require('../services/capabilities/capabilityService');
 
 async function authMiddleware(req, _res, next) {
   const header = req.headers.authorization;
@@ -23,8 +24,8 @@ async function authMiddleware(req, _res, next) {
       email: user.email,
       name: user.name,
       avatar: user.avatar || '',
-      plan: user.plan,
-      teamPlanPreference: user.teamPlanPreference,
+      plan: normalizePlan(user.plan),
+      teamPlanPreference: normalizePlan(user.teamPlanPreference || user.plan),
       defaultEntryMode: user.defaultEntryMode,
       currentWorkspaceId: user.currentWorkspaceId ? user.currentWorkspaceId.toString() : null,
     };

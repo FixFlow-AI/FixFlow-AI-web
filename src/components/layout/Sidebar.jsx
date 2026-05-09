@@ -18,6 +18,7 @@ import {
   Radar,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -54,13 +55,10 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
   const initials = user?.name
     ? user.name.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2)
     : '??'
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'New Proposal', href: '/new', icon: PlusCircle },
-    { name: 'Proposals', href: '/dashboard', icon: FileText },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
-    { name: 'Workspace', href: '/workspace', icon: Users },
+  const canUseFreelancerOS = currentWorkspace
+    ? Boolean(user?.teamPlanCapabilities?.freelancerOS)
+    : Boolean(user?.capabilities?.freelancerOS)
+  const freelancerNavigation = canUseFreelancerOS ? [
     { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true },
     { name: 'Niches', href: '/freelancer/niches', icon: Radar, level: 'child' },
     { name: 'Leads', href: '/freelancer/leads', icon: Network, level: 'child' },
@@ -68,6 +66,16 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
     { name: 'Escrows', href: '/freelancer/escrows', icon: HandCoins, level: 'child' },
     { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint, level: 'child' },
     { name: 'OS Settings', href: '/freelancer/settings', icon: Settings, level: 'child' },
+  ] : []
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'New Proposal', href: '/new', icon: PlusCircle },
+    { name: 'Proposals', href: '/dashboard', icon: FileText },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
+    { name: 'Workspace', href: '/workspace', icon: Users },
+    { name: 'Billing', href: '/billing', icon: CreditCard },
+    ...freelancerNavigation,
     ...(currentWorkspace ? [{ name: 'Workspace Settings', href: '/workspace/settings', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
     { name: 'Help', href: '/help', icon: HelpCircle },
@@ -103,6 +111,26 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
       </nav>
 
       <div className="p-4 border-t border-border">
+        {!isCollapsed && user?.billingUsage ? (
+          <div className="mb-3 rounded-2xl border border-border bg-background/30 px-3 py-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="capitalize text-muted-foreground">{user.plan || 'free'}</span>
+              <span className="font-medium">
+                {user.billingUsage.unlimited ? `${user.billingUsage.proposalsThisMonth || 0} used` : `${user.billingUsage.proposalsThisMonth || 0}/${user.billingUsage.proposalLimit || 0}`}
+              </span>
+            </div>
+            {!user.billingUsage.unlimited ? (
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{
+                    width: `${Math.min(100, ((user.billingUsage.proposalsThisMonth || 0) / Math.max(user.billingUsage.proposalLimit || 1, 1)) * 100)}%`,
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className={cn('flex items-center gap-3 px-3 py-2', isCollapsed && 'justify-center px-0')}>
           <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-medium shrink-0 overflow-hidden shadow-sm">
             {user?.avatar ? (

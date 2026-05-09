@@ -94,6 +94,14 @@ router.get('/status', authMiddleware, async (req, res, next) => {
   }
 });
 
+router.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'slack',
+    configured: Boolean(process.env.SLACK_CLIENT_ID && process.env.SLACK_CLIENT_SECRET),
+  });
+});
+
 router.post('/test', authMiddleware, async (req, res, next) => {
   try {
     const workspace = await getScopedWorkspace(req.user.userId);

@@ -1,61 +1,103 @@
 const { ForbiddenError } = require('../../utils/errors');
 
-const PLAN_ORDER = {
-  free: 0,
-  standard: 1,
-  pro: 2,
-  enterprise: 2,
+const CANONICAL_PLANS = ['free', 'pro', 'agency', 'solo', 'scale'];
+const LEGACY_PLAN_MIGRATION = {
+  standard: 'pro',
+  pro: 'agency',
+  enterprise: 'scale',
+};
+const LEGACY_PLAN_COMPATIBILITY = {
+  standard: 'pro',
+  enterprise: 'scale',
 };
 
-const PERSONAL_USAGE_LIMITS = {
-  free: 10,
-  standard: 50,
-  pro: 250,
+const PLAN_ORDER = {
+  free: 0,
+  solo: 1,
+  pro: 2,
+  agency: 3,
+  scale: 4,
+};
+
+const PERSONAL_PROPOSAL_LIMITS = {
+  free: 5,
+  solo: 50,
+  pro: 50,
+  agency: null,
+  scale: null,
 };
 
 const TEAM_MEMBER_LIMITS = {
   free: 2,
-  standard: 5,
-  pro: 10,
+  solo: 1,
+  pro: 5,
+  agency: null,
+  scale: null,
 };
 
 function normalizePlan(plan = 'free') {
-  if (plan === 'enterprise') {
-    return 'pro';
+  if (CANONICAL_PLANS.includes(plan)) {
+    return plan;
   }
 
-  return ['free', 'standard', 'pro'].includes(plan) ? plan : 'free';
+  return LEGACY_PLAN_COMPATIBILITY[plan] || 'free';
+}
+
+function migrateLegacyPlan(plan = 'free') {
+  return LEGACY_PLAN_MIGRATION[plan] || normalizePlan(plan);
 }
 
 function getPlanRank(plan) {
-  return PLAN_ORDER[plan] ?? 0;
+  return PLAN_ORDER[normalizePlan(plan)] ?? 0;
+}
+
+function isUnlimited(limit) {
+  return limit === null;
 }
 
 function getPersonalCapabilities(plan = 'free') {
   const normalized = normalizePlan(plan);
   const rank = getPlanRank(normalized);
+  const isAgencyTier = rank >= PLAN_ORDER.agency;
+  const isProTier = rank >= PLAN_ORDER.pro;
 
   return {
     normalizedPlan: normalized,
-    agencyBrain: rank >= 1,
-    triProposal: rank >= 2,
-    bundleShare: rank >= 2,
-    usageLimit: PERSONAL_USAGE_LIMITS[normalized],
+    agencyBrain: isProTier || normalized === 'scale',
+    triProposal: isProTier || normalized === 'scale',
+    bundleShare: isProTier || normalized === 'scale',
+    dealRoom: isProTier || normalized === 'agency' || normalized === 'scale',
+    freelancerOS: ['solo', 'agency', 'scale'].includes(normalized),
+    whiteLabel: isAgencyTier,
+    apiAccess: isAgencyTier,
+    auditLog: normalized === 'scale',
+    usageLimit: PERSONAL_PROPOSAL_LIMITS[normalized],
+    proposalLimit: PERSONAL_PROPOSAL_LIMITS[normalized],
+    unlimitedProposals: isUnlimited(PERSONAL_PROPOSAL_LIMITS[normalized]),
   };
 }
 
 function getWorkspaceCapabilities(plan = 'free') {
   const normalized = normalizePlan(plan);
   const rank = getPlanRank(normalized);
+  const memberLimit = TEAM_MEMBER_LIMITS[normalized];
+  const isAgencyTier = rank >= PLAN_ORDER.agency;
+  const isProTier = rank >= PLAN_ORDER.pro;
 
   return {
     normalizedPlan: normalized,
-    agencyBrain: rank >= 1,
-    triProposal: rank >= 2,
-    bundleShare: rank >= 2,
+    agencyBrain: isProTier || normalized === 'scale',
+    triProposal: isProTier || normalized === 'scale',
+    bundleShare: isProTier || normalized === 'scale',
+    dealRoom: isProTier || normalized === 'agency' || normalized === 'scale',
+    freelancerOS: ['agency', 'scale'].includes(normalized),
+    whiteLabel: isAgencyTier,
+    apiAccess: isAgencyTier,
+    auditLog: normalized === 'scale',
     comments: true,
     presence: true,
-    memberLimit: TEAM_MEMBER_LIMITS[normalized],
+    memberLimit,
+    unlimitedMembers: isUnlimited(memberLimit),
   };
 }
 
@@ -66,11 +108,14 @@ function assertCapability(enabled, message) {
 }
 
 module.exports = {
+  CANONICAL_PLANS,
+  LEGACY_PLAN_MIGRATION,
   normalizePlan,
+  migrateLegacyPlan,
   getPlanRank,
   getPersonalCapabilities,
   getWorkspaceCapabilities,
   assertCapability,
-  PERSONAL_USAGE_LIMITS,
+  PERSONAL_PROPOSAL_LIMITS,
   TEAM_MEMBER_LIMITS,
 };

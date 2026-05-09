@@ -6,6 +6,7 @@ const useThemeStore = create(
     (set) => ({
       theme: 'modern-dark', // default theme
       setTheme: (newTheme) => set({ theme: newTheme }),
+      hydrateTheme: (newTheme) => set({ theme: newTheme || 'modern-dark' }),
     }),
     {
       name: 'fixflowai-theme',

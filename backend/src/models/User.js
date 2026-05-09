@@ -5,8 +5,8 @@ const {
 } = require('../services/notifications/notificationPreferences');
 
 const SALT_ROUNDS = 12;
-const PERSONAL_PLANS = ['free', 'standard', 'pro', 'enterprise'];
-const TEAM_PLANS = ['free', 'standard', 'pro'];
+const PERSONAL_PLANS = ['free', 'pro', 'agency', 'solo', 'scale', 'standard', 'enterprise'];
+const TEAM_PLANS = ['free', 'pro', 'agency', 'scale', 'standard', 'enterprise'];
 
 const userSchema = new mongoose.Schema(
   {
@@ -41,6 +41,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
       trim: true,
+    },
+    timezone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    theme: {
+      type: String,
+      enum: ['light', 'modern-dark', 'vscode-dark'],
+      default: 'modern-dark',
     },
     plan: {
       type: String,
@@ -83,7 +93,45 @@ const userSchema = new mongoose.Schema(
     },
     usageLimit: {
       type: Number,
-      default: 10,
+      default: 5,
+    },
+    proposalLimit: {
+      type: Number,
+      default: 5,
+    },
+    proposalsThisMonth: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    resetDate: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    stripeCustomerId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ['none', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired'],
+      default: 'none',
+    },
+    subscriptionCurrentPeriodEnd: {
+      type: Date,
+      default: null,
+    },
+    subscriptionPriceId: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    subscriptionSeats: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
     refreshTokens: {
       type: [String],
@@ -97,7 +145,6 @@ const userSchema = new mongoose.Schema(
         delete ret.passwordHash;
         delete ret.refreshTokens;
         delete ret.__v;
-        ret.plan = ret.plan === 'enterprise' ? 'pro' : ret.plan;
         ret.id = ret._id;
         delete ret._id;
         return ret;

@@ -309,7 +309,7 @@ async function inviteToWorkspace({ workspace, inviter, email, role }) {
   await normalizeWorkspaceRoles(workspace);
   const capabilities = getWorkspaceCapabilities(workspace.plan);
 
-  if (workspace.members.length >= capabilities.memberLimit) {
+  if (!capabilities.unlimitedMembers && workspace.members.length >= capabilities.memberLimit) {
     throw new BadRequestError(`Your ${workspace.plan} team plan supports up to ${capabilities.memberLimit} members.`);
   }
 
@@ -426,7 +426,7 @@ async function acceptInvite({ user, rawToken }) {
 
   if (!workspace.members.some((member) => member.userId.toString() === user._id.toString())) {
     const capabilities = getWorkspaceCapabilities(workspace.plan);
-    if (workspace.members.length >= capabilities.memberLimit) {
+    if (!capabilities.unlimitedMembers && workspace.members.length >= capabilities.memberLimit) {
       throw new BadRequestError(`This workspace has reached the ${workspace.plan} plan member limit.`);
     }
 

@@ -22,6 +22,14 @@ const envSchema = z.object({
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().default(''),
+  EMAIL_FROM_ADDRESS: z.string().default('hello@fixflowai.com'),
+  EMAIL_FROM_NAME: z.string().default('FixFlowAI'),
+  STRIPE_SECRET_KEY: z.string().default(''),
+  STRIPE_WEBHOOK_SECRET: z.string().default(''),
+  STRIPE_FREE_PRICE_ID: z.string().default(''),
+  STRIPE_PRO_PRICE_ID: z.string().default(''),
+  STRIPE_AGENCY_PRICE_ID: z.string().default(''),
+  STRIPE_SOLO_PRICE_ID: z.string().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-3-flash-preview'),
   GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.1-flash-lite-preview'),
@@ -57,6 +65,10 @@ const envSchema = z.object({
   OPPORTUNITY_DISCOVERY_DEMO_FALLBACK: z
     .string()
     .default('true')
+    .transform((value) => value.toLowerCase() === 'true'),
+  ALLOW_DEMO_SEED: z
+    .string()
+    .default('false')
     .transform((value) => value.toLowerCase() === 'true'),
   BID_MATCH_THRESHOLD: z.coerce.number().default(70),
   AWS_REGION: z.string().default('us-east-1'),

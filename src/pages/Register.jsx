@@ -55,7 +55,7 @@ export default function Register() {
         teamPlanPreference: entryMode === 'team' ? plan : 'free',
       });
       toast.success('Account created!');
-      navigate(entryMode === 'team' ? '/workspace' : '/dashboard');
+      navigate(plan === 'free' ? (entryMode === 'team' ? '/workspace' : '/dashboard') : '/billing');
     } catch (err) {
       const message = err.response?.data?.error || 'Registration failed. Please try again.';
       toast.error(message);
@@ -104,8 +104,8 @@ export default function Register() {
           <div className="mb-5 grid gap-3 sm:grid-cols-3">
             {[
               { value: 'free', label: 'Free', price: '$0' },
-              { value: 'standard', label: 'Standard', price: '$10' },
-              { value: 'pro', label: 'Pro', price: '$25' },
+              { value: 'pro', label: 'Pro', price: '$49' },
+              { value: 'agency', label: 'Agency', price: '$249' },
             ].map((option) => (
               <button
                 key={option.value}

@@ -7,8 +7,10 @@ import ProposalCard from '@/components/dashboard/ProposalCard'
 import EmptyState from '@/components/dashboard/EmptyState'
 import api from '@/config/api'
 import { normalizeProposalList } from '@/lib/proposals'
+import useAuthStore from '@/stores/authStore'
 
 function Dashboard() {
+  const user = useAuthStore((state) => state.user)
   const { data: proposals = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['proposals'],
     queryFn: () => api.get('/proposals').then((response) => normalizeProposalList(response.data.proposals)),
@@ -79,6 +81,22 @@ function Dashboard() {
           ))}
         </motion.div>
       )}
+
+      {user?.billingUsage?.nearLimit || user?.billingUsage?.limitReached ? (
+        <div className="mb-8 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">{user.billingUsage.limitReached ? 'Proposal limit reached' : 'Proposal limit nearly reached'}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {user.billingUsage.proposalsThisMonth}/{user.billingUsage.proposalLimit} proposals used this month.
+              </p>
+            </div>
+            <Link to="/billing">
+              <Button variant="outline">Upgrade plan</Button>
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

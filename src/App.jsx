@@ -20,6 +20,7 @@ const Workspace = lazy(() => import('./pages/Workspace'))
 const WorkspaceSettings = lazy(() => import('./pages/WorkspaceSettings'))
 const JoinWorkspace = lazy(() => import('./pages/JoinWorkspace'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Billing = lazy(() => import('./pages/Billing'))
 const Help = lazy(() => import('./pages/Help'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
@@ -121,6 +122,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <DashboardLayout>
                 <Settings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Billing />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -276,6 +287,14 @@ import useThemeStore from './stores/themeStore'
 
 function ThemeController() {
   const theme = useThemeStore((s) => s.theme)
+  const hydrateTheme = useThemeStore((s) => s.hydrateTheme)
+  const userTheme = useAuthStore((s) => s.user?.theme)
+
+  useEffect(() => {
+    if (userTheme && userTheme !== theme) {
+      hydrateTheme(userTheme)
+    }
+  }, [hydrateTheme, theme, userTheme])
   
   useEffect(() => {
     // Remove all previous theme classes

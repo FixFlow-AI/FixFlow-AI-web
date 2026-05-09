@@ -113,5 +113,29 @@ export function usePortalTracking(shareToken, enabled = true) {
   return {
     registerSectionRef,
     flushPending,
+    postAnnotation: async (payload) => {
+      const response = await fetch(`${API_BASE_URL}/portal/${shareToken}/deal-room/annotations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not send annotation.')
+      }
+      return data
+    },
+    postTierSelection: async (payload) => {
+      const response = await fetch(`${API_BASE_URL}/portal/${shareToken}/deal-room/tier-selection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not save tier selection.')
+      }
+      return data
+    },
   }
 }
