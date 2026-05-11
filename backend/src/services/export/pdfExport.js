@@ -1,5 +1,24 @@
-const puppeteer = require('puppeteer');
 const { env } = require('../../config/env');
+const { AppError } = require('../../utils/errors');
+
+let puppeteer;
+let puppeteerLoadError;
+
+function getPuppeteer() {
+  if (puppeteer !== undefined) {
+    return puppeteer;
+  }
+
+  try {
+    // Lazy-load to keep PDF export optional in environments without Puppeteer.
+    puppeteer = require('puppeteer');
+  } catch (error) {
+    puppeteer = null;
+    puppeteerLoadError = error;
+  }
+
+  return puppeteer;
+}
 
 function escapeHtml(value) {
   return String(value || '')
@@ -268,9 +287,19 @@ function buildHTMLTemplate(data, options = {}) {
 
 async function generatePDF(proposalData, options = {}) {
   let browser;
+  const puppeteerClient = getPuppeteer();
+
+  if (!puppeteerClient) {
+    const detail = puppeteerLoadError ? ` (${puppeteerLoadError.message})` : '';
+    throw new AppError(
+      `PDF export is temporarily unavailable because Puppeteer is not installed${detail}. ` +
+        'Install the puppeteer dependency and ensure Chromium is available to enable PDF exports.',
+      503
+    );
+  }
 
   try {
-    browser = await puppeteer.launch({
+    browser = await puppeteerClient.launch({
       headless: true,
       executablePath: env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
