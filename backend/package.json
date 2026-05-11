@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "test": "node --test \"src/test/*.test.js\"",
+    "test": "node --test src/test/*.test.js",
     "migrate:plans": "node src/scripts/migratePlans.js",
     "seed:demo": "node src/scripts/seedDemoData.js"
   },
