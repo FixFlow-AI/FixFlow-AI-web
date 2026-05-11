@@ -45,7 +45,7 @@ function TimelineCard({ item, index }) {
       viewport={{ once: true, margin: '-100px' }}
       transition={{ duration: 0.52, delay: (index % 2) * 0.08 }}
       whileHover={{ y: -8, rotate: index % 2 === 0 ? -1 : 1 }}
-      className="group relative w-[80vw] shrink-0 overflow-hidden rounded-2xl border border-border/80 bg-card/70 p-6 shadow-[0_34px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl md:w-[34rem]"
+      className="landing-future-card group relative w-[80vw] shrink-0 overflow-hidden rounded-2xl p-6 md:w-[34rem]"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-emerald-300/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
       <div className="relative mb-20 flex items-center justify-between border-b border-border/70 pb-4">

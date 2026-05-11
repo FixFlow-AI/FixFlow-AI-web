@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Github, LogIn, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import useAuthStore from '@/stores/authStore';
 import toast from 'react-hot-toast';
 import api from '@/config/api';
@@ -115,6 +116,9 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6">
+        <ThemeSwitcher compact />
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -142,7 +146,7 @@ export default function Login() {
                 type="button"
                 onClick={() => setEntryMode(mode)}
                 className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  entryMode === mode ? 'bg-primary text-[#03131d]' : 'text-muted-foreground'
+                  entryMode === mode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                 }`}
               >
                 {mode === 'individual' ? 'Individual' : 'Team'}

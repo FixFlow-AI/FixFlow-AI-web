@@ -84,7 +84,7 @@ function AudienceParallax() {
                   viewport={{ once: true, margin: '-90px' }}
                   transition={{ duration: 0.5, delay: (index % 3) * 0.06 }}
                   whileHover={{ x: 10 }}
-                  className="group relative overflow-hidden border-t border-border/80 bg-gradient-to-r from-card/55 via-card/30 to-transparent p-5 backdrop-blur-sm md:p-7"
+                  className="landing-future-card group relative overflow-hidden rounded-[1.35rem] p-5 backdrop-blur-sm md:p-7"
                 >
                   <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-primary to-transparent opacity-40" />
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-emerald-300/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />

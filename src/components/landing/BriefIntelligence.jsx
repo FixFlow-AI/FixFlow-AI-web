@@ -53,7 +53,7 @@ function BriefIntelligence() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true, margin: '-100px' }}
                   transition={{ duration: 0.45, delay: index * 0.08 }}
-                  className="group flex items-center justify-between rounded-xl border border-border/70 bg-card/45 p-4 backdrop-blur-xl transition-colors hover:border-primary/45 hover:bg-primary/10"
+                  className="landing-panel group flex items-center justify-between rounded-xl p-4 transition-colors hover:border-primary/45 hover:bg-primary/10"
                 >
                   <span className="flex items-center gap-3">
                     <span className="grid h-10 w-10 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
@@ -72,7 +72,7 @@ function BriefIntelligence() {
           <div className="absolute -inset-8 rounded-[2rem] bg-primary/10 blur-3xl" />
           <motion.div
             style={{ scale: imageScale, clipPath }}
-            className="relative overflow-hidden rounded-[1.75rem] border border-primary/20 bg-card/65 shadow-[0_50px_120px_rgba(0,0,0,0.52)]"
+            className="landing-panel-strong relative overflow-hidden rounded-[1.75rem]"
           >
             <div className="flex items-center justify-between border-b border-border/70 bg-background/55 px-4 py-3 backdrop-blur-xl">
               <div className="flex items-center gap-2">
@@ -94,14 +94,14 @@ function BriefIntelligence() {
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, margin: '-90px' }}
             transition={{ duration: 0.5, delay: 0.12 }}
-            className="relative ml-auto mt-5 max-w-xl rounded-2xl border border-emerald-300/25 bg-emerald-300/10 p-5 backdrop-blur-xl"
+            className="landing-success-callout relative ml-auto mt-5 max-w-xl rounded-2xl p-5 backdrop-blur-xl"
           >
             <div className="flex items-start gap-4">
               <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-emerald-300/30 bg-emerald-300/10 text-emerald-200">
                 <BrainCircuit className="h-5 w-5" />
               </div>
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-emerald-200">staged output</p>
+                <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">staged output</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Features, effort, risks, delivery plan, and client-facing proof move as one structured system.
                 </p>

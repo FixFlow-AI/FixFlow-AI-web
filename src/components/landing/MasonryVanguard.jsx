@@ -51,7 +51,7 @@ function MasonryVanguard() {
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.5, delay: (index % 2) * 0.08 }}
               whileHover={{ y: -8, rotate: index % 2 === 0 ? -1.2 : 1.2 }}
-              className="group relative min-h-[18rem] overflow-hidden rounded-2xl border border-border/80 bg-card/65 p-6 shadow-[0_28px_80px_rgba(0,0,0,0.3)] backdrop-blur-xl"
+              className="landing-future-card group relative min-h-[18rem] overflow-hidden rounded-2xl p-6"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-emerald-400/12 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
               <div className="absolute right-5 top-5 grid h-24 w-24 place-items-center rounded-2xl border border-primary/20 bg-background/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-6">

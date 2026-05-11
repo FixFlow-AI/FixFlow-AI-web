@@ -6,7 +6,7 @@ const Button = forwardRef(
     const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none'
     
     const variants = {
-      default: 'bg-primary text-[#03131d] hover:bg-primary/90 shadow-lg shadow-primary/20',
+      default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20',
       secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/80',
       outline: 'border border-border bg-transparent hover:bg-muted/80 text-foreground',
       ghost: 'hover:bg-muted text-foreground',

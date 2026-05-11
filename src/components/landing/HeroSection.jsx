@@ -128,7 +128,7 @@ function HeroSection() {
           style={{ y: yFrame }}
           className="relative min-h-[34rem] [perspective:1200px]"
         >
-          <div className="absolute right-0 top-0 w-full max-w-[42rem] rounded-[2rem] border border-primary/20 bg-card/55 p-3 shadow-[0_40px_120px_rgba(0,0,0,0.48)] backdrop-blur-2xl lg:rotate-[-2deg]">
+          <div className="landing-panel-strong absolute right-0 top-0 w-full max-w-[42rem] rounded-[2rem] p-3 lg:rotate-[-2deg]">
             <div className="flex items-center justify-between border-b border-border/70 px-3 py-2">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-red-300/80" />
@@ -144,7 +144,7 @@ function HeroSection() {
             />
           </div>
 
-          <div className="absolute bottom-10 left-0 max-w-[24rem] rounded-2xl border border-primary/20 bg-background/70 p-4 shadow-[0_28px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+          <div className="landing-panel absolute bottom-10 left-0 max-w-[24rem] rounded-2xl p-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-primary">execution sequence</span>
               <ShieldCheck className="h-4 w-4 text-emerald-200" />

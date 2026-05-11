@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Sparkles, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -62,6 +63,7 @@ function Navbar() {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center gap-3">
+              <ThemeSwitcher compact />
               <Link to="/login">
                 <Button variant="ghost" size="sm">
                   Sign In
@@ -102,6 +104,7 @@ function Navbar() {
                 </a>
               ))}
               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
+                <ThemeSwitcher className="w-full justify-center" />
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="w-full justify-center">
                     Sign In

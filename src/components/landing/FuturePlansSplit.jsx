@@ -49,7 +49,7 @@ function RoadmapIconStage({ active }) {
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-xs uppercase tracking-[0.22em] text-muted-foreground">Future mode</span>
-            <span className={active.tone === 'emerald' ? 'h-3 w-3 rounded-full bg-emerald-300' : 'h-3 w-3 rounded-full bg-primary'} />
+            <span className={active.tone === 'emerald' ? 'h-3 w-3 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.65)]' : 'h-3 w-3 rounded-full bg-primary shadow-[0_0_18px_var(--fixflowai-glow)]'} />
           </div>
 
           <div>
@@ -58,10 +58,10 @@ function RoadmapIconStage({ active }) {
                 animate={{ rotateY: [0, 16, 0], y: [0, -6, 0] }}
                 transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                 className={cn(
-                  'relative grid h-32 w-32 place-items-center rounded-[2rem] border shadow-2xl',
+                  'relative grid h-32 w-32 place-items-center rounded-[2rem] border shadow-2xl ring-1 ring-white/20',
                   active.tone === 'emerald'
-                    ? 'border-emerald-300/40 bg-emerald-400/15 shadow-emerald-400/10'
-                    : 'border-primary/45 bg-primary/15 shadow-primary/10'
+                    ? 'border-emerald-300/50 bg-emerald-400/18 text-emerald-200 shadow-emerald-400/20'
+                    : 'border-primary/55 bg-primary/18 text-primary shadow-primary/20'
                 )}
               >
                 <div className="absolute inset-3 rounded-[1.4rem] border border-white/10" />
@@ -123,7 +123,7 @@ function FuturePlansSplit() {
         <div className="lg:sticky lg:top-28 lg:self-start">
           <div
             className={cn(
-              'relative overflow-hidden rounded-[1.75rem] border bg-card/70 p-5 shadow-[0_38px_100px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-colors duration-500',
+              'landing-panel-strong relative overflow-hidden rounded-[1.75rem] p-5 transition-colors duration-500',
               active.tone === 'emerald' ? 'border-emerald-300/50' : 'border-primary/55'
             )}
           >
@@ -164,8 +164,8 @@ function FuturePlansSplit() {
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.45 }}
               className={cn(
-                'min-h-[42vh] rounded-2xl border p-6 transition-colors duration-500',
-                activeId === item.id ? 'border-primary/60 bg-primary/10' : 'border-border/80 bg-card/60'
+                'landing-future-card min-h-[42vh] rounded-2xl p-6 transition-colors duration-500',
+                activeId === item.id ? 'border-primary/60 bg-primary/10' : ''
               )}
             >
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">{item.id}</p>

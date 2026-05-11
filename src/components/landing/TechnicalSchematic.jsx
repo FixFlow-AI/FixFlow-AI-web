@@ -11,6 +11,9 @@ const nodes = [
     links: ['SSE streaming', 'JSON repair', 'Prompt ops', 'Confidence grid'],
     metric: 'structured first',
     image: '/web-interface/proposal-flow.png',
+    sceneTitle: 'Consultant-grade intake',
+    sceneBody: 'A buyer brief becomes scored scope, risk, and effort signals before the proposal is written.',
+    avatar: '/avatar.png',
   },
   {
     id: 'fullstack',
@@ -19,6 +22,9 @@ const nodes = [
     links: ['React', 'Express', 'MongoDB', 'S3'],
     metric: 'delivery visible',
     image: '/web-interface/architecture-map.png',
+    sceneTitle: 'Build plan customers can inspect',
+    sceneBody: 'Architecture, milestones, and implementation paths are framed like a delivery room instead of hidden notes.',
+    avatar: '/avatar2.png',
   },
   {
     id: 'ops',
@@ -27,6 +33,9 @@ const nodes = [
     links: ['Lead scoring', 'Outreach', 'Invoices', 'ETA'],
     metric: 'pipeline alive',
     image: '/web-interface/lifecycle-workflow.png',
+    sceneTitle: 'Revenue motion in context',
+    sceneBody: 'Lead, outreach, payment, and ETA states stay visible around the actual work.',
+    avatar: '/avatar3.png',
   },
   {
     id: 'trust',
@@ -35,6 +44,9 @@ const nodes = [
     links: ['Escrow', 'DID', 'Credentials', 'Audit trail'],
     metric: 'risk exposed',
     image: '/web-interface/nogotiate-refinement.png',
+    sceneTitle: 'Trust before handoff',
+    sceneBody: 'Clients see constraints, negotiation history, and release logic without digging through documents.',
+    avatar: '/avatar4.png',
   },
   {
     id: 'data',
@@ -43,6 +55,9 @@ const nodes = [
     links: ['BriefScore', 'Analytics', 'Patterns', 'Workspace'],
     metric: 'learning loop',
     image: '/web-interface/hero-architecture.png',
+    sceneTitle: 'Memory that compounds',
+    sceneBody: 'Proposal outcomes, proof, and workspace patterns become reusable intelligence for the next deal.',
+    avatar: '/avatar5.png',
   },
 ]
 
@@ -83,8 +98,8 @@ function TechnicalSchematic() {
                   onFocus={() => setActiveId(node.id)}
                   onClick={() => setActiveId(node.id)}
                   className={cn(
-                    'group relative min-h-36 overflow-hidden rounded-xl border p-4 text-left transition-colors',
-                    isActive ? 'border-primary/60 bg-primary/12' : 'border-border/75 bg-card/55 hover:border-primary/35'
+                    'landing-future-card group relative min-h-36 overflow-hidden rounded-xl p-4 text-left transition-colors',
+                    isActive ? 'border-primary/60 bg-primary/12' : 'hover:border-primary/35'
                   )}
                 >
                   {isActive && <motion.span layoutId="schematic-highlight" className="absolute inset-0 rounded-xl border border-primary/60 shadow-[inset_0_0_42px_rgba(63,215,255,0.1)]" />}
@@ -105,7 +120,7 @@ function TechnicalSchematic() {
               animate={{ opacity: 1, y: 0, clipPath: 'inset(0% 0% 0% 0% round 24px)' }}
               exit={{ opacity: 0, y: -16, clipPath: 'inset(10% 8% 10% 8% round 24px)' }}
               transition={{ duration: 0.42 }}
-              className="relative overflow-hidden rounded-2xl border border-border/80 bg-card/60 shadow-[0_38px_100px_rgba(0,0,0,0.36)] backdrop-blur-xl"
+              className="landing-panel-strong relative overflow-hidden rounded-2xl"
             >
               <div className="flex items-center justify-between border-b border-border/70 bg-background/45 px-4 py-3">
                 <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-primary">{active.label}</span>
@@ -120,8 +135,18 @@ function TechnicalSchematic() {
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.4 }}
-            className="rounded-2xl border border-border/80 bg-background/45 p-6 backdrop-blur-xl"
+            className="landing-panel rounded-2xl p-6"
           >
+            <div className="workflow-photo mb-6 overflow-hidden rounded-2xl border border-border/70 p-4">
+              <div className="flex items-center gap-4">
+                <img src={active.avatar} alt="" className="h-16 w-16 rounded-2xl border border-white/20 object-cover shadow-lg" />
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-primary">customer scene</p>
+                  <h4 className="mt-1 text-xl font-semibold">{active.sceneTitle}</h4>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{active.sceneBody}</p>
+                </div>
+              </div>
+            </div>
             <div className="grid h-14 w-14 place-items-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
               <ActiveIcon className="h-7 w-7" />
             </div>

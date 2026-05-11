@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import useAuthStore from '@/stores/authStore'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher'
 
 function DashboardHeader({ onOpenSidebar }) {
   const navigate = useNavigate()
@@ -50,6 +51,7 @@ function DashboardHeader({ onOpenSidebar }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeSwitcher compact className="hidden sm:inline-flex" />
           <NotificationCenter />
 
           <motion.button 

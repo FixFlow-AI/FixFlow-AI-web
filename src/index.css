@@ -14,7 +14,7 @@
   --muted-foreground: #8ea5b5;
 
   --primary: #3fd7ff;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #03131d;
 
   --secondary: #12222f;
   --secondary-foreground: #f5f5f7;
@@ -298,6 +298,106 @@ body::before {
     pointer-events: none;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 12%, transparent 84%, rgba(0, 0, 0, 0.22));
     opacity: 0.7;
+  }
+
+  .landing-panel {
+    background: rgba(13, 24, 33, 0.68);
+    border: 1px solid rgba(111, 196, 220, 0.22);
+    box-shadow:
+      0 28px 90px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .landing-panel-strong {
+    background: rgba(8, 18, 27, 0.82);
+    border: 1px solid rgba(111, 196, 220, 0.28);
+    box-shadow:
+      0 38px 110px rgba(0, 0, 0, 0.44),
+      0 0 55px rgba(63, 215, 255, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .landing-success-callout {
+    background: linear-gradient(135deg, rgba(38, 208, 124, 0.16), rgba(63, 215, 255, 0.08));
+    border: 1px solid rgba(52, 211, 153, 0.34);
+    color: var(--foreground);
+  }
+
+  .landing-future-card {
+    position: relative;
+    background:
+      linear-gradient(135deg, rgba(63, 215, 255, 0.1), transparent 36%),
+      linear-gradient(180deg, rgba(13, 24, 33, 0.74), rgba(7, 16, 24, 0.7));
+    border: 1px solid rgba(111, 196, 220, 0.28);
+    box-shadow:
+      0 26px 80px rgba(0, 0, 0, 0.32),
+      0 0 0 1px rgba(63, 215, 255, 0.04),
+      inset 0 0 34px rgba(63, 215, 255, 0.04);
+  }
+
+  .workflow-photo {
+    background:
+      radial-gradient(circle at 30% 18%, rgba(63, 215, 255, 0.26), transparent 26%),
+      radial-gradient(circle at 76% 72%, rgba(38, 208, 124, 0.2), transparent 28%),
+      linear-gradient(135deg, rgba(8, 18, 27, 0.95), rgba(13, 24, 33, 0.82));
+  }
+
+  .theme-light .cinematic-landing {
+    --muted-foreground: #334155;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.12), transparent 32%),
+      radial-gradient(circle at 82% 35%, rgba(20, 184, 166, 0.1), transparent 30%),
+      var(--background);
+  }
+
+  .theme-light .cinematic-landing .text-muted-foreground {
+    color: #334155;
+  }
+
+  .theme-light .cinematic-landing .text-muted-foreground\/35 {
+    color: rgba(51, 65, 85, 0.48);
+  }
+
+  .theme-light .cinematic-landing::before {
+    background:
+      linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  }
+
+  .theme-light .landing-panel,
+  .theme-light .landing-panel-strong {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: rgba(100, 116, 139, 0.24);
+    box-shadow:
+      0 24px 70px rgba(15, 23, 42, 0.1),
+      0 0 0 1px rgba(124, 58, 237, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .theme-light .landing-success-callout {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.16), rgba(124, 58, 237, 0.08));
+    border-color: rgba(20, 184, 166, 0.34);
+    color: #0f172a;
+  }
+
+  .theme-light .landing-future-card {
+    background:
+      linear-gradient(135deg, rgba(124, 58, 237, 0.08), transparent 38%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.76));
+    border-color: rgba(124, 58, 237, 0.18);
+    box-shadow:
+      0 26px 80px rgba(15, 23, 42, 0.11),
+      0 0 36px rgba(124, 58, 237, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .theme-light .workflow-photo {
+    background:
+      radial-gradient(circle at 22% 20%, rgba(124, 58, 237, 0.18), transparent 28%),
+      radial-gradient(circle at 76% 70%, rgba(20, 184, 166, 0.18), transparent 30%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.86));
   }
 }
 
