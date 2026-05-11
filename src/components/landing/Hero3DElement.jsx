@@ -245,10 +245,6 @@ function Hero3DElement() {
           <WorkflowTopology activeIndex={activeIndex} palette={palette} />
         </Canvas>
       </div>
-
-      <div className="pointer-events-none absolute right-[5%] top-[13%] z-0 hidden w-[32%] min-w-[330px] xl:block">
-        <ActiveWorkflowBadge activeIndex={activeIndex} palette={palette} />
-      </div>
     </>
   )
 }

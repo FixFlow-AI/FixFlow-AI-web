@@ -267,6 +267,38 @@ body::before {
     background-size: 48px 48px;
     mask-image: radial-gradient(circle at center, black 30%, transparent 85%);
   }
+
+  .cinematic-landing {
+    position: relative;
+    isolation: isolate;
+    background:
+      radial-gradient(circle at 52% 0%, rgba(63, 215, 255, 0.12), transparent 34%),
+      radial-gradient(circle at 8% 32%, rgba(38, 208, 124, 0.08), transparent 28%),
+      var(--background);
+  }
+
+  .cinematic-landing::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 120px 120px;
+    mask-image: linear-gradient(to bottom, black, transparent 78%);
+  }
+
+  .cinematic-landing::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 12%, transparent 84%, rgba(0, 0, 0, 0.22));
+    opacity: 0.7;
+  }
 }
 
 /* Focus styles */

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { BadgeCheck, Bot, Network } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Bot, Github, Network } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
@@ -36,7 +36,7 @@ function RoadmapIconStage({ active }) {
   const Icon = active.icon
 
   return (
-    <div className="relative aspect-square rounded-xl border border-border bg-background/55 p-6">
+    <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-background/55 p-6">
       <div className="absolute inset-0 workspace-grid opacity-35" />
       <AnimatePresence mode="wait">
         <motion.div
@@ -88,9 +88,6 @@ function RoadmapIconStage({ active }) {
                 </motion.span>
               ))}
             </div>
-
-            <h2 className="mt-8 text-3xl font-semibold">{active.title}</h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">{active.body}</p>
           </div>
         </motion.div>
       </AnimatePresence>
@@ -120,22 +117,43 @@ function FuturePlansSplit() {
   }, [])
 
   return (
-    <section id="roadmap" className="scroll-mt-28 py-24">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:px-8">
+    <section id="roadmap" className="relative scroll-mt-28 overflow-hidden py-24 sm:py-32">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(63,215,255,0.16),transparent_34%),linear-gradient(180deg,transparent,rgba(2,8,13,0.72))]" />
+      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:px-8">
         <div className="lg:sticky lg:top-28 lg:self-start">
           <div
             className={cn(
-              'relative overflow-hidden rounded-2xl border bg-card/75 p-6 transition-colors duration-500',
+              'relative overflow-hidden rounded-[1.75rem] border bg-card/70 p-5 shadow-[0_38px_100px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-colors duration-500',
               active.tone === 'emerald' ? 'border-emerald-300/50' : 'border-primary/55'
             )}
           >
-            <div className="absolute inset-0 workspace-grid opacity-40" />
             <RoadmapIconStage active={active} />
+            <div className="mt-6">
+              <p className="font-mono text-xs uppercase tracking-[0.28em] text-primary">Final scene</p>
+              <h2 className="mt-3 text-4xl font-bold leading-[1.02] tracking-tight md:text-6xl">Open the operating layer.</h2>
+              <p className="mt-5 text-base leading-8 text-muted-foreground">
+                Start with the current MVP, then let the product story expand into agents, marketplace graph, and verifiable proof.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Link to="/register?mode=individual&plan=free">
+                  <Button size="lg" className="w-full sm:w-auto">
+                    <Github className="h-4 w-4" />
+                    Connect GitHub
+                  </Button>
+                </Link>
+                <Link to="/freelancer">
+                  <Button variant="outline" size="lg" className="w-full border-primary/25 bg-background/35 sm:w-auto">
+                    Open the MVP
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <p className="font-mono text-xs uppercase tracking-[0.28em] text-primary">Future plans</p>
+          <p className="font-mono text-xs uppercase tracking-[0.28em] text-primary">Roadmap / CTA</p>
           {roadmap.map((item) => (
             <motion.article
               key={item.id}
@@ -146,18 +164,15 @@ function FuturePlansSplit() {
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.45 }}
               className={cn(
-                'min-h-[46vh] rounded-2xl border p-6 transition-colors duration-500',
-                activeId === item.id ? 'border-primary/60 bg-primary/10' : 'border-border/80 bg-card/70'
+                'min-h-[42vh] rounded-2xl border p-6 transition-colors duration-500',
+                activeId === item.id ? 'border-primary/60 bg-primary/10' : 'border-border/80 bg-card/60'
               )}
             >
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-primary">{item.id}</p>
-              <h3 className="mt-5 text-3xl font-semibold">{item.title}</h3>
+              <h3 className="mt-5 text-4xl font-semibold tracking-tight">{item.title}</h3>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">{item.body}</p>
             </motion.article>
           ))}
-          <Link to="/freelancer">
-            <Button size="lg">Open the MVP</Button>
-          </Link>
         </div>
       </div>
     </section>

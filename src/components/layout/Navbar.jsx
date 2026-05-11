@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
+  { label: 'Story', href: '#intelligence' },
   { label: 'Flow', href: '#flow' },
-  { label: 'Capabilities', href: '#schematic' },
-  { label: 'Architecture', href: '#evidence' },
+  { label: 'Blueprint', href: '#schematic' },
+  { label: 'Proof', href: '#evidence' },
   { label: 'Roadmap', href: '#roadmap' },
 ]
 
@@ -34,7 +35,7 @@ function Navbar() {
       className="fixed top-0 left-0 right-0 z-50"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="glass rounded-2xl px-6 py-3">
+        <nav className="glass rounded-2xl border-primary/10 px-6 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.28)]">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
@@ -46,13 +47,13 @@ function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-7">
               {navLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
                   onClick={(e) => handleAnchorClick(e, link.href)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {link.label}
                 </a>

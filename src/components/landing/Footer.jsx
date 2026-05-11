@@ -3,22 +3,22 @@ import { Sparkles, Github, Twitter, Linkedin } from 'lucide-react'
 
 const footerLinks = {
   product: [
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'Integrations', href: '#integrations' },
-    { label: 'Changelog', href: '#changelog' },
+    { label: 'Brief intelligence', href: '#intelligence' },
+    { label: 'Operating flow', href: '#flow' },
+    { label: 'Blueprint', href: '#schematic' },
+    { label: 'Proof modules', href: '#evidence' },
   ],
   company: [
-    { label: 'About', href: '#about' },
-    { label: 'Blog', href: '#blog' },
-    { label: 'Careers', href: '#careers' },
-    { label: 'Contact', href: '#contact' },
+    { label: 'Audience risk', href: '#audience' },
+    { label: 'Roadmap', href: '#roadmap' },
+    { label: 'Sign in', href: '/login' },
+    { label: 'Register', href: '/register?mode=individual&plan=free' },
   ],
   resources: [
-    { label: 'Documentation', href: '#docs' },
-    { label: 'API Reference', href: '#api' },
-    { label: 'Guides', href: '#guides' },
-    { label: 'Support', href: '#support' },
+    { label: 'FlowBoard', href: '/freelancer' },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'New proposal', href: '/new' },
+    { label: 'Help', href: '/help' },
   ],
   legal: [
     { label: 'Privacy', href: '#privacy' },
@@ -39,7 +39,7 @@ function Footer() {
               <span className="text-lg font-bold">FixFlowAI</span>
             </Link>
             <p className="text-sm text-muted-foreground mb-4">
-              Transform client briefs into execution-ready proposals with AI.
+              Turn client briefs, delivery risk, and revenue motion into one operating system.
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">

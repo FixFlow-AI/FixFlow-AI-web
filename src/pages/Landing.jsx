@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import Navbar from '@/components/layout/Navbar'
 import HeroSection from '@/components/landing/HeroSection'
+import BriefIntelligence from '@/components/landing/BriefIntelligence'
 import ProjectsTimeline from '@/components/landing/ProjectsTimeline'
 import TechnicalSchematic from '@/components/landing/TechnicalSchematic'
 import AudienceParallax from '@/components/landing/AudienceParallax'
@@ -15,11 +16,12 @@ function Landing() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-background"
+      className="cinematic-landing min-h-screen bg-background"
     >
       <Navbar />
       <main>
         <HeroSection />
+        <BriefIntelligence />
         <ProjectsTimeline />
         <TechnicalSchematic />
         <AudienceParallax />
