@@ -23,7 +23,13 @@ const ALLOWED_AVATAR_UPLOADS = new Map([
 
 const MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024;
 
-const s3 = new S3Client({ region: env.AWS_REGION?.trim() || 'us-east-1' });
+const awsRegion = env.AWS_REGION?.trim();
+
+if (!awsRegion && env.NODE_ENV === 'production') {
+  throw new Error('AWS_REGION is required in production environments.');
+}
+
+const s3 = new S3Client({ region: awsRegion || 'us-east-1' });
 
 function isStorageObjectMissingError(error) {
   return ['NoSuchKey', 'NotFound'].includes(error?.Code || error?.name);
