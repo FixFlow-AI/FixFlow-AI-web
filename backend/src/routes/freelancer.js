@@ -28,7 +28,7 @@ const {
 } = require('../services/freelancer/freelancerService');
 const { createNotifications, buildWorkspaceRecipientIds } = require('../services/notifications/notificationService');
 const { assertWorkspacePermission } = require('../services/workspace/workspaceService');
-const { BadRequestError, NotFoundError } = require('../utils/errors');
+const { BadRequestError, ForbiddenError, NotFoundError } = require('../utils/errors');
 const { getLlmProviderStatus } = require('../services/llm/providerRegistry');
 const {
   assertCapability,
@@ -103,6 +103,10 @@ function userFromRequest(req) {
 }
 
 async function ensureFreelancerPermission(req, permission) {
+  if (req.user.role === 'freelancer') {
+    return;
+  }
+
   if (req.user.defaultEntryMode === 'team' && req.user.currentWorkspaceId) {
     await assertWorkspacePermission(req.user.userId, req.user.currentWorkspaceId, permission);
     const workspace = await Workspace.findById(req.user.currentWorkspaceId).select('plan').lean();
@@ -115,8 +119,12 @@ async function ensureFreelancerPermission(req, permission) {
 
   assertCapability(
     getPersonalCapabilities(req.user.plan).freelancerOS,
-    'Freelancer OS requires the Solo, Agency, or Scale plan.'
+    'Freelancer OS requires a Freelancer account or the Solo, Agency, or Scale plan.'
   );
+
+  if (!['solo', 'agency', 'scale'].includes(req.user.plan)) {
+    throw new ForbiddenError('Freelancer OS is only available to Freelancer accounts.');
+  }
 }
 
 async function notifyFreelancerWorkspace(req, notification) {

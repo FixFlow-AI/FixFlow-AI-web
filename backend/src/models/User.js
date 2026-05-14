@@ -29,7 +29,12 @@ async function hashPasswordIfNeeded(user) {
 const User = createDynamoModel({
   modelName: 'User',
   defaults: () => ({
+    role: 'client',
+    selectedPlan: 'free',
+    authProvider: 'email',
     githubId: '',
+    githubUsername: '',
+    googleId: '',
     avatar: '',
     avatarKey: '',
     timezone: '',

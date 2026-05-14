@@ -7,9 +7,11 @@ import DashboardLayout from './components/layout/DashboardLayout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import useAuthStore from './stores/authStore'
 import { PageLoader } from './components/ui/PageLoader'
+import { getDashboardPathForRole, normalizeRole } from './lib/authRoles'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Developer = lazy(() => import('./pages/Developer'))
 const NewProposal = lazy(() => import('./pages/NewProposal'))
 const ProposalResult = lazy(() => import('./pages/ProposalResult'))
 const ProposalPortal = lazy(() => import('./pages/ProposalPortal'))
@@ -60,6 +62,7 @@ function AppRoutes() {
     const refreshToken = params.get('refreshToken')
     const encodedUser = params.get('user')
     const entryMode = params.get('mode') === 'team' ? 'team' : 'individual'
+    const redirectTo = params.get('redirectTo')
 
     if (!accessToken || !refreshToken) {
       return
@@ -68,7 +71,8 @@ function AppRoutes() {
     try {
       const user = encodedUser ? JSON.parse(atob(encodedUser)) : null
       completeOAuthLogin({ accessToken, refreshToken, user })
-      navigate(entryMode === 'team' ? '/workspace' : '/dashboard', { replace: true })
+      const dashboardPath = redirectTo || (entryMode === 'team' ? '/workspace' : getDashboardPathForRole(normalizeRole(user?.role)))
+      navigate(dashboardPath, { replace: true })
     } catch {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
@@ -89,9 +93,19 @@ function AppRoutes() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['client']}>
               <DashboardLayout>
                 <Dashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/developer"
+          element={
+            <ProtectedRoute allowedRoles={['developer']}>
+              <DashboardLayout>
+                <Developer />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -199,7 +213,7 @@ function AppRoutes() {
         <Route
           path="/freelancer"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerFlowBoard />
               </DashboardLayout>
@@ -209,7 +223,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/onboarding"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerOnboarding />
               </DashboardLayout>
@@ -219,7 +233,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/niches"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerNiches />
               </DashboardLayout>
@@ -229,7 +243,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/leads"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerLeads />
               </DashboardLayout>
@@ -239,7 +253,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/outreach"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerOutreach />
               </DashboardLayout>
@@ -249,7 +263,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/escrows"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerEscrows />
               </DashboardLayout>
@@ -259,7 +273,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/identity"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerIdentity />
               </DashboardLayout>
@@ -269,7 +283,7 @@ function AppRoutes() {
         <Route
           path="/freelancer/settings"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['freelancer']}>
               <DashboardLayout>
                 <FreelancerSettings />
               </DashboardLayout>

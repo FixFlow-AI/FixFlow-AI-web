@@ -42,6 +42,8 @@ const registerSchema = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must not exceed 50 characters'),
+  role: z.enum(['freelancer', 'client', 'developer']),
+  selectedPlan: z.enum(['free', 'solo', 'pro', 'agency']),
   plan: z.enum(['free', 'pro', 'agency', 'solo', 'scale', 'standard', 'enterprise']).optional().default('free'),
   defaultEntryMode: z.enum(['individual', 'team']).optional().default('individual'),
   teamPlanPreference: z.enum(['free', 'pro', 'agency', 'scale', 'standard', 'enterprise']).optional().default('free'),
@@ -50,6 +52,7 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
+  role: z.enum(['freelancer', 'client', 'developer']),
   entryMode: z.enum(['individual', 'team']).nullable().optional().default(null),
 });
 

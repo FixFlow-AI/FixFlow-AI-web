@@ -2,6 +2,7 @@ const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
 const { UnauthorizedError } = require('../utils/errors');
 const { normalizePlan } = require('../services/capabilities/capabilityService');
+const { inferUserRole, normalizeSelectedPlanForRole } = require('../services/auth/authRules');
 
 async function authMiddleware(req, _res, next) {
   const header = req.headers.authorization;
@@ -18,13 +19,19 @@ async function authMiddleware(req, _res, next) {
     if (!user) {
       return next(new UnauthorizedError('User not found'));
     }
+    const role = inferUserRole(user);
+    const selectedPlan = normalizeSelectedPlanForRole(role, user.selectedPlan || user.plan || 'free');
 
     req.user = {
       userId: user._id.toString(),
       email: user.email,
       name: user.name,
       avatar: user.avatar || '',
-      plan: normalizePlan(user.plan),
+      role,
+      selectedPlan,
+      authProvider: user.authProvider || (user.githubId ? 'github' : user.googleId ? 'google' : 'email'),
+      githubUsername: user.githubUsername || '',
+      plan: normalizePlan(selectedPlan),
       teamPlanPreference: normalizePlan(user.teamPlanPreference || user.plan),
       defaultEntryMode: user.defaultEntryMode,
       currentWorkspaceId: user.currentWorkspaceId ? user.currentWorkspaceId.toString() : null,

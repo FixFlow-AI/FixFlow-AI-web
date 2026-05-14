@@ -135,10 +135,10 @@ function FuturePlansSplit() {
                 Start with the current MVP, then let the product story expand into agents, marketplace graph, and verifiable proof.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link to="/register?mode=individual&plan=free">
+                <Link to="/register?role=freelancer">
                   <Button size="lg" className="w-full sm:w-auto">
                     <Github className="h-4 w-4" />
-                    Connect GitHub
+                    Join as Freelancer
                   </Button>
                 </Link>
                 <Link to="/freelancer">

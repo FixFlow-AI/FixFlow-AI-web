@@ -21,6 +21,16 @@ const { authLimiter } = require('../middleware/rateLimit');
 const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
 const { getPersonalCapabilities, normalizePlan } = require('../services/capabilities/capabilityService');
 const { buildAuthProfile } = require('../services/auth/profileService');
+const {
+  applyAuthMetadata,
+  assertPlanAllowedForRole,
+  assertProviderAllowedForRole,
+  assertRoleMatchesUser,
+  getRoleDashboardPath,
+  inferUserRole,
+  normalizeRole,
+  normalizeSelectedPlanForRole,
+} = require('../services/auth/authRules');
 const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
 const { buildFrontendUrl, isAllowedFrontendOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
 const s3Service = require('../services/storage/s3');
@@ -35,11 +45,33 @@ function ensureGithubConfigured() {
   }
 }
 
+function ensureGoogleConfigured() {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+    throw new BadRequestError('Google OAuth is not configured on the server');
+  }
+}
+
 function buildGithubAuthorizeUrl(state = '') {
   const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
   authorizeUrl.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   authorizeUrl.searchParams.set('redirect_uri', env.GITHUB_CALLBACK_URL);
   authorizeUrl.searchParams.set('scope', env.GITHUB_OAUTH_SCOPE);
+
+  if (state) {
+    authorizeUrl.searchParams.set('state', state);
+  }
+
+  return authorizeUrl.toString();
+}
+
+function buildGoogleAuthorizeUrl(state = '') {
+  const authorizeUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authorizeUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
+  authorizeUrl.searchParams.set('redirect_uri', env.GOOGLE_CALLBACK_URL);
+  authorizeUrl.searchParams.set('response_type', 'code');
+  authorizeUrl.searchParams.set('scope', env.GOOGLE_OAUTH_SCOPE);
+  authorizeUrl.searchParams.set('access_type', 'offline');
+  authorizeUrl.searchParams.set('prompt', 'select_account');
 
   if (state) {
     authorizeUrl.searchParams.set('state', state);
@@ -75,6 +107,38 @@ async function exchangeGithubCodeForToken(code) {
 
   if (!data.access_token) {
     throw new BadRequestError('GitHub did not return an access token');
+  }
+
+  return data.access_token;
+}
+
+async function exchangeGoogleCodeForToken(code) {
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'FixFlowAI-Backend',
+    },
+    body: new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: env.GOOGLE_CALLBACK_URL,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new BadRequestError('Failed to exchange Google authorization code');
+  }
+
+  const data = await response.json();
+  if (data.error) {
+    throw new BadRequestError(data.error_description || 'Google OAuth exchange failed');
+  }
+
+  if (!data.access_token) {
+    throw new BadRequestError('Google did not return an access token');
   }
 
   return data.access_token;
@@ -121,16 +185,57 @@ async function fetchGithubProfile(accessToken) {
 
   return {
     githubId: String(userData.id),
+    githubUsername: userData.login || '',
     email: email.toLowerCase(),
     name: (userData.name || userData.login || email.split('@')[0]).trim(),
   };
 }
 
-async function findOrCreateUserFromGithub(profile) {
+async function fetchGoogleProfile(accessToken) {
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
+      'User-Agent': 'FixFlowAI-Backend',
+    },
+  });
+
+  if (!response.ok) {
+    throw new BadRequestError('Failed to fetch Google user profile');
+  }
+
+  const userData = await response.json();
+  if (!userData.sub || !userData.email) {
+    throw new BadRequestError('Invalid Google profile payload');
+  }
+  if (userData.email_verified === false) {
+    throw new BadRequestError('Google account email must be verified');
+  }
+
+  return {
+    googleId: String(userData.sub),
+    email: String(userData.email).toLowerCase(),
+    name: (userData.name || userData.email.split('@')[0]).trim(),
+  };
+}
+
+async function findOrCreateUserFromGithub(profile, options = {}) {
+  const role = normalizeRole(options.role);
+  const selectedPlan = normalizeSelectedPlanForRole(role, options.selectedPlan || 'free');
+  assertProviderAllowedForRole(role, 'github');
+  assertPlanAllowedForRole(role, selectedPlan);
+
   let user = await User.findOne({ githubId: profile.githubId });
 
   if (user) {
     let isChanged = false;
+    const actualRole = assertRoleMatchesUser(user, role);
+    applyAuthMetadata(user, {
+      role: actualRole,
+      selectedPlan: user.selectedPlan || user.plan || selectedPlan,
+      authProvider: 'github',
+      githubUsername: profile.githubUsername,
+    });
 
     if (profile.name && user.name !== profile.name) {
       user.name = profile.name;
@@ -147,6 +252,8 @@ async function findOrCreateUserFromGithub(profile) {
 
     if (isChanged) {
       await user.save();
+    } else {
+      await user.save();
     }
 
     return user;
@@ -154,14 +261,22 @@ async function findOrCreateUserFromGithub(profile) {
 
   user = await User.findOne({ email: profile.email });
   if (user) {
+    assertRoleMatchesUser(user, role);
     if (user.githubId && user.githubId !== profile.githubId) {
       throw new ConflictError('Email is already linked to another GitHub account');
     }
 
     user.githubId = profile.githubId;
+    user.githubUsername = profile.githubUsername || user.githubUsername || '';
     if (profile.name && user.name !== profile.name) {
       user.name = profile.name;
     }
+    applyAuthMetadata(user, {
+      role,
+      selectedPlan: user.selectedPlan || user.plan || selectedPlan,
+      authProvider: 'github',
+      githubUsername: profile.githubUsername,
+    });
     await user.save();
 
     return user;
@@ -173,7 +288,71 @@ async function findOrCreateUserFromGithub(profile) {
     passwordHash: generatedPassword,
     name: profile.name,
     githubId: profile.githubId,
+    githubUsername: profile.githubUsername || '',
   });
+  applyAuthMetadata(user, { role, selectedPlan, authProvider: 'github', githubUsername: profile.githubUsername });
+  await user.save();
+
+  return user;
+}
+
+async function findOrCreateUserFromGoogle(profile, options = {}) {
+  const role = normalizeRole(options.role);
+  const selectedPlan = normalizeSelectedPlanForRole(role, options.selectedPlan || 'free');
+  assertProviderAllowedForRole(role, 'google');
+  assertPlanAllowedForRole(role, selectedPlan);
+
+  let user = await User.findOne({ googleId: profile.googleId });
+  if (user) {
+    const actualRole = assertRoleMatchesUser(user, role);
+    applyAuthMetadata(user, {
+      role: actualRole,
+      selectedPlan: user.selectedPlan || user.plan || selectedPlan,
+      authProvider: 'google',
+      googleId: profile.googleId,
+    });
+    if (profile.name && user.name !== profile.name) {
+      user.name = profile.name;
+    }
+    if (profile.email && user.email !== profile.email) {
+      const existingByEmail = await User.findOne({ email: profile.email });
+      if (!existingByEmail || existingByEmail._id.toString() === user._id.toString()) {
+        user.email = profile.email;
+      }
+    }
+    await user.save();
+    return user;
+  }
+
+  user = await User.findOne({ email: profile.email });
+  if (user) {
+    assertRoleMatchesUser(user, role);
+    if (user.googleId && user.googleId !== profile.googleId) {
+      throw new ConflictError('Email is already linked to another Google account');
+    }
+
+    user.googleId = profile.googleId;
+    if (profile.name && user.name !== profile.name) {
+      user.name = profile.name;
+    }
+    applyAuthMetadata(user, {
+      role,
+      selectedPlan: user.selectedPlan || user.plan || selectedPlan,
+      authProvider: 'google',
+      googleId: profile.googleId,
+    });
+    await user.save();
+    return user;
+  }
+
+  const generatedPassword = `${crypto.randomBytes(32).toString('hex')}Aa1`;
+  user = new User({
+    email: profile.email,
+    passwordHash: generatedPassword,
+    name: profile.name,
+    googleId: profile.googleId,
+  });
+  applyAuthMetadata(user, { role, selectedPlan, authProvider: 'google', googleId: profile.googleId });
   await user.save();
 
   return user;
@@ -234,6 +413,22 @@ function resolveEntryMode(state) {
   return payload.entryMode === 'team' ? 'team' : 'individual';
 }
 
+function resolveOAuthContext(state) {
+  const payload = decodeOAuthState(state);
+  const role = normalizeRole(payload.role);
+  const selectedPlan = normalizeSelectedPlanForRole(role, payload.selectedPlan || payload.plan || 'free');
+  const flow = payload.flow === 'login' ? 'login' : 'signup';
+  const returnTo = typeof payload.returnTo === 'string' && payload.returnTo.startsWith('/') ? payload.returnTo : '';
+
+  return {
+    flow,
+    role,
+    selectedPlan,
+    entryMode: payload.entryMode === 'team' ? 'team' : 'individual',
+    returnTo,
+  };
+}
+
 function createOtpCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -244,6 +439,20 @@ router.get('/github/url', (req, res, next) => {
     ensureGithubConfigured();
     const state = typeof req.query.state === 'string' ? req.query.state : '';
     const authUrl = buildGithubAuthorizeUrl(state);
+    res.json({ authUrl });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/google/url
+router.get('/google/url', (req, res, next) => {
+  try {
+    ensureGoogleConfigured();
+    const state = typeof req.query.state === 'string' ? req.query.state : '';
+    const context = resolveOAuthContext(state);
+    assertProviderAllowedForRole(context.role, 'google');
+    const authUrl = buildGoogleAuthorizeUrl(state);
     res.json({ authUrl });
   } catch (err) {
     next(err);
@@ -262,20 +471,57 @@ router.get('/github', (req, res, next) => {
   }
 });
 
+// GET /api/auth/google
+router.get('/google', (req, res, next) => {
+  try {
+    ensureGoogleConfigured();
+    const state = typeof req.query.state === 'string' ? req.query.state : '';
+    const context = resolveOAuthContext(state);
+    assertProviderAllowedForRole(context.role, 'google');
+    const authUrl = buildGoogleAuthorizeUrl(state);
+    res.redirect(authUrl);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/auth/github/exchange
 router.post('/github/exchange', authLimiter, async (req, res, next) => {
   try {
     ensureGithubConfigured();
     const data = githubExchangeSchema.parse(req.body);
+    const context = resolveOAuthContext(data.state);
 
     const githubAccessToken = await exchangeGithubCodeForToken(data.code);
     const profile = await fetchGithubProfile(githubAccessToken);
-    const user = await findOrCreateUserFromGithub(profile);
+    const user = await findOrCreateUserFromGithub(profile, context);
     const authResult = await issueTokensForUser(user);
 
     res.json({
       ...authResult,
       provider: 'github',
+      state: data.state || null,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/google/exchange
+router.post('/google/exchange', authLimiter, async (req, res, next) => {
+  try {
+    ensureGoogleConfigured();
+    const data = githubExchangeSchema.parse(req.body);
+    const context = resolveOAuthContext(data.state);
+
+    const googleAccessToken = await exchangeGoogleCodeForToken(data.code);
+    const profile = await fetchGoogleProfile(googleAccessToken);
+    const user = await findOrCreateUserFromGoogle(profile, context);
+    const authResult = await issueTokensForUser(user);
+
+    res.json({
+      ...authResult,
+      provider: 'google',
       state: data.state || null,
     });
   } catch (err) {
@@ -358,15 +604,62 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
 
     const githubAccessToken = await exchangeGithubCodeForToken(code);
     const profile = await fetchGithubProfile(githubAccessToken);
-    const user = await findOrCreateUserFromGithub(profile);
+    const context = resolveOAuthContext(state);
+    const user = await findOrCreateUserFromGithub(profile, context);
     const authResult = await issueTokensForUser(user);
     const redirectBaseUrl = resolveFrontendBaseUrl(state);
-    const entryMode = resolveEntryMode(state);
+    const entryMode = context.entryMode || resolveEntryMode(state);
+    const dashboardPath = context.returnTo || getRoleDashboardPath(inferUserRole(user));
 
     const redirectUrl = buildFrontendUrl('/login', {
       provider: 'github',
       state,
       mode: entryMode,
+      role: inferUserRole(user),
+      redirectTo: dashboardPath,
+      accessToken: authResult.accessToken,
+      refreshToken: authResult.refreshToken,
+      user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
+    }, { baseUrl: redirectBaseUrl });
+
+    res.redirect(302, redirectUrl);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/google/callback
+router.get('/google/callback', authLimiter, async (req, res, next) => {
+  try {
+    ensureGoogleConfigured();
+
+    if (typeof req.query.error === 'string') {
+      const reason = typeof req.query.error_description === 'string' ? req.query.error_description : req.query.error;
+      throw new BadRequestError(`Google OAuth failed: ${reason}`);
+    }
+
+    const code = typeof req.query.code === 'string' ? req.query.code : '';
+    const state = typeof req.query.state === 'string' ? req.query.state : null;
+
+    if (!code) {
+      throw new BadRequestError('Missing Google authorization code');
+    }
+
+    const googleAccessToken = await exchangeGoogleCodeForToken(code);
+    const profile = await fetchGoogleProfile(googleAccessToken);
+    const context = resolveOAuthContext(state);
+    const user = await findOrCreateUserFromGoogle(profile, context);
+    const authResult = await issueTokensForUser(user);
+    const redirectBaseUrl = resolveFrontendBaseUrl(state);
+    const entryMode = context.entryMode || resolveEntryMode(state);
+    const dashboardPath = context.returnTo || getRoleDashboardPath(inferUserRole(user));
+
+    const redirectUrl = buildFrontendUrl('/login', {
+      provider: 'google',
+      state,
+      mode: entryMode,
+      role: inferUserRole(user),
+      redirectTo: dashboardPath,
       accessToken: authResult.accessToken,
       refreshToken: authResult.refreshToken,
       user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
@@ -452,6 +745,8 @@ router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
 router.post('/register', authLimiter, async (req, res, next) => {
   try {
     const data = registerSchema.parse(req.body);
+    assertProviderAllowedForRole(data.role, 'email');
+    const selectedPlan = assertPlanAllowedForRole(data.role, data.selectedPlan);
 
     const existing = await User.findOne({ email: data.email });
     if (existing) {
@@ -462,12 +757,16 @@ router.post('/register', authLimiter, async (req, res, next) => {
       email: data.email,
       passwordHash: data.password,
       name: data.name,
-      plan: 'free',
+      role: data.role,
+      selectedPlan,
+      authProvider: 'email',
+      plan: selectedPlan,
       teamPlanPreference: 'free',
       defaultEntryMode: data.defaultEntryMode,
-      usageLimit: getPersonalCapabilities('free').usageLimit,
-      proposalLimit: getPersonalCapabilities('free').proposalLimit,
+      usageLimit: getPersonalCapabilities(selectedPlan).usageLimit,
+      proposalLimit: getPersonalCapabilities(selectedPlan).proposalLimit,
     });
+    applyAuthMetadata(user, { role: data.role, selectedPlan, authProvider: 'email' });
     await user.save();
 
     const payload = { userId: user._id.toString(), email: user.email };
@@ -493,11 +792,18 @@ router.post('/register', authLimiter, async (req, res, next) => {
 router.post('/login', authLimiter, async (req, res, next) => {
   try {
     const data = loginSchema.parse(req.body);
+    assertProviderAllowedForRole(data.role, 'email');
 
     const user = await User.findOne({ email: data.email });
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
     }
+    const actualRole = assertRoleMatchesUser(user, data.role);
+    applyAuthMetadata(user, {
+      role: actualRole,
+      selectedPlan: user.selectedPlan || user.plan || 'free',
+      authProvider: user.authProvider || 'email',
+    });
 
     const isValid = await user.comparePassword(data.password);
     if (!isValid) {
@@ -512,6 +818,8 @@ router.post('/login', authLimiter, async (req, res, next) => {
     if (user.plan !== normalizedPlan) {
       user.plan = normalizedPlan;
     }
+    user.selectedPlan = normalizeSelectedPlanForRole(actualRole, user.selectedPlan || normalizedPlan);
+    user.plan = user.selectedPlan;
     const capabilities = getPersonalCapabilities(user.plan);
     user.usageLimit = capabilities.usageLimit;
     user.proposalLimit = capabilities.proposalLimit;
@@ -579,12 +887,21 @@ router.get('/me', authMiddleware, async (req, res, next) => {
       throw new UnauthorizedError('User not found');
     }
     const normalizedPlan = normalizePlan(user.plan);
+    const actualRole = inferUserRole(user);
+    const normalizedSelectedPlan = normalizeSelectedPlanForRole(actualRole, user.selectedPlan || normalizedPlan);
     const normalizedTeamPlanRaw = normalizePlan(user.teamPlanPreference || 'free');
     const normalizedTeamPlan = normalizedTeamPlanRaw === 'solo' ? 'free' : normalizedTeamPlanRaw;
-    if (user.plan !== normalizedPlan || user.teamPlanPreference !== normalizedTeamPlan) {
-      user.plan = normalizedPlan;
+    if (
+      user.role !== actualRole ||
+      user.selectedPlan !== normalizedSelectedPlan ||
+      user.plan !== normalizedSelectedPlan ||
+      user.teamPlanPreference !== normalizedTeamPlan
+    ) {
+      user.role = actualRole;
+      user.selectedPlan = normalizedSelectedPlan;
+      user.plan = normalizedSelectedPlan;
       user.teamPlanPreference = normalizedTeamPlan;
-      const capabilities = getPersonalCapabilities(normalizedPlan);
+      const capabilities = getPersonalCapabilities(normalizedSelectedPlan);
       user.usageLimit = capabilities.usageLimit;
       user.proposalLimit = capabilities.proposalLimit;
       await user.save();

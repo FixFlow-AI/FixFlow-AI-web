@@ -1,72 +1,133 @@
-import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { UserPlus, Eye, EyeOff, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
-import useAuthStore from '@/stores/authStore';
-import toast from 'react-hot-toast';
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Eye, EyeOff, Sparkles, UserPlus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import ThemeSwitcher from '@/components/ui/ThemeSwitcher'
+import AuthProviderButtons from '@/components/auth/AuthProviderButtons'
+import AuthRoleSelector from '@/components/auth/AuthRoleSelector'
+import useAuthStore from '@/stores/authStore'
+import toast from 'react-hot-toast'
+import {
+  FREELANCER_GITHUB_ONLY_MESSAGE,
+  getDashboardPathForRole,
+  getDefaultPlanForRole,
+  getRolePlans,
+  getRoleProviders,
+  isPlanAllowedForRole,
+  normalizeRole,
+  ROLE_DETAILS,
+} from '@/lib/authRoles'
 
 export default function Register() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const register = useAuthStore((s) => s.register);
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const register = useAuthStore((s) => s.register)
+  const startOAuthLogin = useAuthStore((s) => s.startOAuthLogin)
 
-  const [entryMode, setEntryMode] = useState(searchParams.get('mode') === 'team' ? 'team' : 'individual');
-  const [plan, setPlan] = useState(searchParams.get('plan') || 'free');
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const initialRole = normalizeRole(searchParams.get('role'))
+  const [role, setRole] = useState(initialRole)
+  const [selectedPlan, setSelectedPlan] = useState(() => {
+    const requestedPlan = searchParams.get('plan')
+    return requestedPlan && isPlanAllowedForRole(initialRole, requestedPlan)
+      ? requestedPlan
+      : getDefaultPlanForRole(initialRole)
+  })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingProvider, setLoadingProvider] = useState('')
+  const [errors, setErrors] = useState({})
+
+  const plans = useMemo(() => getRolePlans(role), [role])
+  const providers = useMemo(() => getRoleProviders(role), [role])
+  const showEmailForm = providers.includes('email')
+
+  useEffect(() => {
+    if (!isPlanAllowedForRole(role, selectedPlan)) {
+      setSelectedPlan(getDefaultPlanForRole(role))
+    }
+    setErrors({})
+  }, [role, selectedPlan])
+
+  function handleRoleChange(nextRole) {
+    setRole(nextRole)
+    setSelectedPlan(getDefaultPlanForRole(nextRole))
+  }
 
   function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
   function validate() {
-    const errs = {};
-    if (!form.name || form.name.length < 2) errs.name = 'Name must be at least 2 characters';
-    if (!form.email) errs.email = 'Email is required';
-    if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters';
-    else if (!/[A-Z]/.test(form.password)) errs.password = 'Password must contain an uppercase letter';
-    else if (!/[0-9]/.test(form.password)) errs.password = 'Password must contain a number';
-    if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
-    return errs;
+    const errs = {}
+    if (!isPlanAllowedForRole(role, selectedPlan)) errs.selectedPlan = 'Choose a plan that matches the selected role.'
+    if (!showEmailForm) errs.provider = FREELANCER_GITHUB_ONLY_MESSAGE
+    if (!form.name || form.name.length < 2) errs.name = 'Name must be at least 2 characters'
+    if (!form.email) errs.email = 'Email is required'
+    if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters'
+    else if (!/[A-Z]/.test(form.password)) errs.password = 'Password must contain an uppercase letter'
+    else if (!/[0-9]/.test(form.password)) errs.password = 'Password must contain a number'
+    if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
+    return errs
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    const errs = validate();
+    e.preventDefault()
+    const errs = validate()
     if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
+      setErrors(errs)
+      if (errs.provider) toast.error(errs.provider)
+      return
     }
 
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       await register({
         name: form.name,
         email: form.email,
         password: form.password,
-        plan,
-        defaultEntryMode: entryMode,
-        teamPlanPreference: entryMode === 'team' ? plan : 'free',
-      });
-      toast.success('Account created!');
-      navigate(plan === 'free' ? (entryMode === 'team' ? '/workspace' : '/dashboard') : '/billing');
+        role,
+        selectedPlan,
+        defaultEntryMode: 'individual',
+        teamPlanPreference: selectedPlan === 'solo' ? 'free' : selectedPlan,
+      })
+      toast.success('Account created.')
+      navigate(getDashboardPathForRole(role))
     } catch (err) {
-      const message = err.response?.data?.error || 'Registration failed. Please try again.';
-      toast.error(message);
+      const message = err.response?.data?.error || 'Registration failed. Please try again.'
+      toast.error(message)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
+    }
+  }
+
+  async function handleProviderClick(provider) {
+    if (provider !== 'github' && role === 'freelancer') {
+      toast.error(FREELANCER_GITHUB_ONLY_MESSAGE)
+      return
+    }
+
+    setLoadingProvider(provider)
+    try {
+      await startOAuthLogin({
+        provider,
+        role,
+        selectedPlan,
+        flow: 'signup',
+        returnTo: getDashboardPathForRole(role),
+      })
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.message || `Unable to start ${provider} signup.`)
+      setLoadingProvider('')
     }
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background px-4 py-10">
       <div className="fixed right-4 top-4 z-40 sm:right-6 sm:top-6">
         <ThemeSwitcher compact />
       </div>
@@ -74,151 +135,125 @@ export default function Register() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="mx-auto w-full max-w-5xl"
       >
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+        <div className="mb-8 text-center">
+          <Link to="/" className="mb-6 inline-flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <span className="text-xl font-bold text-foreground">FixFlowAI</span>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
-          <p className="text-muted-foreground mt-1">Start building smarter proposals</p>
+          <h1 className="text-3xl font-bold text-foreground">Create your {ROLE_DETAILS[role].shortLabel} account</h1>
+          <p className="mt-2 text-muted-foreground">Choose a role first. Plans and sign-up methods update instantly.</p>
         </div>
 
-        {/* Form */}
-        <div className="glass-card rounded-2xl p-6">
-          <div className="mb-5 flex rounded-full border border-border bg-background/35 p-1">
-            {['individual', 'team'].map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setEntryMode(mode)}
-                className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  entryMode === mode ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-                }`}
-              >
-                {mode === 'individual' ? 'Individual' : 'Team'}
-              </button>
-            ))}
-          </div>
-
-          <div className="mb-5 grid gap-3 sm:grid-cols-3">
-            {[
-              { value: 'free', label: 'Free', price: '$0' },
-              { value: 'pro', label: 'Pro', price: '$49' },
-              { value: 'agency', label: 'Agency', price: '$249' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setPlan(option.value)}
-                className={`rounded-2xl border px-4 py-4 text-left transition-colors ${
-                  plan === option.value ? 'border-primary bg-primary/10' : 'border-border bg-background/30'
-                }`}
-              >
-                <div className="text-sm font-medium">{option.label}</div>
-                <div className="mt-2 text-2xl font-semibold">{option.price}</div>
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1.5">
-                Full Name
-              </label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                placeholder="John Doe"
-                value={form.name}
-                onChange={handleChange}
-                autoComplete="name"
-              />
-              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.82fr]">
+          <div className="glass-card rounded-2xl p-5 sm:p-6">
+            <div className="mb-5">
+              <p className="mb-3 text-sm font-medium text-foreground">Select your role</p>
+              <AuthRoleSelector value={role} onChange={handleRoleChange} />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
-                Email
+              <label htmlFor="selectedPlan" className="mb-2 block text-sm font-medium text-foreground">
+                Team / Pricing Plan
               </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                value={form.email}
-                onChange={handleChange}
-                autoComplete="email"
-              />
-              {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
+              <select
+                id="selectedPlan"
+                name="selectedPlan"
+                value={selectedPlan}
+                onChange={(event) => setSelectedPlan(event.target.value)}
+                className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                data-testid="plan-select"
+              >
+                {plans.map((plan) => (
+                  <option key={plan.value} value={plan.value}>
+                    {plan.label} - {plan.detail}
+                  </option>
+                ))}
+              </select>
+              {errors.selectedPlan && <p className="mt-1 text-sm text-destructive">{errors.selectedPlan}</p>}
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
-              <p className="text-xs text-muted-foreground mt-1">
-                Min 8 characters, 1 uppercase, 1 number
+          <div className="glass-card rounded-2xl p-5 sm:p-6">
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold text-foreground">Sign up methods</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {role === 'freelancer'
+                  ? 'Freelancer credibility is tied to GitHub, so GitHub signup is required.'
+                  : 'Use email, Google, or GitHub for this role.'}
               </p>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-1.5">
-                Confirm Password
-              </label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                autoComplete="new-password"
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive mt-1">{errors.confirmPassword}</p>
-              )}
-            </div>
+            <AuthProviderButtons
+              providers={providers}
+              mode="signup"
+              onProviderClick={handleProviderClick}
+              loadingProvider={loadingProvider}
+            />
 
-            <Button type="submit" className="w-full" isLoading={isLoading}>
-              <UserPlus className="h-4 w-4" />
-              Create Account
-            </Button>
-          </form>
+            {showEmailForm ? (
+              <>
+                <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  <span>or email</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-foreground">Full name</label>
+                    <Input id="name" name="name" type="text" placeholder="Jane Developer" value={form.name} onChange={handleChange} autoComplete="name" />
+                    {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-foreground">Email</label>
+                    <Input id="email" name="email" type="email" placeholder="you@example.com" value={form.email} onChange={handleChange} autoComplete="email" />
+                    {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">Password</label>
+                    <div className="relative">
+                      <Input id="password" name="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={form.password} onChange={handleChange} autoComplete="new-password" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {errors.password && <p className="mt-1 text-sm text-destructive">{errors.password}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Min 8 characters, 1 uppercase, 1 number</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-foreground">Confirm password</label>
+                    <Input id="confirmPassword" name="confirmPassword" type="password" placeholder="••••••••" value={form.confirmPassword} onChange={handleChange} autoComplete="new-password" />
+                    {errors.confirmPassword && <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>}
+                  </div>
+
+                  <Button type="submit" className="w-full" isLoading={isLoading}>
+                    <UserPlus className="h-4 w-4" />
+                    Create account
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <div className="mt-5 rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm text-muted-foreground">
+                {FREELANCER_GITHUB_ONLY_MESSAGE}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to={`/login?mode=${entryMode}`} className="text-primary hover:underline font-medium">
+          <Link to={`/login?role=${role}`} className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>
       </motion.div>
     </div>
-  );
+  )
 }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../config/api';
+import { getDashboardPathForRole, normalizeRole } from '../lib/authRoles';
 
 function encodeOAuthState(payload) {
   return window.btoa(JSON.stringify(payload));
@@ -28,12 +29,14 @@ const useAuthStore = create((set, get) => ({
     });
   },
 
-  register: async ({ email, password, name, plan = 'free', defaultEntryMode = 'individual', teamPlanPreference = 'free' }) => {
+  register: async ({ email, password, name, role = 'client', selectedPlan = 'free', defaultEntryMode = 'individual', teamPlanPreference = 'free' }) => {
     const { data } = await api.post('/auth/register', {
       email,
       password,
       name,
-      plan,
+      role: normalizeRole(role),
+      selectedPlan,
+      plan: selectedPlan,
       defaultEntryMode,
       teamPlanPreference,
     });
@@ -43,30 +46,47 @@ const useAuthStore = create((set, get) => ({
     return data;
   },
 
-  login: async ({ email, password, entryMode = null }) => {
-    const { data } = await api.post('/auth/login', { email, password, entryMode });
+  login: async ({ email, password, role = 'client', entryMode = null }) => {
+    const { data } = await api.post('/auth/login', { email, password, role: normalizeRole(role), entryMode });
     localStorage.setItem('accessToken', data.accessToken);
     localStorage.setItem('refreshToken', data.refreshToken);
     set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true });
     return data;
   },
 
-  startGithubLogin: async (entryMode = 'individual') => {
+  startOAuthLogin: async ({ provider, role = 'client', selectedPlan = 'free', flow = 'login', entryMode = 'individual', returnTo = '' }) => {
     const state = encodeOAuthState({
       frontendOrigin: window.location.origin,
+      flow,
+      role: normalizeRole(role),
+      selectedPlan,
       entryMode: entryMode === 'team' ? 'team' : 'individual',
+      returnTo,
     });
 
-    const { data } = await api.get('/auth/github/url', {
+    const { data } = await api.get(`/auth/${provider}/url`, {
       params: { state },
     });
 
     if (!data?.authUrl) {
-      throw new Error('GitHub login is not available right now.');
+      throw new Error(`${provider === 'google' ? 'Google' : 'GitHub'} login is not available right now.`);
     }
 
     window.location.href = data.authUrl;
   },
+
+  startGithubLogin: async (entryMode = 'individual') => {
+    return get().startOAuthLogin({
+      provider: 'github',
+      role: 'client',
+      selectedPlan: 'free',
+      flow: 'login',
+      entryMode,
+      returnTo: getDashboardPathForRole('client'),
+    });
+  },
+
+  startGoogleLogin: async (options) => get().startOAuthLogin({ provider: 'google', ...options }),
 
   logout: async () => {
     const refreshToken = localStorage.getItem('refreshToken');

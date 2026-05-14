@@ -34,7 +34,17 @@ async function mockFreelancerApi(page, state) {
   await page.route(/\/auth\/me$/, async (route) => {
     await route.fulfill({
       json: {
-        user: { id: 'u1', name: 'Test User', email: 'test@example.com', capabilities: { agencyBrain: true, triProposal: true } },
+        user: {
+          id: 'u1',
+          name: 'Test User',
+          email: 'test@example.com',
+          role: 'freelancer',
+          selectedPlan: 'solo',
+          plan: 'solo',
+          authProvider: 'github',
+          githubUsername: 'test-user',
+          capabilities: { agencyBrain: true, triProposal: true, freelancerOS: true },
+        },
         currentWorkspace: null,
       },
     })
@@ -115,7 +125,7 @@ test('freelancer FlowBoard renders with mocked API data', async ({ page, baseURL
 
   await page.goto(`${baseURL}/freelancer`)
   await expect(page.getByTestId('freelancer-flowboard')).toBeVisible()
-  await expect(page.getByText('FlowBoard')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'FlowBoard' })).toBeVisible()
   await expect(page.getByText('VectorForge Labs')).toBeVisible()
 })
 

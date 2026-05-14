@@ -1,14 +1,12 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
-import { ArrowRight, CheckCircle2, Github, ShieldCheck } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { ArrowRight, CheckCircle2, ShieldCheck, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import useAuthStore from '@/stores/authStore'
 
 const Hero3DElement = lazy(() => import('./Hero3DElement'))
 
-const headlineLines = ['From client brief', 'to revenue system']
+const headlineLines = ['Role-first work', 'from proof to delivery']
 
 const signalCards = [
   ['BriefScore', '90%'],
@@ -18,7 +16,6 @@ const signalCards = [
 
 function HeroSection() {
   const shouldReduceMotion = useReducedMotion()
-  const startGithubLogin = useAuthStore((state) => state.startGithubLogin)
   const { scrollY } = useScroll()
   const yContent = useTransform(scrollY, [0, 720], shouldReduceMotion ? [0, 0] : [0, -96])
   const yFrame = useTransform(scrollY, [0, 720], shouldReduceMotion ? [0, 0] : [0, 74])
@@ -41,14 +38,6 @@ function HeroSection() {
     const timers = bootLines.map((_, index) => window.setTimeout(() => setBootIndex(index), 520 + index * 440))
     return () => timers.forEach((timer) => window.clearTimeout(timer))
   }, [bootLines, shouldReduceMotion])
-
-  const handleGithub = async () => {
-    try {
-      await startGithubLogin('individual')
-    } catch (error) {
-      toast.error(error.message || 'GitHub login is not available right now.')
-    }
-  }
 
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden pt-28">
@@ -85,7 +74,7 @@ function HeroSection() {
             transition={{ duration: 0.58, delay: 0.34 }}
             className="mt-7 max-w-2xl text-lg leading-8 text-muted-foreground"
           >
-            FixFlowAI converts raw briefs, repo signals, delivery risk, lead motion, and client proof into one cinematic operating layer for freelancers and teams.
+            FixFlowAI connects freelancers with GitHub-backed credibility, clients hiring trusted talent, and developers collaborating inside structured delivery workspaces.
           </motion.p>
 
           <motion.div
@@ -94,14 +83,21 @@ function HeroSection() {
             transition={{ duration: 0.55, delay: 0.46 }}
             className="mt-9 flex flex-col gap-3 sm:flex-row"
           >
-            <Button size="lg" onClick={handleGithub} className="glow-effect">
-              <Github className="h-4 w-4" />
-              Connect GitHub
-            </Button>
-            <Link to="/freelancer">
-              <Button variant="outline" size="lg" className="w-full border-primary/25 bg-background/35 backdrop-blur-xl sm:w-auto">
-                View FlowBoard
+            <Link to="/register?role=freelancer">
+              <Button size="lg" className="w-full glow-effect sm:w-auto">
+                Join as Freelancer
                 <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/register?role=client">
+              <Button variant="outline" size="lg" className="w-full border-primary/25 bg-background/35 backdrop-blur-xl sm:w-auto">
+                <Users className="h-4 w-4" />
+                Hire Talent as Client
+              </Button>
+            </Link>
+            <Link to="/register?role=developer">
+              <Button variant="outline" size="lg" className="w-full border-primary/25 bg-background/35 backdrop-blur-xl sm:w-auto">
+                Join as Developer
               </Button>
             </Link>
           </motion.div>

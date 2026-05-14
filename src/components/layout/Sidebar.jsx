@@ -57,8 +57,8 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
     : '??'
   const canUseFreelancerOS = currentWorkspace
     ? Boolean(user?.teamPlanCapabilities?.freelancerOS)
-    : Boolean(user?.capabilities?.freelancerOS)
-  const freelancerNavigation = canUseFreelancerOS ? [
+    : Boolean(user?.capabilities?.freelancerOS) || user?.role === 'freelancer'
+  const freelancerNavigation = user?.role === 'freelancer' || canUseFreelancerOS ? [
     { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true },
     { name: 'Niches', href: '/freelancer/niches', icon: Radar, level: 'child' },
     { name: 'Leads', href: '/freelancer/leads', icon: Network, level: 'child' },
@@ -67,8 +67,14 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
     { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint, level: 'child' },
     { name: 'OS Settings', href: '/freelancer/settings', icon: Settings, level: 'child' },
   ] : []
+  const primaryDashboard =
+    user?.role === 'developer'
+      ? { name: 'Developer', href: '/developer', icon: LayoutDashboard }
+      : user?.role === 'freelancer'
+        ? { name: 'FlowBoard', href: '/freelancer', icon: LayoutDashboard }
+        : { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    primaryDashboard,
     { name: 'New Proposal', href: '/new', icon: PlusCircle },
     { name: 'Proposals', href: '/dashboard', icon: FileText },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },

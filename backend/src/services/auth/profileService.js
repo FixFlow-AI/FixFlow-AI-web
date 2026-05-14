@@ -2,15 +2,24 @@ const { getPersonalCapabilities, getWorkspaceCapabilities, normalizePlan } = req
 const { getCurrentWorkspaceForUser, buildWorkspaceSummary } = require('../workspace/workspaceService');
 const { normalizeNotificationPreferences } = require('../notifications/notificationPreferences');
 const { buildUsageSummary, normalizeUsageFields } = require('../billing/planEnforcer');
+const { inferUserRole, normalizeSelectedPlanForRole } = require('./authRules');
 
 async function buildAuthProfile(user) {
   const currentWorkspace = await getCurrentWorkspaceForUser(user);
+  const role = inferUserRole(user);
+  const normalizedPlan = normalizeSelectedPlanForRole(role, user.selectedPlan || user.plan || 'free');
+  user.role = role;
+  user.selectedPlan = normalizedPlan;
+  user.plan = normalizedPlan;
   normalizeUsageFields(user);
-  const normalizedPlan = normalizePlan(user.plan);
   const usage = buildUsageSummary(user);
 
   const authUser = {
     ...user.toJSON(),
+    role,
+    selectedPlan: normalizedPlan,
+    authProvider: user.authProvider || (user.githubId ? 'github' : user.googleId ? 'google' : 'email'),
+    githubUsername: user.githubUsername || '',
     plan: normalizedPlan,
     proposalsThisMonth: usage.proposalsThisMonth,
     proposalLimit: usage.proposalLimit,

@@ -12,7 +12,7 @@ const footerLinks = {
     { label: 'Audience risk', href: '#audience' },
     { label: 'Roadmap', href: '#roadmap' },
     { label: 'Sign in', href: '/login' },
-    { label: 'Register', href: '/register?mode=individual&plan=free' },
+    { label: 'Register', href: '/register?role=client' },
   ],
   resources: [
     { label: 'FlowBoard', href: '/freelancer' },

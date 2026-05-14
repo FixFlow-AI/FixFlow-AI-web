@@ -1,8 +1,9 @@
 import { Navigate } from 'react-router-dom';
 import useAuthStore from '@/stores/authStore';
+import { getDashboardPathForRole, normalizeRole } from '@/lib/authRoles';
 
-export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+export default function ProtectedRoute({ children, allowedRoles = null }) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
 
   if (isLoading) {
     return (
@@ -20,6 +21,11 @@ export default function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  const role = normalizeRole(user?.role);
+  if (Array.isArray(allowedRoles) && allowedRoles.length && !allowedRoles.includes(role)) {
+    return <Navigate to={getDashboardPathForRole(role)} replace />;
   }
 
   return children;

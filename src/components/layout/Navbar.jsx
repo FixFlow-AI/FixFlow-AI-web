@@ -7,6 +7,7 @@ import ThemeSwitcher from '@/components/ui/ThemeSwitcher'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
+  { label: 'Roles', href: '#roles' },
   { label: 'Story', href: '#intelligence' },
   { label: 'Flow', href: '#flow' },
   { label: 'Blueprint', href: '#schematic' },
@@ -69,9 +70,9 @@ function Navbar() {
                   Sign In
                 </Button>
               </Link>
-              <Link to="/register?mode=individual&plan=free">
+              <Link to="/register?role=freelancer">
                 <Button size="sm" className="glow-effect">
-                  Connect GitHub
+                  Join as Freelancer
                 </Button>
               </Link>
             </div>
@@ -110,9 +111,9 @@ function Navbar() {
                     Sign In
                   </Button>
                 </Link>
-                <Link to="/register?mode=individual&plan=free">
+                <Link to="/register?role=freelancer">
                   <Button size="sm" className="w-full justify-center">
-                    Connect GitHub
+                    Join as Freelancer
                   </Button>
                 </Link>
               </div>

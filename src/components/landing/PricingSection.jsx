@@ -86,7 +86,7 @@ export default function PricingSection() {
                 ))}
               </div>
 
-              <Link to={`/register?mode=${mode}&plan=${plan.slug}`} className="mt-6 block">
+              <Link to={`/register?role=${mode === 'team' ? 'client' : 'developer'}&plan=${plan.slug}`} className="mt-6 block">
                 <Button className="w-full">
                   Choose {plan.name}
                 </Button>

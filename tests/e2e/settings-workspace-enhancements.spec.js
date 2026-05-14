@@ -212,7 +212,7 @@ test('theme-aware 3D backdrop stays mounted and avatar upload commits through th
   await expect(backdrop).toBeAttached()
   await expect(page.locator('canvas').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Light' }).click()
+  await page.getByRole('button', { name: 'Light', exact: true }).click()
   await expect(page.locator('html')).toHaveClass(/theme-light/)
   const lightColor = await backdrop.evaluate((element) => getComputedStyle(element).getPropertyValue('--backdrop-primary').trim())
 

@@ -52,10 +52,10 @@ export default function JoinWorkspace() {
           </Button>
         ) : (
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to={`/login?mode=team`}>
+            <Link to={`/login?role=client`}>
               <Button>Sign In</Button>
             </Link>
-            <Link to={`/register?mode=team`}>
+            <Link to={`/register?role=client`}>
               <Button variant="outline">Create Account</Button>
             </Link>
           </div>

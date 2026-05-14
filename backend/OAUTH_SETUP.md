@@ -1,6 +1,6 @@
-# GitHub OAuth Setup (Backend)
+# OAuth Setup (Backend)
 
-Email/password authentication stays fully active. GitHub OAuth is added as an extra sign-in option.
+Email/password authentication stays active for Client and Developer roles. Freelancer authentication must use GitHub.
 
 ## Required environment variables
 
@@ -10,6 +10,10 @@ Set these in `backend/.env`:
 - `GITHUB_CLIENT_SECRET`
 - `GITHUB_CALLBACK_URL` (default: `http://localhost:5000/api/auth/github/callback`)
 - `GITHUB_OAUTH_SCOPE` (default: `read:user user:email`)
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALLBACK_URL` (default: `http://localhost:5000/api/auth/google/callback`)
+- `GOOGLE_OAUTH_SCOPE` (default: `openid email profile`)
 
 ## GitHub OAuth App settings
 
@@ -60,14 +64,26 @@ Base path: `/api/auth`
 
 4. `GET /github/callback`
    - Backend callback endpoint for GitHub.
-   - Also returns app auth tokens in JSON.
+   - Redirects to the frontend with app auth tokens.
+
+5. `GET /google/url`
+   - Returns `{ authUrl }` to start Google OAuth from frontend.
+   - Optional query: `state`.
+
+6. `POST /google/exchange`
+   - Exchanges Google `code` for app auth tokens.
+   - Body shape matches `/github/exchange`.
+
+7. `GET /google/callback`
+   - Backend callback endpoint for Google.
+   - Redirects to the frontend with app auth tokens.
 
 ## Notes
 
-- Existing endpoints remain unchanged:
+- Email/password endpoints now require role metadata:
   - `POST /register`
   - `POST /login`
-  - `POST /refresh`
-  - `GET /me`
-  - `POST /logout`
-- If a GitHub email matches an existing account, backend links that user to GitHub (`githubId`) automatically.
+- `POST /refresh`
+- `GET /me`
+- `POST /logout`
+- If a GitHub or Google email matches an existing account with the same selected role, backend links that user to the provider automatically.

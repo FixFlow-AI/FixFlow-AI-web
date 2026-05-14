@@ -12,6 +12,10 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().default(''),
   GITHUB_CALLBACK_URL: z.string().url().default('http://localhost:5000/api/auth/github/callback'),
   GITHUB_OAUTH_SCOPE: z.string().default('read:user user:email'),
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_CALLBACK_URL: z.string().url().default('http://localhost:5000/api/auth/google/callback'),
+  GOOGLE_OAUTH_SCOPE: z.string().default('openid email profile'),
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_SECURE: z

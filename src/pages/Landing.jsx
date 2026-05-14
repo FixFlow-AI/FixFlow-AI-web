@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import Navbar from '@/components/layout/Navbar'
 import HeroSection from '@/components/landing/HeroSection'
+import RolePathways from '@/components/landing/RolePathways'
 import BriefIntelligence from '@/components/landing/BriefIntelligence'
 import ProjectsTimeline from '@/components/landing/ProjectsTimeline'
 import TechnicalSchematic from '@/components/landing/TechnicalSchematic'
@@ -21,6 +22,7 @@ function Landing() {
       <Navbar />
       <main>
         <HeroSection />
+        <RolePathways />
         <BriefIntelligence />
         <ProjectsTimeline />
         <TechnicalSchematic />

@@ -140,6 +140,7 @@ async function syncSubscriptionToUser({
 
   user.stripeCustomerId = stripeCustomerId || user.stripeCustomerId || '';
   user.plan = normalizedPlan;
+  user.selectedPlan = normalizedPlan;
   user.subscriptionStatus = status || 'none';
   user.subscriptionCurrentPeriodEnd = currentPeriodEnd;
   user.subscriptionPriceId = stripePriceId || '';
