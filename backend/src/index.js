@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const { env } = require('./config/env');
-const { connectDB } = require('./db/mongoose');
+const { connectDB } = require('./db/dynamodb');
 const { corsMiddleware } = require('./middleware/cors');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { errorHandler } = require('./middleware/errorHandler');

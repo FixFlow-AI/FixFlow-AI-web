@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const { createDynamoModel } = require('../db/dynamoModel');
 
 const leadStatuses = ['new', 'qualified', 'contacted', 'replied', 'won', 'lost'];
 const leadSources = [
@@ -22,122 +22,70 @@ const leadSources = [
   'unknown',
 ];
 
-const draftMessageSchema = new mongoose.Schema(
-  {
-    subject: { type: String, trim: true, default: '' },
-    body: { type: String, trim: true, default: '' },
-    wordCount: { type: Number, default: 0 },
-    tokens: { type: [String], default: [] },
-    tone: { type: String, trim: true, default: 'warm-direct' },
-  },
-  { _id: false }
-);
+function buildDraftMessageDefaults() {
+  return {
+    subject: '',
+    body: '',
+    wordCount: 0,
+    tokens: [],
+    tone: 'warm-direct',
+  };
+}
 
-const leadSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
-    },
-    status: {
-      type: String,
-      enum: leadStatuses,
-      default: 'new',
-      index: true,
-    },
-    score: {
-      type: Number,
-      min: 0,
-      max: 100,
-      default: 0,
-      index: true,
-    },
-    source: {
-      type: String,
-      enum: leadSources,
-      default: 'direct',
-    },
-    sourceUrl: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    externalId: {
-      type: String,
-      trim: true,
-      default: '',
-      index: true,
-    },
-    discoveredAt: {
-      type: Date,
-      default: null,
-    },
-    projectDescription: {
-      type: String,
-      trim: true,
-      default: '',
-    },
-    budget: {
-      type: mongoose.Schema.Types.Mixed,
-      default: () => ({}),
-    },
-    match: {
-      score: { type: Number, min: 0, max: 100, default: 0 },
-      threshold: { type: Number, min: 0, max: 100, default: 70 },
-      eligible: { type: Boolean, default: false },
-      skillsMatched: { type: [String], default: [] },
-      skillsMissing: { type: [String], default: [] },
-      githubEvidence: { type: [String], default: [] },
-      rationale: { type: [String], default: [] },
-      evaluatedAt: { type: Date, default: null },
-    },
-    bid: {
-      status: {
-        type: String,
-        enum: ['not_ready', 'drafted', 'ready', 'submitted', 'accepted', 'rejected'],
-        default: 'not_ready',
-      },
-      draft: { type: String, trim: true, default: '' },
-      submittedAt: { type: Date, default: null },
-    },
-    reasoning: {
-      type: [String],
-      default: [],
-    },
-    company: {
-      name: { type: String, trim: true, required: true },
-      stack: { type: [String], default: [] },
-      size: { type: String, trim: true, default: '' },
-      logo: { type: String, trim: true, default: '' },
-      mission: { type: String, trim: true, default: '' },
-    },
-    role: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    rateRange: {
-      type: [Number],
-      default: [0, 0],
-    },
-    draftMessage: {
-      type: draftMessageSchema,
-      default: () => ({}),
-    },
-    lastContactedAt: {
-      type: Date,
-      default: null,
-    },
-  },
-  { timestamps: true }
-);
+function buildMatchDefaults() {
+  return {
+    score: 0,
+    threshold: 70,
+    eligible: false,
+    skillsMatched: [],
+    skillsMissing: [],
+    githubEvidence: [],
+    rationale: [],
+    evaluatedAt: null,
+  };
+}
 
-leadSchema.index({ userId: 1, status: 1, score: -1 });
+function buildBidDefaults() {
+  return {
+    status: 'not_ready',
+    draft: '',
+    submittedAt: null,
+  };
+}
+
+function buildCompanyDefaults() {
+  return {
+    name: '',
+    stack: [],
+    size: '',
+    logo: '',
+    mission: '',
+  };
+}
+
+const Lead = createDynamoModel({
+  modelName: 'Lead',
+  defaults: () => ({
+    status: 'new',
+    score: 0,
+    source: 'direct',
+    sourceUrl: '',
+    externalId: '',
+    discoveredAt: null,
+    projectDescription: '',
+    budget: {},
+    match: buildMatchDefaults(),
+    bid: buildBidDefaults(),
+    reasoning: [],
+    company: buildCompanyDefaults(),
+    rateRange: [0, 0],
+    draftMessage: buildDraftMessageDefaults(),
+    lastContactedAt: null,
+  }),
+});
 
 module.exports = {
-  Lead: mongoose.model('Lead', leadSchema),
+  Lead,
   leadSources,
   leadStatuses,
 };

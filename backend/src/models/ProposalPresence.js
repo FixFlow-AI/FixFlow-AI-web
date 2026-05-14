@@ -1,50 +1,23 @@
-const mongoose = require('mongoose');
+const { createDynamoModel } = require('../db/dynamoModel');
 
-const proposalPresenceSchema = new mongoose.Schema(
-  {
-    proposalId: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-    workspaceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Workspace',
-      default: null,
-      index: true,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      index: true,
-    },
-    userName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    avatar: {
-      type: String,
-      default: '',
-      trim: true,
-    },
-    avatarInitials: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    lastSeenAt: {
-      type: Date,
-      default: Date.now,
-      expires: 20,
-      index: true,
-    },
+const PRESENCE_TTL_SECONDS = 20;
+
+function ensurePresenceTtl(doc) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  doc.expiresAt = nowSeconds + PRESENCE_TTL_SECONDS;
+}
+
+const ProposalPresence = createDynamoModel({
+  modelName: 'ProposalPresence',
+  defaults: () => ({
+    workspaceId: null,
+    avatar: '',
+    avatarInitials: '??',
+    lastSeenAt: new Date().toISOString(),
+  }),
+  beforeSave: async (doc) => {
+    ensurePresenceTtl(doc);
   },
-  { timestamps: true }
-);
+});
 
-proposalPresenceSchema.index({ proposalId: 1, userId: 1 }, { unique: true });
-
-module.exports = mongoose.model('ProposalPresence', proposalPresenceSchema);
+module.exports = ProposalPresence;

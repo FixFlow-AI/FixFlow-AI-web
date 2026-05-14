@@ -1,68 +1,55 @@
-const mongoose = require('mongoose');
+const { createDynamoModel } = require('../db/dynamoModel');
 
-const agentConfigSchema = new mongoose.Schema(
-  {
-    leadHunter: { type: Boolean, default: true },
-    outreachWriter: { type: Boolean, default: true },
-    escrowWatcher: { type: Boolean, default: true },
-    credentialMinter: { type: Boolean, default: false },
-  },
-  { _id: false }
-);
+function buildAgentConfig() {
+  return {
+    leadHunter: true,
+    outreachWriter: true,
+    escrowWatcher: true,
+    credentialMinter: false,
+  };
+}
 
-const freelancerProfileSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      unique: true,
-      index: true,
+function buildProfileDefaults() {
+  return {
+    upwork: {
+      headline: '',
+      summary: '',
+      rate: 0,
     },
-    did: {
-      type: String,
-      trim: true,
-      default: '',
+    linkedin: {
+      headline: '',
+      about: '',
     },
+    personal: {
+      tagline: '',
+      bio: '',
+    },
+  };
+}
+
+function buildGithubScanDefaults() {
+  return {
+    repos: [],
+    languages: [],
+    commits: 0,
+    scannedAt: null,
+  };
+}
+
+const FreelancerProfile = createDynamoModel({
+  modelName: 'FreelancerProfile',
+  defaults: () => ({
+    did: '',
     walletAddresses: {
-      fixflow: { type: String, trim: true, default: '' },
-      usdc: { type: String, trim: true, default: '' },
-      matic: { type: String, trim: true, default: '' },
+      fixflow: '',
+      usdc: '',
+      matic: '',
     },
-    profiles: {
-      upwork: {
-        headline: { type: String, trim: true, default: '' },
-        summary: { type: String, trim: true, default: '' },
-        rate: { type: Number, default: 0 },
-      },
-      linkedin: {
-        headline: { type: String, trim: true, default: '' },
-        about: { type: String, trim: true, default: '' },
-      },
-      personal: {
-        tagline: { type: String, trim: true, default: '' },
-        bio: { type: String, trim: true, default: '' },
-      },
-    },
-    agentConfig: {
-      type: agentConfigSchema,
-      default: () => ({}),
-    },
-    githubScan: {
-      type: mongoose.Schema.Types.Mixed,
-      default: () => ({
-        repos: [],
-        languages: [],
-        commits: 0,
-        scannedAt: null,
-      }),
-    },
-    onboardedAt: {
-      type: Date,
-      default: null,
-    },
-  },
-  { timestamps: true }
-);
+    profiles: buildProfileDefaults(),
+    agentConfig: buildAgentConfig(),
+    githubScan: buildGithubScanDefaults(),
+    onboardedAt: null,
+  }),
+});
 
-module.exports = mongoose.model('FreelancerProfile', freelancerProfileSchema);
+module.exports = FreelancerProfile;

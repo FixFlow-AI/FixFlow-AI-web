@@ -2,7 +2,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 process.env.NODE_ENV = 'test';
-process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fixflowai-test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-16';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-at-least-16';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';

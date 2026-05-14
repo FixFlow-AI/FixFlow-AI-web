@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const crypto = require('crypto');
-const { isValidObjectId } = require('mongoose');
+const { isValidId } = require('../db/dynamoModel');
 const User = require('../models/User');
 const { env } = require('../config/env');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
@@ -286,7 +286,7 @@ router.post('/github/exchange', authLimiter, async (req, res, next) => {
 // GET /api/auth/avatar/:userId/:fileName
 router.get('/avatar/:userId/:fileName', async (req, res, next) => {
   try {
-    if (!isValidObjectId(req.params.userId)) {
+    if (!isValidId(req.params.userId)) {
       throw new BadRequestError('Avatar not found.');
     }
 

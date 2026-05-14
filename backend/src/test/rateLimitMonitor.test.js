@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fixflowai-test';
-process.env.JWT_SECRET = process.env.JWT_SECRET || '1234567890123456';
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-16';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || '12345678901234567';
 process.env.RATE_LIMIT_MONITOR_ENABLED = 'true';
 process.env.RATE_LIMIT_ALERT_COOLDOWN_SEC = '600';

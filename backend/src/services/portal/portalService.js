@@ -56,7 +56,7 @@ function assertPortalActive(portal) {
     throw new NotFoundError('Portal not found');
   }
 
-  if (portal.expiryAt && portal.expiryAt.getTime() < Date.now()) {
+  if (portal.expiryAt && new Date(portal.expiryAt).getTime() < Date.now()) {
     throw new AppError('Portal link has expired', 410);
   }
 }

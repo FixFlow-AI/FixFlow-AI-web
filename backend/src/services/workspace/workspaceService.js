@@ -392,7 +392,7 @@ async function previewInvite(rawToken) {
   const invite = workspace.invitePending.find(
     (entry) => entry.tokenHash === hashInviteToken(rawToken) && entry.status === 'pending'
   );
-  if (!invite || invite.expiresAt.getTime() < Date.now()) {
+  if (!invite || new Date(invite.expiresAt).getTime() < Date.now()) {
     throw new NotFoundError('Workspace invite not found or expired');
   }
 
@@ -416,7 +416,7 @@ async function acceptInvite({ user, rawToken }) {
   const invite = workspace.invitePending.find(
     (entry) => entry.tokenHash === tokenHash && entry.status === 'pending'
   );
-  if (!invite || invite.expiresAt.getTime() < Date.now()) {
+  if (!invite || new Date(invite.expiresAt).getTime() < Date.now()) {
     throw new NotFoundError('Workspace invite not found or expired');
   }
 
