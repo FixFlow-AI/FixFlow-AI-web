@@ -1,14 +1,12 @@
 import { motion } from 'framer-motion'
-import Navbar from '@/components/layout/Navbar'
-import HeroSection from '@/components/landing/HeroSection'
-import RolePathways from '@/components/landing/RolePathways'
-import BriefIntelligence from '@/components/landing/BriefIntelligence'
-import ProjectsTimeline from '@/components/landing/ProjectsTimeline'
-import TechnicalSchematic from '@/components/landing/TechnicalSchematic'
-import AudienceParallax from '@/components/landing/AudienceParallax'
-import MasonryVanguard from '@/components/landing/MasonryVanguard'
-import FuturePlansSplit from '@/components/landing/FuturePlansSplit'
-import Footer from '@/components/landing/Footer'
+import WaitlistNavbar from '@/components/waitlist/WaitlistNavbar'
+import WaitlistHero from '@/components/waitlist/WaitlistHero'
+import ProblemSection from '@/components/waitlist/ProblemSection'
+import SolutionSection from '@/components/waitlist/SolutionSection'
+import RoleCards from '@/components/waitlist/RoleCards'
+import WhyJoinSection from '@/components/waitlist/WhyJoinSection'
+import WaitlistForm from '@/components/waitlist/WaitlistForm'
+import WaitlistFooter from '@/components/waitlist/WaitlistFooter'
 
 function Landing() {
   return (
@@ -19,18 +17,16 @@ function Landing() {
       transition={{ duration: 0.3 }}
       className="cinematic-landing min-h-screen bg-background"
     >
-      <Navbar />
+      <WaitlistNavbar />
       <main>
-        <HeroSection />
-        <RolePathways />
-        <BriefIntelligence />
-        <ProjectsTimeline />
-        <TechnicalSchematic />
-        <AudienceParallax />
-        <MasonryVanguard />
-        <FuturePlansSplit />
+        <WaitlistHero />
+        <ProblemSection />
+        <SolutionSection />
+        <RoleCards />
+        <WhyJoinSection />
+        <WaitlistForm />
       </main>
-      <Footer />
+      <WaitlistFooter />
     </motion.div>
   )
 }

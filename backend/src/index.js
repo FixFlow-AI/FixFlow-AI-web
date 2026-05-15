@@ -29,6 +29,7 @@ const escrowLifecycleRoutes = require('./routes/escrowLifecycle');
 const { billingRouter, billingWebhookRouter } = require('./routes/billing');
 const userRoutes = require('./routes/users');
 const { publicDealRoomRouter, proposalDealRoomRouter } = require('./routes/dealRoom');
+const waitlistRoutes = require('./routes/waitlist');
 const { initRateLimitNotifier } = require('./services/rateLimit/rateLimitNotifier');
 
 const app = express();
@@ -78,6 +79,7 @@ app.use('/api/integrations/slack', slackIntegrationRoutes);
 app.use('/api/escrows', escrowLifecycleRoutes);
 app.use('/api/billing', billingRouter);
 app.use('/api/users', userRoutes);
+app.use('/api/waitlist', waitlistRoutes);
 
 // 404 handler
 app.use((_req, res) => {
