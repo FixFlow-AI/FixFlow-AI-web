@@ -1,7 +1,27 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import useTheme3DPalette from '@/hooks/useTheme3DPalette'
+import useThemeStore from '@/stores/themeStore'
+
+// Inline palette — replaces the deleted useTheme3DPalette hook
+const PALETTES = {
+  light: {
+    primary: '#0ea5e9', secondary: '#8b5cf6', accent: '#22c55e', muted: '#94a3b8',
+    line: '#94a3b8', lineOpacity: 0.18, coreOpacity: 0.14, secondaryOpacity: 0.12,
+  },
+  'modern-dark': {
+    primary: '#3fd7ff', secondary: '#a78bfa', accent: '#26d07c', muted: '#64748b',
+    line: '#64748b', lineOpacity: 0.22, coreOpacity: 0.18, secondaryOpacity: 0.15,
+  },
+  'vscode-dark': {
+    primary: '#569cd6', secondary: '#c586c0', accent: '#4ec9b0', muted: '#6a9955',
+    line: '#6a9955', lineOpacity: 0.2, coreOpacity: 0.16, secondaryOpacity: 0.13,
+  },
+}
+function useTheme3DPalette() {
+  const theme = useThemeStore((s) => s.theme)
+  return PALETTES[theme] || PALETTES['modern-dark']
+}
 
 const WORKFLOW_NODES = [
   { id: 'github', label: 'GitHub Scan', metric: 'signals', colorKey: 'primary', position: [-2.6, 0.9, 0.2] },

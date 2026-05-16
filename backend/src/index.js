@@ -7,33 +7,9 @@ const { connectDB } = require('./db/dynamodb');
 const { corsMiddleware } = require('./middleware/cors');
 const { apiLimiter } = require('./middleware/rateLimit');
 const { errorHandler } = require('./middleware/errorHandler');
-const authRoutes = require('./routes/auth');
-const briefScoreRoutes = require('./routes/briefScore');
-const generateRoutes = require('./routes/generate');
-const proposalRoutes = require('./routes/proposals');
-const proposalChatRoutes = require('./routes/proposalChat');
-const portalRoutes = require('./routes/portals');
-const publicPortalRoutes = require('./routes/publicPortal');
-const analyticsRoutes = require('./routes/analytics');
-const etaRoutes = require('./routes/eta');
-const agencyBrainRoutes = require('./routes/agencyBrain');
-const workspaceRoutes = require('./routes/workspaces');
-const proposalCommentsRoutes = require('./routes/proposalComments');
-const proposalPresenceRoutes = require('./routes/proposalPresence');
-const tripRoutes = require('./routes/trips');
-const proposalPlanningRoutes = require('./routes/proposalPlanning');
-const notificationRoutes = require('./routes/notifications');
-const freelancerRoutes = require('./routes/freelancer');
-const slackIntegrationRoutes = require('./routes/slackIntegration');
-const escrowLifecycleRoutes = require('./routes/escrowLifecycle');
-const { billingRouter, billingWebhookRouter } = require('./routes/billing');
-const userRoutes = require('./routes/users');
-const { publicDealRoomRouter, proposalDealRoomRouter } = require('./routes/dealRoom');
 const waitlistRoutes = require('./routes/waitlist');
-const { initRateLimitNotifier } = require('./services/rateLimit/rateLimitNotifier');
 
 const app = express();
-initRateLimitNotifier();
 
 // Security headers
 app.use(helmet());
@@ -41,11 +17,8 @@ app.use(helmet());
 // CORS
 app.use(corsMiddleware);
 
-// Stripe webhooks need the raw body before JSON parsing.
-app.use('/api/billing', billingWebhookRouter);
-
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 // Global rate limit
 app.use('/api', apiLimiter);
@@ -56,29 +29,6 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/brief', briefScoreRoutes);
-app.use('/api/generate', generateRoutes);
-app.use('/api/proposals', proposalRoutes);
-app.use('/api/proposals', portalRoutes);
-app.use('/api/proposals', proposalCommentsRoutes);
-app.use('/api/proposals', proposalPresenceRoutes);
-app.use('/api/proposals', proposalPlanningRoutes);
-app.use('/api/proposals', proposalDealRoomRouter);
-app.use('/api/proposal', proposalChatRoutes);
-app.use('/api/portal', publicPortalRoutes);
-app.use('/api/portal', publicDealRoomRouter);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/eta', etaRoutes);
-app.use('/api/agency-brain', agencyBrainRoutes);
-app.use('/api/workspaces', workspaceRoutes);
-app.use('/api/trips', tripRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/freelancer', freelancerRoutes);
-app.use('/api/integrations/slack', slackIntegrationRoutes);
-app.use('/api/escrows', escrowLifecycleRoutes);
-app.use('/api/billing', billingRouter);
-app.use('/api/users', userRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 
 // 404 handler
