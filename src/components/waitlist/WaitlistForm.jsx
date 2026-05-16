@@ -6,11 +6,10 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
 
-const API_BASE_URL =
+const WAITLIST_API_URL =
+  import.meta.env.VITE_WAITLIST_API_URL ||
   import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined' && window.location.protocol === 'https:'
-    ? '/api'
-    : 'http://localhost:5000/api')
+  'https://7b0z4yv667.execute-api.ap-south-1.amazonaws.com/prod/waitlist'
 
 const VALID_ROLES = ['Freelancer', 'Client', 'Developer']
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -78,7 +77,7 @@ function WaitlistForm() {
     setSubmitResult(null)
 
     try {
-      const { data } = await axios.post(`${API_BASE_URL}/waitlist`, {
+      const { data } = await axios.post(WAITLIST_API_URL, {
         username: form.username.trim(),
         email: form.email.trim().toLowerCase(),
         role: form.role,
