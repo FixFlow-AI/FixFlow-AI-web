@@ -1,0 +1,61 @@
+name: Deploy to AWS Amplify
+
+on:
+  push:
+    branches:
+      - waitlist
+
+jobs:
+  deploy:
+    name: Build & Deploy to Amplify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Deploy to Amplify
+        run: |
+          # Create deployment and capture the upload URL + job ID
+          DEPLOY_OUTPUT=$(aws amplify create-deployment \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --branch-name waitlist \
+            --region ap-south-1)
+
+          UPLOAD_URL=$(echo "$DEPLOY_OUTPUT" | jq -r '.zipUploadUrl')
+          JOB_ID=$(echo "$DEPLOY_OUTPUT" | jq -r '.jobId')
+
+          # Zip the dist folder
+          cd dist && zip -r ../deploy.zip . && cd ..
+
+          # Upload the zip
+          curl -X PUT -T deploy.zip -H "Content-Type: application/zip" "$UPLOAD_URL"
+
+          # Start the deployment
+          aws amplify start-deployment \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --branch-name waitlist \
+            --job-id "$JOB_ID" \
+            --region ap-south-1
+
+          echo "✅ Deployment started (Job ID: $JOB_ID)"
+          echo "🌐 https://waitlist.$(aws amplify get-app --app-id ${{ secrets.AMPLIFY_APP_ID }} --region ap-south-1 --query 'app.defaultDomain' --output text)"
