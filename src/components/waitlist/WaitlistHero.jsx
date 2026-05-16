@@ -79,12 +79,12 @@ function WaitlistHero() {
   const shouldReduceMotion = useReducedMotion()
   const { scrollY } = useScroll()
 
-  // Parallax transforms
-  const yContent = useTransform(scrollY, [0, 700], shouldReduceMotion ? [0, 0] : [0, -100])
-  const yBg = useTransform(scrollY, [0, 700], shouldReduceMotion ? [0, 0] : [0, 80])
-  const heroOpacity = useTransform(scrollY, [0, 500], [1, 0])
-  const heroScale = useTransform(scrollY, [0, 500], [1, 0.95])
-  const blurOnScroll = useTransform(scrollY, [0, 500], [0, 10])
+  // Parallax transforms — fade/blur starts only AFTER scrolling past the hero viewport
+  const yContent = useTransform(scrollY, [0, 900], shouldReduceMotion ? [0, 0] : [0, -120])
+  const yBg = useTransform(scrollY, [0, 900], shouldReduceMotion ? [0, 0] : [0, 100])
+  const heroOpacity = useTransform(scrollY, [600, 1100], [1, 0])
+  const heroScale = useTransform(scrollY, [600, 1100], [1, 0.92])
+  const blurOnScroll = useTransform(scrollY, [700, 1100], [0, 12])
 
   const handleScroll = (e, target) => {
     e.preventDefault()

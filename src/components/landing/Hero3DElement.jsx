@@ -6,8 +6,8 @@ import useThemeStore from '@/stores/themeStore'
 // Inline palette — replaces the deleted useTheme3DPalette hook
 const PALETTES = {
   light: {
-    primary: '#0ea5e9', secondary: '#8b5cf6', accent: '#22c55e', muted: '#94a3b8',
-    line: '#94a3b8', lineOpacity: 0.18, coreOpacity: 0.14, secondaryOpacity: 0.12,
+    primary: '#0369a1', secondary: '#6d28d9', accent: '#15803d', muted: '#475569',
+    line: '#475569', lineOpacity: 0.45, coreOpacity: 0.35, secondaryOpacity: 0.3,
   },
   'modern-dark': {
     primary: '#3fd7ff', secondary: '#a78bfa', accent: '#26d07c', muted: '#64748b',
@@ -253,9 +253,11 @@ function Hero3DElement() {
     )
   }
 
+  const isLight = palette === PALETTES.light
+
   return (
     <>
-      <div className="pointer-events-none absolute right-[-6%] top-[12%] z-0 h-[64%] w-[54%] opacity-42">
+      <div className={`pointer-events-none absolute right-[-6%] top-[12%] z-0 h-[64%] w-[54%] ${isLight ? 'opacity-75' : 'opacity-42'}`}>
         <Canvas
           camera={{ position: [0, 0, 5.8], fov: 44 }}
           dpr={[1, 1.35]}
