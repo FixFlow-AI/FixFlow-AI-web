@@ -1,4 +1,5 @@
 const { env } = require('../../config/env');
+const { safeFetch } = require('../../utils/safeFetch');
 
 function trimTrailingSlash(value = '') {
   return String(value || '').replace(/\/+$/, '');
@@ -35,10 +36,10 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = env.STREAM_TIMEOU
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    return await fetch(url, {
+    return await safeFetch(url, {
       ...options,
       signal: controller.signal,
-    });
+    }, { timeoutMs, maxBytes: 20 * 1024 * 1024 });
   } catch (error) {
     if (error?.name === 'AbortError') {
       const timeoutError = new Error(`LLM request timed out after ${timeoutMs}ms.`);

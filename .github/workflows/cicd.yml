@@ -46,7 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      MONGODB_URI: mongodb://localhost:27017/fixflowai-ci
       JWT_SECRET: 1234567890abcdef1234567890abcdef
       JWT_REFRESH_SECRET: abcdef1234567890abcdef1234567890
     steps:
@@ -75,6 +74,12 @@ jobs:
 
       - name: Run backend unit tests
         run: npm --prefix backend test
+
+      - name: Audit frontend production dependencies
+        run: npm audit --omit=dev
+
+      - name: Audit backend production dependencies
+        run: npm --prefix backend audit --omit=dev
 
       - name: Build frontend
         run: npm run build

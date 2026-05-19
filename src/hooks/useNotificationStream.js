@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { API_BASE_URL } from '@/config/api'
+import { getAccessToken } from '@/lib/authToken'
 
 function buildStreamUrl(accessToken) {
   const base = String(API_BASE_URL || '').replace(/\/$/, '')
@@ -16,7 +17,7 @@ export function useNotificationStream() {
   const reconnectAttemptRef = useRef(0)
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken')
+    const accessToken = getAccessToken()
     if (!accessToken) {
       return undefined
     }

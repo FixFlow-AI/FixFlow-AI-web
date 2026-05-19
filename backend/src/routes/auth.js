@@ -3,11 +3,10 @@ const crypto = require('crypto');
 const { isValidId } = require('../db/dynamoModel');
 const User = require('../models/User');
 const { env } = require('../config/env');
-const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
+const { signAccessToken } = require('../utils/jwt');
 const {
   registerSchema,
   loginSchema,
-  refreshSchema,
   githubExchangeSchema,
   uploadUrlSchema,
   avatarCommitSchema,
@@ -17,7 +16,7 @@ const {
 } = require('../models/schemas');
 const { UnauthorizedError, ConflictError, BadRequestError } = require('../utils/errors');
 const { authMiddleware } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimit');
+const { authLimiter, passwordResetLimiter, uploadLimiter } = require('../middleware/rateLimit');
 const { isSmtpConfigured, sendPasswordResetOtp } = require('../utils/mailer');
 const { getPersonalCapabilities, normalizePlan } = require('../services/capabilities/capabilityService');
 const { buildAuthProfile } = require('../services/auth/profileService');
@@ -34,10 +33,24 @@ const {
 const { normalizeNotificationPreferences } = require('../services/notifications/notificationPreferences');
 const { buildFrontendUrl, isAllowedFrontendOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
 const s3Service = require('../services/storage/s3');
+const { safeFetch } = require('../utils/safeFetch');
+const {
+  clearRefreshCookie,
+  createCsrfToken,
+  createSession,
+  getRefreshTokenFromRequest,
+  revokeSession,
+  rotateRefreshSession,
+  setRefreshCookie,
+  verifyRefreshSession,
+} = require('../services/auth/sessionService');
+const { getClientIp, writeAuditLog } = require('../services/audit/auditService');
 
 const router = Router();
 
 const otpStore = new Map();
+const MAX_FAILED_LOGINS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
 
 function ensureGithubConfigured() {
   if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
@@ -81,7 +94,7 @@ function buildGoogleAuthorizeUrl(state = '') {
 }
 
 async function exchangeGithubCodeForToken(code) {
-  const response = await fetch('https://github.com/login/oauth/access_token', {
+  const response = await safeFetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -113,7 +126,7 @@ async function exchangeGithubCodeForToken(code) {
 }
 
 async function exchangeGoogleCodeForToken(code) {
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await safeFetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -151,7 +164,7 @@ async function fetchGithubProfile(accessToken) {
     'User-Agent': 'FixFlowAI-Backend',
   };
 
-  const userResponse = await fetch('https://api.github.com/user', { headers });
+  const userResponse = await safeFetch('https://api.github.com/user', { headers });
   if (!userResponse.ok) {
     throw new BadRequestError('Failed to fetch GitHub user profile');
   }
@@ -160,7 +173,7 @@ async function fetchGithubProfile(accessToken) {
   let email = userData.email;
 
   if (!email) {
-    const emailResponse = await fetch('https://api.github.com/user/emails', { headers });
+    const emailResponse = await safeFetch('https://api.github.com/user/emails', { headers });
     if (emailResponse.ok) {
       const emails = await emailResponse.json();
       if (Array.isArray(emails)) {
@@ -192,7 +205,7 @@ async function fetchGithubProfile(accessToken) {
 }
 
 async function fetchGoogleProfile(accessToken) {
-  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+  const response = await safeFetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/json',
@@ -358,19 +371,44 @@ async function findOrCreateUserFromGoogle(profile, options = {}) {
   return user;
 }
 
-async function issueTokensForUser(user) {
-  const payload = { userId: user._id.toString(), email: user.email };
+async function issueTokensForUser(user, req, res) {
+  const { session, refreshToken } = await createSession(user, req);
+  const payload = { userId: user._id.toString(), email: user.email, sessionId: session._id.toString() };
   const accessToken = signAccessToken(payload);
-  const refreshToken = signRefreshToken(payload);
-
-  user.refreshTokens.push(refreshToken);
-  await user.save();
+  setRefreshCookie(res, refreshToken);
+  req.authSessionId = session._id.toString();
 
   return {
     ...(await buildAuthProfile(user)),
     accessToken,
-    refreshToken,
+    expiresIn: env.JWT_ACCESS_EXPIRY,
   };
+}
+
+function hashOtp(otp) {
+  return crypto.createHash('sha256').update(String(otp || '')).digest('hex');
+}
+
+function isPasswordLocked(user) {
+  return user?.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now();
+}
+
+async function recordAuthEvent(req, user, action, success, metadata = {}, riskLevel = 'low') {
+  await writeAuditLog({
+    userId: user?._id?.toString() || user?.id || null,
+    sessionId: req.authSessionId || null,
+    eventType: 'auth',
+    action,
+    method: req.method,
+    endpoint: req.originalUrl,
+    statusCode: success ? 200 : 401,
+    ipAddress: getClientIp(req),
+    userAgent: req.headers['user-agent'] || '',
+    requestId: req.id || '',
+    metadata,
+    riskLevel,
+    success,
+  });
 }
 
 function safeFrontendRedirect(path, params) {
@@ -459,6 +497,10 @@ router.get('/google/url', (req, res, next) => {
   }
 });
 
+router.get('/csrf', (req, res) => {
+  res.json({ csrfToken: createCsrfToken(req.authSessionId || '') });
+});
+
 // GET /api/auth/github
 router.get('/github', (req, res, next) => {
   try {
@@ -495,7 +537,8 @@ router.post('/github/exchange', authLimiter, async (req, res, next) => {
     const githubAccessToken = await exchangeGithubCodeForToken(data.code);
     const profile = await fetchGithubProfile(githubAccessToken);
     const user = await findOrCreateUserFromGithub(profile, context);
-    const authResult = await issueTokensForUser(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'oauth_github_exchange_success', true, { provider: 'github' });
 
     res.json({
       ...authResult,
@@ -517,7 +560,8 @@ router.post('/google/exchange', authLimiter, async (req, res, next) => {
     const googleAccessToken = await exchangeGoogleCodeForToken(data.code);
     const profile = await fetchGoogleProfile(googleAccessToken);
     const user = await findOrCreateUserFromGoogle(profile, context);
-    const authResult = await issueTokensForUser(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'oauth_google_exchange_success', true, { provider: 'google' });
 
     res.json({
       ...authResult,
@@ -553,7 +597,7 @@ router.get('/avatar/:userId/:fileName', async (req, res, next) => {
 });
 
 // POST /api/auth/avatar/upload-url
-router.post('/avatar/upload-url', authMiddleware, async (req, res, next) => {
+router.post('/avatar/upload-url', authMiddleware, uploadLimiter, async (req, res, next) => {
   try {
     const { fileName, fileType } = uploadUrlSchema.parse(req.body);
     res.json(await s3Service.generateAvatarUploadUrl(req.user.userId, fileType, fileName));
@@ -606,7 +650,8 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
     const profile = await fetchGithubProfile(githubAccessToken);
     const context = resolveOAuthContext(state);
     const user = await findOrCreateUserFromGithub(profile, context);
-    const authResult = await issueTokensForUser(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'oauth_github_callback_success', true, { provider: 'github' });
     const redirectBaseUrl = resolveFrontendBaseUrl(state);
     const entryMode = context.entryMode || resolveEntryMode(state);
     const dashboardPath = context.returnTo || getRoleDashboardPath(inferUserRole(user));
@@ -617,9 +662,7 @@ router.get('/github/callback', authLimiter, async (req, res, next) => {
       mode: entryMode,
       role: inferUserRole(user),
       redirectTo: dashboardPath,
-      accessToken: authResult.accessToken,
-      refreshToken: authResult.refreshToken,
-      user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
+      oauth: 'success',
     }, { baseUrl: redirectBaseUrl });
 
     res.redirect(302, redirectUrl);
@@ -649,7 +692,8 @@ router.get('/google/callback', authLimiter, async (req, res, next) => {
     const profile = await fetchGoogleProfile(googleAccessToken);
     const context = resolveOAuthContext(state);
     const user = await findOrCreateUserFromGoogle(profile, context);
-    const authResult = await issueTokensForUser(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'oauth_google_callback_success', true, { provider: 'google' });
     const redirectBaseUrl = resolveFrontendBaseUrl(state);
     const entryMode = context.entryMode || resolveEntryMode(state);
     const dashboardPath = context.returnTo || getRoleDashboardPath(inferUserRole(user));
@@ -660,9 +704,7 @@ router.get('/google/callback', authLimiter, async (req, res, next) => {
       mode: entryMode,
       role: inferUserRole(user),
       redirectTo: dashboardPath,
-      accessToken: authResult.accessToken,
-      refreshToken: authResult.refreshToken,
-      user: Buffer.from(JSON.stringify(authResult.user)).toString('base64'),
+      oauth: 'success',
     }, { baseUrl: redirectBaseUrl });
 
     res.redirect(302, redirectUrl);
@@ -672,7 +714,7 @@ router.get('/google/callback', authLimiter, async (req, res, next) => {
 });
 
 // POST /api/auth/forgot-password/request
-router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
+router.post('/forgot-password/request', passwordResetLimiter, async (req, res, next) => {
   try {
     if (!isSmtpConfigured()) {
       throw new BadRequestError('Email service is not configured. Please contact support.');
@@ -683,13 +725,17 @@ router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
 
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      throw new UnauthorizedError('No account found for that email');
+      await recordAuthEvent(req, null, 'password_reset_requested_unknown_email', false, { email: normalizedEmail }, 'medium');
+      return res.json({
+        message: 'If an account exists for that email, an OTP has been sent.',
+      });
     }
 
     const otp = createOtpCode();
     otpStore.set(normalizedEmail, {
-      otp,
+      otpHash: hashOtp(otp),
       expiresAt: Date.now() + 10 * 60 * 1000,
+      attempts: 0,
     });
 
     try {
@@ -701,7 +747,7 @@ router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
     }
 
     res.json({
-      message: 'OTP sent to your registered email address.',
+      message: 'If an account exists for that email, an OTP has been sent.',
     });
   } catch (err) {
     next(err);
@@ -709,7 +755,7 @@ router.post('/forgot-password/request', authLimiter, async (req, res, next) => {
 });
 
 // POST /api/auth/forgot-password/verify
-router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
+router.post('/forgot-password/verify', passwordResetLimiter, async (req, res, next) => {
   try {
     const { email, otp, newPassword } = forgotPasswordVerifySchema.parse(req.body);
     const normalizedEmail = email.trim().toLowerCase();
@@ -721,7 +767,14 @@ router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
       throw new UnauthorizedError('OTP expired or invalid');
     }
 
-    if (stored.otp !== normalizedOtp) {
+    stored.attempts = Number(stored.attempts || 0) + 1;
+    if (stored.attempts > 5) {
+      otpStore.delete(normalizedEmail);
+      await recordAuthEvent(req, null, 'password_reset_otp_attempts_exceeded', false, { email: normalizedEmail }, 'high');
+      throw new UnauthorizedError('OTP expired or invalid');
+    }
+
+    if (stored.otpHash !== hashOtp(normalizedOtp)) {
       throw new UnauthorizedError('OTP is incorrect');
     }
 
@@ -732,6 +785,8 @@ router.post('/forgot-password/verify', authLimiter, async (req, res, next) => {
 
     user.passwordHash = newPassword;
     user.refreshTokens = [];
+    user.passwordChangedAt = new Date().toISOString();
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
     otpStore.delete(normalizedEmail);
 
@@ -769,19 +824,13 @@ router.post('/register', authLimiter, async (req, res, next) => {
     applyAuthMetadata(user, { role: data.role, selectedPlan, authProvider: 'email' });
     await user.save();
 
-    const payload = { userId: user._id.toString(), email: user.email };
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
-
-    user.refreshTokens.push(refreshToken);
+    user.lastLoginAt = new Date().toISOString();
     await user.save();
-
-    const profile = await buildAuthProfile(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'register_success', true, { role: data.role });
 
     res.status(201).json({
-      ...profile,
-      accessToken,
-      refreshToken,
+      ...authResult,
     });
   } catch (err) {
     next(err);
@@ -796,7 +845,12 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
     const user = await User.findOne({ email: data.email });
     if (!user) {
+      await recordAuthEvent(req, null, 'login_failure_unknown_email', false, { email: data.email }, 'medium');
       throw new UnauthorizedError('Invalid email or password');
+    }
+    if (isPasswordLocked(user)) {
+      await recordAuthEvent(req, user, 'login_failure_account_locked', false, {}, 'high');
+      throw new UnauthorizedError('Too many failed attempts. Please try again later.');
     }
     const actualRole = assertRoleMatchesUser(user, data.role);
     applyAuthMetadata(user, {
@@ -807,6 +861,14 @@ router.post('/login', authLimiter, async (req, res, next) => {
 
     const isValid = await user.comparePassword(data.password);
     if (!isValid) {
+      user.failedLoginCount = Number(user.failedLoginCount || 0) + 1;
+      if (user.failedLoginCount >= MAX_FAILED_LOGINS) {
+        user.lockedUntil = new Date(Date.now() + LOGIN_LOCK_MS).toISOString();
+      }
+      await user.save();
+      await recordAuthEvent(req, user, 'login_failure_bad_password', false, {
+        failedLoginCount: user.failedLoginCount,
+      }, user.failedLoginCount >= MAX_FAILED_LOGINS ? 'high' : 'medium');
       throw new UnauthorizedError('Invalid email or password');
     }
 
@@ -826,19 +888,15 @@ router.post('/login', authLimiter, async (req, res, next) => {
     const normalizedTeamPlan = normalizePlan(user.teamPlanPreference || 'free');
     user.teamPlanPreference = normalizedTeamPlan === 'solo' ? 'free' : normalizedTeamPlan;
 
-    const payload = { userId: user._id.toString(), email: user.email };
-    const accessToken = signAccessToken(payload);
-    const refreshToken = signRefreshToken(payload);
-
-    user.refreshTokens.push(refreshToken);
+    user.failedLoginCount = 0;
+    user.lockedUntil = null;
+    user.lastLoginAt = new Date().toISOString();
     await user.save();
-
-    const profile = await buildAuthProfile(user);
+    const authResult = await issueTokensForUser(user, req, res);
+    await recordAuthEvent(req, user, 'login_success', true, { role: actualRole });
 
     res.json({
-      ...profile,
-      accessToken,
-      refreshToken,
+      ...authResult,
     });
   } catch (err) {
     next(err);
@@ -848,31 +906,27 @@ router.post('/login', authLimiter, async (req, res, next) => {
 // POST /api/auth/refresh
 router.post('/refresh', async (req, res, next) => {
   try {
-    const { refreshToken } = refreshSchema.parse(req.body);
-
-    let decoded;
-    try {
-      decoded = verifyRefreshToken(refreshToken);
-    } catch {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    const user = await User.findById(decoded.userId);
-    if (!user || !user.refreshTokens.includes(refreshToken)) {
+    const session = await verifyRefreshSession(refreshToken);
+    const user = await User.findById(session.userId);
+    if (!user) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    // Rotate refresh token
-    user.refreshTokens = user.refreshTokens.filter((t) => t !== refreshToken);
-    const payload = { userId: user._id.toString(), email: user.email };
+    const newRefreshToken = await rotateRefreshSession(session, req);
+    setRefreshCookie(res, newRefreshToken);
+    req.authSessionId = session._id.toString();
+
+    const payload = { userId: user._id.toString(), email: user.email, sessionId: session._id.toString() };
     const newAccessToken = signAccessToken(payload);
-    const newRefreshToken = signRefreshToken(payload);
-    user.refreshTokens.push(newRefreshToken);
-    await user.save();
 
     res.json({
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      expiresIn: env.JWT_ACCESS_EXPIRY,
     });
   } catch (err) {
     next(err);
@@ -955,13 +1009,9 @@ router.patch('/me', authMiddleware, async (req, res, next) => {
 // POST /api/auth/logout
 router.post('/logout', authMiddleware, async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
-    const user = await User.findById(req.user.userId);
-
-    if (user && refreshToken) {
-      user.refreshTokens = user.refreshTokens.filter((t) => t !== refreshToken);
-      await user.save();
-    }
+    await revokeSession(req.authSessionId);
+    clearRefreshCookie(res);
+    await recordAuthEvent(req, { _id: req.user.userId }, 'logout_success', true);
 
     res.json({ message: 'Logged out successfully' });
   } catch (err) {

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { API_BASE_URL } from '@/config/api'
+import { getAccessToken } from '@/lib/authToken'
 import { extractPartialSections } from '@/lib/streaming'
 import useProposalStore from '@/stores/proposalStore'
 import useAuthStore from '@/stores/authStore'
@@ -20,7 +21,7 @@ export function useStreamingProposal() {
     async (briefText, fileKey = null, existingProposalId = null, briefScore = null, options = {}) => {
       startStream()
 
-      const accessToken = localStorage.getItem('accessToken')
+      const accessToken = getAccessToken()
       let rawBuffer = ''
       let eventBuffer = ''
       let reader = null

@@ -8,7 +8,7 @@ test.describe('proposal lifecycle', () => {
 
   test('scores, generates, shares, and tracks proposal outcomes', async ({ page, baseURL }) => {
     const email = `lifecycle-${Date.now()}@example.com`
-    const password = process.env.PLAYWRIGHT_TEST_PASSWORD || 'Password123'
+    const password = process.env.PLAYWRIGHT_TEST_PASSWORD || 'Password123!'
 
     await page.goto(`${baseURL}/register`)
     await page.fill('[name="name"]', 'Lifecycle User')

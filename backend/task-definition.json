@@ -19,10 +19,6 @@
       ],
       "secrets": [
         {
-          "name": "MONGODB_URI",
-          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/MONGODB_URI"
-        },
-        {
           "name": "JWT_SECRET",
           "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/JWT_SECRET"
         },
@@ -37,6 +33,10 @@
         {
           "name": "FRONTEND_URL",
           "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/FRONTEND_URL"
+        },
+        {
+          "name": "FRONTEND_ALLOWED_ORIGINS",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/FRONTEND_ALLOWED_ORIGINS"
         },
         {
           "name": "GITHUB_CLIENT_ID",
@@ -77,6 +77,10 @@
         {
           "name": "SMTP_FROM",
           "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/SMTP_FROM"
+        },
+        {
+          "name": "INTEGRATION_SECRET",
+          "valueFrom": "arn:aws:ssm:us-east-1:034476915822:parameter/proplytics/dev/INTEGRATION_SECRET"
         }
       ],
       "environment": [
@@ -95,6 +99,14 @@
         {
           "name": "S3_BUCKET",
           "value": "fixflowai-assets-dev"
+        },
+        {
+          "name": "DYNAMODB_TABLE_PREFIX",
+          "value": "fixflowai"
+        },
+        {
+          "name": "REQUEST_BODY_LIMIT",
+          "value": "1mb"
         }
       ],
       "logConfiguration": {

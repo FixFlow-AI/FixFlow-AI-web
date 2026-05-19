@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import api from '../config/api';
+import api, { ensureCsrfToken, refreshAccessToken } from '../config/api';
+import { clearAccessToken, setAccessToken } from '../lib/authToken';
 import { getDashboardPathForRole, normalizeRole } from '../lib/authRoles';
 
 function encodeOAuthState(payload) {
@@ -17,9 +18,8 @@ const useAuthStore = create((set, get) => ({
   updateUser: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
   updateCurrentWorkspace: (updates) =>
     set((state) => ({ currentWorkspace: state.currentWorkspace ? { ...state.currentWorkspace, ...updates } : null })),
-  completeOAuthLogin: ({ accessToken, refreshToken, user, currentWorkspace = null }) => {
-    if (accessToken) localStorage.setItem('accessToken', accessToken);
-    if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  completeOAuthLogin: ({ accessToken, user, currentWorkspace = null }) => {
+    if (accessToken) setAccessToken(accessToken);
 
     set({
       user: user || null,
@@ -40,16 +40,14 @@ const useAuthStore = create((set, get) => ({
       defaultEntryMode,
       teamPlanPreference,
     });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    setAccessToken(data.accessToken);
     set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true });
     return data;
   },
 
   login: async ({ email, password, role = 'client', entryMode = null }) => {
     const { data } = await api.post('/auth/login', { email, password, role: normalizeRole(role), entryMode });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    setAccessToken(data.accessToken);
     set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true });
     return data;
   },
@@ -89,30 +87,25 @@ const useAuthStore = create((set, get) => ({
   startGoogleLogin: async (options) => get().startOAuthLogin({ provider: 'google', ...options }),
 
   logout: async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
     try {
-      await api.post('/auth/logout', { refreshToken });
+      await ensureCsrfToken();
+      await api.post('/auth/logout', {});
     } catch {
       // Silently fail — still clear local state
     }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearAccessToken();
     set({ user: null, currentWorkspace: null, isAuthenticated: false });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      set({ user: null, currentWorkspace: null, isAuthenticated: false, isLoading: false });
-      return;
-    }
-
     try {
+      if (!get().isAuthenticated) {
+        await refreshAccessToken();
+      }
       const { data } = await api.get('/auth/me');
       set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true, isLoading: false });
     } catch {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      clearAccessToken();
       set({ user: null, currentWorkspace: null, isAuthenticated: false, isLoading: false });
     }
   },

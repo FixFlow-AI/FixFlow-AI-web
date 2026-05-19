@@ -1,5 +1,6 @@
 import { startTransition, useCallback, useState } from 'react'
 import { API_BASE_URL } from '@/config/api'
+import { getAccessToken } from '@/lib/authToken'
 import { extractPartialSections } from '@/lib/streaming'
 
 const STRATEGIES = ['lean', 'standard', 'premium']
@@ -60,7 +61,7 @@ export function useTriGeneration() {
   }, [])
 
   const generateAll = useCallback(async ({ briefText, fileKey = null, briefScore = null, calibrationContext = '', workspaceId = null, nextTripId }) => {
-    const accessToken = localStorage.getItem('accessToken')
+    const accessToken = getAccessToken()
     setIsGenerating(true)
     setError(null)
     setTripId(nextTripId)

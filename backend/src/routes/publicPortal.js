@@ -10,8 +10,11 @@ const {
   recordPortalEvents,
   submitPortalFeedback,
 } = require('../services/portal/portalService');
+const { publicPortalLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
+
+router.use(publicPortalLimiter);
 
 router.get('/:token', async (req, res, next) => {
   try {

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearAccessToken, getAccessToken, getCsrfToken, setAccessToken, setCsrfToken } from '@/lib/authToken'
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
@@ -13,12 +14,37 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
+  const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  const csrfToken = getCsrfToken()
+  if (csrfToken) {
+    config.headers['X-CSRF-Token'] = csrfToken
+  }
   return config
 })
+
+export async function ensureCsrfToken() {
+  if (getCsrfToken()) return getCsrfToken()
+  const { data } = await axios.get(`${API_BASE_URL}/auth/csrf`, { withCredentials: true })
+  setCsrfToken(data.csrfToken)
+  return data.csrfToken
+}
+
+export async function refreshAccessToken() {
+  const csrfToken = await ensureCsrfToken()
+  const { data } = await axios.post(
+    `${API_BASE_URL}/auth/refresh`,
+    {},
+    {
+      withCredentials: true,
+      headers: { 'X-CSRF-Token': csrfToken },
+    }
+  )
+  setAccessToken(data.accessToken)
+  return data.accessToken
+}
 
 api.interceptors.response.use(
   (response) => response,
@@ -28,27 +54,13 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (!refreshToken) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        window.location.href = '/login'
-        return Promise.reject(error)
-      }
-
       try {
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        })
-
-        localStorage.setItem('accessToken', data.accessToken)
-        localStorage.setItem('refreshToken', data.refreshToken)
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        const newAccessToken = await refreshAccessToken()
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
 
         return api(originalRequest)
       } catch {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+        clearAccessToken()
         window.location.href = '/login'
         return Promise.reject(error)
       }

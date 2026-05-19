@@ -4,6 +4,7 @@ const FreelancerProfile = require('../../models/FreelancerProfile');
 const Niche = require('../../models/Niche');
 const { Lead } = require('../../models/Lead');
 const { evaluateProjectMatch } = require('./profileMatchService');
+const { safeFetch } = require('../../utils/safeFetch');
 
 const MARKETPLACE_DOMAINS = [
   'upwork.com',
@@ -218,19 +219,12 @@ function buildQuery(profile = {}, niches = [], override = '') {
 }
 
 async function fetchJson(url, options = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 300)}`);
-    }
-    return text ? JSON.parse(text) : {};
-  } finally {
-    clearTimeout(timeout);
+  const response = await safeFetch(url, options, { timeoutMs: 20000, maxBytes: 2 * 1024 * 1024 });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 300)}`);
   }
+  return text ? JSON.parse(text) : {};
 }
 
 async function searchTavily(query, limit) {

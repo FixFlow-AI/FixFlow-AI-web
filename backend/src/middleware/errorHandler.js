@@ -1,13 +1,25 @@
 const { AppError } = require('../utils/errors');
 const { env } = require('../config/env');
 
+function sendError(res, statusCode, message, extra = {}) {
+  return res.status(statusCode).json({
+    success: false,
+    message,
+    error: message,
+    requestId: res.getHeader('X-Request-Id'),
+    ...extra,
+  });
+}
+
 function errorHandler(err, _req, res, _next) {
+  res.locals.errorMessage = err?.message || 'Unhandled error';
+
   // CORS origin rejections
   if (typeof err?.message === 'string' && err.message.startsWith('Not allowed by CORS')) {
     if (env.NODE_ENV !== 'production') {
       console.warn(`CORS rejection: ${err.message}`);
     }
-    return res.status(403).json({ error: 'Not allowed by CORS' });
+    return sendError(res, 403, 'Not allowed by CORS');
   }
 
   // Zod validation errors
@@ -16,13 +28,13 @@ function errorHandler(err, _req, res, _next) {
       field: issue.path.join('.'),
       message: issue.message,
     }));
-    return res.status(400).json({ error: 'Validation failed', details: messages });
+    return sendError(res, 400, 'Validation failed', { details: messages });
   }
 
   // Mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
-    return res.status(409).json({ error: `${field} already exists` });
+    return sendError(res, 409, `${field} already exists`);
   }
 
   // Mongoose validation
@@ -31,18 +43,18 @@ function errorHandler(err, _req, res, _next) {
       field: e.path,
       message: e.message,
     }));
-    return res.status(400).json({ error: 'Validation failed', details: messages });
+    return sendError(res, 400, 'Validation failed', { details: messages });
   }
 
   // Known operational errors
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return sendError(res, err.statusCode, err.message);
   }
 
   // Unexpected errors
   console.error('Unhandled error:', err);
   const message = env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
-  return res.status(500).json({ error: message });
+  return sendError(res, 500, message);
 }
 
 module.exports = { errorHandler };

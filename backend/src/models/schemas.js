@@ -36,8 +36,11 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must be under 128 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one symbol'),
   name: z
     .string()
     .min(2, 'Name must be at least 2 characters')
@@ -47,27 +50,27 @@ const registerSchema = z.object({
   plan: z.enum(['free', 'pro', 'agency', 'solo', 'scale', 'standard', 'enterprise']).optional().default('free'),
   defaultEntryMode: z.enum(['individual', 'team']).optional().default('individual'),
   teamPlanPreference: z.enum(['free', 'pro', 'agency', 'scale', 'standard', 'enterprise']).optional().default('free'),
-});
+}).strict();
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
   role: z.enum(['freelancer', 'client', 'developer']),
   entryMode: z.enum(['individual', 'team']).nullable().optional().default(null),
-});
+}).strict();
 
 const refreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
-});
+}).strict();
 
 const githubExchangeSchema = z.object({
   code: z.string().min(1, 'GitHub authorization code is required'),
   state: z.string().optional(),
-});
+}).strict();
 
 const forgotPasswordRequestSchema = z.object({
   email: z.string().email('Invalid email address'),
-});
+}).strict();
 
 const forgotPasswordVerifySchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -75,9 +78,12 @@ const forgotPasswordVerifySchema = z.object({
   newPassword: z
     .string()
     .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must be under 128 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-});
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one symbol'),
+}).strict();
 
 const proposalGenerateSchema = z
   .object({
@@ -108,7 +114,7 @@ const briefScoreRequestSchema = z
 const uploadUrlSchema = z.object({
   fileName: z.string().trim().min(1, 'fileName is required'),
   fileType: z.string().trim().min(1, 'fileType is required'),
-});
+}).strict();
 
 const proposalExportSchema = z.object({
   format: z.enum(['pdf', 'json', 'md']).default('pdf'),
@@ -259,7 +265,7 @@ const authProfileUpdateSchema = z.object({
   timezone: z.string().trim().max(80).optional(),
   theme: z.enum(['light', 'modern-dark', 'vscode-dark']).optional(),
   notificationPreferences: notificationPreferencesSchema.optional(),
-});
+}).strict();
 
 const billingCheckoutSchema = z.object({
   plan: z.enum(['pro', 'agency', 'solo']),

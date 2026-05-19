@@ -87,7 +87,7 @@ test('landing role CTAs prefill signup roles', async ({ page, baseURL }) => {
 test('client register and login flow redirects to client dashboard', async ({ page, baseURL }) => {
   await mockAuthenticatedApis(page, 'client')
   const email = `test-${Date.now()}@example.com`
-  const password = process.env.PLAYWRIGHT_TEST_PASSWORD || 'Password123'
+  const password = process.env.PLAYWRIGHT_TEST_PASSWORD || 'Password123!'
 
   await page.goto(`${baseURL}/register?role=client`)
   await page.fill('[name="name"]', 'Test Client')

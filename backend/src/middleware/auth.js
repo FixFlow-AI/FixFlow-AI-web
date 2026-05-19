@@ -36,6 +36,7 @@ async function authMiddleware(req, _res, next) {
       defaultEntryMode: user.defaultEntryMode,
       currentWorkspaceId: user.currentWorkspaceId ? user.currentWorkspaceId.toString() : null,
     };
+    req.authSessionId = decoded.sessionId || null;
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

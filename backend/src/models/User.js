@@ -55,6 +55,12 @@ const User = createDynamoModel({
     subscriptionPriceId: '',
     subscriptionSeats: 1,
     refreshTokens: [],
+    isAdmin: false,
+    failedLoginCount: 0,
+    lockedUntil: null,
+    lastLoginAt: null,
+    passwordChangedAt: null,
+    tokenVersion: 0,
   }),
   hiddenFields: ['passwordHash', 'refreshTokens'],
   methods: {

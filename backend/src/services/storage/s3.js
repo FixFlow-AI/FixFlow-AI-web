@@ -22,6 +22,7 @@ const ALLOWED_AVATAR_UPLOADS = new Map([
 ]);
 
 const MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_BRIEF_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 const awsRegionValue = env.AWS_REGION?.trim();
 
@@ -117,13 +118,13 @@ function makeProposalKey(userId, proposalId, version) {
 }
 
 function assertOwnedBriefKey(userId, fileKey) {
-  if (!fileKey.startsWith(`briefs/${userId}/`)) {
+  if (!fileKey.startsWith(`briefs/${userId}/`) || fileKey.includes('..') || fileKey.includes('\\')) {
     throw new ForbiddenError('You do not have access to this uploaded file.');
   }
 }
 
 function assertOwnedAvatarKey(userId, fileKey) {
-  if (!fileKey.startsWith(`avatars/${userId}/`)) {
+  if (!fileKey.startsWith(`avatars/${userId}/`) || fileKey.includes('..') || fileKey.includes('\\')) {
     throw new ForbiddenError('You do not have access to this uploaded avatar.');
   }
 }
@@ -151,7 +152,7 @@ async function generateUploadUrl(userId, fileType, fileName) {
     { expiresIn: 300 }
   );
 
-  return { uploadUrl, fileKey };
+  return { uploadUrl, fileKey, maxBytes: MAX_BRIEF_UPLOAD_BYTES };
 }
 
 async function generateAvatarUploadUrl(userId, fileType, fileName) {
@@ -250,6 +251,7 @@ module.exports = {
   ALLOWED_UPLOADS,
   ALLOWED_AVATAR_UPLOADS,
   MAX_AVATAR_UPLOAD_BYTES,
+  MAX_BRIEF_UPLOAD_BYTES,
   assertOwnedBriefKey,
   assertOwnedAvatarKey,
   buildAvatarUrl,

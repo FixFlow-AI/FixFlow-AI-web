@@ -6,6 +6,7 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "node --test src/test/*.test.js",
+    "security:migrate": "node src/scripts/createSecurityTables.js",
     "migrate:plans": "node src/scripts/migratePlans.js",
     "seed:demo": "node src/scripts/seedDemoData.js"
   },

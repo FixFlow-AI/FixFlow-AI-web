@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '@/config/api'
+import { getAccessToken } from '@/lib/authToken'
 
 /**
  * useProposalChat Hook
@@ -22,7 +23,7 @@ export function useProposalChat(proposalId) {
     async (message, intent = 'question', targetSection = null) => {
       if (!proposalId || !message.trim() || isStreaming) return
 
-      const accessToken = localStorage.getItem('accessToken')
+      const accessToken = getAccessToken()
       setError(null)
 
       // Add user message

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api, { API_BASE_URL } from '@/config/api'
+import { getAccessToken } from '@/lib/authToken'
 
 const freelancerKeys = {
   all: ['freelancer'],
@@ -156,7 +157,7 @@ export function useFreelancerMutations() {
 }
 
 export async function streamNicheAnalysis({ onStart, onNiche, onComplete, onError } = {}) {
-  const accessToken = localStorage.getItem('accessToken')
+  const accessToken = getAccessToken()
   const response = await fetch(`${API_BASE_URL}/freelancer/niches/analyze`, {
     method: 'POST',
     headers: {

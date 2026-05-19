@@ -1,6 +1,7 @@
 const { env } = require('../../config/env');
 const { BadRequestError } = require('../../utils/errors');
 const { buildFrontendUrl } = require('../../utils/frontendOrigin');
+const { safeFetch } = require('../../utils/safeFetch');
 const { decryptSecret, encryptSecret, signState, verifyState } = require('./secretCrypto');
 
 const SLACK_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -42,7 +43,7 @@ async function exchangeSlackCode(code) {
   });
   const basic = Buffer.from(`${env.SLACK_CLIENT_ID}:${env.SLACK_CLIENT_SECRET}`).toString('base64');
 
-  const response = await fetch('https://slack.com/api/oauth.v2.access', {
+  const response = await safeFetch('https://slack.com/api/oauth.v2.access', {
     method: 'POST',
     headers: {
       Authorization: `Basic ${basic}`,
@@ -123,7 +124,7 @@ function buildSlackMessage({ title, body, metadata = {}, frontendPath = '/worksp
 }
 
 async function sendSlackWebhook(webhookUrl, message) {
-  const response = await fetch(webhookUrl, {
+  const response = await safeFetch(webhookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

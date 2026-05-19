@@ -29,6 +29,7 @@ const {
 } = require('../services/proposal/proposalAccess');
 const { ensureDeliveryPlan } = require('../services/proposal/deliveryPlanService');
 const { BadRequestError, NotFoundError } = require('../utils/errors');
+const { generationLimiter, uploadLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ function buildTitle(projectSummary) {
   return (firstSentence || 'Generated proposal').slice(0, 100);
 }
 
-router.post('/', authMiddleware, async (req, res, next) => {
+router.post('/', authMiddleware, generationLimiter, async (req, res, next) => {
   let proposalRecord = null;
 
   try {
@@ -268,7 +269,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
   }
 });
 
-router.post('/upload-url', authMiddleware, async (req, res, next) => {
+router.post('/upload-url', authMiddleware, uploadLimiter, async (req, res, next) => {
   try {
     const { fileName, fileType } = uploadUrlSchema.parse(req.body);
     const upload = await s3Service.generateUploadUrl(req.user.userId, fileType, fileName);

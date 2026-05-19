@@ -7,7 +7,7 @@ import DashboardLayout from './components/layout/DashboardLayout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import useAuthStore from './stores/authStore'
 import { PageLoader } from './components/ui/PageLoader'
-import { getDashboardPathForRole, normalizeRole } from './lib/authRoles'
+import { clearAccessToken } from './lib/authToken'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -48,7 +48,6 @@ import RouteTransition from './components/layout/RouteTransition'
 
 function AppRoutes() {
   const checkAuth = useAuthStore((s) => s.checkAuth)
-  const completeOAuthLogin = useAuthStore((s) => s.completeOAuthLogin)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -58,27 +57,21 @@ function AppRoutes() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    const accessToken = params.get('accessToken')
-    const refreshToken = params.get('refreshToken')
-    const encodedUser = params.get('user')
+    const oauthSuccess = params.get('oauth') === 'success'
     const entryMode = params.get('mode') === 'team' ? 'team' : 'individual'
     const redirectTo = params.get('redirectTo')
 
-    if (!accessToken || !refreshToken) {
+    if (oauthSuccess) {
+      checkAuth().then(() => {
+        navigate(redirectTo || (entryMode === 'team' ? '/workspace' : '/dashboard'), { replace: true })
+      }).catch(() => {
+        clearAccessToken()
+        navigate('/login', { replace: true })
+      })
       return
     }
 
-    try {
-      const user = encodedUser ? JSON.parse(atob(encodedUser)) : null
-      completeOAuthLogin({ accessToken, refreshToken, user })
-      const dashboardPath = redirectTo || (entryMode === 'team' ? '/workspace' : getDashboardPathForRole(normalizeRole(user?.role)))
-      navigate(dashboardPath, { replace: true })
-    } catch {
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      navigate('/login', { replace: true })
-    }
-  }, [completeOAuthLogin, location.search, navigate])
+  }, [checkAuth, location.search, navigate])
 
   return (
     <RouteTransition>

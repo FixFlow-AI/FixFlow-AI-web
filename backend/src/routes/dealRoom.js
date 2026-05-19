@@ -12,9 +12,12 @@ const {
   setTierSelection,
 } = require('../services/portal/dealRoomService');
 const { getProposalAccessContext } = require('../services/proposal/proposalAccess');
+const { publicPortalLimiter } = require('../middleware/rateLimit');
 
 const publicDealRoomRouter = express.Router();
 const proposalDealRoomRouter = express.Router();
+
+publicDealRoomRouter.use(publicPortalLimiter);
 
 publicDealRoomRouter.get('/:token/deal-room/annotations', async (req, res, next) => {
   try {
