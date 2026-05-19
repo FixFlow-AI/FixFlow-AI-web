@@ -18,6 +18,7 @@ yarn-error.log*
 
 # env files
 .env*
+!**/.env.example
 
 # vercel
 .vercel
@@ -56,3 +57,4 @@ reference\IMPLEMENTATION_ROADMAP.md
 reference\fixflowai-10x-masterplan.html
 reference\guide.pdf
 reference\steps.md
+lambda

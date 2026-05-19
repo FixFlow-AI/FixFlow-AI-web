@@ -5,6 +5,8 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-16';
 process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-12345';
 process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://main.d22glq95zibf1w.amplifyapp.com';
+process.env.FRONTEND_ALLOWED_ORIGINS =
+  process.env.FRONTEND_ALLOWED_ORIGINS || 'https://testing.d22glq95zibf1w.amplifyapp.com';
 
 const { buildFrontendUrl, isAllowedFrontendOrigin, normalizeOrigin } = require('../utils/frontendOrigin');
 

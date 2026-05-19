@@ -512,28 +512,33 @@ npm install
 # 3. Install backend dependencies
 npm --prefix backend install
 
-# 4. Configure backend environment
-#   Copy backend/.env.example to backend/.env
-#   Fill required values (MongoDB URI, JWT secrets, S3 bucket, at least one LLM key)
+# 4. Configure frontend environment
+#   Copy .env.example to .env
+#   Set VITE_API_URL (and PLAYWRIGHT_BASE_URL if running E2E tests)
 
-# 5. Start backend API
+# 5. Configure backend environment
+#   Copy backend/.env.example to backend/.env
+#   Fill required values (JWT secrets, S3 bucket, at least one LLM key, and any provider keys you plan to use)
+#   If you host multiple frontends, set FRONTEND_ALLOWED_ORIGINS in backend/.env
+
+# 6. Start backend API
 npm --prefix backend run dev
 # API: http://localhost:5000
 
-# 6. Start frontend app
+# 7. Start frontend app
 npm run dev
 # App: http://localhost:3001
 
-# 7. Run backend tests
+# 8. Run backend tests
 npm --prefix backend test
 
-# 8. Run the standard repo verification
+# 9. Run the standard repo verification
 npm run check
 
-# 9. Optional end-to-end tests
+# 10. Optional end-to-end tests
 npm run test:e2e
 
-# 10. Build for production
+# 11. Build for production
 npm run build
 npm run preview
 ```

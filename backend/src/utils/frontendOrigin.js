@@ -1,13 +1,11 @@
 const { env } = require('../config/env');
 
-const STATIC_ALLOWED_FRONTEND_ORIGINS = [
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://main.d22glq95zibf1w.amplifyapp.com',
-  'https://testing.d22glq95zibf1w.amplifyapp.com',
-];
+function parseOriginList(value) {
+  return String(value || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
 
 function normalizeOrigin(origin) {
   try {
@@ -30,7 +28,7 @@ function isLoopbackOrigin(origin) {
 
 function getAllowedFrontendOrigins() {
   return new Set(
-    [...STATIC_ALLOWED_FRONTEND_ORIGINS, env.FRONTEND_URL]
+    [...parseOriginList(env.FRONTEND_ALLOWED_ORIGINS), env.FRONTEND_URL]
       .filter(Boolean)
       .map((origin) => normalizeOrigin(origin))
   );
@@ -65,5 +63,4 @@ module.exports = {
   isAllowedFrontendOrigin,
   isLoopbackOrigin,
   normalizeOrigin,
-  STATIC_ALLOWED_FRONTEND_ORIGINS,
 };

@@ -8,6 +8,7 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRY: z.string().default('15m'),
   JWT_REFRESH_EXPIRY: z.string().default('7d'),
   FRONTEND_URL: z.string().url().default('http://localhost:3001'),
+  FRONTEND_ALLOWED_ORIGINS: z.string().default(''),
   GITHUB_CLIENT_ID: z.string().default(''),
   GITHUB_CLIENT_SECRET: z.string().default(''),
   GITHUB_CALLBACK_URL: z.string().url().default('http://localhost:5000/api/auth/github/callback'),
@@ -92,7 +93,7 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((value) => value.toLowerCase() === 'true'),
-  ADMIN_ALERT_EMAIL: z.string().default('suvampersonal555@gmail.com'),
+  ADMIN_ALERT_EMAIL: z.string().default(''),
   RATE_LIMIT_MONITOR_ENABLED: z
     .string()
     .default('true')
