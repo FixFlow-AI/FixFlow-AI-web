@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { z } = require('zod');
 
 const envSchema = z.object({
