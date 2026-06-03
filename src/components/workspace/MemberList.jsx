@@ -12,7 +12,7 @@ export default function MemberList({
   return (
     <div className="space-y-3">
       {members.map((member) => (
-        <div key={member.userId} className="flex items-center justify-between rounded-2xl border border-border bg-background/30 p-4">
+            <div key={member.userId} className="surface-frame flex items-center justify-between rounded-2xl border border-border bg-background/30 p-4">
           <div className="flex items-center gap-3">
             <Avatar src={member.avatar || '/avatar.png'} fallback={member.name?.slice(0, 2)?.toUpperCase()} size="md" />
             <div>

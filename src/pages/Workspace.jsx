@@ -47,9 +47,9 @@ export default function Workspace() {
 
   if (!currentWorkspace) {
     return (
-      <div className="max-w-3xl mx-auto glass-card rounded-[32px] p-8">
+      <div className="mx-auto max-w-3xl glass-card rounded-[32px] p-5 sm:p-8">
         <p className="text-xs uppercase tracking-[0.24em] text-primary">Team Mode</p>
-        <h1 className="mt-3 text-3xl font-bold">Create your workspace</h1>
+        <h1 className="mt-3 text-2xl font-bold sm:text-3xl">Create your workspace</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           Start the shared proposal room for your agency, then invite editors and viewers.
         </p>
@@ -69,7 +69,7 @@ export default function Workspace() {
     <div className="max-w-7xl mx-auto space-y-8">
       <div>
         <p className="text-xs uppercase tracking-[0.24em] text-primary">Workspace</p>
-        <h1 className="mt-2 text-3xl font-bold">{currentWorkspace.name}</h1>
+        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{currentWorkspace.name}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Shared proposals, activity, and delivery momentum across your team.
         </p>

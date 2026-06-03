@@ -144,32 +144,32 @@ function NewProposal() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-10"
+        className="mb-8 sm:mb-10"
       >
         <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
           <Sparkles className="h-7 w-7 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold mb-2">Create New Proposal</h1>
+        <h1 className="text-2xl font-bold mb-2 sm:text-3xl">Create New Proposal</h1>
         <p className="max-w-3xl text-muted-foreground">
           Paste a client brief or upload a discovery file. FixFlowAI will score the input first, then generate the proposal with the brief-quality snapshot attached.
         </p>
       </motion.div>
 
-      <div className="grid gap-8 xl:grid-cols-[1fr_0.95fr]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr] xl:gap-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card rounded-[28px] p-8 space-y-8"
+          className="glass-card space-y-6 rounded-[28px] p-5 sm:p-8 xl:space-y-8"
         >
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-primary">Intake</p>
-              <h2 className="mt-2 text-2xl font-semibold">Brief intake workspace</h2>
+              <h2 className="mt-2 text-xl font-semibold sm:text-2xl">Brief intake workspace</h2>
             </div>
             <div className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground">
               {fileKey ? 'File attached' : `${wordCount} words`}
@@ -178,7 +178,7 @@ function NewProposal() {
 
           <BriefInput value={briefText} onChange={setBriefText} />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div className="flex-1 h-px bg-border" />
             <span className="text-sm text-muted-foreground">or</span>
             <div className="flex-1 h-px bg-border" />
@@ -252,7 +252,7 @@ function NewProposal() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="glass-card rounded-[28px] p-8"
+          className="glass-card rounded-[28px] p-5 sm:p-8"
         >
           <div className="flex items-center gap-3">
             <Gauge className="h-5 w-5 text-primary" />
@@ -274,7 +274,7 @@ function NewProposal() {
               'Include the launch window, deadlines, and budget if available.',
               'Name the approvers, operators, and target user groups.',
             ].map((tip, index) => (
-              <div key={tip} className="rounded-2xl border border-border bg-background/35 px-4 py-3 text-sm text-muted-foreground">
+              <div key={tip} className="surface-frame rounded-2xl border border-border bg-background/35 px-4 py-3 text-sm text-muted-foreground">
                 <span className="mr-3 text-primary">0{index + 1}</span>
                 {tip}
               </div>

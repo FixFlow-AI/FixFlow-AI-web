@@ -42,7 +42,7 @@ function Dashboard() {
         <motion.div
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3"
+          className="flex flex-wrap items-center gap-3"
         >
           <Button variant="outline" size="sm">
             <Filter className="h-4 w-4 mr-2" />
@@ -66,7 +66,7 @@ function Dashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-1 gap-4 mb-8 sm:grid-cols-2 lg:grid-cols-4"
         >
           {[
             { label: 'Total Proposals', value: proposals.length },
@@ -74,7 +74,7 @@ function Dashboard() {
             { label: 'Negotiating', value: proposals.filter((proposal) => proposal.dealStatus === 'negotiating').length },
             { label: 'Pending', value: proposals.filter((proposal) => proposal.dealStatus === 'pending').length },
           ].map((stat) => (
-            <div key={stat.label} className="p-4 rounded-xl border border-border bg-card/50">
+            <div key={stat.label} className="glass-card rounded-xl border border-border p-4">
               <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
               <p className="text-2xl font-bold">{stat.value}</p>
             </div>
@@ -130,7 +130,7 @@ function Dashboard() {
           }}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-6"
         >
           {proposals.map((proposal, index) => (
             <motion.div

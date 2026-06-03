@@ -105,7 +105,7 @@ export default function RoleManager({ roles = [], permissions = [], canManage = 
             Start from FixFlowAI defaults, then add owner-managed role templates for collaboration.
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/40 px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="surface-frame inline-flex items-center gap-2 rounded-full border border-border bg-background/40 px-3 py-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" />
           {canManage ? 'Role manager active' : 'Owner permission required'}
         </div>
@@ -115,7 +115,7 @@ export default function RoleManager({ roles = [], permissions = [], canManage = 
         {roles.map((role) => {
           const rolePermissions = normalizeDraft(role.permissions)
           return (
-            <div key={role.roleId} className="rounded-2xl border border-border bg-background/30 p-4">
+            <div key={role.roleId} className="surface-frame rounded-2xl border border-border bg-background/30 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-semibold">{role.name}</div>
@@ -161,7 +161,7 @@ export default function RoleManager({ roles = [], permissions = [], canManage = 
       </div>
 
       {canManage ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-border bg-background/25 p-4">
+      <div className="surface-frame mt-6 rounded-2xl border border-dashed border-border bg-background/25 p-4">
           <div className="grid gap-4 lg:grid-cols-[0.7fr_1.3fr_auto] lg:items-start">
             <input
               value={draftName}

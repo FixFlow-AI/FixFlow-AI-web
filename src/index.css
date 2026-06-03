@@ -196,11 +196,68 @@ body::before {
   }
   
   .glass-card {
-    background: var(--glass-card-bg);
+    background: transparent !important;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-card-shadow);
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .glass-card:hover,
+  .glass-card:focus-within {
+    background: var(--glass-card-bg) !important;
+  }
+
+  .surface-frame {
+    background: transparent !important;
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .surface-frame:hover,
+  .surface-frame:focus-within {
+    background: var(--glass-card-bg) !important;
+  }
+
+  .app-surfaces :where(
+    .glass-card,
+    .surface-frame,
+    [class*="rounded"][class*="bg-background"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="bg-card"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="bg-muted"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-background"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-card"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-muted"]:not([class*="rounded-full"])
+  ) {
+    background: transparent !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition:
+      background 180ms ease,
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .app-surfaces :where(
+    .glass-card,
+    .surface-frame,
+    [class*="rounded"][class*="bg-background"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="bg-card"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="bg-muted"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-background"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-card"]:not([class*="rounded-full"]),
+    [class*="rounded"][class*="border"][class*="bg-muted"]:not([class*="rounded-full"])
+  ):where(:hover, :focus-within) {
+    background: var(--glass-card-bg) !important;
   }
   
   .gradient-border {
@@ -398,6 +455,27 @@ body::before {
       radial-gradient(circle at 22% 20%, rgba(124, 58, 237, 0.18), transparent 28%),
       radial-gradient(circle at 76% 70%, rgba(20, 184, 166, 0.18), transparent 30%),
       linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.86));
+  }
+}
+
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-top: 84px;
+  }
+
+  section {
+    scroll-margin-top: 84px;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    background-image:
+      radial-gradient(circle at top, rgba(63, 215, 255, 0.08), transparent 34%);
+  }
+
+  .workspace-grid {
+    background-size: 34px 34px;
   }
 }
 

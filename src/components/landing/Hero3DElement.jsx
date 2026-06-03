@@ -163,31 +163,6 @@ function WorkflowTopology({ activeIndex, palette }) {
   )
 }
 
-function ActiveWorkflowBadge({ activeIndex, palette }) {
-  const activeNode = WORKFLOW_NODES[activeIndex]
-  const activeColor = palette[activeNode.colorKey] || palette.primary
-
-  return (
-    <div className="rounded-2xl border border-primary/15 bg-background/40 p-3 shadow-[var(--glass-card-shadow)] backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/70">
-        <span>Live workflow topology</span>
-        <span className="text-primary">adaptive</span>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card/45 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.16em]">
-        <span className="flex min-w-0 items-center gap-2 text-foreground">
-          <span
-            className="h-1.5 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: activeColor }}
-            aria-hidden="true"
-          />
-          <span className="truncate">{activeNode.label}</span>
-        </span>
-        <span className="shrink-0 text-primary">{activeNode.metric}</span>
-      </div>
-    </div>
-  )
-}
-
 function Hero3DElement() {
   const palette = useTheme3DPalette()
   const [enabled, setEnabled] = useState(false)
@@ -225,10 +200,9 @@ function Hero3DElement() {
     return (
       <div className="pointer-events-none absolute inset-x-4 top-28 z-0 hidden sm:block lg:right-[5%] lg:left-auto lg:top-[13%] lg:w-[32%] lg:min-w-[330px]">
         <div
-          className="absolute inset-0"
+          className="h-40 rounded-full opacity-40 blur-3xl"
           style={{ background: `radial-gradient(circle at 50% 35%, ${palette.primary}26, transparent 58%)` }}
         />
-        <ActiveWorkflowBadge activeIndex={activeIndex} palette={palette} />
       </div>
     )
   }

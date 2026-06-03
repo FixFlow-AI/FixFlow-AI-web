@@ -40,7 +40,7 @@ function HeroSection() {
   }, [bootLines, shouldReduceMotion])
 
   return (
-    <section className="relative flex min-h-screen items-center overflow-hidden pt-28">
+    <section className="relative flex min-h-[92vh] items-center overflow-hidden pt-28">
       <div className="absolute inset-0">
         <div className="workspace-grid opacity-75" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(63,215,255,0.2),transparent_28%),radial-gradient(circle_at_26%_78%,rgba(38,208,124,0.12),transparent_28%),linear-gradient(180deg,rgba(7,16,24,0),rgba(2,8,13,0.72))]" />
@@ -50,29 +50,26 @@ function HeroSection() {
       </div>
 
       <motion.div
-        style={{ y: yContent, opacity: heroOpacity }}
-        className="relative z-10 mx-auto grid w-full max-w-7xl gap-10 px-4 pb-16 sm:px-6 lg:grid-cols-[0.94fr_1.06fr] lg:px-8"
+        style={{ y: yContent, opacity }}
+        className="relative z-10 mx-auto grid max-w-7xl gap-12 px-4 pb-12 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:px-8"
       >
         <div className="flex flex-col justify-center">
-          <div className="overflow-hidden">
-            {headlineLines.map((line, index) => (
-              <motion.h1
-                key={line}
-                initial={{ y: '110%', opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.72, delay: index * 0.13, ease: [0.22, 1, 0.36, 1] }}
-                className="text-5xl font-bold leading-[0.92] tracking-tight text-foreground sm:text-7xl lg:text-[6.8rem]"
-              >
-                {index === 1 ? <span className="text-gradient-primary">{line}</span> : line}
-              </motion.h1>
-            ))}
-          </div>
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
+          >
+            <span className="text-gradient">From brief intelligence to</span>
+            <br />
+            <span className="text-gradient-primary">freelancer operating system</span>
+          </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.58, delay: 0.34 }}
-            className="mt-7 max-w-2xl text-lg leading-8 text-muted-foreground"
+            transition={{ duration: 0.55, delay: 0.12 }}
+            className="mt-6 max-w-2xl text-lg leading-8 text-muted-foreground"
           >
             FixFlowAI connects freelancers with GitHub-backed credibility, clients hiring trusted talent, and developers collaborating inside structured delivery workspaces.
           </motion.p>
@@ -118,20 +115,15 @@ function HeroSection() {
         </div>
 
         <motion.div
-          initial={{ opacity: 0, x: 34, rotateY: -8 }}
-          animate={{ opacity: 1, x: 0, rotateY: 0 }}
-          transition={{ duration: 0.7, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
-          style={{ y: yFrame }}
-          className="relative min-h-[34rem] [perspective:1200px]"
+          initial={{ opacity: 0, x: 28 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.65, delay: 0.18 }}
+          className="relative"
         >
-          <div className="landing-panel-strong absolute right-0 top-0 w-full max-w-[42rem] rounded-[2rem] p-3 lg:rotate-[-2deg]">
-            <div className="flex items-center justify-between border-b border-border/70 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-300/80" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-300/80" />
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-300/80" />
-              </div>
-              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">live product surface</span>
+          <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-[var(--glass-card-shadow)]">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <span className="font-mono text-xs uppercase tracking-[0.22em] text-primary">Boot sequence</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-300" />
             </div>
             <img
               src="/web-interface/landing.png"

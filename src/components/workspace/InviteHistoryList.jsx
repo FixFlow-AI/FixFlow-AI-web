@@ -35,7 +35,7 @@ function getInviteStatusMeta(invite) {
 export default function InviteHistoryList({ invites = [] }) {
   if (!invites.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-border bg-background/20 p-5 text-sm text-muted-foreground">
+      <div className="surface-frame rounded-2xl border border-dashed border-border bg-background/20 p-5 text-sm text-muted-foreground">
         No invitations have been sent yet.
       </div>
     )
@@ -47,7 +47,7 @@ export default function InviteHistoryList({ invites = [] }) {
         const status = getInviteStatusMeta(invite)
 
         return (
-          <div key={invite.inviteId || `${invite.email}-${invite.createdAt}`} className="rounded-2xl border border-border bg-background/30 p-4">
+            <div key={invite.inviteId || `${invite.email}-${invite.createdAt}`} className="surface-frame rounded-2xl border border-border bg-background/30 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-1">
                 <div className="font-medium">{invite.email}</div>

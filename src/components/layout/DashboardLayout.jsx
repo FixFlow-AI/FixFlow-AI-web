@@ -17,7 +17,7 @@ function DashboardLayout({ children }) {
         onMobileClose={() => setIsMobileSidebarOpen(false)}
       />
 
-      <div className="lg:pl-[280px] min-h-screen flex flex-col">
+      <div className="flex min-h-screen min-w-0 flex-col lg:pl-[280px]">
         <DashboardHeader onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
 
         <motion.main
@@ -25,7 +25,7 @@ function DashboardLayout({ children }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
-          className="flex-1 p-4 sm:p-6"
+          className="app-surfaces min-w-0 flex-1 overflow-x-hidden p-4 sm:p-6"
         >
           {children}
         </motion.main>

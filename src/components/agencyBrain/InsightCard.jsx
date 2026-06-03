@@ -22,7 +22,7 @@ export default function InsightCard({ insight, enabled, onToggle, index = 0 }) {
 
       <p className="mt-4 text-sm text-muted-foreground">{insight.recommendation}</p>
 
-      <div className="mt-5 rounded-2xl border border-border bg-background/35 p-4 text-sm text-muted-foreground">
+      <div className="surface-frame mt-5 rounded-2xl border border-border bg-background/35 p-4 text-sm text-muted-foreground">
         {insight.calibrationText}
       </div>
 

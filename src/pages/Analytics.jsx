@@ -66,7 +66,7 @@ export default function Analytics() {
   })
 
   if (isLoading) {
-    return <div className="grid gap-6 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="glass-card rounded-[24px] p-6"><div className="shimmer h-5 w-24 rounded" /><div className="shimmer mt-4 h-10 w-20 rounded" /></div>)}</div>
+    return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">{Array.from({ length: 6 }).map((_, index) => <div key={index} className="glass-card rounded-[24px] p-6"><div className="shimmer h-5 w-24 rounded" /><div className="shimmer mt-4 h-10 w-20 rounded" /></div>)}</div>
   }
 
   if (isError) {
@@ -85,13 +85,13 @@ export default function Analytics() {
     <div className="max-w-7xl mx-auto space-y-8" data-testid="analytics-page">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <p className="text-xs uppercase tracking-[0.24em] text-primary">Lifecycle Analytics</p>
-        <h1 className="mt-2 text-3xl font-bold">Proposal outcomes across your pipeline</h1>
+        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Proposal outcomes across your pipeline</h1>
         <p className="mt-3 max-w-3xl text-muted-foreground">
           Compare win rate, proposal confidence, brief quality, and the features that show up most often in won deals.
         </p>
       </motion.div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Total Proposals" value={data.totalProposals} />
         <MetricCard label="Pending" value={data.statusBreakdown.pending} />
         <MetricCard label="Negotiating" value={data.statusBreakdown.negotiating} />

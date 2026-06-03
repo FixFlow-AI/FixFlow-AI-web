@@ -14,7 +14,7 @@ export default function ActivityFeed({ proposals = [] }) {
       <h3 className="text-lg font-semibold">Activity Feed</h3>
       <div className="mt-5 space-y-4">
         {events.length ? events.map((event) => (
-          <div key={event.id} className="rounded-2xl border border-border bg-background/25 p-4 text-sm">
+        <div key={event.id} className="surface-frame rounded-2xl border border-border bg-background/25 p-4 text-sm">
             <div className="font-medium">{event.author} {event.action} "{event.title}"</div>
             <div className="mt-1 text-muted-foreground">{formatRelativeTime(event.createdAt)}</div>
           </div>

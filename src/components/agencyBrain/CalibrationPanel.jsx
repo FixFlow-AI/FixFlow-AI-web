@@ -33,7 +33,7 @@ export default function CalibrationPanel({ insights = [], isLoading = false }) {
             return (
               <label
                 key={insight.id}
-                className="flex cursor-pointer items-start gap-4 rounded-2xl border border-border bg-background/30 px-4 py-4"
+                className="surface-frame flex cursor-pointer items-start gap-4 rounded-2xl border border-border bg-background/30 px-4 py-4"
               >
                 <input
                   type="checkbox"

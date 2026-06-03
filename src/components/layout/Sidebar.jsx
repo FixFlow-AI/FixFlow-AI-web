@@ -18,9 +18,9 @@ import {
   Radar,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
+  ChevronDown,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/stores/authStore'
 import { Sheet } from '@/components/ui/Sheet'
@@ -36,10 +36,10 @@ function NavLinks({ items, isCollapsed, location, onNavigate }) {
         onClick={onNavigate}
         className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-          item.level === 'child' && !isCollapsed && 'ml-5 border-l border-border/70 pl-4',
+          item.level === 'child' && !isCollapsed && 'pl-3',
           isActive
             ? 'bg-primary/10 text-primary'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/70',
           isCollapsed && 'justify-center px-2'
         )}
       >
@@ -52,40 +52,39 @@ function NavLinks({ items, isCollapsed, location, onNavigate }) {
 }
 
 function SidebarContent({ isCollapsed, onToggleCollapse, location, user, currentWorkspace, onNavigate, mobile = false }) {
+  const isFreelancerActive = location.pathname.startsWith('/freelancer')
+  const [freelancerOpen, setFreelancerOpen] = useState(() => isFreelancerActive)
   const initials = user?.name
     ? user.name.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2)
     : '??'
-  const canUseFreelancerOS = currentWorkspace
-    ? Boolean(user?.teamPlanCapabilities?.freelancerOS)
-    : Boolean(user?.capabilities?.freelancerOS) || user?.role === 'freelancer'
-  const freelancerNavigation = user?.role === 'freelancer' || canUseFreelancerOS ? [
-    { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true },
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'New Proposal', href: '/new', icon: PlusCircle },
+    { name: 'Proposals', href: '/dashboard', icon: FileText },
+    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
+    { name: 'Workspace', href: '/workspace', icon: Users },
+  ]
+  const freelancerItem = { name: 'Freelancer OS', href: '/freelancer', icon: BriefcaseBusiness, matchPrefix: true }
+  const freelancerNavigation = [
     { name: 'Niches', href: '/freelancer/niches', icon: Radar, level: 'child' },
     { name: 'Leads', href: '/freelancer/leads', icon: Network, level: 'child' },
     { name: 'Outreach', href: '/freelancer/outreach', icon: Mail, level: 'child' },
     { name: 'Escrows', href: '/freelancer/escrows', icon: HandCoins, level: 'child' },
     { name: 'Identity', href: '/freelancer/identity', icon: Fingerprint, level: 'child' },
     { name: 'OS Settings', href: '/freelancer/settings', icon: Settings, level: 'child' },
-  ] : []
-  const primaryDashboard =
-    user?.role === 'developer'
-      ? { name: 'Developer', href: '/developer', icon: LayoutDashboard }
-      : user?.role === 'freelancer'
-        ? { name: 'FlowBoard', href: '/freelancer', icon: LayoutDashboard }
-        : { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
-  const navigation = [
-    primaryDashboard,
-    { name: 'New Proposal', href: '/new', icon: PlusCircle },
-    { name: 'Proposals', href: '/dashboard', icon: FileText },
-    { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    { name: 'Agency Brain', href: '/agency-brain', icon: Brain },
-    { name: 'Workspace', href: '/workspace', icon: Users },
-    { name: 'Billing', href: '/billing', icon: CreditCard },
-    ...freelancerNavigation,
+  ]
+  const footerNavigation = [
     ...(currentWorkspace ? [{ name: 'Workspace Settings', href: '/workspace/settings', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
     { name: 'Help', href: '/help', icon: HelpCircle },
   ]
+
+  useEffect(() => {
+    if (isFreelancerActive) {
+      setFreelancerOpen(true)
+    }
+  }, [isFreelancerActive])
 
   return (
     <>
@@ -114,6 +113,47 @@ function SidebarContent({ isCollapsed, onToggleCollapse, location, user, current
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <NavLinks items={navigation} isCollapsed={isCollapsed} location={location} onNavigate={onNavigate} />
+        <div
+          className={cn(
+            'rounded-xl transition-colors',
+            !isCollapsed && freelancerOpen && 'border border-border/60 bg-background/10 p-1'
+          )}
+        >
+          <div className="flex items-center gap-1">
+            <Link
+              to={freelancerItem.href}
+              onClick={onNavigate}
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                isFreelancerActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                isCollapsed && 'justify-center px-2'
+              )}
+            >
+              <freelancerItem.icon className={cn('h-5 w-5 shrink-0', isFreelancerActive && 'text-primary')} />
+              {!isCollapsed && <span className="truncate">{freelancerItem.name}</span>}
+              {isFreelancerActive && !isCollapsed && <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
+            </Link>
+            {!isCollapsed && (
+              <button
+                type="button"
+                aria-label={freelancerOpen ? 'Collapse Freelancer OS navigation' : 'Expand Freelancer OS navigation'}
+                aria-expanded={freelancerOpen}
+                onClick={() => setFreelancerOpen((value) => !value)}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+              >
+                {freelancerOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+            )}
+          </div>
+          {!isCollapsed && freelancerOpen && (
+            <div className="mt-1 space-y-1 border-l border-border/60 pl-3">
+              <NavLinks items={freelancerNavigation} isCollapsed={isCollapsed} location={location} onNavigate={onNavigate} />
+            </div>
+          )}
+        </div>
+        <NavLinks items={footerNavigation} isCollapsed={isCollapsed} location={location} onNavigate={onNavigate} />
       </nav>
 
       <div className="p-4 border-t border-border">
