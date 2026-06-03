@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - testing
-      - main
+      - master
   push:
     branches:
       - testing
-      - main
+      - master
   workflow_dispatch:
     inputs:
       target_environment:
@@ -18,7 +18,7 @@ on:
         type: choice
         options:
           - testing
-          - main
+          - master
 
 permissions:
   contents: read
@@ -112,15 +112,15 @@ jobs:
               echo "Selected target_environment=$DEPLOY_ENV but workflow ref is ${{ github.ref_name }}." >&2
               exit 1
             fi
-          elif [ "${{ github.ref_name }}" = "main" ]; then
-            DEPLOY_ENV="main"
+          elif [ "${{ github.ref_name }}" = "master" ]; then
+            DEPLOY_ENV="master"
           else
             DEPLOY_ENV="testing"
           fi
 
-          if [ "$DEPLOY_ENV" = "main" ]; then
+          if [ "$DEPLOY_ENV" = "master" ]; then
             IMAGE_TAG="latest"
-            FRONTEND_URL="https://main.${{ env.AMPLIFY_APP_ID }}.amplifyapp.com"
+            FRONTEND_URL="https://master.${{ env.AMPLIFY_APP_ID }}.amplifyapp.com"
           else
             IMAGE_TAG="testing"
             FRONTEND_URL="https://testing.${{ env.AMPLIFY_APP_ID }}.amplifyapp.com"
