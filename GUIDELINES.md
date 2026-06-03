@@ -1,6 +1,6 @@
 # FixFlow-AI Web Project Guidelines
 
-Welcome to the **FixFlow-AI-web** repository! As this project is built for teams and group projects, collaboration is at the heart of what we do. 
+Welcome to the **FixFlow-AI** project! As this project is built for teams and group projects, collaboration is at the heart of what we do. 
 
 This document serves as the **single source of truth** for all guidelines, instructions, policies, and rules for anyone contributing to or participating in the FixFlow-AI project. By interacting with this repository, you agree to abide by the rules and policies outlined below.
 
@@ -30,7 +30,7 @@ We are committed to providing a welcoming, inclusive, and harassment-free experi
 - Any other conduct which could reasonably be considered inappropriate in a professional setting.
 
 ### Reporting
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project administrators. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project administrators by emailing **admin@fixflow.ai** (placeholder email - please reach out to maintainers directly via GitHub issues if this email is unavailable). All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
 
 ---
 
@@ -40,7 +40,7 @@ Security is a top priority for FixFlow-AI. We take all vulnerabilities seriously
 
 ### Reporting a Vulnerability
 - **Do NOT open a public issue.** 
-- If you discover a security vulnerability, please send an email to the security team or use GitHub's private vulnerability reporting feature (if enabled).
+- If you discover a security vulnerability, please send an email to the security team at **security@fixflow.ai** or use GitHub's private vulnerability reporting feature under the "Security" tab of this repository.
 - Provide detailed steps to reproduce the vulnerability. We will acknowledge receipt of your vulnerability report and strive to send you regular updates about our progress.
 
 ### Security Rules
