@@ -5,12 +5,14 @@ on:
     branches:
       - testing
       - production
-      - main
+      - master
+      - waitlist
   pull_request:
     branches:
       - testing
       - production
-      - main
+      - master
+      - waitlist
 
 permissions:
   contents: read
@@ -116,7 +118,7 @@ jobs:
 
           echo "Current Branch: $BRANCH_NAME"
 
-          if [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "testing" ]] || [[ "$BRANCH_NAME" == "production" ]]; then
+          if [[ "$BRANCH_NAME" == "master" ]] || [[ "$BRANCH_NAME" == "testing" ]] || [[ "$BRANCH_NAME" == "production" ]] || [[ "$BRANCH_NAME" == "waitlist" ]]; then
             echo "✅ Target branch detected: $BRANCH_NAME"
           elif [[ "$BRANCH_NAME" =~ ^feature\/.*$ ]]; then
             echo "✅ Valid feature branch: $BRANCH_NAME"
@@ -126,7 +128,7 @@ jobs:
             echo "✅ Valid hotfix branch: $BRANCH_NAME"
           else
             echo "❌ Error: Branch name '$BRANCH_NAME' does not follow naming conventions."
-            echo "Branches must be main, testing, production, or prefixed with feature/, bugfix/, or hotfix/."
+            echo "Branches must be master, testing, production, waitlist, or prefixed with feature/, bugfix/, or hotfix/."
             exit 1
           fi
 
