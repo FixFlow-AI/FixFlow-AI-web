@@ -60,7 +60,7 @@ We love pull requests from everyone! Here’s how you can contribute:
 3. **Find an issue:** Look for issues tagged with `good first issue` or `help wanted`.
 
 ### Branching Strategy
-- **`main`:** The primary branch. It must always be stable and deployable.
+- **`testing`:** The primary branch. It must always be stable and deployable.
 - **Feature Branches:** Create a new branch for each feature or bug fix.
   - Format: `feature/your-feature-name` or `fix/your-fix-name` or `docs/update-readme`
 
@@ -90,7 +90,7 @@ To maintain order, security, and quality across the FixFlow-AI organization, the
 ### Roles and Permissions
 - **Admin/Owner:** Full access to manage the repository, including settings, secrets, and branch protection rules.
 - **Maintainer:** Can push to protected branches, manage issues/PRs, and configure repository settings.
-- **Developer/Write Access:** Can push to standard branches, create PRs, and review code. Cannot push directly to `main` without a PR.
+- **Developer/Write Access:** Can push to standard branches, create PRs, and review code. Cannot push directly to `testing` without a PR.
 - **Triage:** Can manage issues and PRs (labels, milestones) but cannot push code.
 - **Read:** Can clone the repository and open issues/PRs (for public or standard internal repos).
 
