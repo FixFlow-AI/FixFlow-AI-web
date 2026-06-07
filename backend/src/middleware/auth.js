@@ -1,5 +1,6 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
+const Session = require('../models/Session');
 const { UnauthorizedError } = require('../utils/errors');
 const { normalizePlan } = require('../services/capabilities/capabilityService');
 const { inferUserRole, normalizeSelectedPlanForRole } = require('../services/auth/authRules');
@@ -15,6 +16,14 @@ async function authMiddleware(req, _res, next) {
 
   try {
     const decoded = verifyAccessToken(token);
+
+    if (decoded.sessionId) {
+      const session = await Session.findById(decoded.sessionId).lean();
+      if (!session || session.revokedAt) {
+        return next(new UnauthorizedError('Session has been revoked'));
+      }
+    }
+
     const user = await User.findById(decoded.userId).lean();
     if (!user) {
       return next(new UnauthorizedError('User not found'));

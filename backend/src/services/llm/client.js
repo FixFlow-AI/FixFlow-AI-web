@@ -2,6 +2,7 @@ const { env } = require('../../config/env');
 const { RESPONSE_JSON_SCHEMA } = require('./promptBuilder');
 const {
   createGeminiGuard,
+  detectPromptInjection,
   extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,
@@ -10,6 +11,8 @@ const {
   isGeminiModelError,
   isGeminiQuotaError,
 } = require('./geminiGuard');
+const { writeAuditLog } = require('../audit/auditService');
+const { BadRequestError } = require('../../utils/errors');
 const { geminiModelCoordinator } = require('./modelCoordinator');
 const { getGeminiClient } = require('./provider');
 const { getConfiguredLlmProviders } = require('./providerRegistry');
@@ -375,6 +378,27 @@ async function* streamProviderAttempt(provider, system, userMessage, options = {
 }
 
 async function* streamLlmChat(system, userMessage, options = {}) {
+  if (detectPromptInjection(userMessage)) {
+    const errorMsg = 'Adversarial instruction patterns detected in input';
+    await writeAuditLog({
+      userId: options.context?.userId || null,
+      sessionId: options.context?.sessionId || null,
+      eventType: 'security_violation',
+      action: 'prompt_injection_blocked',
+      method: 'LLM',
+      endpoint: options.path || 'streamLlmChat',
+      statusCode: 400,
+      ipAddress: '',
+      userAgent: '',
+      requestId: options.context?.requestId || '',
+      metadata: { userMessage: String(userMessage || '').slice(0, 500) },
+      riskLevel: 'critical',
+      success: false,
+      errorMessage: errorMsg,
+    });
+    throw new BadRequestError(errorMsg);
+  }
+
   const providers = getConfiguredLlmProviders();
 
   if (!providers.length) {

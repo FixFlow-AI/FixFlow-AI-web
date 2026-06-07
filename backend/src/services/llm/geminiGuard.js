@@ -229,6 +229,26 @@ function createGeminiGuard({ cooldownMs = DEFAULT_GEMINI_KEY_GUARD_MS, now = Dat
   };
 }
 
+const PROMPT_INJECTION_PATTERNS = [
+  /ignore\s+(?:the\s+)?previous\s+instructions/i,
+  /ignore\s+(?:the\s+)?above\s+instructions/i,
+  /system\s+prompt\s+override/i,
+  /you\s+must\s+now\s+act\s+as/i,
+  /disregard\s+(?:the\s+)?system/i,
+  /stop\s+(?:following\s+)?instructions/i,
+  /override\s+(?:the\s+)?instructions/i,
+  /\bDAN\s+mode\b/i,
+  /new\s+role\s*:/i,
+  /translate\s+(?:the\s+)?above\s+and\s+ignore/i,
+];
+
+function detectPromptInjection(text) {
+  if (typeof text !== 'string') {
+    return false;
+  }
+  return PROMPT_INJECTION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 module.exports = {
   DEFAULT_GEMINI_MODEL,
   DEFAULT_GEMINI_FALLBACK_MODEL,
@@ -239,6 +259,7 @@ module.exports = {
   DEFAULT_GEMINI_MAX_QUEUE_WAIT_MS,
   DEFAULT_GEMINI_RPM_BY_MODEL,
   createGeminiGuard,
+  detectPromptInjection,
   extractRetryDelayMs,
   getGeminiAuthErrorMessage,
   getGeminiModelCandidates,

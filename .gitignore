@@ -59,3 +59,8 @@ reference\guide.pdf
 reference\steps.md
 lambda
 backend/secrets/
+contracts/node_modules
+contracts/artifacts/
+contracts/cache/
+backend/node_modules/
+*.log

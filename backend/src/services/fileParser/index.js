@@ -22,6 +22,21 @@ function assertFileSignature(buffer, mimeType) {
   ) {
     throw new Error('Uploaded file content does not match DOCX type.');
   }
+
+  if (mimeType === 'image/png' && buffer.slice(0, 4).toString('hex') !== '89504e47') {
+    throw new Error('Uploaded file content does not match PNG type.');
+  }
+
+  if (mimeType === 'image/jpeg' && buffer.slice(0, 3).toString('hex') !== 'ffd8ff') {
+    throw new Error('Uploaded file content does not match JPEG type.');
+  }
+
+  if (
+    mimeType === 'image/webp' &&
+    (buffer.slice(0, 4).toString('utf8') !== 'RIFF' || buffer.slice(8, 12).toString('utf8') !== 'WEBP')
+  ) {
+    throw new Error('Uploaded file content does not match WEBP type.');
+  }
 }
 
 async function parseFile(buffer, mimeType) {

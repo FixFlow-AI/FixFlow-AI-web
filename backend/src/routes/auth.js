@@ -611,7 +611,12 @@ router.post('/avatar/commit', authMiddleware, async (req, res, next) => {
   try {
     const { fileKey } = avatarCommitSchema.parse(req.body);
     s3Service.assertOwnedAvatarKey(req.user.userId, fileKey);
-    s3Service.getAvatarMimeTypeFromKey(fileKey);
+    const mimeType = s3Service.getAvatarMimeTypeFromKey(fileKey);
+
+    // Fetch the file from S3 and verify the image signature (magic bytes)
+    const fileBuffer = await s3Service.getFile(fileKey);
+    const { assertFileSignature } = require('../services/fileParser');
+    assertFileSignature(fileBuffer, mimeType);
 
     const user = await User.findById(req.user.userId);
     if (!user) {
