@@ -154,6 +154,17 @@ async function sendWorkspaceSlackNotification({ workspace, title, body, metadata
     await workspace.save();
     return result;
   } catch (error) {
+    console.error(JSON.stringify({
+      level: 'ERROR',
+      timestamp: new Date().toISOString(),
+      event: 'SLACK_WEBHOOK_POST_FAILED',
+      workspaceId: workspace?._id?.toString(),
+      workspaceName: workspace?.name,
+      channel: workspace?.slack?.channelName,
+      error: error.message,
+      stack: error.stack,
+    }, null, 2));
+
     workspace.slack.status = 'error';
     workspace.slack.lastDeliveryStatus = error.message || 'failed';
     workspace.slack.lastDeliveryAt = new Date();

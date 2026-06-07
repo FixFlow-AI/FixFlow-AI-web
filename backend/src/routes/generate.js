@@ -202,14 +202,32 @@ router.post('/', authMiddleware, generationLimiter, async (req, res, next) => {
         status: 'complete',
         title: proposalRecord.title,
       });
-      await refreshAgencyPatternsForProposal(proposalRecord).catch(() => null);
+      await refreshAgencyPatternsForProposal(proposalRecord).catch((err) => {
+        console.error(JSON.stringify({
+          level: 'ERROR',
+          timestamp: new Date().toISOString(),
+          event: 'AGENCY_PATTERNS_REFRESH_FAILED',
+          proposalId,
+          error: err.message,
+          stack: err.stack,
+        }, null, 2));
+      });
       setImmediate(() => {
         evaluateProposal(proposalRecord).catch((evalError) => {
           console.error('Proposal evaluation failed:', evalError);
         });
       });
       if (isNewProposal) {
-        await incrementProposalUsage(currentUser).catch(() => null);
+        await incrementProposalUsage(currentUser).catch((err) => {
+          console.error(JSON.stringify({
+            level: 'ERROR',
+            timestamp: new Date().toISOString(),
+            event: 'PLAN_INCREMENT_USAGE_FAILED',
+            userId: currentUser._id?.toString(),
+            error: err.message,
+            stack: err.stack,
+          }, null, 2));
+        });
       }
 
       console.log(
@@ -224,6 +242,16 @@ router.post('/', authMiddleware, generationLimiter, async (req, res, next) => {
 
       sendEvent('complete', { proposalId, version: nextVersion });
     } catch (error) {
+      console.error(JSON.stringify({
+        level: 'ERROR',
+        timestamp: new Date().toISOString(),
+        event: 'PROPOSAL_GENERATION_FAILED',
+        proposalId,
+        userId: req.user.userId,
+        error: error.message,
+        stack: error.stack,
+      }, null, 2));
+
       let friendlyMessage = error.message;
       try {
         const match = error.message.match(/\{.*\}/s);

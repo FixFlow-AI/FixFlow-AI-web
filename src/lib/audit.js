@@ -1,4 +1,5 @@
 import api from '@/config/api'
+import { logger } from '@/lib/logger'
 
 const ALLOWED_METADATA_TYPES = new Set(['string', 'number', 'boolean'])
 
@@ -20,7 +21,9 @@ export async function trackEvent(eventName, metadata = {}) {
       eventName: eventName.slice(0, 120),
       metadata: cleanMetadata(metadata),
     })
-  } catch {
+  } catch (error) {
     // Client-side tracking should never block the user workflow.
+    logger.warn('Client Audit Tracker', 'Failed to submit client event tracking payload', { eventName, error })
   }
 }
+

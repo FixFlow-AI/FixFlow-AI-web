@@ -9,6 +9,7 @@ import AuthProviderButtons from '@/components/auth/AuthProviderButtons'
 import AuthRoleSelector from '@/components/auth/AuthRoleSelector'
 import useAuthStore from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger'
 import {
   FREELANCER_GITHUB_ONLY_MESSAGE,
   getDashboardPathForRole,
@@ -98,6 +99,7 @@ export default function Register() {
       toast.success('Account created.')
       navigate(getDashboardPathForRole(role))
     } catch (err) {
+      logger.error('Registration Failed', err, { email: form.email, role, selectedPlan })
       const message = err.response?.data?.error || 'Registration failed. Please try again.'
       toast.error(message)
     } finally {
@@ -121,6 +123,7 @@ export default function Register() {
         returnTo: getDashboardPathForRole(role),
       })
     } catch (err) {
+      logger.error('OAuth Redirect Failed', err, { provider, role, selectedPlan })
       toast.error(err.response?.data?.error || err.message || `Unable to start ${provider} signup.`)
       setLoadingProvider('')
     }

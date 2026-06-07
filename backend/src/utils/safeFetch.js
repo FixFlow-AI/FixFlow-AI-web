@@ -47,26 +47,39 @@ function assertAllowedUrl(rawUrl, extraHosts = []) {
 }
 
 async function safeFetch(rawUrl, options = {}, { timeoutMs = 20000, maxBytes = 2 * 1024 * 1024, extraHosts = [] } = {}) {
-  assertAllowedUrl(rawUrl, extraHosts);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(rawUrl, { ...options, signal: controller.signal });
-    const contentLength = Number(response.headers.get('content-length') || 0);
-    if (contentLength > maxBytes) {
-      throw new Error('Outbound response is too large.');
+    assertAllowedUrl(rawUrl, extraHosts);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(rawUrl, { ...options, signal: controller.signal });
+      const contentLength = Number(response.headers.get('content-length') || 0);
+      if (contentLength > maxBytes) {
+        throw new Error('Outbound response is too large.');
+      }
+      return response;
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        const timeoutError = new Error(`Outbound request timed out after ${timeoutMs}ms.`);
+        timeoutError.status = 504;
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-    return response;
   } catch (error) {
-    if (error?.name === 'AbortError') {
-      const timeoutError = new Error(`Outbound request timed out after ${timeoutMs}ms.`);
-      timeoutError.status = 504;
-      throw timeoutError;
-    }
+    console.error(JSON.stringify({
+      level: 'ERROR',
+      timestamp: new Date().toISOString(),
+      event: 'OUTBOUND_HTTP_REQUEST_FAILED',
+      url: rawUrl,
+      method: options.method || 'GET',
+      error: error.message,
+      stack: error.stack,
+    }, null, 2));
     throw error;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

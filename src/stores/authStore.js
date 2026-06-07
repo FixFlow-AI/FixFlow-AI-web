@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import api, { ensureCsrfToken, refreshAccessToken } from '../config/api';
 import { clearAccessToken, setAccessToken } from '../lib/authToken';
 import { getDashboardPathForRole, normalizeRole } from '../lib/authRoles';
+import { logger } from '../lib/logger';
 
 function encodeOAuthState(payload) {
   return window.btoa(JSON.stringify(payload));
@@ -90,8 +91,9 @@ const useAuthStore = create((set, get) => ({
     try {
       await ensureCsrfToken();
       await api.post('/auth/logout', {});
-    } catch {
+    } catch (err) {
       // Silently fail — still clear local state
+      logger.warn('Auth Store Logout', 'Failed to call logout endpoint. Clearing local session anyway.', { error: err });
     }
     clearAccessToken();
     set({ user: null, currentWorkspace: null, isAuthenticated: false });
@@ -104,11 +106,13 @@ const useAuthStore = create((set, get) => ({
       }
       const { data } = await api.get('/auth/me');
       set({ user: data.user, currentWorkspace: data.currentWorkspace || null, isAuthenticated: true, isLoading: false });
-    } catch {
+    } catch (err) {
+      logger.info('Auth Store Check', 'User session check failed or session expired. Redirecting to unauthenticated state.', { error: err });
       clearAccessToken();
       set({ user: null, currentWorkspace: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));
+
 
 export default useAuthStore;

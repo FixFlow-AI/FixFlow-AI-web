@@ -413,6 +413,15 @@ async function discoverOpportunities(user, options = {}) {
         break;
       }
     } catch (error) {
+      console.error(JSON.stringify({
+        level: 'ERROR',
+        timestamp: new Date().toISOString(),
+        event: 'OPPORTUNITY_PROVIDER_FAILED',
+        provider: provider.id,
+        query,
+        error: error.message,
+        stack: error.stack,
+      }, null, 2));
       providerErrors.push({ provider: provider.id, message: error.message });
     }
   }

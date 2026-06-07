@@ -37,6 +37,15 @@ async function sendNotificationEmail({ user, notification }) {
     });
     return 'sent';
   } catch (_error) {
+    console.error(JSON.stringify({
+      level: 'ERROR',
+      timestamp: new Date().toISOString(),
+      event: 'EMAIL_NOTIFICATION_FAILED',
+      recipient: user?.email,
+      title: notification?.title,
+      error: _error.message,
+      stack: _error.stack,
+    }, null, 2));
     return 'failed';
   }
 }
@@ -119,7 +128,18 @@ async function createNotifications({
       body,
       metadata,
       frontendPath: proposalId ? `/proposal/${proposalId}` : '/workspace',
-    }).catch(() => null);
+    }).catch((slackError) => {
+      console.error(JSON.stringify({
+        level: 'ERROR',
+        timestamp: new Date().toISOString(),
+        event: 'SLACK_NOTIFICATION_FAILED',
+        workspaceId: workspace?._id?.toString(),
+        workspaceName: workspace?.name,
+        error: slackError.message,
+        stack: slackError.stack,
+      }, null, 2));
+      return null;
+    });
   }
 
   return created;

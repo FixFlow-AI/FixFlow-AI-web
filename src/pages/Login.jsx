@@ -10,6 +10,7 @@ import AuthRoleSelector from '@/components/auth/AuthRoleSelector'
 import useAuthStore from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import api from '@/config/api'
+import { logger } from '@/lib/logger'
 import {
   FREELANCER_GITHUB_ONLY_MESSAGE,
   getDashboardPathForRole,
@@ -76,6 +77,7 @@ export default function Login() {
       toast.success('Welcome back.')
       navigate(getDashboardPathForRole(nextRole))
     } catch (err) {
+      logger.error('Login Failed', err, { email: form.email, role })
       const message = err.response?.data?.error || 'Login failed. Please try again.'
       if (/invalid email or password/i.test(message)) {
         setErrors({ email: 'Email not found or password is incorrect', password: ' ' })
@@ -102,6 +104,7 @@ export default function Login() {
         returnTo: getDashboardPathForRole(role),
       })
     } catch (err) {
+      logger.error('OAuth Redirect Failed', err, { provider, role })
       toast.error(err.response?.data?.error || err.message || `Unable to start ${provider} login.`)
       setLoadingProvider('')
     }
@@ -114,6 +117,7 @@ export default function Login() {
       setIsOtpRequested(true)
       toast.success(data.message || 'OTP sent successfully')
     } catch (err) {
+      logger.error('OTP Request Failed', err, { email: forgotForm.email })
       toast.error(err.response?.data?.error || 'Unable to send OTP.')
     } finally {
       setIsForgotLoading(false)
@@ -138,6 +142,7 @@ export default function Login() {
       setIsOtpRequested(false)
       setForgotForm({ email: '', otp: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
+      logger.error('Password Reset OTP Verification Failed', err, { email: forgotForm.email })
       toast.error(err.response?.data?.error || 'OTP verification failed.')
     } finally {
       setIsForgotLoading(false)

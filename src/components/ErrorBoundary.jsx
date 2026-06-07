@@ -10,6 +10,16 @@ export default class ErrorBoundary extends Component {
     return { hasError: true }
   }
 
+  componentDidCatch(error, errorInfo) {
+    console.error(
+      `%c[React Error Boundary]%c A component crashed!\n` +
+      `Error: ${error?.message || error}\n` +
+      `Component Stack:`,
+      'color: #ef4444; font-weight: bold;', 'color: inherit;',
+      errorInfo?.componentStack
+    );
+  }
+
   render() {
     if (this.state.hasError) {
       return (

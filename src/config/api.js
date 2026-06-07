@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAccessToken, getAccessToken, getCsrfToken, setAccessToken, setCsrfToken } from '@/lib/authToken'
+import { logger } from '@/lib/logger'
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
@@ -53,21 +54,44 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
+      logger.warn('API Session Expired', 'Access token expired. Attempting token refresh...', {
+        url: originalRequest.url,
+      })
 
       try {
         const newAccessToken = await refreshAccessToken()
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        logger.info('API Session Restored', 'Token refresh succeeded, retrying request.', {
+          url: originalRequest.url,
+        })
 
         return api(originalRequest)
-      } catch {
+      } catch (refreshErr) {
+        logger.error('API Session Refresh Failed', refreshErr, {
+          url: originalRequest.url,
+        })
         clearAccessToken()
         window.location.href = '/login'
         return Promise.reject(error)
       }
     }
 
+    // General API error logging
+    const method = originalRequest?.method?.toUpperCase() || 'UNKNOWN'
+    const url = originalRequest?.url || 'unknown url'
+    const status = error.response?.status
+    const statusText = error.response?.statusText || ''
+    const responseData = error.response?.data
+
+    logger.error(`API Request Failure (${method} ${url})`, error, {
+      status: status ? `${status} ${statusText}` : 'Network Error / Timeout',
+      responseData,
+      requestData: originalRequest?.data,
+    })
+
     return Promise.reject(error)
   }
 )
 
 export default api
+

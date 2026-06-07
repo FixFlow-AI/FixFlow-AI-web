@@ -11,6 +11,16 @@ async function start() {
   });
 }
 
-start();
+start().catch((error) => {
+  console.error(JSON.stringify({
+    level: 'ERROR',
+    timestamp: new Date().toISOString(),
+    event: 'SERVER_STARTUP_FAILED',
+    message: 'Failed to initialize database connection or start Express server listener.',
+    error: error.message,
+    stack: error.stack,
+  }, null, 2));
+  process.exit(1);
+});
 
 module.exports = app;

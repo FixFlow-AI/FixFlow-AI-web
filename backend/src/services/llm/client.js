@@ -66,6 +66,15 @@ async function* streamGeminiModel(system, userMessage, model) {
       }
     }
   } catch (error) {
+    console.error(JSON.stringify({
+      level: 'ERROR',
+      timestamp: new Date().toISOString(),
+      event: 'GEMINI_STREAM_ERROR',
+      model,
+      message: error.message,
+      stack: error.stack,
+    }, null, 2));
+
     if (error?.name === 'AbortError') {
       throw new Error(`LLM request timed out after ${env.STREAM_TIMEOUT_MS}ms.`);
     }
@@ -400,6 +409,16 @@ async function* streamLlmChat(system, userMessage, options = {}) {
       } catch (error) {
         lastError = error;
         lastProvider = attempt;
+
+        console.error(JSON.stringify({
+          level: 'ERROR',
+          timestamp: new Date().toISOString(),
+          event: 'LLM_PROVIDER_ATTEMPT_FAILED',
+          provider: attempt.id,
+          model: attempt.model || attempt.primaryModel,
+          message: error.message,
+          stack: error.stack,
+        }, null, 2));
 
         if (attempt.id !== 'gemini') {
           reportProviderError({
