@@ -50,7 +50,7 @@ function HeroSection() {
       </div>
 
       <motion.div
-        style={{ y: yContent, opacity }}
+        style={{ y: yContent, opacity: heroOpacity }}
         className="relative z-10 mx-auto grid max-w-7xl gap-12 px-4 pb-12 sm:px-6 lg:grid-cols-[1.04fr_0.96fr] lg:px-8"
       >
         <div className="flex flex-col justify-center">
