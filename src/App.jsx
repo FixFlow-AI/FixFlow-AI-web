@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
@@ -24,8 +24,9 @@ function AppRoutes() {
       <AnimatePresence mode="wait">
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            <Route path="/waitlist" element={<Landing />} />
             <Route path="/" element={<Landing />} />
-            <Route path="*" element={<Landing />} />
+            <Route path="*" element={<Navigate to="/waitlist" replace />} />
           </Routes>
         </Suspense>
       </AnimatePresence>
