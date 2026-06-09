@@ -25,7 +25,7 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/waitlist" element={<Landing />} />
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<Navigate to="/waitlist" replace />} />
             <Route path="*" element={<Navigate to="/waitlist" replace />} />
           </Routes>
         </Suspense>
