@@ -71,7 +71,7 @@ function SolutionSection() {
             className="lg:col-span-7"
           >
             <div className="relative rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-              <div className="aspect-[4/3] bg-muted/20">
+              <div className="aspect-[4/3] bg-muted/20 overflow-hidden">
                 <video
                   src="/video/onboarding-portal.mp4"
                   poster="/landing-page/onboarding-portal.png"
@@ -79,7 +79,7 @@ function SolutionSection() {
                   playsInline
                   autoPlay
                   loop
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-[1.08] translate-x-[2.5%] translate-y-[2.5%]"
                 />
               </div>
             </div>
@@ -105,7 +105,7 @@ function SolutionSection() {
                   checkout.fixflowai.xyz
                 </div>
               </div>
-              <div className="aspect-[16/10] bg-muted/20">
+              <div className="aspect-[16/10] bg-muted/20 overflow-hidden">
                 <video
                   src="/video/payment-checkout.mp4"
                   poster="/landing-page/payment-checkout.png"
@@ -113,7 +113,7 @@ function SolutionSection() {
                   playsInline
                   autoPlay
                   loop
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-[1.08] translate-x-[2.5%] translate-y-[2.5%]"
                 />
               </div>
             </div>

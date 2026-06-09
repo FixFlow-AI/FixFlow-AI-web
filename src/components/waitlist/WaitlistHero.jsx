@@ -133,7 +133,7 @@ function WaitlistHero() {
               </div>
               
               {/* Video Player */}
-              <div className="aspect-[16/9] relative bg-muted/20">
+              <div className="aspect-[16/9] relative bg-muted/20 overflow-hidden">
                 <video
                   src="/video/hero-ui.mp4"
                   poster="/landing-page/hero-ui.png"
@@ -141,7 +141,7 @@ function WaitlistHero() {
                   playsInline
                   autoPlay
                   loop
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover scale-[1.08] translate-x-[2.5%] translate-y-[2.5%]"
                 />
               </div>
             </div>
