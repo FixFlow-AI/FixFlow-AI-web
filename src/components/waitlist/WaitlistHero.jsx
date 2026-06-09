@@ -29,7 +29,7 @@ function WaitlistHero() {
       {/* Background Grid Pattern */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="workspace-grid opacity-40" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(7,91,255,0.06),transparent_32%),radial-gradient(circle_at_26%_78%,rgba(22,160,133,0.04),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0),rgba(246,248,251,0.9))] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(7,91,255,0.06),transparent_32%),radial-gradient(circle_at_26%_78%,rgba(22,160,133,0.04),transparent_32%),linear-gradient(180deg,transparent,var(--background))] pointer-events-none" />
       </div>
 
       <motion.div
