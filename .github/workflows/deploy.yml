@@ -25,8 +25,8 @@ jobs:
 
       - name: Build
         env:
-          VITE_AWS_ACCESS_KEY_ID: ${{ secrets.VITE_AWS_ACCESS_KEY_ID }}
-          VITE_AWS_SECRET_ACCESS_KEY: ${{ secrets.VITE_AWS_SECRET_ACCESS_KEY }}
+          VITE_AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY_ID }}
+          VITE_AWS_SECRET_ACCESS_KEY: ${{ vars.AWS_SECRET_ACCESS_KEY || secrets.AWS_SECRET_ACCESS_KEY }}
           VITE_AWS_REGION: ap-south-1
           VITE_DYNAMODB_TABLE: fixflowai_waitlist
           VITE_DYNAMODB_CONTACT_TABLE: fixflowai_contact_inquiry
