@@ -1,35 +1,35 @@
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { AlertTriangle, Clock, ShieldAlert, Sparkles, DollarSign, EyeOff } from 'lucide-react'
+
 
 const problems = [
   {
-    icon: ShieldAlert,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/onboarding%20gatekeeping.webp',
     title: 'Onboarding Gatekeeping',
     description: 'Traditional platforms gatekeep opportunities by over-indexing on historical profile reviews, locking out highly skilled talent.',
   },
   {
-    icon: AlertTriangle,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/payment%20security%20risks%20.webp',
     title: 'Payment Security Risk',
     description: 'Freelancers face unpaid work after task completion, while clients struggle to verify work deliverables before releasing funds.',
   },
   {
-    icon: Clock,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/Scattered%20proposals.webp',
     title: 'Scattered Proposals',
     description: 'Proposals are drafted manually across email chains and chats instead of co-creating requirements under a single unified roof.',
   },
   {
-    icon: DollarSign,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/inflexible%20milestone.webp',
     title: 'Inflexible Milestones',
     description: 'Service teams are forced to work under rigid timeline quotes that cannot adapt to evolving project scope requirements.',
   },
   {
-    icon: EyeOff,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/Scope%20creep%20gaps.webp',
     title: 'Scope Creep Gaps',
     description: 'Vague initial briefs cause hidden project constraints to go unnoticed until they manifest as costly mid-project delays.',
   },
   {
-    icon: Sparkles,
+    image: '/diagrams/icon/THE%20SCOPING%20CREEP%20AUDIT%20section/disorganised%20intake.webp',
     title: 'Disorganized Intakes',
     description: 'Onboarding clients through scattered Slack channels and documents instead of a professional, collaborative workspace.',
   },
@@ -37,7 +37,6 @@ const problems = [
 
 function ProblemCard({ problem, index, isInView }) {
   const cardRef = useRef(null)
-  const Icon = problem.icon
 
   return (
     <motion.div
@@ -51,10 +50,14 @@ function ProblemCard({ problem, index, isInView }) {
     >
       <div
         ref={cardRef}
-        className="landing-panel rounded-xl p-6 border border-border bg-card hover:border-border-strong hover:shadow-sm transition-all duration-300 cursor-default"
+        className="landing-panel rounded-xl p-6 border border-border bg-card hover:border-border-strong hover:shadow-sm transition-all duration-300 cursor-default group"
       >
-        <div className="mb-4 inline-flex items-center justify-center h-10 w-10 rounded-lg bg-destructive/10 text-destructive/80">
-          <Icon className="h-5 w-5" />
+        <div className="mb-5 inline-flex items-center justify-center h-20 w-20 rounded-2xl bg-muted/5 p-1 overflow-hidden border border-border/40 group-hover:scale-105 group-hover:bg-muted/10 transition-all duration-300">
+          <img
+            src={problem.image}
+            alt={problem.title}
+            className="h-full w-full object-contain filter drop-shadow-[0_8px_10px_rgba(0,0,0,0.14)] group-hover:drop-shadow-[0_14px_16px_rgba(0,0,0,0.22)] transition-all duration-300"
+          />
         </div>
         <h3 className="text-base font-semibold text-foreground mb-2">{problem.title}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">{problem.description}</p>
@@ -62,6 +65,9 @@ function ProblemCard({ problem, index, isInView }) {
     </motion.div>
   )
 }
+
+
+
 
 function ProblemSection() {
   const ref = useRef(null)
