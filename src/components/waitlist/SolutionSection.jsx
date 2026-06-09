@@ -42,23 +42,23 @@ function SolutionSection() {
               <UserCheck className="h-5 w-5" />
             </div>
             <h3 className="text-2xl font-bold text-foreground tracking-tight sm:text-3xl">
-              Autonomous Onboarding
+              Barrier-Free Onboarding
             </h3>
             <p className="mt-4 text-base text-muted-foreground leading-7">
-              Once you paste the brief, FixFlow AI sets up a branded Client Portal. The client is guided through requirement confirmations, file uploads, and specific details without back-and-forth email threads.
+              Dismantle historical review gatekeeping. FixFlow AI connects experienced freelancers and clients directly based on verified skills, requirements, and project scopes, removing the entry barrier.
             </p>
             <ul className="mt-6 space-y-3">
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Custom wizard guides client through project assets</span>
+                <span>Bypass historical reputation gatekeeping filters</span>
               </li>
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Smart file drop box accepts briefs, design docs, and specs</span>
+                <span>Onboard clients and teams directly into shared workspaces</span>
               </li>
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Keeps client informed of setup progress in real time</span>
+                <span>Co-create proposals, modify timelines, and track goals</span>
               </li>
             </ul>
           </motion.div>
@@ -130,23 +130,23 @@ function SolutionSection() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <h3 className="text-2xl font-bold text-foreground tracking-tight sm:text-3xl">
-              Secure Integrated Payments
+              Autonomous Milestone Payments
             </h3>
             <p className="mt-4 text-base text-muted-foreground leading-7">
-              Never start work without a deposit again. FixFlow AI generates secure, itemized billing schedules tied directly to the proposal scope. Clients review, sign, and pay retainers instantly via Razorpay or Stripe.
+              Eliminate payment fraud and collections overhead. FixFlow AI holds project bid deposits in secure escrows, autonomously releasing payments (40%-50% segments) to freelancers as project milestones are completed and verified.
             </p>
             <ul className="mt-6 space-y-3">
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Integrated Razorpay & Stripe gateway collection</span>
+                <span>Auto-deposits locked in secure milestone escrows</span>
               </li>
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Itemized scope items mapped to payment schedules</span>
+                <span>Milestone payments auto-released upon verified task completion</span>
               </li>
               <li className="flex items-start gap-2.5 text-sm text-foreground">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
-                <span>Instant webhooks activate project repositories upon deposit</span>
+                <span>Zero payment disputes or manual billing permissions needed</span>
               </li>
             </ul>
           </motion.div>

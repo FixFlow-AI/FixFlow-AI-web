@@ -3,10 +3,10 @@ import { useRef } from 'react'
 import { Check } from 'lucide-react'
 
 const layers = [
-  { step: 'Layer 1', title: 'User Interface', desc: 'The client-facing scope document and onboarding portal.' },
-  { step: 'Layer 2', title: 'Structured Data', desc: 'Extracted deliverables matrix with timeline scheduling.' },
-  { step: 'Layer 3', title: 'Risk & Gap Analysis', desc: 'Alert cards highlighting scope uncertainties and assumptions.' },
-  { step: 'Layer 4', title: 'Execution & Trust', desc: 'Contract signature sign-off and secure checkout payments.' },
+  { step: 'Layer 1', title: 'Collaborative Workspace', desc: 'A unified portal where clients and freelancers co-create proposals and renegotiate timelines in real-time.' },
+  { step: 'Layer 2', title: 'Scoping Matrix', desc: 'Semantic extraction of deliverables, transforming messy specs into clean, structured developer milestones.' },
+  { step: 'Layer 3', title: 'Barrier-Free Onboarding', desc: 'Verify skills and project requirements directly, bypassing legacy profile review gatekeeping.' },
+  { step: 'Layer 4', title: 'Autonomous Escrow', desc: 'Secure project funds and autonomously release payments upon verified task completion, eliminating payment fraud.' },
 ]
 
 function WhyJoinSection() {

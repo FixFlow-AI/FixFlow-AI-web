@@ -61,13 +61,13 @@ function WaitlistHero() {
 
             {/* H1 Heading */}
             <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Turn messy client briefs into{' '}
-              <span className="text-gradient-primary">proposal-ready scope.</span>
+              The autonomous escrow and{' '}
+              <span className="text-gradient-primary">scoping workspace.</span>
             </h1>
 
             {/* Subheading */}
             <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              FixFlow AI analyzes client requirements, identifies scope gaps, and generates structured, client-ready proposals with integrated payment flows.
+              FixFlow AI removes freelancer onboarding barriers, establishes collaborative proposal workspaces, and automates milestone payments with secure escrow protection.
             </p>
 
             {/* CTAs */}

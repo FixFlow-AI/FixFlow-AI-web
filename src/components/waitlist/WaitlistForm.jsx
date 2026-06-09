@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
-import { Send, CheckCircle2, AlertCircle, Sparkles, X, Mail } from 'lucide-react'
+import { Send, CheckCircle2, AlertCircle, Sparkles, X, Mail, Heart, Award, Users, Gift, ExternalLink } from 'lucide-react'
 import axios from 'axios'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
@@ -35,6 +35,9 @@ function WaitlistForm() {
   const [contactErrors, setContactErrors] = useState({})
   const [isContactLoading, setIsContactLoading] = useState(false)
   const [contactResult, setContactResult] = useState(null)
+
+  // Contribute Modal State
+  const [isContributeOpen, setIsContributeOpen] = useState(false)
 
   // Waitlist Validation
   const validateWaitlist = () => {
@@ -291,21 +294,35 @@ function WaitlistForm() {
             </form>
           </motion.div>
 
-          {/* Contact Us Footer Callout */}
+          {/* Contact Us & Contribute Footer Callout */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-12 text-center"
+            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground"
           >
-            <p className="text-sm text-muted-foreground">
-              Have questions about integrations or enterprise setups?{' '}
+            <p className="flex items-center gap-2">
+              <span>Have questions about integrations?</span>
               <button
                 type="button"
                 onClick={() => setIsContactOpen(true)}
                 className="font-semibold text-primary hover:underline underline-offset-4 focus:outline-none"
               >
                 Contact Us
+              </button>
+            </p>
+            
+            <div className="hidden sm:block h-4 w-[1px] bg-border" />
+            
+            <p className="flex items-center gap-2">
+              <span>Want to back our scoping mission?</span>
+              <button
+                type="button"
+                onClick={() => setIsContributeOpen(true)}
+                className="font-semibold text-emerald-600 hover:underline underline-offset-4 focus:outline-none flex items-center gap-1"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-emerald-500 animate-pulse" />
+                Contribute Here
               </button>
             </p>
           </motion.div>
@@ -423,6 +440,107 @@ function WaitlistForm() {
                   </div>
                 )}
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Contribute Modal Overlay */}
+      <AnimatePresence>
+        {isContributeOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full max-w-xl rounded-xl border border-border bg-card p-6 sm:p-8 shadow-lg overflow-y-auto max-h-[90vh]"
+              role="dialog"
+              aria-modal="true"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsContributeOpen(false)}
+                className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg transition-colors border border-transparent hover:border-border"
+                aria-label="Close contribute dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-2 mb-4">
+                <Heart className="h-5 w-5 text-emerald-500 fill-emerald-500/10" />
+                <h3 className="text-lg font-bold text-foreground">Support FixFlow AI Development</h3>
+              </div>
+              
+              <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+                <p>
+                  We are building <strong className="text-foreground font-semibold">FixFlow AI</strong> to remove onboarding gatekeeping barriers for experienced freelancers and establish an autonomous milestone payment system with secure escrows.
+                </p>
+                <p>
+                  As an early-stage project, your voluntary support helps us cover high <strong className="text-foreground font-semibold">AI processing (Gemini/LLM) API costs</strong>, maintain secure database and server infrastructure, and accelerate our core development timeline.
+                </p>
+
+                <div className="border-t border-b border-border/80 py-4 my-4">
+                  <h4 className="text-xs font-mono uppercase tracking-[0.1em] text-foreground mb-3 font-semibold">
+                    What You Get After Contribution:
+                  </h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex items-start gap-2.5">
+                      <Gift className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5 animate-bounce" />
+                      <div>
+                        <strong className="text-foreground text-xs block font-semibold">Priority Early Access</strong>
+                        <span className="text-xs text-muted-foreground">Skip the queue and join directly with Batch 01.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Award className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-foreground text-xs block font-semibold">Early Pro Benefits</strong>
+                        <span className="text-xs text-muted-foreground">Get premium Pro tier features for free upon launch.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Sparkles className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-foreground text-xs block font-semibold">Lifetime Discounts</strong>
+                        <span className="text-xs text-muted-foreground">A perpetual discount on scoping and escrow fees.</span>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Users className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-foreground text-xs block font-semibold">Future Meetup Invites</strong>
+                        <span className="text-xs text-muted-foreground">Priority invitations to our company and community meetups.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-xs text-emerald-900 leading-normal flex items-start gap-2">
+                  <Sparkles className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <p>
+                    <strong>Fully Flexible:</strong> You can contribute any amount from <strong>₹1 to ₹10,000</strong> as your needs dictate. Every contribution directly funds tools that protect freelance work.
+                  </p>
+                </div>
+
+                {/* Redirect button */}
+                <div className="pt-2">
+                  <a
+                    href="https://rzp.io/rzp/support-fixflow"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsContributeOpen(false)}
+                    className="block w-full"
+                  >
+                    <Button className="w-full bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm flex items-center justify-center gap-2 font-medium">
+                      Sponsor FixFlow AI
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </a>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

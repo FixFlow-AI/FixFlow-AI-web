@@ -4,34 +4,34 @@ import { AlertTriangle, Clock, ShieldAlert, Sparkles, DollarSign, EyeOff } from 
 
 const problems = [
   {
-    icon: AlertTriangle,
-    title: 'Scope Creep Anxiety',
-    description: 'Vague client briefs lead to hidden deliverables that clients assume are included, leading to unpaid scope extensions.',
+    icon: ShieldAlert,
+    title: 'Onboarding Gatekeeping',
+    description: 'Traditional platforms gatekeep opportunities by over-indexing on historical profile reviews, locking out highly skilled talent.',
   },
   {
-    icon: ShieldAlert,
-    title: 'Hidden Risk Scopes',
-    description: 'Failing to notice third-party integrations, data migrations, or edge cases before committing to a final price quote.',
+    icon: AlertTriangle,
+    title: 'Payment Security Risk',
+    description: 'Freelancers face unpaid work after task completion, while clients struggle to verify work deliverables before releasing funds.',
   },
   {
     icon: Clock,
-    title: 'Proposal Drafting Overhead',
-    description: 'Spending hours translating messy email threads into professional scope structures and itemized delivery matrices.',
+    title: 'Scattered Proposals',
+    description: 'Proposals are drafted manually across email chains and chats instead of co-creating requirements under a single unified roof.',
   },
   {
     icon: DollarSign,
-    title: 'Mispriced Deliverables',
-    description: 'Underpricing services by estimating based on gut feeling rather than a structured requirement audit.',
+    title: 'Inflexible Milestones',
+    description: 'Service teams are forced to work under rigid timeline quotes that cannot adapt to evolving project scope requirements.',
   },
   {
     icon: EyeOff,
-    title: 'Communication Gaps',
-    description: 'Awaiting client feedback on specific requirements while project timelines slip away in unread email threads.',
+    title: 'Scope Creep Gaps',
+    description: 'Vague initial briefs cause hidden project constraints to go unnoticed until they manifest as costly mid-project delays.',
   },
   {
     icon: Sparkles,
-    title: 'Unprofessional Client Intake',
-    description: 'Presenting a disorganized onboarding experience instead of a structured, high-trust digital workspace.',
+    title: 'Disorganized Intakes',
+    description: 'Onboarding clients through scattered Slack channels and documents instead of a professional, collaborative workspace.',
   },
 ]
 
