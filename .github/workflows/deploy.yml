@@ -24,6 +24,12 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_AWS_ACCESS_KEY_ID: ${{ secrets.VITE_AWS_ACCESS_KEY_ID }}
+          VITE_AWS_SECRET_ACCESS_KEY: ${{ secrets.VITE_AWS_SECRET_ACCESS_KEY }}
+          VITE_AWS_REGION: ap-south-1
+          VITE_DYNAMODB_TABLE: fixflowai_waitlist
+          VITE_DYNAMODB_CONTACT_TABLE: fixflowai_contact_inquiry
         run: npm run build
 
       - name: Configure AWS credentials
@@ -38,7 +44,7 @@ jobs:
           aws amplify update-app \
             --app-id ${{ secrets.AMPLIFY_APP_ID }} \
             --region ap-south-1 \
-            --custom-rules '[{"source":"/<*>","target":"/index.html","status":"404-200"}]'
+            --custom-rules '[{"source":"/","target":"/waitlist","status":"302"},{"source":"/<*>","target":"/index.html","status":"404-200"}]'
 
       - name: Deploy to Amplify
         run: |

@@ -1,20 +1,14 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence, useInView } from 'framer-motion'
 import { Send, CheckCircle2, AlertCircle, Sparkles, X, Mail, Heart, Award, Users, Gift, ExternalLink } from 'lucide-react'
-import axios from 'axios'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
+import { docClient } from '@/lib/dynamodb'
+import { PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb'
 
-const WAITLIST_API_URL =
-  import.meta.env.VITE_WAITLIST_API_URL ||
-  import.meta.env.VITE_API_URL ||
-  '/api/waitlist'
-
-const CONTACT_API_URL =
-  import.meta.env.VITE_API_URL 
-    ? `${import.meta.env.VITE_API_URL}/contact`
-    : '/api/contact'
+const WAITLIST_TABLE = import.meta.env.VITE_DYNAMODB_TABLE || 'fixflowai_waitlist'
+const CONTACT_TABLE = import.meta.env.VITE_DYNAMODB_CONTACT_TABLE || 'fixflowai_contact_inquiry'
 
 const VALID_ROLES = ['Freelancer', 'Client', 'Developer']
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -104,21 +98,56 @@ function WaitlistForm() {
     setSubmitResult(null)
 
     try {
-      const { data } = await axios.post(WAITLIST_API_URL, {
-        username: form.username.trim(),
-        email: form.email.trim().toLowerCase(),
-        role: form.role,
-        comment: form.comment.trim(),
-      })
+      const email = form.email.trim().toLowerCase()
+      
+      // Check for duplicate email using ScanCommand
+      const scanRes = await docClient.send(new ScanCommand({
+        TableName: WAITLIST_TABLE,
+        FilterExpression: 'email = :email',
+        ExpressionAttributeValues: {
+          ':email': email
+        }
+      }))
+
+      if (scanRes.Items && scanRes.Items.length > 0) {
+        setSubmitResult({
+          type: 'success',
+          message: 'You are already on the waitlist.',
+        })
+        setIsLoading(false)
+        return
+      }
+
+      // Create new waitlist entry
+      const entryId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+      const now = new Date().toISOString()
+      const userAgent = (navigator.userAgent || '').slice(0, 500)
+
+      await docClient.send(new PutCommand({
+        TableName: WAITLIST_TABLE,
+        Item: {
+          _id: entryId,
+          id: entryId,
+          username: form.username.trim(),
+          email: email,
+          role: form.role,
+          comment: form.comment.trim(),
+          source: 'waitlist-landing-page',
+          status: 'new',
+          userAgent: userAgent,
+          createdAt: now,
+          updatedAt: now
+        }
+      }))
+
       setSubmitResult({
         type: 'success',
-        message: data.message || 'Thank you for joining the FixFlow AI waitlist.',
+        message: 'Thank you for joining the FixFlow AI waitlist.',
       })
-      if (data.message && !data.message.includes('already')) {
-        setForm({ username: '', email: '', role: '', comment: '' })
-      }
+      setForm({ username: '', email: '', role: '', comment: '' })
     } catch (error) {
-      const message = error.response?.data?.message || 'Something went wrong. Please try again.'
+      console.error('Waitlist submission error:', error)
+      const message = error.message || 'Something went wrong. Please try again.'
       setSubmitResult({ type: 'error', message })
     } finally {
       setIsLoading(false)
@@ -134,18 +163,34 @@ function WaitlistForm() {
     setContactResult(null)
 
     try {
-      const { data } = await axios.post(CONTACT_API_URL, {
-        name: contactForm.name.trim(),
-        email: contactForm.email.trim().toLowerCase(),
-        message: contactForm.message.trim(),
-      })
+      const entryId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+      const now = new Date().toISOString()
+      const userAgent = (navigator.userAgent || '').slice(0, 500)
+
+      await docClient.send(new PutCommand({
+        TableName: CONTACT_TABLE,
+        Item: {
+          _id: entryId,
+          id: entryId,
+          name: contactForm.name.trim(),
+          email: contactForm.email.trim().toLowerCase(),
+          message: contactForm.message.trim(),
+          source: 'waitlist-landing-page',
+          status: 'unread',
+          userAgent: userAgent,
+          createdAt: now,
+          updatedAt: now
+        }
+      }))
+
       setContactResult({
         type: 'success',
-        message: data.message || 'Thank you. Your inquiry has been submitted.',
+        message: 'Thank you. Your message has been received. We will get back to you shortly.',
       })
       setContactForm({ name: '', email: '', message: '' })
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to submit inquiry. Please try again.'
+      console.error('Contact submission error:', error)
+      const message = error.message || 'Failed to submit inquiry. Please try again.'
       setContactResult({ type: 'error', message })
     } finally {
       setIsContactLoading(false)
