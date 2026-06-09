@@ -307,6 +307,13 @@ jobs:
             --environment-variables "VITE_API_URL=${{ env.BACKEND_API_URL }}" \
             --region "${{ env.AWS_REGION }}"
 
+      - name: Update Amplify custom redirect/rewrite rules
+        run: |
+          aws amplify update-app \
+            --app-id "${{ env.AMPLIFY_APP_ID }}" \
+            --custom-rules '[{"source":"/<*>","target":"/index.html","status":"404-200"}]' \
+            --region "${{ env.AWS_REGION }}"
+
       - name: Package build output
         run: |
           cd dist

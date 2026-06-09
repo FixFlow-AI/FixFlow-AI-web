@@ -33,6 +33,13 @@ jobs:
           aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
+      - name: Update Amplify custom redirect/rewrite rules
+        run: |
+          aws amplify update-app \
+            --app-id ${{ secrets.AMPLIFY_APP_ID }} \
+            --region ap-south-1 \
+            --custom-rules '[{"source":"/<*>","target":"/index.html","status":"404-200"}]'
+
       - name: Deploy to Amplify
         run: |
           # Create deployment and capture the upload URL + job ID
