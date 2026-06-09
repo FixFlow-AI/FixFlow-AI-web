@@ -1,90 +1,22 @@
-import { Suspense, lazy, useMemo } from 'react'
+import { useRef } from 'react'
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
-import { ArrowRight, Telescope } from 'lucide-react'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
-const Hero3DElement = lazy(() => import('@/components/landing/Hero3DElement'))
-
 const stats = [
-  { label: 'Early Signups', value: 'Growing' },
-  { label: 'User Roles', value: '3' },
-  { label: 'Launch Status', value: 'Soon' },
+  { label: 'Onboarding', value: 'Autonomous' },
+  { label: 'Payments', value: 'Razorpay' },
+  { label: 'Access Queue', value: 'Batch 01' },
 ]
-
-// Word-by-word reveal animation for headline
-function AnimatedWords({ text, className, delay = 0 }) {
-  const words = text.split(' ')
-  return (
-    <span className={className}>
-      {words.map((word, i) => (
-        <motion.span
-          key={`${word}-${i}`}
-          className="inline-block mr-[0.28em]"
-          initial={{ y: 80, opacity: 0, rotateX: -90 }}
-          animate={{ y: 0, opacity: 1, rotateX: 0 }}
-          transition={{
-            duration: 0.6,
-            delay: delay + i * 0.04,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-        >
-          {word}
-        </motion.span>
-      ))}
-    </span>
-  )
-}
-
-// Floating particles background
-function FloatingParticles() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: 2 + Math.random() * 4,
-        duration: 12 + Math.random() * 20,
-        delay: Math.random() * 8,
-      })),
-    []
-  )
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-primary/20"
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
-          animate={{
-            y: [0, -60, 0],
-            x: [0, 20, -20, 0],
-            opacity: [0, 0.6, 0.3, 0],
-            scale: [0.5, 1.2, 0.8, 0.5],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-    </div>
-  )
-}
 
 function WaitlistHero() {
   const shouldReduceMotion = useReducedMotion()
   const { scrollY } = useScroll()
 
-  // Parallax transforms — fade/blur starts only AFTER scrolling past the hero viewport
-  const yContent = useTransform(scrollY, [0, 900], shouldReduceMotion ? [0, 0] : [0, -120])
-  const yBg = useTransform(scrollY, [0, 900], shouldReduceMotion ? [0, 0] : [0, 100])
+  // Subtle parallax shifts
+  const yContent = useTransform(scrollY, [0, 900], shouldReduceMotion ? [0, 0] : [0, -80])
   const heroOpacity = useTransform(scrollY, [600, 1100], [1, 0])
-  const heroScale = useTransform(scrollY, [600, 1100], [1, 0.92])
-  const blurOnScroll = useTransform(scrollY, [700, 1100], [0, 12])
+  const heroScale = useTransform(scrollY, [600, 1100], [1, 0.95])
 
   const handleScroll = (e, target) => {
     e.preventDefault()
@@ -93,150 +25,131 @@ function WaitlistHero() {
   }
 
   return (
-    <section id="home" className="relative flex min-h-screen items-center overflow-hidden pt-28">
-      {/* Background layers with parallax */}
-      <motion.div className="absolute inset-0" style={{ y: yBg }}>
-        <div className="workspace-grid opacity-75" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(63,215,255,0.2),transparent_28%),radial-gradient(circle_at_26%_78%,rgba(38,208,124,0.12),transparent_28%),linear-gradient(180deg,rgba(7,16,24,0),rgba(2,8,13,0.72))]" />
-        {!shouldReduceMotion && <FloatingParticles />}
-        <Suspense fallback={<div className="absolute inset-0" />}>
-          <Hero3DElement />
-        </Suspense>
-      </motion.div>
+    <section id="home" className="relative flex min-h-[92vh] items-center overflow-hidden pt-28 pb-16">
+      {/* Background Grid Pattern */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="workspace-grid opacity-40" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(7,91,255,0.06),transparent_32%),radial-gradient(circle_at_26%_78%,rgba(22,160,133,0.04),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0),rgba(246,248,251,0.9))] pointer-events-none" />
+      </div>
 
       <motion.div
         style={{
           y: yContent,
           opacity: heroOpacity,
           scale: heroScale,
-          filter: useTransform(blurOnScroll, (v) => `blur(${v}px)`),
         }}
-        className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 lg:px-8"
+        className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"
       >
-        <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-          {/* Badge with bounce-in */}
-          <motion.div
-            initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.5, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
-            className="mb-8"
-          >
-            <motion.span
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium backdrop-blur-md"
-              animate={shouldReduceMotion ? {} : { boxShadow: ['0 0 20px rgba(63,215,255,0)', '0 0 30px rgba(63,215,255,0.3)', '0 0 20px rgba(63,215,255,0)'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+          {/* Left Column: Text & CTAs */}
+          <div className="lg:col-span-6 flex flex-col items-start text-left max-w-2xl">
+            {/* Live Indicator Badge */}
+            <motion.div
+              initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
+              className="mb-6"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-card text-foreground text-xs font-mono font-medium shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                Active Queue — Batch 01 Opening Soon
               </span>
-              Coming Soon — Join the Early Access Waitlist
-            </motion.span>
-          </motion.div>
+            </motion.div>
 
-          {/* Headline with word-by-word reveal */}
-          <div className="overflow-hidden [perspective:1000px]">
-            <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-              {shouldReduceMotion ? (
-                <>
-                  Fix Flow AI —{' '}
-                  <span className="text-gradient-primary">
-                    Where Freelancers, Clients, and Developers Connect Smarter
-                  </span>
-                </>
-              ) : (
-                <>
-                  <AnimatedWords text="Fix Flow AI —" delay={0.2} />
-                  <AnimatedWords
-                    text="Where Freelancers, Clients, and Developers Connect Smarter"
-                    className="text-gradient-primary"
-                    delay={0.5}
-                  />
-                </>
-              )}
+            {/* H1 Heading */}
+            <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              Turn messy client briefs into{' '}
+              <span className="text-gradient-primary">proposal-ready scope.</span>
             </h1>
-          </div>
 
-          {/* Subheadline with fade-up + blur */}
-          <motion.p
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: 30, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            transition={{ duration: 0.7, delay: 1.0 }}
-            className="mt-7 max-w-2xl text-lg leading-8 text-muted-foreground"
-          >
-            Join the early waitlist for an AI-powered platform built to understand your work needs,
-            improve collaboration, and help the right people find the right opportunities.
-          </motion.p>
+            {/* Subheading */}
+            <p className="mt-6 text-lg leading-8 text-muted-foreground">
+              FixFlow AI analyzes client requirements, identifies scope gaps, and generates structured, client-ready proposals with integrated payment flows.
+            </p>
 
-          {/* CTAs with spring hover + stagger */}
-          <motion.div
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 1.2 }}
-            className="mt-9 flex flex-col gap-3 sm:flex-row"
-          >
-            <motion.a
-              href="#waitlist-form"
-              onClick={(e) => handleScroll(e, '#waitlist-form')}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            >
-              <Button size="lg" className="w-full glow-effect sm:w-auto">
-                Join the Waitlist
-                <motion.span
-                  animate={shouldReduceMotion ? {} : { x: [0, 4, 0] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            {/* CTAs */}
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <a
+                href="#waitlist-form"
+                onClick={(e) => handleScroll(e, '#waitlist-form')}
+                className="w-full sm:w-auto"
+              >
+                <Button size="lg" className="w-full bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm">
+                  Request Beta Access
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </a>
+              <a
+                href="#workflow"
+                onClick={(e) => handleScroll(e, '#workflow')}
+                className="w-full sm:w-auto"
+              >
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full border-border bg-card/60 backdrop-blur-md"
                 >
-                  <ArrowRight className="h-4 w-4" />
-                </motion.span>
-              </Button>
-            </motion.a>
-            <motion.a
-              href="#problems"
-              onClick={(e) => handleScroll(e, '#problems')}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            >
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full border-primary/25 bg-background/35 backdrop-blur-xl sm:w-auto"
-              >
-                <Telescope className="h-4 w-4" />
-                Explore the Vision
-              </Button>
-            </motion.a>
-          </motion.div>
+                  See How It Works
+                </Button>
+              </a>
+            </div>
 
-          {/* Stats with staggered spring pop-in */}
-          <div className="mt-14 grid grid-cols-3 gap-3 max-w-md w-full">
-            {stats.map(({ label, value }, index) => (
-              <motion.div
-                key={label}
-                initial={shouldReduceMotion ? {} : { opacity: 0, y: 40, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 200,
-                  damping: 20,
-                  delay: 1.4 + index * 0.12,
-                }}
-                whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
-                className="rounded-xl border border-border/70 bg-card/45 p-4 backdrop-blur-xl transition-colors cursor-default"
-              >
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {label}
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
-              </motion.div>
-            ))}
+            {/* Stats list */}
+            <div className="mt-12 grid grid-cols-3 gap-4 border-t border-border/80 pt-8 w-full max-w-lg">
+              {stats.map(({ label, value }) => (
+                <div key={label} className="flex flex-col">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                    {label}
+                  </span>
+                  <span className="mt-1.5 text-base font-semibold text-foreground tracking-tight">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Right Column: Hero Video Frame */}
+          <motion.div
+            initial={shouldReduceMotion ? {} : { opacity: 0, x: 40, scale: 0.98 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-6 w-full relative"
+          >
+            {/* Visual background shadows */}
+            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-primary/10 to-accent/5 blur-2xl opacity-40 pointer-events-none" />
+            
+            {/* Web browser frame mockup */}
+            <div className="relative rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+              {/* Browser bar */}
+              <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/40 border-b border-border/60">
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="ml-4 h-4 w-40 rounded bg-border/40" />
+              </div>
+              
+              {/* Video Player */}
+              <div className="aspect-[16/9] relative bg-muted/20">
+                <video
+                  src="/video/hero-ui.mp4"
+                  poster="/landing-page/hero-ui.png"
+                  muted
+                  playsInline
+                  autoPlay
+                  loop
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
       </motion.div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-background" />
+      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background pointer-events-none" />
     </section>
   )
 }

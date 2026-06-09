@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils'
 
 const navLinks = [
   { label: 'Home', href: '#home' },
-  { label: 'Why Fix Flow AI', href: '#problems' },
-  { label: 'For Users', href: '#roles' },
-  { label: 'How It Works', href: '#solutions' },
-  { label: 'Join Waitlist', href: '#waitlist-form' },
+  { label: 'Workflow', href: '#workflow' },
+  { label: 'Gaps & Risks', href: '#intelligence' },
+  { label: 'Early Access', href: '#waitlist-form' },
+  { label: 'Contact', href: '#contact' },
 ]
 
 function WaitlistNavbar() {
@@ -54,8 +54,8 @@ function WaitlistNavbar() {
           className={cn(
             'rounded-2xl border px-6 py-3 transition-colors duration-500',
             hasScrolled
-              ? 'border-primary/15 bg-card/85 shadow-[0_18px_60px_rgba(0,0,0,0.36)]'
-              : 'border-primary/10 bg-card/40 shadow-[0_18px_60px_rgba(0,0,0,0.18)]'
+              ? 'border-border bg-card/90 shadow-sm'
+              : 'border-border/60 bg-card/60 shadow-none'
           )}
         >
           <div className="flex items-center justify-between">
@@ -67,14 +67,13 @@ function WaitlistNavbar() {
             >
               <motion.div
                 className="relative"
-                whileHover={{ scale: 1.15, rotate: 12 }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               >
-                <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full group-hover:bg-primary/50 transition-colors" />
-                <Sparkles className="h-8 w-8 text-primary relative" />
+                <img src="/official-logo.png" className="h-8 w-8 object-contain" alt="FixFlow AI logo" />
               </motion.div>
-              <span className="text-xl font-bold text-gradient">FixFlowAI</span>
+              <span className="text-xl font-bold text-foreground">FixFlow AI</span>
             </a>
 
             {/* Desktop Navigation */}
@@ -88,7 +87,7 @@ function WaitlistNavbar() {
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 + index * 0.06, duration: 0.4 }}
-                  whileHover={{ y: -2 }}
+                  whileHover={{ y: -1 }}
                 >
                   {link.label}
                   <motion.span
@@ -107,11 +106,11 @@ function WaitlistNavbar() {
               <motion.a
                 href="#waitlist-form"
                 onClick={(e) => handleAnchorClick(e, '#waitlist-form')}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <Button size="sm" className="glow-effect">
-                  Join Waitlist
+                <Button size="sm" className="bg-primary text-primary-foreground">
+                  Request Access
                 </Button>
               </motion.a>
             </div>
@@ -161,8 +160,8 @@ function WaitlistNavbar() {
               ))}
               <div className="mt-2 pt-2 border-t border-border">
                 <a href="#waitlist-form" onClick={(e) => handleAnchorClick(e, '#waitlist-form')}>
-                  <Button size="sm" className="w-full justify-center glow-effect">
-                    Join Waitlist
+                  <Button size="sm" className="w-full justify-center">
+                    Request Access
                   </Button>
                 </a>
               </div>

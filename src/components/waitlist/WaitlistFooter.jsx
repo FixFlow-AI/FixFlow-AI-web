@@ -1,19 +1,19 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
-import { Sparkles, Github, Twitter, Linkedin } from 'lucide-react'
+import { Github, Twitter, Linkedin } from 'lucide-react'
 
 const footerLinks = {
   navigate: [
     { label: 'Home', href: '#home' },
-    { label: 'Why Fix Flow AI', href: '#problems' },
-    { label: 'For Users', href: '#roles' },
-    { label: 'How It Works', href: '#solutions' },
+    { label: 'Workflow', href: '#workflow' },
+    { label: 'Gaps & Risks', href: '#intelligence' },
+    { label: 'Early Access', href: '#waitlist-form' },
   ],
   join: [
-    { label: 'Join Waitlist', href: '#waitlist-form' },
-    { label: 'Why Join Now', href: '#why-join' },
+    { label: 'Privacy Policy', href: '#' },
+    { label: 'Terms of Service', href: '#' },
+    { label: 'Data Governance', href: '#' },
   ],
-  legal: ['Privacy', 'Terms', 'Security'],
 }
 
 function WaitlistFooter() {
@@ -40,19 +40,19 @@ function WaitlistFooter() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand */}
           <motion.div
-            className="sm:col-span-2 lg:col-span-1"
+            className="sm:col-span-2 lg:col-span-2"
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <a href="#home" onClick={(e) => handleAnchorClick(e, '#home')} className="flex items-center gap-2 mb-4">
-              <motion.div whileHover={{ rotate: 15, scale: 1.15 }} transition={{ type: 'spring', stiffness: 300 }}>
-                <Sparkles className="h-6 w-6 text-primary" />
+            <a href="#home" onClick={(e) => handleAnchorClick(e, '#home')} className="flex items-center gap-2.5 mb-4">
+              <motion.div whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 300 }}>
+                <img src="/official-logo.png" className="h-6 w-6 object-contain" alt="FixFlow AI logo" />
               </motion.div>
-              <span className="text-lg font-bold">FixFlowAI</span>
+              <span className="text-lg font-bold text-foreground">FixFlow AI</span>
             </a>
-            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              Building the future of AI-powered collaboration for freelancers, clients, and developers.
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed max-w-sm">
+              The proposal operating system for client work. Automatically turn messy briefs into execution-ready proposals, client portals, and secure payment setups.
             </p>
             <div className="flex items-center gap-4">
               {[Twitter, Github, Linkedin].map((Icon, i) => (
@@ -60,13 +60,13 @@ function WaitlistFooter() {
                   key={i} href="#"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={Icon.displayName}
-                  whileHover={{ y: -3, scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
                   initial={{ opacity: 0, y: 10 }}
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ delay: 0.3 + i * 0.08 }}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                 </motion.a>
               ))}
             </div>
@@ -78,34 +78,12 @@ function WaitlistFooter() {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h4 className="font-semibold mb-4">Navigate</h4>
+            <h4 className="font-semibold text-sm mb-4">Navigate</h4>
             <ul className="space-y-2">
               {footerLinks.navigate.map((link) => (
                 <li key={link.label}>
                   <motion.a href={link.href} onClick={(e) => handleAnchorClick(e, link.href)}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    whileHover={{ x: 4 }}
-                  >
-                    {link.label}
-                  </motion.a>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Join */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <h4 className="font-semibold mb-4">Get Involved</h4>
-            <ul className="space-y-2">
-              {footerLinks.join.map((link) => (
-                <li key={link.label}>
-                  <motion.a href={link.href} onClick={(e) => handleAnchorClick(e, link.href)}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    whileHover={{ x: 4 }}
                   >
                     {link.label}
                   </motion.a>
@@ -118,14 +96,14 @@ function WaitlistFooter() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <h4 className="font-semibold mb-4">Legal</h4>
+            <h4 className="font-semibold text-sm mb-4">Legal & Security</h4>
             <ul className="space-y-2">
-              {footerLinks.legal.map((label) => (
-                <li key={label}>
-                  <motion.a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors" whileHover={{ x: 4 }}>
-                    {label}
+              {footerLinks.join.map((link) => (
+                <li key={link.label}>
+                  <motion.a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    {link.label}
                   </motion.a>
                 </li>
               ))}
@@ -138,10 +116,10 @@ function WaitlistFooter() {
           className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} FixFlowAI. All rights reserved.</p>
-          <p className="text-sm text-muted-foreground text-center">Fix Flow AI — Building the future of AI-powered collaboration.</p>
+          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} FixFlow AI. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground text-center">Secure client onboarding and project scoping system.</p>
         </motion.div>
       </div>
     </motion.footer>

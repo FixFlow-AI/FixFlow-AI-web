@@ -4,9 +4,9 @@ import { persist } from 'zustand/middleware';
 const useThemeStore = create(
   persist(
     (set) => ({
-      theme: 'modern-dark', // default theme
+      theme: 'light', // default theme set to light
       setTheme: (newTheme) => set({ theme: newTheme }),
-      hydrateTheme: (newTheme) => set({ theme: newTheme || 'modern-dark' }),
+      hydrateTheme: (newTheme) => set({ theme: newTheme || 'light' }),
     }),
     {
       name: 'fixflowai-theme',

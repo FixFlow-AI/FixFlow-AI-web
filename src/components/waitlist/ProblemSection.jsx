@@ -1,88 +1,62 @@
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { SearchX, Users, MessageSquareX, BrainCog, Shuffle, MessageCircleQuestion } from 'lucide-react'
+import { AlertTriangle, Clock, ShieldAlert, Sparkles, DollarSign, EyeOff } from 'lucide-react'
 
 const problems = [
   {
-    icon: SearchX,
-    title: 'Finding the Right Clients',
-    description: 'Freelancers spend more time searching for work than actually doing it. The right clients are hard to find.',
+    icon: AlertTriangle,
+    title: 'Scope Creep Anxiety',
+    description: 'Vague client briefs lead to hidden deliverables that clients assume are included, leading to unpaid scope extensions.',
   },
   {
-    icon: Users,
-    title: 'Finding Reliable Talent',
-    description: 'Clients struggle to discover skilled, trustworthy freelancers and developers who can deliver on time.',
+    icon: ShieldAlert,
+    title: 'Hidden Risk Scopes',
+    description: 'Failing to notice third-party integrations, data migrations, or edge cases before committing to a final price quote.',
   },
   {
-    icon: Shuffle,
-    title: 'Lack of Collaboration Tools',
-    description: 'Developers need better ways to join teams, collaborate on projects, and find meaningful work.',
+    icon: Clock,
+    title: 'Proposal Drafting Overhead',
+    description: 'Spending hours translating messy email threads into professional scope structures and itemized delivery matrices.',
   },
   {
-    icon: MessageSquareX,
-    title: 'Scattered Communication',
-    description: 'Project conversations happen across emails, chats, and calls — making it hard to track progress.',
+    icon: DollarSign,
+    title: 'Mispriced Deliverables',
+    description: 'Underpricing services by estimating based on gut feeling rather than a structured requirement audit.',
   },
   {
-    icon: BrainCog,
-    title: 'No Smart Workflows',
-    description: 'People need AI-assisted workflows to manage tasks, deadlines, and deliverables more efficiently.',
+    icon: EyeOff,
+    title: 'Communication Gaps',
+    description: 'Awaiting client feedback on specific requirements while project timelines slip away in unread email threads.',
   },
   {
-    icon: MessageCircleQuestion,
-    title: 'Building Without Feedback',
-    description: 'Platforms often launch without understanding what real users actually need. Early feedback matters.',
+    icon: Sparkles,
+    title: 'Unprofessional Client Intake',
+    description: 'Presenting a disorganized onboarding experience instead of a structured, high-trust digital workspace.',
   },
 ]
 
-// Individual card with 3D tilt on hover
 function ProblemCard({ problem, index, isInView }) {
   const cardRef = useRef(null)
   const Icon = problem.icon
 
-  const handleMouseMove = (e) => {
-    const card = cardRef.current
-    if (!card) return
-    const rect = card.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    const rotateX = (y - centerY) / 12
-    const rotateY = (centerX - x) / 12
-    card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`
-  }
-
-  const handleMouseLeave = () => {
-    const card = cardRef.current
-    if (card) card.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
-  }
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50, scale: 0.9, filter: 'blur(10px)' }}
-      animate={isInView ? { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' } : {}}
+      initial={{ opacity: 0, y: 30, scale: 0.98 }}
+      animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
       transition={{
-        duration: 0.6,
-        delay: index * 0.1,
-        ease: [0.22, 1, 0.36, 1],
+        duration: 0.5,
+        delay: index * 0.08,
+        ease: [0.16, 1, 0.3, 1],
       }}
     >
       <div
         ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="landing-panel rounded-2xl p-6 group hover:border-primary/30 transition-all duration-300 will-change-transform cursor-default"
-        style={{ transition: 'transform 0.15s ease-out' }}
+        className="landing-panel rounded-xl p-6 border border-border bg-card hover:border-border-strong hover:shadow-sm transition-all duration-300 cursor-default"
       >
-        <motion.div
-          className="mb-4 inline-flex items-center justify-center h-12 w-12 rounded-xl bg-destructive/10 text-destructive/80 group-hover:bg-destructive/15"
-          whileHover={{ rotate: [0, -10, 10, 0], scale: 1.15 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Icon className="h-6 w-6" />
-        </motion.div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">{problem.title}</h3>
+        <div className="mb-4 inline-flex items-center justify-center h-10 w-10 rounded-lg bg-destructive/10 text-destructive/80">
+          <Icon className="h-5 w-5" />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-2">{problem.title}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">{problem.description}</p>
       </div>
     </motion.div>
@@ -97,43 +71,31 @@ function ProblemSection() {
     offset: ['start end', 'end start'],
   })
 
-  // Subtle parallax on the whole section
-  const yShift = useTransform(scrollYProgress, [0, 1], [40, -40])
+  const yShift = useTransform(scrollYProgress, [0, 1], [30, -30])
 
   return (
-    <section id="problems" className="py-24 sm:py-32 overflow-hidden">
+    <section id="workflow" className="py-24 sm:py-32 overflow-hidden border-b border-border/60 bg-muted/20">
       <motion.div ref={ref} style={{ y: yShift }} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header with scale-in */}
+        {/* Section Header */}
         <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.95 }}
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="text-center max-w-3xl mx-auto mb-16"
         >
-          <motion.span
-            className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary inline-block"
-            initial={{ opacity: 0, letterSpacing: '0.5em' }}
-            animate={isInView ? { opacity: 1, letterSpacing: '0.22em' } : {}}
-            transition={{ duration: 0.8, delay: 0.1 }}
-          >
-            The Challenge
-          </motion.span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary inline-block font-semibold">
+            The Scoping Creep Audit
+          </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            Problems We Want to{' '}
-            <span className="text-gradient-primary">Solve</span>
+            Vague specifications cost{' '}
+            <span className="text-gradient-primary">more than time.</span>
           </h2>
-          <motion.div
-            className="mt-3 mx-auto h-1 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
-            initial={{ width: 0, opacity: 0 }}
-            animate={isInView ? { width: 120, opacity: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          />
-          <p className="mt-5 text-lg text-muted-foreground leading-8">
-            The freelance and collaboration ecosystem is broken in ways that cost everyone time, money, and missed opportunities.
+          <p className="mt-5 text-base text-muted-foreground leading-7">
+            Unstructured client briefs cause bad estimates, scope creep, and slow proposal cycles. FixFlow AI turns client briefs into scoped, contract-ready proposals.
           </p>
         </motion.div>
 
-        {/* Problem Cards Grid with 3D tilt */}
+        {/* Problem Cards Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {problems.map((problem, index) => (
             <ProblemCard key={problem.title} problem={problem} index={index} isInView={isInView} />

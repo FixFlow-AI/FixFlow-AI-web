@@ -1,146 +1,158 @@
-import { motion, useInView, useScroll, useTransform } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
-import { Cpu, Eye, Handshake, UserCog, MessageSquareText, HeartHandshake } from 'lucide-react'
-
-const solutions = [
-  {
-    icon: Cpu,
-    title: 'AI-Powered Matching',
-    description: 'Intelligent algorithms connect freelancers, clients, and developers with the right opportunities based on skills, needs, and goals.',
-  },
-  {
-    icon: Eye,
-    title: 'Workflow Clarity',
-    description: 'Clear, structured workflows eliminate confusion — everyone knows what to do, when, and how progress is tracking.',
-  },
-  {
-    icon: Handshake,
-    title: 'Smarter Collaboration',
-    description: 'Built-in tools for project communication, file sharing, and task management — all in one connected workspace.',
-  },
-  {
-    icon: UserCog,
-    title: 'Role-Based Experience',
-    description: 'Whether you are a freelancer, client, or developer, the platform adapts to your role with tailored dashboards and tools.',
-  },
-  {
-    icon: MessageSquareText,
-    title: 'Feedback-Driven Development',
-    description: 'Every feature we build is shaped by real user feedback — your input directly influences the platform.',
-  },
-  {
-    icon: HeartHandshake,
-    title: 'Built for Real Needs',
-    description: 'Not another generic platform. Fix Flow AI is designed around actual pain points shared by early users like you.',
-  },
-]
-
-function SolutionCard({ solution, index, isInView }) {
-  const cardRef = useRef(null)
-  const Icon = solution.icon
-
-  // Alternating slide direction for visual interest
-  const isEvenRow = Math.floor(index / 3) % 2 === 0
-  const slideDir = isEvenRow ? (index % 2 === 0 ? -60 : 60) : (index % 2 === 0 ? 60 : -60)
-
-  const handleMouseMove = (e) => {
-    const card = cardRef.current
-    if (!card) return
-    const rect = card.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    const rotateX = (y - centerY) / 14
-    const rotateY = (centerX - x) / 14
-    card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`
-  }
-
-  const handleMouseLeave = () => {
-    const card = cardRef.current
-    if (card) card.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: slideDir, y: 30, filter: 'blur(8px)' }}
-      animate={isInView ? { opacity: 1, x: 0, y: 0, filter: 'blur(0px)' } : {}}
-      transition={{
-        duration: 0.7,
-        delay: index * 0.1,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-    >
-      <div
-        ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="landing-future-card rounded-2xl p-6 group hover:border-primary/40 transition-all duration-300 will-change-transform cursor-default h-full"
-        style={{ transition: 'transform 0.15s ease-out' }}
-      >
-        <motion.div
-          className="mb-4 inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/15"
-          whileHover={{ scale: 1.2, rotate: 12 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-        >
-          <Icon className="h-6 w-6" />
-        </motion.div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">{solution.title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{solution.description}</p>
-      </div>
-    </motion.div>
-  )
-}
+import { CheckCircle2, UserCheck, ShieldCheck } from 'lucide-react'
 
 function SolutionSection() {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  })
-  const yShift = useTransform(scrollYProgress, [0, 1], [40, -40])
+  const isInView = useInView(ref, { once: true, margin: '-100px' })
 
   return (
-    <section id="solutions" className="py-24 sm:py-32 overflow-hidden">
-      <motion.div ref={ref} style={{ y: yShift }} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="solutions" className="py-24 sm:py-32 overflow-hidden border-b border-border/60">
+      <div ref={ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
         {/* Section Header */}
         <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.95 }}
-          animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center max-w-3xl mx-auto mb-20"
         >
-          <motion.span
-            className="font-mono text-[11px] uppercase tracking-[0.22em] text-primary inline-block"
-            initial={{ opacity: 0, letterSpacing: '0.5em' }}
-            animate={isInView ? { opacity: 1, letterSpacing: '0.22em' } : {}}
-            transition={{ duration: 0.8, delay: 0.1 }}
-          >
-            Our Approach
-          </motion.span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary inline-block font-semibold">
+            How It Works
+          </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-            How Fix Flow AI{' '}
-            <span className="text-gradient-primary">Helps</span>
+            Automating the client{' '}
+            <span className="text-gradient-primary">lifecycle.</span>
           </h2>
-          <motion.div
-            className="mt-3 mx-auto h-1 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
-            initial={{ width: 0, opacity: 0 }}
-            animate={isInView ? { width: 120, opacity: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          />
-          <p className="mt-5 text-lg text-muted-foreground leading-8">
-            We are building a platform that puts people first — connecting talent with opportunity through intelligent, AI-driven workflows.
+          <p className="mt-5 text-base text-muted-foreground leading-7">
+            From initial brief parsing to scope approvals and secure retainer collections. FixFlow AI handles client intake autonomously.
           </p>
         </motion.div>
 
-        {/* Solution Cards Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {solutions.map((solution, index) => (
-            <SolutionCard key={solution.title} solution={solution} index={index} isInView={isInView} />
-          ))}
+        {/* Feature Row 1: Autonomous Onboarding */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-24">
+          {/* Left: Text Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 flex flex-col items-start"
+          >
+            <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary mb-6">
+              <UserCheck className="h-5 w-5" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground tracking-tight sm:text-3xl">
+              Autonomous Onboarding
+            </h3>
+            <p className="mt-4 text-base text-muted-foreground leading-7">
+              Once you paste the brief, FixFlow AI sets up a branded Client Portal. The client is guided through requirement confirmations, file uploads, and specific details without back-and-forth email threads.
+            </p>
+            <ul className="mt-6 space-y-3">
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Custom wizard guides client through project assets</span>
+              </li>
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Smart file drop box accepts briefs, design docs, and specs</span>
+              </li>
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Keeps client informed of setup progress in real time</span>
+              </li>
+            </ul>
+          </motion.div>
+
+          {/* Right: iPad Frame Onboarding Video */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, x: 40 }}
+            animate={isInView ? { opacity: 1, scale: 1, x: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7"
+          >
+            <div className="relative rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+              <div className="aspect-[4/3] bg-muted/20">
+                <video
+                  src="/video/onboarding-portal.mp4"
+                  poster="/landing-page/onboarding-portal.png"
+                  muted
+                  playsInline
+                  autoPlay
+                  loop
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </motion.div>
+
+        {/* Feature Row 2: Secure Integrated Payments */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          {/* Left: Laptop Frame Payment Video */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, x: -40 }}
+            animate={isInView ? { opacity: 1, scale: 1, x: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-7 order-2 lg:order-1"
+          >
+            <div className="relative rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+              {/* Browser Header Bar */}
+              <div className="flex items-center gap-1.5 px-4 py-3 bg-muted/40 border-b border-border/60">
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="w-2.5 h-2.5 rounded-full bg-border" />
+                <div className="ml-4 h-4 w-44 rounded bg-border/40 font-mono text-[9px] flex items-center px-2 text-muted-foreground/60">
+                  checkout.fixflowai.xyz
+                </div>
+              </div>
+              <div className="aspect-[16/10] bg-muted/20">
+                <video
+                  src="/video/payment-checkout.mp4"
+                  poster="/landing-page/payment-checkout.png"
+                  muted
+                  playsInline
+                  autoPlay
+                  loop
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right: Text Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-5 order-1 lg:order-2 flex flex-col items-start"
+          >
+            <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary mb-6">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground tracking-tight sm:text-3xl">
+              Secure Integrated Payments
+            </h3>
+            <p className="mt-4 text-base text-muted-foreground leading-7">
+              Never start work without a deposit again. FixFlow AI generates secure, itemized billing schedules tied directly to the proposal scope. Clients review, sign, and pay retainers instantly via Razorpay or Stripe.
+            </p>
+            <ul className="mt-6 space-y-3">
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Integrated Razorpay & Stripe gateway collection</span>
+              </li>
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Itemized scope items mapped to payment schedules</span>
+              </li>
+              <li className="flex items-start gap-2.5 text-sm text-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                <span>Instant webhooks activate project repositories upon deposit</span>
+              </li>
+            </ul>
+          </motion.div>
+        </div>
+
+      </div>
     </section>
   )
 }
