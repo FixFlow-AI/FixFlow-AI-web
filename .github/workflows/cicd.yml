@@ -132,7 +132,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.AWS_ROLE_ARN }}" ]; then
             echo "method=oidc" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          elif [ -n "${{ vars.AWS_ACCESS_KEY_ID }}" ] && [ -n "${{ vars.AWS_SECRET_ACCESS_KEY }}" ]; then
             echo "method=keys" >> "$GITHUB_OUTPUT"
           else
             echo "method=none" >> "$GITHUB_OUTPUT"
@@ -141,7 +141,7 @@ jobs:
       - name: Fail if AWS credentials are missing
         if: steps.aws-auth.outputs.method == 'none'
         run: |
-          echo "Missing AWS credentials. Set AWS_ROLE_ARN for OIDC or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY secrets." >&2
+          echo "Missing AWS credentials. Set AWS_ROLE_ARN for OIDC or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY variables." >&2
           exit 1
 
       - name: Configure AWS credentials (OIDC)
@@ -155,8 +155,8 @@ jobs:
         if: steps.aws-auth.outputs.method == 'keys'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
@@ -272,7 +272,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.AWS_ROLE_ARN }}" ]; then
             echo "method=oidc" >> "$GITHUB_OUTPUT"
-          elif [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          elif [ -n "${{ vars.AWS_ACCESS_KEY_ID }}" ] && [ -n "${{ vars.AWS_SECRET_ACCESS_KEY }}" ]; then
             echo "method=keys" >> "$GITHUB_OUTPUT"
           else
             echo "method=none" >> "$GITHUB_OUTPUT"
@@ -281,7 +281,7 @@ jobs:
       - name: Fail if AWS credentials are missing
         if: steps.aws-auth.outputs.method == 'none'
         run: |
-          echo "Missing AWS credentials. Set AWS_ROLE_ARN for OIDC or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY secrets." >&2
+          echo "Missing AWS credentials. Set AWS_ROLE_ARN for OIDC or AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY variables." >&2
           exit 1
 
       - name: Configure AWS credentials (OIDC)
@@ -295,8 +295,8 @@ jobs:
         if: steps.aws-auth.outputs.method == 'keys'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update Amplify branch environment variables
