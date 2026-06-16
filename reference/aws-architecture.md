@@ -1,6 +1,7 @@
 # FixFlowAI AWS Architecture
 
 ```mermaid
+
 flowchart TD
   User[Browser] --> R53[Route 53]
   R53 --> CF[CloudFront + WAF]

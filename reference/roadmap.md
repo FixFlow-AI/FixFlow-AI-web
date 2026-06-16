@@ -39,22 +39,22 @@ Recommended production architecture:
 
 ```mermaid
 flowchart TD
-  User[Browser user] --> R53[Route 53 DNS]
-  R53 --> CF[CloudFront CDN + WAF]
-  CF --> Amplify[Amplify Hosting or S3 static frontend]
-  CF --> ALB[Application Load Balancer /api/*]
-  ALB --> ECS[ECS Fargate backend tasks: Node/Express port 5000]
-  ECS --> DDB[DynamoDB tables]
-  ECS --> S3[S3 app bucket]
-  ECS --> SSM[SSM Parameter Store or Secrets Manager]
-  ECS --> SES[SES SMTP or external SMTP]
-  ECS --> Stripe[Stripe API + webhooks]
-  ECS --> Gemini[Gemini/OpenRouter/xAI/Ollama providers]
-  ECS --> Slack[Slack OAuth + incoming webhook]
-  CF --> APIGW[Optional API Gateway waitlist]
-  APIGW --> Lambda[Optional Lambda waitlist]
-  Lambda --> WaitlistDDB[fixflowai_waitlist DynamoDB table]
-  ECS --> CW[CloudWatch Logs/Metrics/Alarms]
+  User["Browser user"] --> R53["Route 53 DNS"]
+  R53 --> CF["CloudFront CDN + WAF"]
+  CF --> Amplify["Amplify Hosting or S3 static frontend"]
+  CF --> ALB["Application Load Balancer /api/*"]
+  ALB --> ECS["ECS Fargate backend tasks: Node/Express port 5000"]
+  ECS --> DDB["DynamoDB tables"]
+  ECS --> S3["S3 app bucket"]
+  ECS --> SSM["SSM Parameter Store or Secrets Manager"]
+  ECS --> SES["SES SMTP or external SMTP"]
+  ECS --> Stripe["Stripe API + webhooks"]
+  ECS --> Gemini["Gemini/OpenRouter/xAI/Ollama providers"]
+  ECS --> Slack["Slack OAuth + incoming webhook"]
+  CF --> APIGW["Optional API Gateway waitlist"]
+  APIGW --> Lambda["Optional Lambda waitlist"]
+  Lambda --> WaitlistDDB["fixflowai_waitlist DynamoDB table"]
+  ECS --> CW["CloudWatch Logs/Metrics/Alarms"]
   ALB --> CW
   Lambda --> CW
 ```
@@ -718,11 +718,11 @@ ECS deployment sequence:
 
 ```mermaid
 sequenceDiagram
-  participant Dev as Developer PC
-  participant ECR as Amazon ECR
-  participant ECS as ECS Fargate
-  participant ALB as Application Load Balancer
-  participant CW as CloudWatch
+  participant Dev as "Developer PC"
+  participant ECR as "Amazon ECR"
+  participant ECS as "ECS Fargate"
+  participant ALB as "Application Load Balancer"
+  participant CW as "CloudWatch"
 
   Dev->>Dev: docker build ./backend
   Dev->>ECR: docker push image:git-sha

@@ -104,10 +104,10 @@ To achieve the highest success rate with the lowest risk, we recommend a **three
 
 ```mermaid
 sequenceDiagram
-    participant S as Intent Sourcing (Tech 4)
-    participant D as De-Anonymizer (Tech 1)
-    participant E as Outreach AI Engine
-    participant P as Client Sandbox (Tech 2)
+    participant S as "Intent Sourcing (Tech 4)"
+    participant D as "De-Anonymizer (Tech 1)"
+    participant E as "Outreach AI Engine"
+    participant P as "Client Sandbox (Tech 2)"
     
     S->>D: Feed raw leads (GitHub, HN, Startup Funding)
     D->>E: Resolve company name + CTO email address
