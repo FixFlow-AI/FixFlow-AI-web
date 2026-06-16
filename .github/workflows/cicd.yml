@@ -3,11 +3,11 @@ name: FixFlowAI CI/CD
 on:
   pull_request:
     branches:
-      - testing
+      # - testing
       - master
   push:
     branches:
-      - testing
+      # - testing
       - master
   workflow_dispatch:
     inputs:

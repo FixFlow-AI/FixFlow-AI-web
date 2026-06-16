@@ -3,13 +3,13 @@ name: Startup CI Pipeline
 on:
   push:
     branches:
-      - testing
+      # - testing
       - production
       - master
       - waitlist
   pull_request:
     branches:
-      - testing
+      # - testing
       - production
       - master
       - waitlist
