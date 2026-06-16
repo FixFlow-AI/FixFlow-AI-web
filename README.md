@@ -129,7 +129,7 @@ To maintain a 24-hour service for at least **1,000 customers** while minimizing 
 
 ### 🏗️ Infrastructure Components
 * **Frontend Hosting:** AWS S3 + CloudFront (CDN). Zero server cost.
-* **Backend API Execution:** AWS Lambda (leveraging `serverless-http` to wrap the Express app) + Amazon API Gateway (HTTP APIs). Pay only per request.
+* **Backend API Execution & Routing:** AWS Lambda Function URLs (Direct Access). Enables direct response streaming up to 15 minutes, bypassing the 29-second API Gateway timeout and eliminating routing proxy costs.
 * **Database Layer:** Amazon DynamoDB (configured in On-Demand Capacity Mode). Base cost is $0.
 * **Secrets Management:** AWS Secrets Manager for credentials caching.
 * **Notification Emails:** Amazon SES (Simple Email Service).
@@ -144,7 +144,7 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 │ AWS Service                │ Usage Details               │ Monthly Cost │
 ├────────────────────────────┼─────────────────────────────┼──────────────┤
 │ 🌐 S3 + CloudFront         │ 50 GB Data Out / 100MB SPA  │ $0.00*       │
-│ ⚡ API Gateway (HTTP API)   │ 200,000 HTTP Requests       │ $0.22        │
+│ ⚡ Lambda Function URLs    │ 200,000 Requests (Direct)   │ $0.00        │
 │ ⚙️ AWS Lambda              │ 200k Runs @ 512MB / 500ms   │ $0.00*       │
 │ 🗄️ DynamoDB (On-Demand)    │ 1 GB Storage, 200k Reads/Wr │ $0.00*       │
 │ 🗃️ AWS S3 (Blobs)          │ 2 GB Storage (PDFs/JSONs)   │ $0.00*       │
@@ -152,8 +152,8 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 │ 🔑 Secrets Manager         │ 2 secrets stored + API calls│ $0.80        │
 │ 🗺️ Route 53 (DNS)          │ 1 Hosted Zone + Queries     │ $0.55        │
 ├────────────────────────────┴─────────────────────────────┼──────────────┤
-│  TOTAL MONTHLY COST (WITH AWS FREE TIER)                 │ ~$1.57       │
-│  TOTAL MONTHLY COST (WITHOUT AWS FREE TIER)              │ ~$8.24       │
+│  TOTAL MONTHLY COST (WITH AWS FREE TIER)                 │ ~$1.35       │
+│  TOTAL MONTHLY COST (WITHOUT AWS FREE TIER)              │ ~$8.02       │
 └──────────────────────────────────────────────────────────┴──────────────┘
 * Denotes cost fully absorbed under AWS Free Tier.
 ```

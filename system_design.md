@@ -187,8 +187,7 @@ graph TD
     ClientBrowser["Browser client (React + Zustand)"]:::client
     CloudFront["AWS CloudFront (CDN)"]:::edge
     S3Static["S3 Bucket (Static Assets)"]:::storage
-    APIGateway["Amazon API Gateway (HTTP APIs)"]:::edge
-    LambdaBackend["AWS Lambda (Express Serverless API)"]:::compute
+    LambdaBackend["AWS Lambda API (via Function URL)"]:::compute
     DynamoDB["Amazon DynamoDB (On-Demand DB)"]:::storage
     S3Data["S3 Bucket (Proposal Revisions & PDFs)"]:::storage
     
@@ -199,14 +198,13 @@ graph TD
     %% Flow Connections
     ClientBrowser -->|1. Requests static UI| CloudFront
     CloudFront -->|2. Pulls| S3Static
-    ClientBrowser -->|3. REST API Requests & SSE streams| APIGateway
-    APIGateway -->|4. Invokes| LambdaBackend
-    LambdaBackend -->|5. Queries metadata / leads| DynamoDB
-    LambdaBackend -->|6. Saves proposal versions| S3Data
+    ClientBrowser -->|3. Direct API requests & SSE streams (Function URL)| LambdaBackend
+    LambdaBackend -->|4. Queries database| DynamoDB
+    LambdaBackend -->|5. Saves proposal versions| S3Data
     
-    LambdaBackend -->|7. Fetches structured prompts| GeminiAPI
-    LambdaBackend -->|8. Holds/routes milestone payouts| RazorpayGateway
-    LambdaBackend -->|9. Mints verifiable Soulbound DID credentials| PolygonChain
+    LambdaBackend -->|6. Fetches structured prompts| GeminiAPI
+    LambdaBackend -->|7. Holds/routes milestone payouts| RazorpayGateway
+    LambdaBackend -->|8. Mints verifiable Soulbound DID credentials| PolygonChain
 ```
 
 ---
