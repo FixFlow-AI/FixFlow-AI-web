@@ -129,7 +129,7 @@ Designed for high scalability, low latency, and maximum cost efficiency:
 To maintain a 24-hour service for at least **1,000 customers** while minimizing the server bill, we bypass expensive always-on resources (like EC2 instances, ECS Fargate containers, or provisioned ElastiCache clusters) and adopt a **100% Serverless Pay-As-You-Go Architecture** using serverless databases and caches.
 
 ### 🏗️ Infrastructure Components
-* **Frontend Hosting:** AWS S3 + CloudFront (CDN). Zero server cost.
+* **Frontend Hosting:** AWS Amplify Hosting (Git-integrated CDN & routing). Zero base server cost.
 * **Backend API Execution & Routing:** AWS Lambda Function URLs (Direct Access). Enables direct response streaming up to 15 minutes, bypassing the 29-second API Gateway timeout and eliminating routing proxy costs.
 * **Database Layer:** Amazon DynamoDB (configured in On-Demand Capacity Mode). Base cost is $0.
 * **Transient Cache & Queue:** Upstash Serverless Redis (handles rate limits, scraper queues, and Gemini cache).
@@ -145,7 +145,7 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 ├────────────────────────────┬─────────────────────────────┬──────────────┤
 │ AWS Service                │ Usage Details               │ Monthly Cost │
 ├────────────────────────────┼─────────────────────────────┼──────────────┤
-│ 🌐 S3 + CloudFront         │ 50 GB Data Out / 100MB SPA  │ $0.00*       │
+│ 🌐 AWS Amplify Hosting     │ 100 GB Data Out / Git CI-CD │ $0.00*       │
 │ ⚡ Lambda Function URLs    │ 200,000 Requests (Direct)   │ $0.00        │
 │ ⚙️ AWS Lambda              │ 200k Runs @ 512MB / 500ms   │ $0.00*       │
 │ 🗄️ DynamoDB (On-Demand)    │ 1 GB Storage, 200k Reads/Wr │ $0.00*       │

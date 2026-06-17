@@ -181,7 +181,7 @@ We utilize **Upstash Serverless Redis** for transient, high-speed, and asynchron
 ## 🎨 3. FixFlow AI: High-Level System Design
 
 ### A. High-Level Architecture Map
-The following diagram maps out how a user interacts with the frontend SPA, API Backend hosted on AWS Lambda, DynamoDB, S3, and external systems like Razorpay and Gemini.
+The following diagram maps out how a user interacts with the frontend SPA hosted on AWS Amplify Hosting, API Backend hosted on AWS Lambda, DynamoDB, S3, and external systems like Razorpay and Gemini.
 
 ```mermaid
 graph TD
@@ -194,8 +194,7 @@ graph TD
 
     %% Elements
     ClientBrowser["Browser client (React + Zustand)"]:::client
-    CloudFront["AWS CloudFront (CDN)"]:::edge
-    S3Static["S3 Bucket (Static Assets)"]:::storage
+    AmplifyHosting["AWS Amplify Hosting (Frontend CDN)"]:::edge
     LambdaBackend["AWS Lambda API (via Function URL)"]:::compute
     DynamoDB["Amazon DynamoDB (On-Demand DB)"]:::storage
     S3Data["S3 Bucket (Proposal Revisions & PDFs)"]:::storage
@@ -206,16 +205,15 @@ graph TD
     PolygonChain["Polygon Blockchain"]:::external
 
     %% Flow Connections
-    ClientBrowser -->|1. Requests static UI| CloudFront
-    CloudFront -->|2. Pulls| S3Static
-    ClientBrowser -->|"3. Direct API requests & SSE streams (Function URL)"| LambdaBackend
-    LambdaBackend -->|4. Queries database| DynamoDB
-    LambdaBackend -->|5. Saves proposal versions| S3Data
-    LambdaBackend -->|"6. Caches API responses, rate limits, & queues jobs"| RedisCache
+    ClientBrowser -->|1. Requests static UI| AmplifyHosting
+    ClientBrowser -->|"2. Direct API requests & SSE streams (Function URL)"| LambdaBackend
+    LambdaBackend -->|3. Queries database| DynamoDB
+    LambdaBackend -->|4. Saves proposal versions| S3Data
+    LambdaBackend -->|"5. Caches API responses, rate limits, & queues jobs"| RedisCache
     
-    LambdaBackend -->|7. Fetches structured prompts| GeminiAPI
-    LambdaBackend -->|8. Holds/routes milestone payouts| RazorpayGateway
-    LambdaBackend -->|9. Mints verifiable Soulbound DID credentials| PolygonChain
+    LambdaBackend -->|6. Fetches structured prompts| GeminiAPI
+    LambdaBackend -->|7. Holds/routes milestone payouts| RazorpayGateway
+    LambdaBackend -->|8. Mints verifiable Soulbound DID credentials| PolygonChain
 ```
 
 ---
