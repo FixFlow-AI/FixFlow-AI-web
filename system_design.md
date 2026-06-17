@@ -56,7 +56,7 @@ This document details the requirements, core flows, database schema design, and 
 
 ## 🗄️ 2. FixFlow DB Design: Entities & Schema-Level Views
 
-Since FixFlowAI is optimized for cost and scalability using **AWS DynamoDB**, our database schemas are modeled as clean document structures.
+Since FixFlowAI is optimized for cost and scalability using **AWS DynamoDB**, our database schemas are modeled as clean document structures. For high-speed caching, distributed rate-limiting, and managing the lead scraping job queue (via `bull` / `bullmq`), we incorporate **Upstash Redis** (a serverless, pay-as-you-go Redis database) which keeps base costs at $0.
 
 ```
                   ENTITY RELATIONSHIP LOGICAL SCHEMA
@@ -167,6 +167,15 @@ Since FixFlowAI is optimized for cost and scalability using **AWS DynamoDB**, ou
   * `contractAddress` (String) - Polygon smart contract address (if Web3).
   * `chain` (String) - Polygon Amoy/Mainnet.
 
+### Redis Schema (Caching, Rate-Limiting & Scraping Queue)
+We utilize **Upstash Serverless Redis** for transient, high-speed, and asynchronous storage tasks:
+* **Distributed Rate Limiting:**
+  * Key: `ratelimit:<userId>` or `ratelimit:<ipAddress>` (String) - Tracks active API request window counts.
+* **Lead Scraping Job Queue (BullMQ):**
+  * Keys: `bull:scraping-queue:*` (Hashes, Sets, Lists) - Coordinates active Tavily, Reddit, and Apify scraper jobs.
+* **Gemini Response Cache:**
+  * Key: `cache:gemini:<briefHash>` (String) - Caches generated proposals for 24 hours to prevent duplicate LLM calls and reduce API costs.
+
 ---
 
 ## 🎨 3. FixFlow AI: High-Level System Design
@@ -190,6 +199,7 @@ graph TD
     LambdaBackend["AWS Lambda API (via Function URL)"]:::compute
     DynamoDB["Amazon DynamoDB (On-Demand DB)"]:::storage
     S3Data["S3 Bucket (Proposal Revisions & PDFs)"]:::storage
+    RedisCache["Upstash Redis (Serverless Cache & Queue)"]:::storage
     
     GeminiAPI["Google Gemini AI API"]:::external
     RazorpayGateway["Razorpay Escrow API"]:::external
@@ -198,13 +208,14 @@ graph TD
     %% Flow Connections
     ClientBrowser -->|1. Requests static UI| CloudFront
     CloudFront -->|2. Pulls| S3Static
-    ClientBrowser -->|3. Direct API requests & SSE streams (Function URL)| LambdaBackend
+    ClientBrowser -->|"3. Direct API requests & SSE streams (Function URL)"| LambdaBackend
     LambdaBackend -->|4. Queries database| DynamoDB
     LambdaBackend -->|5. Saves proposal versions| S3Data
+    LambdaBackend -->|"6. Caches API responses, rate limits, & queues jobs"| RedisCache
     
-    LambdaBackend -->|6. Fetches structured prompts| GeminiAPI
-    LambdaBackend -->|7. Holds/routes milestone payouts| RazorpayGateway
-    LambdaBackend -->|8. Mints verifiable Soulbound DID credentials| PolygonChain
+    LambdaBackend -->|7. Fetches structured prompts| GeminiAPI
+    LambdaBackend -->|8. Holds/routes milestone payouts| RazorpayGateway
+    LambdaBackend -->|9. Mints verifiable Soulbound DID credentials| PolygonChain
 ```
 
 ---
@@ -217,9 +228,9 @@ sequenceDiagram
     autonumber
     actor Freelancer
     actor Client
-    participant Backend as Express Backend (Lambda)
-    participant Razorpay as Razorpay API
-    participant Polygon as Polygon Smart Contract
+    participant Backend as "Express Backend (Lambda)"
+    participant Razorpay as "Razorpay API"
+    participant Polygon as "Polygon Smart Contract"
 
     %% Discovery and Onboarding
     Freelancer->>Backend: Scan GitHub & Analyze Niche

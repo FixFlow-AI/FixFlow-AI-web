@@ -115,6 +115,7 @@ Designed for high scalability, low latency, and maximum cost efficiency:
 | **Styling** | Tailwind CSS 3.4 + Framer Motion 11.2 | Fluid layouts, micro-animations, glassmorphism UI. |
 | **Backend API** | Node.js + Express 5.2 | Scalable backend server hosting routes and SSE (Server-Sent Events). |
 | **Database** | AWS DynamoDB | Fully serverless, low-latency MongoDB-compatible ORM wrapper. |
+| **Caching & Queue** | Upstash Redis (Serverless) | Distributed rate-limiting, BullMQ scraping jobs, and Gemini API caching. |
 | **Storage** | AWS S3 | Object storage for original brief documents, templates, and versioned JSONs. |
 | **AI Processing** | Google Gemini (SDK) + OpenRouter + xAI | Multi-provider fallback chain for structured JSON proposal streaming. |
 | **Payment Gateway** | Razorpay APIs (Route/Smart Collect) | Fiat milestone escrow holdings, bank routes, webhooks. |
@@ -125,12 +126,13 @@ Designed for high scalability, low latency, and maximum cost efficiency:
 
 ## 💰 Cost-Optimized AWS Serverless Architecture
 
-To maintain a 24-hour service for at least **1,000 customers** while minimizing the server bill, we bypass expensive always-on resources (like EC2 instances, ECS Fargate containers, or ElastiCache Redis clusters) and adopt a **100% Serverless Pay-As-You-Go Architecture**.
+To maintain a 24-hour service for at least **1,000 customers** while minimizing the server bill, we bypass expensive always-on resources (like EC2 instances, ECS Fargate containers, or provisioned ElastiCache clusters) and adopt a **100% Serverless Pay-As-You-Go Architecture** using serverless databases and caches.
 
 ### 🏗️ Infrastructure Components
 * **Frontend Hosting:** AWS S3 + CloudFront (CDN). Zero server cost.
 * **Backend API Execution & Routing:** AWS Lambda Function URLs (Direct Access). Enables direct response streaming up to 15 minutes, bypassing the 29-second API Gateway timeout and eliminating routing proxy costs.
 * **Database Layer:** Amazon DynamoDB (configured in On-Demand Capacity Mode). Base cost is $0.
+* **Transient Cache & Queue:** Upstash Serverless Redis (handles rate limits, scraper queues, and Gemini cache).
 * **Secrets Management:** AWS Secrets Manager for credentials caching.
 * **Notification Emails:** Amazon SES (Simple Email Service).
 
@@ -149,6 +151,7 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 │ 🗄️ DynamoDB (On-Demand)    │ 1 GB Storage, 200k Reads/Wr │ $0.00*       │
 │ 🗃️ AWS S3 (Blobs)          │ 2 GB Storage (PDFs/JSONs)   │ $0.00*       │
 │ ✉️ AWS SES                 │ 2,000 transactional emails  │ $0.00*       │
+│ 🏎️ Upstash Redis           │ 10,000 reqs/day (Free Tier) │ $0.00*       │
 │ 🔑 Secrets Manager         │ 2 secrets stored + API calls│ $0.80        │
 │ 🗺️ Route 53 (DNS)          │ 1 Hosted Zone + Queries     │ $0.55        │
 ├────────────────────────────┴─────────────────────────────┼──────────────┤
@@ -162,6 +165,7 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 1. **Zero Idle Costs:** When no users are online, the system costs literally fractions of a cent per day (only storage costs).
 2. **Lambda Invocations:** The Lambda Free Tier provides **400,000 GB-seconds** per month, which easily absorbs our 100,000 GB-seconds requirement for 200,000 executions.
 3. **DynamoDB On-Demand:** Eliminates provisioned RCU/WCU pricing. You pay only for what you query.
+4. **Serverless Cache (Upstash):** Operates on a pay-as-you-go / free tier model instead of charging a flat hourly rate for idle cluster time.
 
 ---
 
@@ -177,25 +181,6 @@ FixFlowAI/
 ├── 📄 system_design.md                 ← Low-level DB schema & system architecture
 ├── 📄 package.json                     ← Root configuration & scripts
 └── 📄 README.md                        ← Main documentation (this file)
-```
-
----
-
-## 🚀 Quick Start (Development)
-
-### 1. Backend Setup
-```bash
-cd backend
-npm install
-# Copy backend/.env.example to backend/.env and populate credentials
-npm run dev
-```
-
-### 2. Frontend Setup
-```bash
-npm install
-# Copy .env.example to .env
-npm run dev
 ```
 
 ---
