@@ -261,6 +261,33 @@ Coordinates smart agreements and tracks milestone releases.
 
 ---
 
+### Table 9: Sessions (Authentication & Activity Tracking)
+Tracks logged-in active sessions, rotation secrets, and enforces custom revocation policies.
+
+* **Primary Key:** `_id` (UUID String)
+
+| Attribute | Data Type | Structure | Description |
+| :--- | :--- | :--- | :--- |
+| `userId` | UUID String | FK -> `Users._id` | Direct link to the owner account. |
+| `refreshTokenHash` | String | SHA-256 Hashed string | Hashed value of the current active rotation secret. |
+| `userAgent` | String | Browser User-Agent | Telemetry identifying the browser environment. |
+| `ipAddress` | String | IPv4 / IPv6 Address | Client IP captured during login or token refresh. |
+| `expiresAt` | String (Date) \| Null | ISO Timestamp \| Null | Set to `null` to disable automatic session timeouts. |
+| `revokedAt` | String (Date) \| Null | ISO Timestamp \| Null | Populated if logged out within 24 hours of creation. |
+| `lastUsedAt` | String (Date) | ISO Timestamp | Records the timestamp of last token refresh activity. |
+| `replayDetectedAt` | String (Date) \| Null | ISO Timestamp \| Null | Triggered if token replay/hijack is detected. |
+| `createdAt` | String (Date) | ISO Timestamp | Captured during initial authentication (login/oauth). |
+| `updatedAt` | String (Date) | ISO Timestamp | Recorded during state modifications. |
+
+#### Database Session Constraints:
+1. **Never Automatically Expired**: `expiresAt` is initialized to `null`. The backend bypasses expiry validation for such sessions.
+2. **Conditional Logout Revocation**:
+   - If `Date.now() - createdAt <= 24 hours` when hitting `/logout`, write timestamp to `revokedAt`. Subsequent bearer validation requests will fail with `UnauthorizedError`.
+   - If `Date.now() - createdAt > 24 hours`, `revokedAt` remains `null`. The session record remains perpetually valid in DynamoDB even after the user logs out.
+
+
+---
+
 ## 🏎️ 4. Redis Transient Schema
 
 We utilize **Upstash Serverless Redis** to handle high-frequency cache reads, distributed locks, and real-time queues.

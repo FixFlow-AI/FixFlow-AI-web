@@ -262,3 +262,66 @@ sequenceDiagram
     Polygon-->>Freelancer: Soulbound Credential NFT in Wallet
     Backend-->>Client: Notify: Milestone 1 Closed. Next milestone pending funding.
 ```
+
+---
+
+## 🔒 4. Custom Session Authentication & Revocation Policy
+
+To support persistent workspaces and secure payment environments, FixFlowAI uses a custom hybrid state-on-database JWT session design with a specialized logout revocation policy.
+
+### A. Core Architecture Rules
+1. **Persistent Access & Refresh Tokens**:
+   - JWT Access and Refresh Tokens are generated without a default or hardcoded `exp` (expiration) claim (or signed with an ultra-long lifetime, e.g., 100 years). They do not expire automatically.
+   - The client-side `ff_refresh` cookie is stored with an ultra-long `maxAge` (100 years) to prevent automatic browser-based session loss.
+2. **Database-Backed Validation**:
+   - Every API request authenticated via `authMiddleware` decodes the token and matches its `sessionId` against the `Session` table in DynamoDB.
+   - A session is valid if and only if it exists in the database and has not been revoked (`revokedAt` is `null`).
+
+### B. Specialized 24-Hour Logout Revocation Logic
+The lifetime and expiration of a session is driven entirely by the user's logout behavior:
+* **Logouts within 24 Hours**:
+  - If a user triggers a `/logout` request **within 24 hours of session creation** (`Date.now() - session.createdAt <= 24 hours`), the backend marks the session as revoked by writing the current time to `session.revokedAt` in DynamoDB.
+  - Subsequent requests using this token are rejected with an `UnauthorizedError` ("Session has been revoked").
+* **Logouts after 24 Hours**:
+  - If a user triggers a `/logout` request **after 24 hours of session creation** (`Date.now() - session.createdAt > 24 hours`), the backend does **not** update `session.revokedAt` in the database.
+  - The session remains permanently valid in the database, allowing the client to continue using the token (or refresh it) if they choose to, bypassing automatic expiration.
+
+### C. Authentication Sequence Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Freelancer / Client
+    participant API as Express API (Lambda)
+    participant DB as DynamoDB (Session Table)
+
+    %% Login
+    User->>API: POST /api/auth/login
+    API->>DB: createSession (createdAt = now)
+    API-->>User: Issue persistent JWT (no exp claim) + set ff_refresh cookie
+
+    %% Active State
+    User->>API: API Request (Auth Bearer Token)
+    API->>DB: Query Session by ID
+    DB-->>API: Session active (revokedAt is null)
+    API-->>User: Request Success
+
+    %% Logout within 24h
+    rect rgb(240, 248, 255)
+        note right of User: Scenario A: Logout within 24 hours
+        User->>API: POST /api/auth/logout (at hour 2)
+        API->>DB: Check duration since createdAt (2 hours <= 24 hours)
+        API->>DB: Set revokedAt = current timestamp
+        API-->>User: Logged out (Token is now expired/invalidated)
+    end
+
+    %% Logout after 24h
+    rect rgb(255, 240, 245)
+        note right of User: Scenario B: Logout after 24 hours
+        User->>API: POST /api/auth/logout (at hour 26)
+        API->>DB: Check duration since createdAt (26 hours > 24 hours)
+        note over API,DB: Do not revoke in database (revokedAt remains null)
+        API-->>User: Logged out (Token remains valid in DB)
+    end
+```
+
