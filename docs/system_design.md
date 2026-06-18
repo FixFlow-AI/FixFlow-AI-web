@@ -1,327 +1,127 @@
 # FixFlowAI - System Design & Architecture Document
 
-This document details the requirements, core flows, database schema design, and high-level architecture diagrams for **FixFlowAI**.
+This document details the high-level system architecture, technology stack, security boundaries, and end-to-end operational sequence flows for **FixFlowAI**.
 
 ---
 
-## 📋 Tasklist Progress
+## 🧠 1. Architectural Overview & Requirements
 
-- [x] **FixFlow AI:** Requirements + key flows
-- [x] **FixFlow DB design:** Identify entities + relationships schema level views
-- [x] **FixFlow AI:** High-level system design (Mermaid diagrams)
+FixFlowAI is designed as an Enterprise-Grade SaaS platform linking Web2 developers, freelancers, Web3 decentralized escrows, and clients.
 
----
+### A. Core Tech Stack (Next-Gen Version)
 
-## 🧠 1. FixFlow AI: Requirements & Key Flows
-
-### A. Functional Requirements
-1. **GitHub Niche Scanner & Developer Profile Mapping:**
-   * Scan developer repositories, language weights, commit activity, and active PRs.
-   * Auto-assign technical niche categories (e.g. AI/ML, Blockchain, Frontend, Systems) and calculate a niche capability depth score.
-2. **Scraped Leads Pipeline (FlowBoard):**
-   * Aggregate freelance opportunities across multiple platforms (Upwork, Reddit, Hacker News, direct submissions) using Tavily/SerpAPI/Apify.
-   * Cross-reference client requirements with the developer's GitHub profile to score lead matching suitability.
-3. **Structured Proposal Workspace:**
-   * Accept raw text briefs or PDF/DOCX file uploads.
-   * Parse brief quality via BriefScore preflight (gates requirements, timeline, budget).
-   * Stream a structured JSON proposal document using SSE (Server-Sent Events) containing features, estimations, risks, timeline, and market research.
-4. **Client Sharing & Telemetry Portal:**
-   * Generate tokenized portal links with optional PIN-gate security and automatic expiration.
-   * Monitor client interaction (dwell time and scroll views per section) to report interest telemetry back to the freelancer.
-5. **Autonomous Milestone Escrow Payments:**
-   * **Fiat Gateway:** Hold payments securely using Razorpay Smart Collect Virtual Accounts & Route API. Automatically split-payout funds when milestones (25%, 50%, 75%, 100%) are completed.
-   * **Web3 Web3 Escrow:** Secure milestone holdings on the Polygon Blockchain in USDC. Mint a Soulbound verifiable credential DID NFT upon project completion.
+| Architectural Layer | Technology Selected | Purpose |
+| :--- | :--- | :--- |
+| **Frontend SPA** | Next.js (App Router) + Tailwind CSS + Framer Motion | High-performance user interface, server-side rendering (SSR), and smooth interactive views. |
+| **Backend API** | Node.js + Express / NestJS | Core business logic server, controller routes, and server-sent event (SSE) streaming. |
+| **Primary Database**| PostgreSQL (hosted on AWS Aurora / RDS) | ACID-compliant relational storage for core entities and structured transaction records. |
+| **Database ORM** | Prisma | Typesafe database client, migration management, and relational mapping. |
+| **Session & Rate Cache**| Redis (hosted on AWS ElastiCache / Redis Enterprise) | High-speed stateful session storage, rate limiting, and BullMQ task queues. |
+| **File Storage** | AWS S3 | Object store for template files, S3-bound briefs, and exported proposal PDFs. |
+| **Payment Processor**| Razorpay APIs | Fiat escrow holdings and split-route banking payouts. |
+| **Web3 Trust Layer**| Polygon Blockchain + Ethers.js | Decentralized USDC contracts, wallet binds, and Soulbound DID minting. |
 
 ---
 
-### B. Core System Flows
+## 🎨 2. System Architecture Topology
 
-#### Flow 1: Lead Discovery, Scoring & Outreach
-1. **Discover:** The Lead Aggregator runs a cron trigger invoking Apify / Tavily searches.
-2. **Save:** New raw opportunities are saved into the `Leads` table with a status of `new`.
-3. **Score:** The matching engine compares the lead description against the `FreelancerProfile.githubScan` metadata.
-4. **Qualify:** If the score exceeds the `BID_MATCH_THRESHOLD` (e.g., 70%), the lead is moved to the `qualified` status in the Kanban board.
-5. **Outreach:** The AI model drafts a contextual email/message matching the user's profile and save it under `Lead.draftMessage`.
-
-#### Flow 2: Autonomous Escrow Payment (Razorpay Route & Smart Collect)
-1. **Initiate:** Once the client accepts the proposal, the system creates an `Escrow` record linked to the `Lead`.
-2. **Milestones:** Milestones are generated based on the proposal timeline (e.g., 4 milestones at 25% price each).
-3. **Deposit:** The client receives a Razorpay Smart Collect link. The payment goes into a designated Virtual Account.
-4. **Lock:** The transaction status is updated to `FUNDED`, and notifications alert the freelancer to start working.
-5. **Submit & Approve:** The freelancer submits work. The client marks the milestone as `APPROVED`.
-6. **Payout Route:** The system triggers a Razorpay Route transfer, releasing the specific milestone percentage (e.g., 25% of the total amount) to the freelancer's bank account, keeping the remaining funds locked.
-7. **Complete & DID:** When the final milestone reaches 100%, the funds are fully disbursed, and a Soulbound Verifiable Credential DID is minted.
-
----
-
-## 🗄️ 2. FixFlow DB Design: Entities & Schema-Level Views
-
-Since FixFlowAI is optimized for cost and scalability using **AWS DynamoDB**, our database schemas are modeled as clean document structures. For high-speed caching, distributed rate-limiting, and managing the lead scraping job queue (via `bull` / `bullmq`), we incorporate **Upstash Redis** (a serverless, pay-as-you-go Redis database) which keeps base costs at $0.
-
-```
-                  ENTITY RELATIONSHIP LOGICAL SCHEMA
- ┌──────────────┐          ┌──────────────┐          ┌───────────────────┐
- │     User     │1       1│  Freelancer  │1       * │    Credential     │
- │  (Auth & RP) ├─────────┤   Profile    ├──────────┤ (Soulbound proof) │
- └──────┬───────┘         └──────┬───────┘          └───────────────────┘
-        │1                       │1
-        │                        │
-        │*                       │*
- ┌──────┴───────┐          ┌─────┴────────┐
- │  Workspace   │1       * │     Lead     │
- │ (Team context)├─────────┤ (Opp & pipeline)
- └──────┬───────┘          └─────┬────────┘
-        │1                       │1
-        │                        │
-        │*                       │1
- ┌──────┴───────┐          ┌─────┴────────┐
- │   Proposal   │1       1 │    Escrow    │
- │ (JSON / S3)  ├─────────┤ (Razorpay/Web3)
- └──────────────┘          └─────┬────────┘
-                                 │1
-                                 │
-                                 │*
-                           ┌─────┴────────┐
-                           │   Invoice    │
-                           │(Milestone records)
-                           └──────────────┘
-```
-
-### Table 1: Users
-* **Primary Key (`_id`):** UUID String
-* **Attributes:**
-  * `email` (String) - Unique user email.
-  * `passwordHash` (String) - Encrypted password.
-  * `role` (Enum) - `'freelancer' | 'client' | 'developer'`.
-  * `selectedPlan` (Enum) - `'free' | 'solo' | 'pro' | 'agency'`.
-  * `defaultEntryMode` (Enum) - `'individual' | 'team'`.
-  * `currentWorkspaceId` (UUID) - Active workspace link.
-  * `notificationPreferences` (Map) - Enable flags and channel preferences.
-  * `proposalsThisMonth` (Number) - Rate-limiting counter.
-  * `stripeCustomerId` (String) - Platform billing customer link.
-  * `subscriptionStatus` (String) - active/past-due/none.
-
-### Table 2: FreelancerProfiles
-* **Primary Key (`_id`):** UUID String (matches User ID)
-* **Attributes:**
-  * `did` (String) - Decentralized Identifier.
-  * `walletAddresses` (Map) - Web3 addresses: `fixflow` (native), `usdc` (stablecoin), `matic` (gas).
-  * `profiles` (Map) - Headlines & descriptions for `upwork`, `linkedin`, and `personal` feeds.
-  * `agentConfig` (Map) - Automation toggles: `leadHunter`, `outreachWriter`, `escrowWatcher`, `credentialMinter` (Booleans).
-  * `githubScan` (Map) - List of repos, languages, commit counts, and last scanned date.
-  * `onboardedAt` (ISO Date) - Profile completion timestamp.
-
-### Table 3: Workspaces
-* **Primary Key (`_id`):** UUID String
-* **Attributes:**
-  * `name` (String) - Team / Organization name.
-  * `plan` (Enum) - `'free' | 'pro' | 'agency' | 'scale'`.
-  * `notificationDefaults` (Map) - Standard notification settings for members.
-  * `slack` (Map) - Integration status, team name, and webhook details.
-  * `members` (List of Maps) - User IDs, roles, and joined dates.
-  * `invitePending` (List of Maps) - Pending invite email tokens.
-
-### Table 4: Leads
-* **Primary Key (`_id`):** UUID String
-* **Attributes:**
-  * `userId` (UUID) - Freelancer owner.
-  * `status` (Enum) - `'new' | 'qualified' | 'contacted' | 'replied' | 'won' | 'lost'`.
-  * `score` (Number) - Match score against GitHub profile.
-  * `source` (String) - Reddit/Upwork/HN/Tavily/etc.
-  * `sourceUrl` (String) - Link to original post.
-  * `projectDescription` (String) - Client requirements.
-  * `budget` (Map) - Amount, rate type, currency.
-  * `match` (Map) - SkillsMatched (array), skillsMissing (array), githubEvidence (array), rationale (array).
-  * `bid` (Map) - Status (`not_ready` / `submitted`), draft proposal, submission dates.
-  * `company` (Map) - Name, stack, size, mission.
-  * `draftMessage` (Map) - Subject, body, tone, wordCount.
-
-### Table 5: Proposals
-* **Primary Key (`_id`):** UUID String
-* **Attributes:**
-  * `s3Key` (String) - Path to versioned proposal JSON in AWS S3.
-  * `projectSummary` (String) - Brief outline.
-  * `status` (Enum) - `'generating' | 'ready' | 'failed'`.
-  * `strategy` (Enum) - `'lean' | 'standard' | 'premium'`.
-  * `workspaceId` (UUID) - Project context.
-  * `createdBy` (UUID) - Initiating freelancer/agent.
-  * `dealStatus` (Enum) - `'pending' | 'negotiating' | 'won' | 'lost'`.
-  * `briefScore` (Map) - Scope score, technical score, timeline score.
-  * `versionCount` (Number) - Incrementing counter for revisions.
-  * `chatTimingStats` (Map) - Interaction delays.
-  * `comments` (List of Maps) - Review discussions per section.
-
-### Table 6: Escrows
-* **Primary Key (`_id`):** UUID String
-* **Attributes:**
-  * `leadId` (UUID) - Lead proposal source.
-  * `clientDid` (String) - Client ID link.
-  * `freelancerDid` (String) - Freelancer ID link.
-  * `buyerAddress` (String) - Client payment source.
-  * `sellerAddress` (String) - Freelancer payout target.
-  * `state` (Enum) - `'CREATED' | 'FUNDED' | 'RELEASED' | 'DISPUTED'`.
-  * `totalAmount` (Number) - Budget locked.
-  * `currency` (String) - USDC / INR.
-  * `milestones` (List of Maps) - Milestone ID, percentage, title, funded status, release status.
-  * `razorpayPaymentId` (String) - Reference for transaction audits.
-  * `contractAddress` (String) - Polygon smart contract address (if Web3).
-  * `chain` (String) - Polygon Amoy/Mainnet.
-
-### Redis Schema (Caching, Rate-Limiting & Scraping Queue)
-We utilize **Upstash Serverless Redis** for transient, high-speed, and asynchronous storage tasks:
-* **Distributed Rate Limiting:**
-  * Key: `ratelimit:<userId>` or `ratelimit:<ipAddress>` (String) - Tracks active API request window counts.
-* **Lead Scraping Job Queue (BullMQ):**
-  * Keys: `bull:scraping-queue:*` (Hashes, Sets, Lists) - Coordinates active Tavily, Reddit, and Apify scraper jobs.
-* **Gemini Response Cache:**
-  * Key: `cache:gemini:<briefHash>` (String) - Caches generated proposals for 24 hours to prevent duplicate LLM calls and reduce API costs.
-
----
-
-## 🎨 3. FixFlow AI: High-Level System Design
-
-### A. High-Level Architecture Map
-The following diagram maps out how a user interacts with the frontend SPA hosted on AWS Amplify Hosting, API Backend hosted on AWS Lambda, DynamoDB, S3, and external systems like Razorpay and Gemini.
+The diagram below maps the runtime infrastructure of FixFlowAI, enforcing separation of concerns between public ingress, private compute, and isolated state layers.
 
 ```mermaid
 graph TD
-    %% Define Classes & Styles
     classDef client fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
     classDef edge fill:#64748b,stroke:#475569,stroke-width:2px,color:#fff;
     classDef compute fill:#eab308,stroke:#ca8a04,stroke-width:2px,color:#000;
     classDef storage fill:#22c55e,stroke:#16a34a,stroke-width:2px,color:#fff;
     classDef external fill:#a855f7,stroke:#9333ea,stroke-width:2px,color:#fff;
 
-    %% Elements
-    ClientBrowser["Browser client (React + Zustand)"]:::client
-    AmplifyHosting["AWS Amplify Hosting (Frontend CDN)"]:::edge
-    LambdaBackend["AWS Lambda API (via Function URL)"]:::compute
-    DynamoDB["Amazon DynamoDB (On-Demand DB)"]:::storage
-    S3Data["S3 Bucket (Proposal Revisions & PDFs)"]:::storage
-    RedisCache["Upstash Redis (Serverless Cache & Queue)"]:::storage
+    ClientBrowser["Client Browser (Next.js)"]:::client
+    WAF["AWS WAF & CloudFront (CDN/Firewall)"]:::edge
+    ALB["AWS Application Load Balancer"]:::edge
+    APICluster["API Backend (Express/NestJS Cluster)"]:::compute
     
-    GeminiAPI["Google Gemini AI API"]:::external
-    RazorpayGateway["Razorpay Escrow API"]:::external
-    PolygonChain["Polygon Blockchain"]:::external
+    PostgreSQL["PostgreSQL Database (Aurora)"]:::storage
+    RedisCache["Redis (Session Store, Rate Limits, Queues)"]:::storage
+    S3Data["AWS S3 Bucket (Proposal Blobs)"]:::storage
+    
+    GeminiAPI["Google Gemini API"]:::external
+    RazorpayGateway["Razorpay Escrow Gateway"]:::external
+    PolygonChain["Polygon Smart Contract"]:::external
 
-    %% Flow Connections
-    ClientBrowser -->|1. Requests static UI| AmplifyHosting
-    ClientBrowser -->|"2. Direct API requests & SSE streams (Function URL)"| LambdaBackend
-    LambdaBackend -->|3. Queries database| DynamoDB
-    LambdaBackend -->|4. Saves proposal versions| S3Data
-    LambdaBackend -->|"5. Caches API responses, rate limits, & queues jobs"| RedisCache
+    ClientBrowser -->|1. Requests static assets & page loads| WAF
+    ClientBrowser -->|2. Secure HTTPS connection (TLS 1.3)| ALB
+    ALB -->|3. Forwards traffic to VPC | APICluster
     
-    LambdaBackend -->|6. Fetches structured prompts| GeminiAPI
-    LambdaBackend -->|7. Holds/routes milestone payouts| RazorpayGateway
-    LambdaBackend -->|8. Mints verifiable Soulbound DID credentials| PolygonChain
+    APICluster -->|4. Checks session state & rate limits| RedisCache
+    APICluster -->|5. Queries application entities| PostgreSQL
+    APICluster -->|6. Saves/loads static proposals| S3Data
+    
+    APICluster -->|7. Calls LLM models for generation| GeminiAPI
+    APICluster -->|8. Creates virtual payment accounts| RazorpayGateway
+    APICluster -->|9. Triggers Web3 DID token minting| PolygonChain
 ```
 
 ---
 
-### B. End-to-End Proposal & Milestone Payment Sequence Flow
-This sequence chart details the interaction between the Freelancer, Client, the API Backend, Razorpay, and the Polygon contract.
+## 🔄 3. End-to-End Proposal & Payment Sequence
+
+The following sequence details how a freelancer and client interact with the Next-Gen infrastructure to negotiate, lock funds, and release payments:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Freelancer
     actor Client
-    participant Backend as "Express Backend (Lambda)"
-    participant Razorpay as "Razorpay API"
-    participant Polygon as "Polygon Smart Contract"
+    participant API as NestJS / Express Backend
+    participant Redis as Redis Cache
+    participant DB as PostgreSQL (Prisma)
+    participant RP as Razorpay API
+    participant Poly as Polygon Contract
 
-    %% Discovery and Onboarding
-    Freelancer->>Backend: Scan GitHub & Analyze Niche
-    Backend-->>Freelancer: Identify capabilities & sync FreelancerProfile
+    %% Step 1: Onboarding
+    Freelancer->>API: Scan GitHub & Profile setup
+    API->>DB: Save updated FreelancerProfile (Prisma)
+    API-->>Freelancer: Niche profile updated
 
-    %% Lead and Proposal
-    Backend->>Backend: Scrape opportunities & score match threshold
-    Backend-->>Freelancer: Display qualified Leads on FlowBoard
-    Freelancer->>Backend: Request Proposal Generation (Brief Text/PDF)
-    Backend->>Backend: Validate intake (BriefScore Preflight)
-    Backend-->>Freelancer: Stream structured JSON Proposal (SSE)
-    Freelancer->>Backend: Share Proposal Portal (PIN Enabled)
+    %% Step 2: Auth and Rate checks
+    Freelancer->>API: Request Proposal Generation (Brief Upload)
+    API->>Redis: Check API Rate Limit (Sliding Window ZSET)
+    Redis-->>API: Rate Limit check PASSED
+    API->>API: Generate structured proposal (Gemini)
+    API-->>Freelancer: Stream proposal JSON (SSE)
 
-    %% Escrow and Milestones
-    Client->>Backend: Review Portal & Accept Proposal
-    Backend->>Backend: Create Escrow record (Milestones 25%, 50%, 75%, 100%)
-    Backend->>Razorpay: Generate Smart Collect Virtual Account
-    Razorpay-->>Backend: Return Payment Details & UPI/NetBanking details
-    Backend-->>Client: Request Milestone Funding
-    Client->>Razorpay: Deposit funds for Milestone 1 (25%)
-    Razorpay-->>Backend: Webhook: PAYMENT_RECEIVED (Milestone Funded)
-    Backend->>Backend: Update Escrow state to 'FUNDED'
-    Backend-->>Freelancer: Notify: Milestone 1 funded. Begin work.
+    %% Step 3: Portal Sharing
+    Freelancer->>API: Share Portal Link (PIN Gated)
+    API->>DB: Save Proposal & generate portal token
+    Client->>API: Open Portal Link + Enter PIN
+    API->>Redis: Increment Telemetry metrics (dwell time tracking)
+    API-->>Client: Render proposal view
 
-    %% Delivery & Payout
-    Freelancer->>Client: Submit Milestone 1 Deliverables
-    Client->>Backend: Approve Milestone 1 Delivery
-    Backend->>Razorpay: Trigger Route split transfer (release 25% amount)
-    Razorpay-->>Freelancer: Payout disbursed to Linked Bank Account
-    Backend->>Polygon: Mint Soulbound DID Verifiable Credential
-    Polygon-->>Freelancer: Soulbound Credential NFT in Wallet
-    Backend-->>Client: Notify: Milestone 1 Closed. Next milestone pending funding.
+    %% Step 4: Escrow Deal
+    Client->>API: Accept Proposal & Milestone terms
+    API->>DB: Update proposal status to WON & Create Escrow record
+    API->>RP: Create Smart Collect Virtual Account
+    RP-->>API: Return payment coordinates
+    API-->>Client: Prompt payment transfer
+
+    %% Step 5: Payment Lock
+    Client->>RP: Fund Milestone 1 (25%)
+    RP->>API: Webhook callback (PAYMENT_RECEIVED)
+    API->>DB: Update Escrow status to FUNDED
+    API-->>Freelancer: Notify: Milestone 1 funded. Start work.
+
+    %% Step 6: Payout and DID Minting
+    Freelancer->>Client: Submit Milestone 1 deliverables
+    Client->>API: Approve Milestone 1 completion
+    API->>RP: Trigger Razorpay Route transfer (payout release)
+    RP-->>Freelancer: Disburse funds to bank account
+    API->>Poly: Mint Soulbound DID Credential
+    Poly-->>Freelancer: SB-NFT credential transferred to wallet
+    API-->>Client: Milestone 1 closed. Ready for Milestone 2.
 ```
 
 ---
 
-## 🔒 4. Custom Session Authentication & Revocation Policy
+## 🔒 4. Security, Authentication & Session Specifications
 
-To support persistent workspaces and secure payment environments, FixFlowAI uses a custom hybrid state-on-database JWT session design with a specialized logout revocation policy.
-
-### A. Core Architecture Rules
-1. **Persistent Access & Refresh Tokens**:
-   - JWT Access and Refresh Tokens are generated without a default or hardcoded `exp` (expiration) claim (or signed with an ultra-long lifetime, e.g., 100 years). They do not expire automatically.
-   - The client-side `ff_refresh` cookie is stored with an ultra-long `maxAge` (100 years) to prevent automatic browser-based session loss.
-2. **Database-Backed Validation**:
-   - Every API request authenticated via `authMiddleware` decodes the token and matches its `sessionId` against the `Session` table in DynamoDB.
-   - A session is valid if and only if it exists in the database and has not been revoked (`revokedAt` is `null`).
-
-### B. Specialized 24-Hour Logout Revocation Logic
-The lifetime and expiration of a session is driven entirely by the user's logout behavior:
-* **Logouts within 24 Hours**:
-  - If a user triggers a `/logout` request **within 24 hours of session creation** (`Date.now() - session.createdAt <= 24 hours`), the backend marks the session as revoked by writing the current time to `session.revokedAt` in DynamoDB.
-  - Subsequent requests using this token are rejected with an `UnauthorizedError` ("Session has been revoked").
-* **Logouts after 24 Hours**:
-  - If a user triggers a `/logout` request **after 24 hours of session creation** (`Date.now() - session.createdAt > 24 hours`), the backend does **not** update `session.revokedAt` in the database.
-  - The session remains permanently valid in the database, allowing the client to continue using the token (or refresh it) if they choose to, bypassing automatic expiration.
-
-### C. Authentication Sequence Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Freelancer / Client
-    participant API as Express API (Lambda)
-    participant DB as DynamoDB (Session Table)
-
-    %% Login
-    User->>API: POST /api/auth/login
-    API->>DB: createSession (createdAt = now)
-    API-->>User: Issue persistent JWT (no exp claim) + set ff_refresh cookie
-
-    %% Active State
-    User->>API: API Request (Auth Bearer Token)
-    API->>DB: Query Session by ID
-    DB-->>API: Session active (revokedAt is null)
-    API-->>User: Request Success
-
-    %% Logout within 24h
-    rect rgb(240, 248, 255)
-        note right of User: Scenario A: Logout within 24 hours
-        User->>API: POST /api/auth/logout (at hour 2)
-        API->>DB: Check duration since createdAt (2 hours <= 24 hours)
-        API->>DB: Set revokedAt = current timestamp
-        API-->>User: Logged out (Token is now expired/invalidated)
-    end
-
-    %% Logout after 24h
-    rect rgb(255, 240, 245)
-        note right of User: Scenario B: Logout after 24 hours
-        User->>API: POST /api/auth/logout (at hour 26)
-        API->>DB: Check duration since createdAt (26 hours > 24 hours)
-        note over API,DB: Do not revoke in database (revokedAt remains null)
-        API-->>User: Logged out (Token remains valid in DB)
-    end
-```
-
+For detailed guidelines regarding token configurations, role matrices, security headers, XSS/CSRF protections, and API rate limits, please refer directly to the [security_architecture.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/security_architecture.md) manual.
