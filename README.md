@@ -169,6 +169,26 @@ Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls
 
 ---
 
+## ⚡ Core Injected Subsystems & Skills
+
+FixFlow AI relies on 5 core production-ready engineering subsystems (Skills) for high-performance and secure operation:
+
+1. **Enterprise Semantic Brief Parsing & Schema Enforcement**: Automated ingest and structured extraction of briefs via Gemini and Zod validation.
+   - *Code*: [briefParser.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/briefParser.ts)
+2. **Deterministic Multi-Agent Orchestration**: FSM-based agent execution flows and budget validation checks.
+   - *Code*: [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts)
+3. **Secure Milestone Mechanics & Versioning**: Secure transaction states, optimistic locking, and cryptographic audit hashes.
+   - *Code*: [escrowStateMachine.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/escrowStateMachine.ts)
+4. **Cloud Infrastructure Scale & Pipeline Optimization**: High-throughput WebSocket server and LWW/Vector Clock conflict resolution.
+   - *Code (Backend)*: [syncServer.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/syncServer.ts)
+   - *Code (Frontend)*: [optimisticSync.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/frontend/src/skills/optimisticSync.ts)
+5. **Pinpoint Self-Correction & Root-Cause Diagnostics**: Multi-agent consensus scoring and autonomous self-correction optimization loops.
+   - *Code*: [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts#L104)
+
+For detailed architectural information on these skills, see the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/skills.md) manual.
+
+---
+
 ## 📂 Project Structure
 
 ```
