@@ -128,3 +128,6 @@ For detailed guidelines regarding token configurations, role matrices, security 
 
 For architectural and implementation details regarding the five core engineering subsystems (Semantic Brief Parsing, Multi-Agent Orchestration, Milestone State Machine, Real-time Sync, and Self-Correction Loops), see the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/skills.md) manual.
 
+For the product strategy overview detailing how client and freelancer pain points translate into platform UVPs and engineering features, refer to the [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/market_positioning_and_uvps.md) guide.
+
+
