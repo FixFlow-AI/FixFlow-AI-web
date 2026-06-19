@@ -57,63 +57,68 @@ Clients suffer from information asymmetry: they do not know who to trust, they a
 The value propositions listed above are not just marketing copy—they are directly wired into the database models, backend API controllers, and core design modules of the application.
 
 ```mermaid
-graph TD
+flowchart LR
     classDef uvp fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
     classDef model fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
     classDef subsystem fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#581c87;
     classDef api fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
 
-    %% Unique Value Propositions
-    UVP1["Trust-First Hiring / Verified Marketplace"]:::uvp
-    UVP2["Zero-Noise Match Shortlist"]:::uvp
-    UVP3["Protected Payment Escrow"]:::uvp
-    UVP4["Transparent Earnings Engine"]:::uvp
-    UVP5["Unified Workspace Sync"]:::uvp
-    UVP6["Client Quality Rating"]:::uvp
+    %% --- LAYERS / COLUMNS ---
+    subgraph L1 ["1. Strategic UVPs"]
+        UVP1["Trust-First Hiring"]:::uvp
+        UVP2["Zero-Noise Shortlist"]:::uvp
+        UVP3["Protected Payment"]:::uvp
+        UVP4["Transparent Earnings"]:::uvp
+        UVP5["Unified Workspace"]:::uvp
+        UVP6["Client Quality Rating"]:::uvp
+    end
 
-    %% Data Models
-    M_Freelancer["FreelancerProfile Model"]:::model
-    M_Lead["Lead Model (Match details, score)"]:::model
-    M_Escrow["Escrow & Invoice Models"]:::model
-    M_Proposal["Proposal Model"]:::model
+    subgraph L2 ["2. API & Interfaces"]
+        A_Scan["POST /github-scan"]:::api
+        A_Leads["GET /leads"]:::api
+        A_Proposals["POST /proposals"]:::api
+        A_Escrows["POST /escrows"]:::api
+    end
 
-    %% Subsystems
-    S_Brief["1. Semantic Brief Parser"]:::subsystem
-    S_Grid["2. Confidence Grid (Audits)"]:::subsystem
-    S_Escrow["3. Escrow State Machine"]:::subsystem
-    S_Sync["4. Real-time Vector Sync"]:::subsystem
-    S_Correction["5. Self-Correction Loop"]:::subsystem
+    subgraph L3 ["3. Core Subsystems"]
+        S_Brief["1. Brief Parser"]:::subsystem
+        S_Grid["2. Confidence Grid"]:::subsystem
+        S_Escrow["3. Escrow State Machine"]:::subsystem
+        S_Sync["4. Real-time Sync"]:::subsystem
+        S_Correction["5. Self-Correction"]:::subsystem
+    end
 
-    %% API Endpoints
-    A_Scan["POST /api/freelancer/github-scan"]:::api
-    A_Leads["GET /api/leads"]:::api
-    A_Proposals["POST /api/proposals"]:::api
-    A_Escrows["POST /api/escrows"]:::api
+    subgraph L4 ["4. Data Models"]
+        M_Freelancer["FreelancerProfile"]:::model
+        M_Lead["Lead (Matches & Score)"]:::model
+        M_Proposal["Proposal"]:::model
+        M_Escrow["Escrow & Invoices"]:::model
+    end
 
-    %% Mappings
-    UVP1 --> M_Freelancer
+    %% --- RELATIONSHIPS (Flowing Left to Right) ---
     UVP1 --> A_Scan
-    
-    UVP2 --> S_Brief
-    UVP2 --> S_Grid
-    UVP2 --> M_Lead
+    A_Scan --> M_Freelancer
+
     UVP2 --> A_Leads
+    A_Leads --> S_Grid
+    S_Grid --> M_Lead
+    S_Grid -.-> S_Correction
 
-    UVP3 --> S_Escrow
-    UVP3 --> M_Escrow
     UVP3 --> A_Escrows
+    A_Escrows --> S_Escrow
+    S_Escrow --> M_Escrow
 
-    UVP4 --> M_Escrow
-    UVP4 --> S_Brief
+    UVP4 --> A_Proposals
+    A_Proposals --> S_Brief
+    S_Brief --> M_Escrow
 
     UVP5 --> S_Sync
-    UVP5 --> M_Proposal
+    S_Sync --> M_Proposal
 
-    UVP6 --> M_Lead
     UVP6 --> S_Grid
-    
-    S_Grid --> S_Correction
+    M_Lead -.-> UVP6
 ```
+
 
 ### Technical Mapping Matrix
 
