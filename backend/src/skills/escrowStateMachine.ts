@@ -59,6 +59,15 @@ export class InvalidTransitionError extends Error {
   }
 }
 
+export class MFARequiredError extends Error {
+  constructor(milestoneId: string, targetState: MilestoneState) {
+    super(`MFA Verification Required: Milestone [${milestoneId}] transition to state [${targetState}] requires Multi-Factor Authentication.`);
+    this.name = 'MFARequiredError';
+  }
+}
+
+export type MFAVerifier = (milestoneId: string, state: MilestoneState) => boolean;
+
 // ==========================================
 // FSM State Transition Rule Matrix
 // ==========================================
@@ -107,7 +116,8 @@ export function transitionMilestone(
   triggerUserRole: UserRole,
   expectedVersion: number,
   previousBlockIndex: number = 0,
-  metadata?: string
+  metadata?: string,
+  mfaVerifier?: MFAVerifier
 ): { updatedMilestone: Milestone; newBlock: AuditTrailBlock } {
   
   // 1. Optimistic Concurrency Control Check
@@ -121,6 +131,18 @@ export function transitionMilestone(
     throw new InvalidTransitionError(milestone.id, milestone.state, toState);
   }
 
+  // 2b. MFA Verification check
+  let mfaVerified = false;
+  if (toState === 'Approved' || toState === 'Funds_Released') {
+    if (!mfaVerifier) {
+      throw new MFARequiredError(milestone.id, toState);
+    }
+    if (!mfaVerifier(milestone.id, toState)) {
+      throw new Error(`MFA Verification Failed: Milestone [${milestone.id}] transition to state [${toState}] rejected by verifier.`);
+    }
+    mfaVerified = true;
+  }
+
   // 3. Increment Version
   const nextVersion = expectedVersion + 1;
   const previousHash = milestone.lastAuditHash || '0'.repeat(64);
@@ -129,6 +151,9 @@ export function transitionMilestone(
   const blockIndex = previousBlockIndex + 1;
   const timestamp = new Date().toISOString();
   
+  const mfaStamp = mfaVerified ? " [MFA Verified]" : "";
+  const blockMetadata = (metadata || `Milestone state transitioned from ${milestone.state} to ${toState}`) + mfaStamp;
+
   const blockData: Omit<AuditTrailBlock, 'hash'> = {
     index: blockIndex,
     timestamp,
@@ -137,7 +162,7 @@ export function transitionMilestone(
     toState,
     triggerUserId,
     triggerUserRole,
-    metadata: metadata || `Milestone state transitioned from ${milestone.state} to ${toState}`,
+    metadata: blockMetadata,
     previousHash
   };
 
