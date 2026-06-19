@@ -150,6 +150,7 @@ Users must complete an MFA challenge for the following events:
 2. Changing account passwords or security settings.
 3. Executing payments or editing Razorpay / Web3 wallet routing details.
 4. Performing admin actions (e.g. deleting workspaces, updating user roles).
+5. Approving or releasing milestones inside the Escrow FSM. The transition enforces checking of an `MFAVerifier` callback signature, throwing an `MFARequiredError` if omitted or unsuccessful, and embeds a `[MFA Verified]` verification stamp in the block's cryptographic metadata.
 
 ---
 
