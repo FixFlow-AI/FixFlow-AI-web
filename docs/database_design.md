@@ -338,3 +338,29 @@ FixFlow AI relies on **Redis** for managing transient runtime data structures in
 * **Type**: Hybrid (Lists, Sets, and Hashes)
 * **TTL**: 7 Days (for completed job histories).
 * **Description**: Handles job registration, locking, and concurrency tracking for active Apify/Tavily scraping tasks.
+
+---
+
+## 🧩 4. Entity Mappings for Extra Problem-Resolution Modules
+
+The newly implemented calculation and AI generation modules map directly to the PostgreSQL Prisma schemas as follows:
+
+### A. Transparent Earnings Engine (`earningsCalculator.js`)
+*   **Prisma Mapping**: Pre-populates and validates splits in the `Escrow` (`totalAmount`) and `Invoice` (`amount`) entities.
+*   **Attributes Generated**: Calculates `platformFee`, `paymentGatewayFee`, `withholdingTax`, `netFreelancerEarnings`, and `totalClientCheckout` using the `User` (`selectedPlan`) and `Escrow` base variables.
+
+### B. Client Behavior Scoring & Risk Classifier (`clientScoring.js`)
+*   **Prisma Mapping**: Reads client historical transactions from `Escrow` (completed milestones history) to compute metrics.
+*   **Attributes Updated**: Flags `Lead` (`company`) with behavior metrics and assigns risk indicators (`SCOPE_CREEP_RISK`, `LATE_PAYER_RISK`, `HIGH_DISPUTE_RISK`, `PREMIUM_CLIENT`).
+
+### C. Multi-Dimensional Reputation Engine (`reputationCalculator.js`)
+*   **Prisma Mapping**: Aggregates raw transactional history from `Escrow` and `Invoice` milestones for a given freelancer.
+*   **Attributes Updated**: Synthesizes reputation metrics to construct the `tokenUri` JSON schema stored in the `Credential` table representing the Polygon SBT minting metadata.
+
+### D. Dynamic Interview Vetting Generator (`interviewGenerator.ts`)
+*   **Prisma Mapping**: Reads `Lead` (`projectDescription`, `matchDetails` (`skillsMissing`)), and the `FreelancerProfile` (`githubScan`) JSON data.
+*   **Attributes Generated**: Outputs technical vetting questions, rationales, and expected keywords, which are stored in the matching pipeline to screen candidates.
+
+### E. Contextual Contract Extensions (`contextExtensions.ts`)
+*   **Prisma Mapping**: Vectorizes and analyzes completed deliverables in `Escrow` and history logs to draft follow-up scopes.
+*   **Attributes Generated**: Generates `suggestedMilestones` and draft proposal content used to initialize a new `Proposal` in the corresponding `Workspace`.
