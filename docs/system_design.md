@@ -48,17 +48,17 @@ graph TD
     RazorpayGateway["Razorpay Escrow Gateway"]:::external
     PolygonChain["Polygon Smart Contract"]:::external
 
-    ClientBrowser -->|1. Requests static assets & page loads| WAF
-    ClientBrowser -->|2. Secure HTTPS connection (TLS 1.3)| ALB
-    ALB -->|3. Forwards traffic to VPC | APICluster
+    ClientBrowser -->|"1. Requests static assets & page loads"| WAF
+    ClientBrowser -->|"2. Secure HTTPS connection (TLS 1.3)"| ALB
+    ALB -->|"3. Forwards traffic to VPC"| APICluster
     
-    APICluster -->|4. Checks session state & rate limits| RedisCache
-    APICluster -->|5. Queries application entities| PostgreSQL
-    APICluster -->|6. Saves/loads static proposals| S3Data
+    APICluster -->|"4. Checks session state & rate limits"| RedisCache
+    APICluster -->|"5. Queries application entities"| PostgreSQL
+    APICluster -->|"6. Saves/loads static proposals"| S3Data
     
-    APICluster -->|7. Calls LLM models for generation| GeminiAPI
-    APICluster -->|8. Creates virtual payment accounts| RazorpayGateway
-    APICluster -->|9. Triggers Web3 DID token minting| PolygonChain
+    APICluster -->|"7. Calls LLM models for generation"| GeminiAPI
+    APICluster -->|"8. Creates virtual payment accounts"| RazorpayGateway
+    APICluster -->|"9. Triggers Web3 DID token minting"| PolygonChain
 ```
 
 ---

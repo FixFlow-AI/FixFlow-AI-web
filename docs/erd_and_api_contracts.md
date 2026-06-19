@@ -12,13 +12,13 @@ The following diagram defines the relational structure, primary keys, foreign ke
 erDiagram
     User {
         uuid id PK
-        string email UK
+        string email "UK"
         string passwordHash
         enum role
         enum selectedPlan
         enum defaultEntryMode
         uuid currentWorkspaceId
-        string stripeCustomerId UK
+        string stripeCustomerId "UK"
         string subscriptionStatus
         int tokenVersion
         datetime createdAt
@@ -27,7 +27,7 @@ erDiagram
 
     FreelancerProfile {
         uuid id PK "FK to User.id"
-        string did UK
+        string did "UK"
         json walletAddresses
         json profiles
         json agentConfig
@@ -99,7 +99,7 @@ erDiagram
 
     Escrow {
         uuid id PK
-        uuid leadId FK UK
+        uuid leadId FK "UK"
         string clientDid
         string freelancerDid
         string buyerAddress
@@ -127,7 +127,7 @@ erDiagram
     Credential {
         uuid id PK
         uuid freelancerId FK "FK to FreelancerProfile.id"
-        uuid escrowId FK UK
+        uuid escrowId FK "UK"
         string tokenId
         string tokenUri
         datetime mintedAt
@@ -159,7 +159,7 @@ erDiagram
     
     Workspace ||--o{ WorkspaceMember : "has (1:N)"
     Workspace ||--o{ Proposal : "contains (1:N)"
-
+ 
     FreelancerProfile ||--o{ Lead : "manages (1:N)"
     FreelancerProfile ||--o{ Credential : "earns (1:N)"
 
