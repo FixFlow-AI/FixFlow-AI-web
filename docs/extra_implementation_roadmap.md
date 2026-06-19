@@ -12,9 +12,9 @@ The table below maps the strategic value propositions (UVPs) against what is **c
 
 | Paradigm | Pain Point | Core UVP | Current Code State | Extra Module Needed (Gaps) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Freelancer** | **Fees Eat Earnings** | Transparent Earnings Engine | Schema records total amount. No fee separation. | **Extra Module 1**: `earningsCalculator.ts` to calculate tiered platform, payment, and tax cuts. |
-| **Freelancer / Client** | **Opaque Algorithms / Trust** | Verifiable Reputation & DID | Credential records minting state; no metrics. | **Extra Module 2**: `reputationCalculator.ts` to compute verified metrics for Soulbound Token metadata. |
-| **Freelancer** | **Unreliable Clients** | Client Quality Scoring | Lead records static `company` JSON. | **Extra Module 3**: `clientScoring.ts` to compute Scope Stability, Payment Speed, and Risk Labels. |
+| **Freelancer** | **Fees Eat Earnings** | Transparent Earnings Engine | Schema records total amount. No fee separation. | **Extra Module 1**: `earningsCalculator.js` to calculate tiered platform, payment, and tax cuts. |
+| **Freelancer / Client** | **Opaque Algorithms / Trust** | Verifiable Reputation & DID | Credential records minting state; no metrics. | **Extra Module 2**: `reputationCalculator.js` to compute verified metrics for Soulbound Token metadata. |
+| **Freelancer** | **Unreliable Clients** | Client Quality Scoring | Lead records static `company` JSON. | **Extra Module 3**: `clientScoring.js` to compute Scope Stability, Payment Speed, and Risk Labels. |
 | **Client** | **Hiring Takes Too Long** | Fast Hire & Vetting | Matches leads based on skills score. | **Extra Module 4**: `interviewGenerator.ts` to auto-generate technical vetting questions per candidate. |
 | **Freelancer** | **Constant Income Hustle** | Workspace Retention | Persistent workspaces exist. | **Extra Module 5**: `contextExtensions.ts` to vectorize historical context and suggest follow-up milestones. |
 | **Security** | **Payment Hijacking Risks** | Secure MFA Payout Release | FSM transitions are audited. | **Extra Module 6**: Integrates MFA OTP directly inside `escrowStateMachine.ts` with crypto signatures. |
@@ -74,7 +74,7 @@ sequenceDiagram
 ## ⚙️ 3. Detailed Specifications for Extra Modules
 
 ### 💸 Extra Module 1: The Transparent Earnings Calculator
-*   **File Location**: [earningsCalculator.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/earningsCalculator.ts)
+*   **File Location**: [earningsCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/earningsCalculator.js)
 *   **Target Pain Point**: Freelancer Fee anxiety.
 *   **Functional Description**: Processes raw milestones, extracts platform fees, Razorpay gateway fees, and TDS/GST taxes to show transparent numbers.
 
@@ -130,7 +130,7 @@ export function calculateEarningsBreakdown(
 ---
 
 ### 🛡️ Extra Module 2: The Multi-Dimensional Reputation Engine
-*   **File Location**: [reputationCalculator.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/reputationCalculator.ts)
+*   **File Location**: [reputationCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/reputationCalculator.js)
 *   **Target Pain Point**: Opaque ratings & trust verification.
 *   **Functional Description**: Aggregates raw history from `FreelancerProfile` and `Escrow` transactions to generate mathematical reputation scores.
 
@@ -165,7 +165,7 @@ flowchart TD
 ---
 
 ### 💼 Extra Module 3: Client Quality Scorer & Risk Labeler
-*   **File Location**: [clientScoring.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/clientScoring.ts)
+*   **File Location**: [clientScoring.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/clientScoring.js)
 *   **Target Pain Point**: Toxicity, late payments, and scope creep.
 *   **Functional Description**: Evaluates client historical transactions to assign warning indicators on incoming Leads.
 
@@ -244,13 +244,13 @@ Here is the recommended execution path to implement these extra components:
 
 ```
 [Sprint 1: Escrow & Fees]
-  ├── Implement Extra 1 (earningsCalculator.ts)
+  ├── Implement Extra 1 (earningsCalculator.js)
   └── Implement Extra 6 (MFA verification on milestone releases)
             │
             ▼
 [Sprint 2: Trust & Reputation]
-  ├── Implement Extra 3 (clientScoring.ts)
-  └── Implement Extra 2 (reputationCalculator.ts + SBT Metadata)
+  ├── Implement Extra 3 (clientScoring.js)
+  └── Implement Extra 2 (reputationCalculator.js + SBT Metadata)
             │
             ▼
 [Sprint 3: AI Vetting & Extensions]
@@ -262,8 +262,8 @@ Here is the recommended execution path to implement these extra components:
 
 ## 📂 5. Target File Index
 Create and link these files directly in the codebase:
-1. `backend/src/skills/earningsCalculator.ts` $\rightarrow$ Calculates fees.
-2. `backend/src/skills/reputationCalculator.ts` $\rightarrow$ Evaluates Trust.
-3. `backend/src/skills/clientScoring.ts` $\rightarrow$ Rates clients.
+1. `backend/src/skills/earningsCalculator.js` $\rightarrow$ Calculates fees.
+2. `backend/src/skills/reputationCalculator.js` $\rightarrow$ Evaluates Trust.
+3. `backend/src/skills/clientScoring.js` $\rightarrow$ Rates clients.
 4. `backend/src/skills/interviewGenerator.ts` $\rightarrow$ Formulates vetting Qs.
 5. `backend/src/skills/contextExtensions.ts` $\rightarrow$ Drives contract retention.
