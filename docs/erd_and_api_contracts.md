@@ -458,13 +458,21 @@ All API requests must communicate over HTTPS. Non-public endpoints require verif
       { "id": "m_1", "title": "Setup & APIs", "percentage": 30, "approved": false },
       { "id": "m_2", "title": "Launch Component", "percentage": 70, "approved": false }
     ],
+    "feeBreakdown": {
+      "grossAmount": 10000.00,
+      "platformFee": 300.00,
+      "paymentGatewayFee": 203.00,
+      "withholdingTax": 100.00,
+      "netFreelancerEarnings": 9397.00,
+      "totalClientCheckout": 10150.00
+    },
     "razorpayPaymentId": "pay_vaccount_1234"
   }
   ```
 
 #### 2. Approve Milestone Completion (Payout Trigger)
 * **Endpoint**: `POST /api/escrows/:escrowId/milestones/:milestoneId/approve`
-* **MFA Verification Required**: Yes (for Manager/Admin step-up)
+* **MFA Verification Required**: Yes (integrated with Escrow FSM verifier hook)
 * **Request Headers**:
   - `X-MFA-Token: 981242` (TOTP code)
 * **Success Response (`200 OK`)**:
@@ -474,6 +482,10 @@ All API requests must communicate over HTTPS. Non-public endpoints require verif
     "milestoneId": "m_1",
     "approved": true,
     "payoutStatus": "released",
-    "invoiceId": "inv_9081a..."
+    "invoiceId": "inv_9081a...",
+    "auditStamp": "Approved [MFA Verified]"
   }
   ```
+* **Error Responses**:
+  - `400 Bad Request` (Invalid code).
+  - `403 Forbidden` (`MFARequiredError` thrown by FSM if MFA verifier hook is missing/fails).
