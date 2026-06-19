@@ -57,3 +57,59 @@ This document details the design principles, operational guidelines, and code ma
     *   **GAP Feedback Prompting**: The system extracts the explicit issues list compiled by the Auditor and Feasibility agents and feeds them back into a specialized optimization prompt alongside the original brief and proposal.
     *   **Automatic Proposal Reconciliation**: The optimization agent regenerates the proposal correcting the flagged issues, saving round-trips and manual editing time.
 *   **Code Implementation**: [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts#L104) (see `optimizeProposal` function)
+
+---
+
+## 🧩 Extra Problem-Resolution Modules
+
+To bridge the gap between strategic UVPs and actual code, five additional modules and MFA integration hooks were implemented:
+
+### 1. Transparent Earnings Engine (`earningsCalculator.js`)
+*   **Purpose**: Eliminates freelancer fee anxiety by pre-calculating exact payouts, platform cuts, taxes, and client checkout premiums.
+*   **Design**: 
+    *   Tiered Platform Commissions: `FREE` (10%), `SOLO` (5%), `PRO` (3%), `AGENCY` (2%).
+    *   Payment Gateway Fees: Razorpay standard (2% of transaction amount + flat ₹3).
+    *   TDS Withholding: Configurable rules based on location (e.g., 1% TDS for India `'IN'`).
+    *   Client Premium: 1.5% checkout processing fee.
+*   **Location**: [earningsCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/earningsCalculator.js)
+
+### 2. Multi-Dimensional Reputation Engine (`reputationCalculator.js`)
+*   **Purpose**: Creates game-proof trust scores by transforming raw transactional escrow history into verified performance indicators.
+*   **Design**:
+    *   On-Time Delivery Rate: Percentage of milestones completed before or on the due date.
+    *   Revision Efficiency Score: Higher scores for fewer revision requests (`Math.max(0, 100 - (avgRevisions * 25))`).
+    *   Dispute-Free Rate: Percentage of dispute-free milestones.
+    *   Repeat Client Rate: Ratio of repeat contracts to reward developer-client retention.
+    *   SBT Schema Builder: Synthesizes attributes into ERC-721 JSON for Polygon minting.
+*   **Location**: [reputationCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/reputationCalculator.js)
+
+### 3. Client Behavior Scoring & Risk Profiler (`clientScoring.js`)
+*   **Purpose**: Protects freelancers against late payers, scope creep, and hostile clients.
+*   **Design**:
+    *   Scope Stability Score: Derived from revision requests relative to milestones (`max(0, 100 - (edits / milestones * 100))`).
+    *   Payment Speed Score: Continuous inverse mapping of approval time in hours (faster approvals yield higher scores).
+    *   Risk Classifier: Flags `SCOPE_CREEP_RISK` (stability < 60), `LATE_PAYER_RISK` (speed < 55), `HIGH_DISPUTE_RISK` (disputes > 15%), and awards `PREMIUM_CLIENT` badges.
+*   **Location**: [clientScoring.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/clientScoring.js)
+
+### 4. Dynamic Interview Vetting Generator (`interviewGenerator.ts`)
+*   **Purpose**: Minimizes client screening fatigue and shortens vetting cycles.
+*   **Design**:
+    *   Custom Prompts: Combines the project brief, candidate's GitHub scan summary, and missing skills gap list.
+    *   Gemini Integration: Uses `gemini-2.5-pro` with structured JSON schema output to produce 3-5 technical questions, rationales, and expected keywords.
+    *   Self-Healing Fallbacks: Automatically outputs tailored fallback questions if the API key is invalid or requests fail.
+*   **Location**: [interviewGenerator.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/interviewGenerator.ts)
+
+### 5. Contextual Contract Extensions (`contextExtensions.ts`)
+*   **Purpose**: Promotes freelancer-client retention by suggesting next-phase milestones based on completed work.
+*   **Design**:
+    *   Strategic Prompts: Analyzes completed deliverables and chat discussion summaries.
+    *   Milestones Proposal: Recommends 1-3 logical next-phase milestones with descriptions, durations, and budget estimates.
+    *   Automated Drafts: Generates polite, copy-ready proposal messages.
+*   **Location**: [contextExtensions.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/contextExtensions.ts)
+
+### 6. MFA Payout Releases (FSM Security Hook)
+*   **Purpose**: Hardens payment releasing operations against session hijacking.
+*   **Design**:
+    *   Custom Exception: Throws `MFARequiredError` if transition to `Approved` or `Funds_Released` is requested without an authentication token callback.
+    *   Audit Log Stamp: Appends `[MFA Verified]` to the cryptographically linked ledger block metadata.
+*   **Location**: [escrowStateMachine.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/escrowStateMachine.ts#L129)
