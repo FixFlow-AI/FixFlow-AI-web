@@ -8,6 +8,14 @@ import { Hero } from './sections/Hero'
 import { HowItThinks } from './sections/HowItThinks'
 import { Navigation } from './sections/Navigation'
 import { Problem } from './sections/Problem'
+import {
+  DeliveryFundsMoments,
+  IntelligenceProductMoments,
+  OutcomeProductMoment,
+  ProductOverviewMoment,
+  ProposalAgreementMoments,
+  RoleOnboardingMoment,
+} from './sections/ProductMoments'
 import { SystemIntelligence } from './sections/SystemIntelligence'
 import { Trust } from './sections/Trust'
 import { Workflow } from './sections/Workflow'
@@ -25,12 +33,18 @@ export function App() {
       <Navigation />
       <main id="main-content">
         <Hero />
+        <ProductOverviewMoment />
         <Problem />
+        <IntelligenceProductMoments />
         <SystemIntelligence />
         <HowItThinks />
+        <ProposalAgreementMoments />
         <Workflow />
+        <DeliveryFundsMoments />
         <Automation />
         <Trust />
+        <OutcomeProductMoment />
+        <RoleOnboardingMoment />
         <FinalCta />
       </main>
       <Footer />
