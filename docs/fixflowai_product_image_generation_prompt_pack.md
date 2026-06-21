@@ -1,5 +1,88 @@
 # FixFlowAI Product Image Generation Prompt Pack
 
+# IMAGE GENERATION RELIABILITY DIRECTIVE (HIGHEST PRIORITY)
+
+You are receiving a very large design specification. Do NOT reject, truncate, simplify, skip, or ignore any requirement because of prompt size or complexity.
+
+This is a hierarchical product specification, not a normal image prompt.
+
+Your task is to internally reorganize the instructions before rendering while preserving 100% of the requirements.
+
+Follow these execution rules strictly:
+
+1. Do NOT treat all instructions with equal priority. Resolve the design in layers.
+
+Execution order:
+
+Layer 1 → Global application architecture  
+Layer 2 → Persistent shell (top bar, left navigation)  
+Layer 3 → Primary workflow and information hierarchy  
+Layer 4 → Main workspace content  
+Layer 5 → Inspector panels and supporting states  
+Layer 6 → Timelines and secondary information  
+Layer 7 → Typography refinement  
+Layer 8 → Visual polish
+
+2. Never abort generation because there is too much information. If necessary, internally compress repetitive instructions without changing their meaning.
+
+3. Never omit major structural elements. If space becomes constrained, reduce spacing before removing information.
+
+4. Treat long textual content as semantic labels rather than paragraph content. Prioritize accurate rendering of critical labels and preserve the exact wording whenever possible.
+
+5. Do NOT merge unrelated components together. Build one coherent software application first, then populate it with information.
+
+6. If multiple instructions appear conflicting, resolve them using this priority order:
+
+Product understanding  
+>  
+Information hierarchy  
+>  
+Readability  
+>  
+Layout consistency  
+>  
+Visual aesthetics
+
+7. Do NOT reinterpret the product as:
+- a dashboard
+- a chatbot
+- a talent marketplace
+- a landing page
+- a marketing illustration
+- a futuristic AI concept
+
+It is a realistic internal enterprise software interface.
+
+8. Treat attached files as authoritative references and use them selectively:
+
+- Use the logo only for branding.
+- Use visual references only for spacing, typography, and composition.
+- Use long documents only for terminology, workflow, and product identity.
+
+Do not attempt to literally render entire documents.
+
+9. Do NOT generate isolated floating cards unless explicitly required. Every component must belong to one connected application shell.
+
+10. When many requirements exist simultaneously, preserve all requirements by simplifying decorative details instead of removing functional content.
+
+11. Maintain a white-space budget. Prioritize clarity over density, but never leave large empty regions that make the interface appear unfinished.
+
+12. Before rendering, internally verify:
+
+✓ The image is a real software screenshot.  
+✓ The application is fully connected.  
+✓ The product can be understood in under 5 seconds.  
+✓ The interface is operational, not decorative.  
+✓ The image does not resemble a generic AI dashboard.  
+✓ All major requested sections are present.  
+✓ The next user action is obvious.
+
+Only after this internal verification should the image be generated.
+
+The original prompt that follows is the source of truth. Preserve all of its requirements exactly and reorganize them internally for successful image generation without reducing quality, fidelity, or completeness.
+
+---
+
 ## 1. Purpose
 
 Use this document to generate realistic internal FixFlowAI product screens with ChatGPT Images. These screens are intended to sit between landing-page sections and make the underlying product workflow visible.
