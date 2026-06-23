@@ -49,10 +49,15 @@ export function Navigation() {
             </a>
           ))}
         </nav>
-        <a className="button button--small nav-cta" href="#early-access">
-          Request access
-          <ArrowUpRight aria-hidden="true" size={15} strokeWidth={2} />
-        </a>
+        <div className="hidden md:flex items-center gap-4">
+          <a className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors" href="#/login">
+            Log in
+          </a>
+          <a className="button button--small nav-cta" href="#/signup">
+            Request access
+            <ArrowUpRight aria-hidden="true" size={15} strokeWidth={2} />
+          </a>
+        </div>
         <button
           className="icon-button menu-button"
           type="button"
@@ -75,7 +80,10 @@ export function Navigation() {
             {label}
           </a>
         ))}
-        <a className="button" href="#early-access" onClick={() => setMobileOpen(false)}>
+        <a className="text-sm font-bold text-slate-600 py-2 text-center" href="#/login" onClick={() => setMobileOpen(false)}>
+          Log in
+        </a>
+        <a className="button" href="#/signup" onClick={() => setMobileOpen(false)}>
           Request early access
           <ArrowUpRight aria-hidden="true" size={17} />
         </a>

@@ -50,7 +50,7 @@ export function Hero() {
           milestones, and one shared delivery record.
         </p>
         <div className="hero-actions">
-          <a className="button" href="#early-access">
+          <a className="button" href="#/signup">
             Request early access
             <ArrowRight aria-hidden="true" size={18} />
           </a>

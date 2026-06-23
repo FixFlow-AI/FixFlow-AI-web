@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { useLandingStore, DashboardTabId } from './store/useLandingStore'
 import { CursorField } from './components/CursorField'
 import { ScrollProgress } from './components/ScrollProgress'
 import { useSmoothScroll } from './hooks/useSmoothScroll'
@@ -20,8 +22,66 @@ import { SystemIntelligence } from './sections/SystemIntelligence'
 import { Trust } from './sections/Trust'
 import { Workflow } from './sections/Workflow'
 
+import { Login } from './sections/Login'
+import { Signup } from './sections/Signup'
+import { Dashboard } from './sections/Dashboard'
+
 export function App() {
   useSmoothScroll()
+  const { page, setPage, setDashboardTab } = useLandingStore()
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash
+      if (!hash || hash === '#' || hash === '#/') {
+        setPage('landing')
+      } else if (hash === '#/login') {
+        setPage('login')
+      } else if (hash === '#/signup') {
+        setPage('signup')
+      } else if (hash.startsWith('#/dashboard')) {
+        setPage('dashboard')
+        const parts = hash.split('/')
+        const tab = parts[2] as DashboardTabId
+        if (tab) {
+          setDashboardTab(tab)
+        } else {
+          setDashboardTab('overview')
+        }
+      }
+    }
+
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [setPage, setDashboardTab])
+
+  if (page === 'login') {
+    return (
+      <>
+        <CursorField />
+        <Login />
+      </>
+    )
+  }
+
+  if (page === 'signup') {
+    return (
+      <>
+        <CursorField />
+        <Signup />
+      </>
+    )
+  }
+
+  if (page === 'dashboard') {
+    return (
+      <>
+        <CursorField />
+        <Dashboard />
+      </>
+    )
+  }
 
   return (
     <>
@@ -51,3 +111,4 @@ export function App() {
     </>
   )
 }
+
