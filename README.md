@@ -29,179 +29,246 @@
 
 ---
 
-## ❓ The Problem We Face (Problem Statement)
+## 📖 Executive Summary & Core Value Proposition
 
-Freelancing platforms have become highly saturated, transactional, and inefficient. The modern freelance economy suffers from three main structural problems:
+FixFlowAI is a trust-first hiring platform and automated freelance execution workspace. Traditional freelancing platforms are plagued by skill inflation, high client intake friction, and default risks. FixFlowAI resolves this by replacing resume-based profiles with **evidence-based vetting** (direct scanner of repositories and commits) and securing delivery using a state-machine-driven milestone payments engine. 
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                      THE FREELANCE TRUST CHAOS                         │
-├─────────────────────────┬─────────────────────────┬────────────────────┤
-│   🔍 DISCOVERY GAPS     │   📝 COLLATERAL WASTE   │ 💳 PAYMENT RISK    │
-│  Freelancers spend      │  Crafting custom        │ 75% of freelancers │
-│  hours manual-hunting  │  technical proposals    │ prioritize payment │
-│  scattered channels     │  takes 10-17 hours,     │ security. Escrow   │
-│  (Upwork, Reddit, HN)   │  costing ~$1,200/doc.   │ options favor the  │
-│  only to get lost in    │  Bidding wars favor     │ client or carry    │
-│  SEO-driven feeds.      │  SEO over skill.        │ massive fees.      │
-└─────────────────────────┴─────────────────────────┴────────────────────┘
-```
-
-Finding high-quality clients is often **harder than doing the actual project**. Freelancers have to split their days between scraping opportunities, writing long proposals, doing client onboarding calls, and chasing late invoices.
+For a deep dive into our market research, target personas, and value positioning, refer to the [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/market_positioning_and_uvps.md) specification.
 
 ---
 
-## ⚡ The Challenges
+## 🗺️ Project Navigation Index
 
-1. **Self-Reported Skill Inflation:** Traditional platforms rely on resumes or self-reported profiles. Clients must screen dozens of applicants manually, leading to high friction and poor matches.
-2. **Disconnected Tools:** Freelancers currently patch together Upwork (leads), Google Docs/PandaDoc (proposals), Trello/Jira (tasks), Slack (chat), and Stripe/Bank Transfers (payments). These tools don't communicate, leading to data loss and manual duplication.
-3. **High Intake Friction:** Onboarding a new client requires collecting requirements, defining scopes, mapping milestones, and signing agreements, which often stalls project kickoffs.
-4. **Payment Default & Disputes:** Freelancers have little recourse when a client delays payments or disputes deliverables. High dispute resolution anxiety hinders professional growth.
+All project specifications, blueprints, and roadmaps are organized under `docs/specifications/`. Select a guide below to explore specific details:
+
+### 1. Product & UI Strategy
+*   [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/market_positioning_and_uvps.md) – Competitive analysis, unique selling points, and pricing models.
+*   [landing_page_redesign_implementation_plan.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/landing_page_redesign_implementation_plan.md) – Structural blueprints for the modern landing page redesign.
+*   [fixflowai_product_image_generation_prompt_pack.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/fixflowai_product_image_generation_prompt_pack.md) – High-fidelity Midjourney/FLUX asset prompt libraries for dashboard views.
+
+### 2. System Architecture & Database
+*   [system_design.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/system_design.md) – AWS serverless layout, tech stack, and cost parameters.
+*   [erd_and_api_contracts.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/erd_and_api_contracts.md) – Core DynamoDB schemas, API endpoints, and event structures.
+*   [database_design.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/database_design.md) – PostgreSQL relational schema and Prisma ORM definition.
+*   [security_architecture.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/security_architecture.md) – Access control, rate limits, data encryption, and Web3 security protocols.
+*   [backend_connectivity_roadmap.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/backend_connectivity_roadmap.md) – Roadmap to tie frontend components to active REST/SSE services.
+
+### 3. Core Subsystems & Feasibility
+*   [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/skills.md) – Production manual for the core backend skill engines.
+*   [extra_implementation_roadmap.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/extra_implementation_roadmap.md) – Testing boundaries, error-handling states, and validation logic.
+*   [opportunity_intelligence_implementation.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/opportunity_intelligence_implementation.md) – Lead scraping architecture across platforms.
+*   [opportunity_intelligence_alternative_platforms.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/opportunity_intelligence_alternative_platforms.md) – Comparison of Brave, SerpAPI, and Apify scraper tools.
+*   [client_project_ingestion_feasibility.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/client_project_ingestion_feasibility.md) – Feasibility breakdown of importing client contracts from external portals.
+
+### 4. Frontend Specifications
+*   [frontend_gaps_and_requirements.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/frontend/frontend_gaps_and_requirements.md) – Assessment of UI gaps and dynamic components.
+*   [frontend_implementation_guide.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/frontend/frontend_implementation_guide.md) – Detailed guide for live state integration, charts, and portals.
+*   [frontend_roadmap.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/frontend/frontend_roadmap.md) – Frontend development stages and milestones.
+
+### 5. AI Features Index
+*   [ai_features/README.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/README.md) – Overarching master index for all integrated AI systems.
 
 ---
 
-## 🎯 Target Customers
+## 🤖 AI Feature Matrix
 
-FixFlowAI is built for two core audiences who interact in the digital workspace:
+FixFlowAI implements 6 specialized AI features powered by Google Gemini and custom orchestration agents:
 
-### 1. Freelancers & Specialized Professionals
-* **Software Developers & AI Engineers:** Niche technologists who want to stand out using their real codebase contributions (GitHub repository and commit metadata) rather than profile ratings.
-* **UI/UX Designers & Product Managers:** Creatives who need interactive workspaces to present scopes, wireframes, and design stages to clients.
-* **Agencies & Small Teams:** Independent teams pitching for high-value projects ($10K - $100K+) needing fast turnarounds, multi-strategy proposals (TriProposals), and team-wide presence tracking.
-
-### 2. Clients & Project Owners
-* **Startups & Small Businesses:** Technical founders who want to discover pre-screened developers matching highly specific tech stacks with proof of work.
-* **Enterprise Managers:** Clients seeking secure portals, detailed cost-complexity breakdowns, transparent milestone delivery tracking, and direct payment integrations.
+| Feature ID | Feature Name | Core Capability | Specification Document |
+| :--- | :--- | :--- | :--- |
+| **AI-001** | Semantic Brief Parsing | Extracts scope, requirements, tech stack, and milestones from text/PDFs into structured JSON proposals. | [ai_001_semantic_brief_parsing.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_001_semantic_brief_parsing.md) |
+| **AI-002** | Multi-Agent Confidence Grid | Grades proposal task cards for cost, time, and feasibility, self-correcting outliers through agent consensus loops. | [ai_002_confidence_grid_self_correction.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_002_confidence_grid_self_correction.md) |
+| **AI-003** | AI Vetting Interview | Generates context-specific, randomized questionnaire flows to vet candidate competencies on the brief's stack. | [ai_003_interview_vetting_generation.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_003_interview_vetting_generation.md) |
+| **AI-004** | Contract Scope Extensions | Monitors active project logs and scopes, dynamically offering contract extension clauses to retain talent. | [ai_004_contextual_contract_extensions.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_004_contextual_contract_extensions.md) |
+| **AI-005** | Opportunity Intelligence | Scrapes and categorizes client projects from Upwork, Reddit, HN, Tavily, scoring leads by margin and viability. | [ai_005_opportunity_intelligence_scoring.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_005_opportunity_intelligence_scoring.md) |
+| **AI-006** | Developer Skill Matching | Scans freelancer GitHub repositories (commits, metadata) and matches them to active client proposals. | [ai_006_smart_matching_lead_scoring.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/ai_features/ai_006_smart_matching_lead_scoring.md) |
 
 ---
 
-## 💡 The Solution
+## ⚙️ Core Engineering Skills (Production Modules)
 
-FixFlowAI consolidates the fragmented freelancing workflow into a single **intelligent and automated system**:
+The core logic of FixFlowAI is encapsulated in modular engine directories. These run inside the backend API node environment or handle active sync operations:
+
+### 📥 Backend Modules (`backend/src/skills/`)
+1.  [briefParser.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/briefParser.ts): Uses Gemini structured JSON outputs to parse text briefs, enforcing schemas using Zod validation.
+2.  [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts): Evaluates project risks, sets baseline hours/costs, and triggers self-correction loops on task cards.
+3.  [interviewGenerator.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/interviewGenerator.ts): Customizes project-specific screening tests to filter candidates based on brief requirements.
+4.  [contextExtensions.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/contextExtensions.ts): Scrapes project conversation logs and tasks to propose contract revisions and renewals.
+5.  [escrowStateMachine.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/escrowStateMachine.ts): Oversees project phase lifecycles, release approvals, and disputes with cryptographically generated audit hashes.
+6.  [syncServer.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/syncServer.ts): Coordinates high-throughput WebSocket synchronization and handles conflicts using Vector Clocks.
+7.  [reputationCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/reputationCalculator.js): Compiles Git metrics and payment histories to mint Soulbound ID tokens on Polygon.
+8.  [clientScoring.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/clientScoring.js): Assesses client risk based on historical funding activity, communications, and disputes.
+9.  [earningsCalculator.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/earningsCalculator.js): Projects tax estimates, platform processing costs, and direct payouts.
+
+### 📤 Frontend Modules (`frontend/src/skills/`)
+1.  [optimisticSync.js](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/frontend/src/skills/optimisticSync.js): Manages local Zustand stores, optimistic server updates, and local storage offline caching fallback.
+
+---
+
+## 🔄 Project Lifecycle Workflow
+
+Below is the structured lifecycle flow representing the core interaction pattern between Clients, Freelancers, the AI Orchestration layer, and Smart Contracts:
+
+```mermaid
+graph TD
+    classDef ai fill:#3b82f6,stroke:#1d4ed8,color:#fff,stroke-width:2px;
+    classDef web3 fill:#7c3aed,stroke:#5b21b6,color:#fff,stroke-width:2px;
+    classDef core fill:#10b981,stroke:#047857,color:#fff,stroke-width:2px;
+    classDef client fill:#f59e0b,stroke:#b45309,color:#fff,stroke-width:2px;
+
+    %% Intake & Discovery
+    subgraph A["1. Intake & Discovery"]
+        Leads["Scraped Leads (Reddit, HN, Upwork)"] --> Match["AI Match Engine (AI-006)"]:::ai
+        Brief["Client Project Brief"] --> BriefParser["Semantic Brief Parser (AI-001)"]:::ai
+    end
+
+    %% Proposal Generation & Review
+    subgraph B["2. Structure & Proposal"]
+        BriefParser --> Prop["Structured JSON Proposal"]
+        Prop --> ConfGrid["Confidence Grid Engine (AI-002)"]:::ai
+        Match --> Vet["AI Vetting Gen (AI-003)"]:::ai
+    end
+
+    %% Contract & Escrow
+    subgraph C["3. Agreement & Escrow"]
+        ConfGrid --> ClientPortal["Client Deal Portal"]:::client
+        Vet --> ClientPortal
+        ClientPortal --> Contract["Agreement Composer"]
+        Contract --> Escrow["Secure Escrow FSM"]:::core
+        Escrow --> PayFiat["Razorpay Escrow Gateway"]:::core
+        Escrow --> PayCrypto["Polygon USDC Contract"]:::web3
+    end
+
+    %% Execution & Retention
+    subgraph D["4. Execution & Growth"]
+        PayFiat --> Milestone["Milestone Sync Engine"]:::core
+        PayCrypto --> Milestone
+        Milestone --> VerifiableRep["Soulbound Token (SBT) Minted"]:::web3
+        Milestone --> Ext["Scope Extensions (AI-004)"]:::ai
+    end
+```
+
+---
+
+## 📈 Backend Connectivity Roadmap
+
+To replace mock data with active database connections and APIs, we follow a 4-phase integration plan as mapped in the [backend_connectivity_roadmap.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/backend_connectivity_roadmap.md):
 
 ```
-                       FIXFLOWAI INTEGRATED WORKFLOW
- ┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐
- │  GitHub Scan     │ ───> │ Lead Aggregation │ ───> │ AI Match Engine  │
- │  Scrapes repos & │      │ Reddit, HN,      │      │ Matches depth-   │
- │  niche depth.    │      │ Upwork, Tavily.  │      │ score against ID.│
- └──────────────────┘      └──────────────────┘      └──────────────────┘
-                                                              │
-                                                              ▼
- ┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐
- │ Escrow / Payment │ <─── │ client Portal    │ <─── │ Proposal Builder │
- │ Razorpay Route / │      │ Interactive view │      │ Structured JSON  │
- │ Polygon USDC.    │      │ with PIN & dwell.│      │ generated in <30s│
- └──────────────────┘      └──────────────────┘      └──────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      BACKEND CONNECTIVITY ROADMAP                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Phase 1: Authentication & Client Setup                                  │
+│ - Implement live JWT/OAuth auth & map PostgreSQL via Prisma.            │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Phase 2: AI Proposal Pipeline & Streaming                               │
+│ - Integrate active Gemini API endpoints using Express SSE streams.      │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Phase 3: Financial Escrow & Websocket Sync                              │
+│ - Implement Razorpay webhooks and stateful WebSocket sync engines.     │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Phase 4: Production Polish & Security Audits                            │
+│ - Set up rate limits, security tokens, and monitor pipeline performance.│
+└─────────────────────────────────────────────────────────────────────────┘
 ```
-
-1. **Evidence-Based Matching (Freelancer OS):** Analyzes the freelancer's GitHub repositories, language usage, commit frequency, and niche capabilities to dynamically score their match capability against scraped leads.
-2. **Omnichannel Lead Aggregator:** Automatically pulls developer and client leads from multiple sources (Upwork, LinkedIn, Reddit, Hacker News, SerpAPI, Tavily) into a clean Kanban board (FlowBoard).
-3. **Structured Proposal Pipeline (AI Engine):** Converts client briefs or file uploads (PDF/DOCX) into high-fidelity technical proposals with a **Confidence Grid** (showing LLM confidence and complexity ratings per feature card).
-4. **Autonomous Payment Gateway:** 
-   * **Razorpay Smart Escrow:** Implements automated, progress-based fiat payment holds and split-route releases to the freelancer's bank account when milestones (25%, 50%, 75%, 100%) are approved.
-   * **Web3 Web3 Escrow:** Supports decentralized USDC/Polygon escrows with verifiable soulbound credentials (DID) minted as proofs of project completion.
-5. **Collaborative Deal Portal:** A client share portal protected by custom access PINs and tracking metrics (views, section dwell time) to give freelancers visibility into what sections the client is reviewing.
 
 ---
 
-## ⚙️ Technology Stack
+## 📂 Project Directory Structure
 
-Designed for high scalability, low latency, and maximum cost efficiency:
+```
+FixFlowAI/
+├── 📁 backend/                         ← Production Node.js + Express API
+│   ├── 📁 src/
+│   │   ├── 📁 skills/                  ← 9 Backend production skill modules
+│   │   └── 📁 test/                    ← Skill verification tests
+│   ├── 📄 package.json                 ← Express configuration
+│   └── 📄 tsconfig.json                ← TypeScript configurations
+├── 📁 docs/                            ← Architecture & Specification Manuals
+│   ├── 📄 FixFlowAI_Week1_BuildInPublic.pdf
+│   └── 📁 specifications/              ← Interactive system plans
+│       ├── 📁 ai_features/             ← AI feature guides (AI-001 - AI-006)
+│       ├── 📁 architecture/            ← System design & db connectivity maps
+│       ├── 📁 core_subsystems/         ← Skills & lead scraper evaluations
+│       ├── 📁 frontend/                ← Gaps assessment and implementation guide
+│       └── 📁 product_strategy/        ← Brand UVPs and redesign blueprints
+├── 📁 frontend/                        ← Production Vite + React 18 Application
+│   ├── 📁 src/
+│   │   ├── 📁 components/              ← Reusable glassmorphic UI components
+│   │   ├── 📁 sections/                ← 9 Dashboard tabs UI panels
+│   │   ├── 📁 store/                   ← Zustand global state controllers
+│   │   └── 📁 skills/                  ← Optimistic sync & storage utilities
+│   ├── 📄 package.json                 ← Vite configuration
+│   └── 📄 tailwind.config.js           ← Tailwind CSS configurations
+├── 📁 References/                      ← PDF briefs and product guidelines
+└── 📄 README.md                        ← Main developer documentation (this file)
+```
 
-| Layer | Technology | Purpose |
-|:---|:---|:---|
-| **Frontend** | React 18.3 + Vite 5.3 + Zustand 5.0 | High-performance Single Page Application (SPA), state management. |
-| **Styling** | Tailwind CSS 3.4 + Framer Motion 11.2 | Fluid layouts, micro-animations, glassmorphism UI. |
-| **Backend API** | Node.js + Express 5.2 | Scalable backend server hosting routes and SSE (Server-Sent Events). |
-| **Database** | AWS DynamoDB | Fully serverless, low-latency MongoDB-compatible ORM wrapper. |
-| **Caching & Queue** | Upstash Redis (Serverless) | Distributed rate-limiting, BullMQ scraping jobs, and Gemini API caching. |
-| **Storage** | AWS S3 | Object storage for original brief documents, templates, and versioned JSONs. |
-| **AI Processing** | Google Gemini (SDK) + OpenRouter + xAI | Multi-provider fallback chain for structured JSON proposal streaming. |
-| **Payment Gateway** | Razorpay APIs (Route/Smart Collect) | Fiat milestone escrow holdings, bank routes, webhooks. |
-| **Identity / Trust** | Polygon Amoy / Mainnet + Ethers.js | Web3 wallet binding, DID identity, minting Soulbound verifiable credentials. |
-| **Automation** | Puppeteer + Nodemailer | Browser-grade PDF exports, automated SMTP notification updates. |
+---
+
+## 💻 Developer Getting Started Guide
+
+Follow these steps to spin up the local development environments:
+
+### Prerequisites
+*   Node.js (v18+)
+*   NPM or Yarn
+*   A Gemini API Key (set in backend environment)
+
+### 1. Set Up the Backend
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Install all node packages:
+   ```bash
+   npm install
+   ```
+3. Configure the environment variables. Create a `.env` file in the backend root:
+   ```env
+   PORT=5000
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+4. Transpile typescript and start the server:
+   ```bash
+   npm run build
+   npm start
+   ```
+
+### 2. Set Up the Frontend
+1. Navigate to the frontend directory:
+   ```bash
+   cd ../frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Boot up the Vite developer instance:
+   ```bash
+   npm run dev
+   ```
+4. Access the dashboard via `http://localhost:5173`.
 
 ---
 
 ## 💰 Cost-Optimized AWS Serverless Architecture
 
-To maintain a 24-hour service for at least **1,000 customers** while minimizing the server bill, we bypass expensive always-on resources (like EC2 instances, ECS Fargate containers, or provisioned ElastiCache clusters) and adopt a **100% Serverless Pay-As-You-Go Architecture** using serverless databases and caches.
+For cloud deployments, FixFlowAI uses a 100% pay-as-you-go architecture to support over **1,000 monthly active users (MAUs)** with minimal operating cost. This eliminates always-on server costs:
 
-### 🏗️ Infrastructure Components
-* **Frontend Hosting:** AWS Amplify Hosting (Git-integrated CDN & routing). Zero base server cost.
-* **Backend API Execution & Routing:** AWS Lambda Function URLs (Direct Access). Enables direct response streaming up to 15 minutes, bypassing the 29-second API Gateway timeout and eliminating routing proxy costs.
-* **Database Layer:** Amazon DynamoDB (configured in On-Demand Capacity Mode). Base cost is $0.
-* **Transient Cache & Queue:** Upstash Serverless Redis (handles rate limits, scraper queues, and Gemini cache).
-* **Secrets Management:** AWS Secrets Manager for credentials caching.
-* **Notification Emails:** Amazon SES (Simple Email Service).
+| AWS Service | Deployment Details | Purpose | Monthly Cost (Est.) |
+| :--- | :--- | :--- | :--- |
+| **AWS Amplify Hosting** | CDN Edge Routing | Static frontend asset deployment & distribution | **$0.00** (Free Tier) |
+| **AWS Lambda** | Function URLs | Handles Node.js API processes and streams responses | **$0.00** (Free Tier) |
+| **Amazon DynamoDB** | On-Demand Mode | Document storage for proposals and user settings | **$0.00** (Free Tier) |
+| **Amazon S3** | Object Storage | Houses uploaded briefs, PDFs, and JSON structures | **$0.00** (Free Tier) |
+| **Upstash Redis** | Serverless Tier | Rate-limiting, cache layers, and scraper worker queues | **$0.00** (Free Tier) |
+| **AWS Secrets Manager** | API Key Storage | Restricts key scopes and handles rotations | **$0.80** |
+| **Route 53 & SES** | DNS & Simple Email | Handles domain configurations and emails | **$0.55** |
+| **TOTAL** | **Pay-As-You-Go** | **Complete platform operational costs** | **~$1.35 / month** |
 
-### 📊 Cost Analysis Breakdown (per 1,000 Active Customers)
-Assuming 1,000 Monthly Active Users (MAUs) executing an average of 200 API calls/month (200,000 requests total):
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│              ESTIMATED MONTHLY AWS COST FOR 1,000 MAUs                  │
-├────────────────────────────┬─────────────────────────────┬──────────────┤
-│ AWS Service                │ Usage Details               │ Monthly Cost │
-├────────────────────────────┼─────────────────────────────┼──────────────┤
-│ 🌐 AWS Amplify Hosting     │ 100 GB Data Out / Git CI-CD │ $0.00*       │
-│ ⚡ Lambda Function URLs    │ 200,000 Requests (Direct)   │ $0.00        │
-│ ⚙️ AWS Lambda              │ 200k Runs @ 512MB / 500ms   │ $0.00*       │
-│ 🗄️ DynamoDB (On-Demand)    │ 1 GB Storage, 200k Reads/Wr │ $0.00*       │
-│ 🗃️ AWS S3 (Blobs)          │ 2 GB Storage (PDFs/JSONs)   │ $0.00*       │
-│ ✉️ AWS SES                 │ 2,000 transactional emails  │ $0.00*       │
-│ 🏎️ Upstash Redis           │ 10,000 reqs/day (Free Tier) │ $0.00*       │
-│ 🔑 Secrets Manager         │ 2 secrets stored + API calls│ $0.80        │
-│ 🗺️ Route 53 (DNS)          │ 1 Hosted Zone + Queries     │ $0.55        │
-├────────────────────────────┴─────────────────────────────┼──────────────┤
-│  TOTAL MONTHLY COST (WITH AWS FREE TIER)                 │ ~$1.35       │
-│  TOTAL MONTHLY COST (WITHOUT AWS FREE TIER)              │ ~$8.02       │
-└──────────────────────────────────────────────────────────┴──────────────┘
-* Denotes cost fully absorbed under AWS Free Tier.
-```
-
-#### Why this scales cheaply:
-1. **Zero Idle Costs:** When no users are online, the system costs literally fractions of a cent per day (only storage costs).
-2. **Lambda Invocations:** The Lambda Free Tier provides **400,000 GB-seconds** per month, which easily absorbs our 100,000 GB-seconds requirement for 200,000 executions.
-3. **DynamoDB On-Demand:** Eliminates provisioned RCU/WCU pricing. You pay only for what you query.
-4. **Serverless Cache (Upstash):** Operates on a pay-as-you-go / free tier model instead of charging a flat hourly rate for idle cluster time.
-
----
-
-## ⚡ Core Injected Subsystems & Skills
-
-FixFlow AI relies on 5 core production-ready engineering subsystems (Skills) for high-performance and secure operation:
-
-1. **Enterprise Semantic Brief Parsing & Schema Enforcement**: Automated ingest and structured extraction of briefs via Gemini and Zod validation.
-   - *Code*: [briefParser.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/briefParser.ts)
-2. **Deterministic Multi-Agent Orchestration**: FSM-based agent execution flows and budget validation checks.
-   - *Code*: [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts)
-3. **Secure Milestone Mechanics & Versioning**: Secure transaction states, optimistic locking, and cryptographic audit hashes.
-   - *Code*: [escrowStateMachine.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/escrowStateMachine.ts)
-4. **Cloud Infrastructure Scale & Pipeline Optimization**: High-throughput WebSocket server and LWW/Vector Clock conflict resolution.
-   - *Code (Backend)*: [syncServer.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/syncServer.ts)
-   - *Code (Frontend)*: [optimisticSync.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/frontend/src/skills/optimisticSync.ts)
-5. **Pinpoint Self-Correction & Root-Cause Diagnostics**: Multi-agent consensus scoring and autonomous self-correction optimization loops.
-   - *Code*: [confidenceGrid.ts](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/backend/src/skills/confidenceGrid.ts#L104)
-
-For detailed architectural information on these skills, see the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/skills.md) manual.
-
----
-
-## 📂 Project Structure
-
-```
-FixFlowAI/
-├── 📁 References/
-│   └── project-proposal.pdf            ← Main product proposal guidelines
-├── 📁 old-version/                     ← Legacy codebase (reference)
-├── 📁 src/                             ← Production Frontend React Source
-├── 📁 backend/                         ← Production Express.js + DynamoDB API
-├── 📄 system_design.md                 ← Low-level DB schema & system architecture
-├── 📄 package.json                     ← Root configuration & scripts
-└── 📄 README.md                        ← Main documentation (this file)
-```
+> [!NOTE]
+> The platform can scale seamlessly to handle thousands of requests without server upgrades, incurring costs only proportional to active user growth.
 
 ---
 
