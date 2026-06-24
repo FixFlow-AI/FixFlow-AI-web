@@ -1,6 +1,6 @@
 # FixFlow AI - Client & Freelancer Problem Resolution Roadmap
 
-This document outlines the **Extra Implementation Modules** required on top of the five core subsystems to fully resolve the strategic client and freelancer pain points identified in [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/market_positioning_and_uvps.md).
+This document outlines the **Extra Implementation Modules** required on top of the five core subsystems to fully resolve the strategic client and freelancer pain points identified in [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/market_positioning_and_uvps.md).
 
 It acts as an architectural blueprint and implementation guide for developers and LLM agents to build out the remaining high-value features.
 

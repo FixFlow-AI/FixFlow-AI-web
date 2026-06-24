@@ -112,7 +112,7 @@ Attach these three files with every section prompt:
    `frontend/public/official-logo.png`
 
 2. **Landing-page source-of-truth specification**  
-   `docs/landing_page_redesign_implementation_plan.md`
+   `docs/specifications/product_strategy/landing_page_redesign_implementation_plan.md`
 
 3. **Primary visual style reference**  
    `docs/assets/landing-concepts/01-hero-problem.png`
@@ -122,7 +122,7 @@ Attach these three files with every section prompt:
 For the most consistent result, also attach:
 
 4. **Product positioning and real feature context**  
-   `docs/market_positioning_and_uvps.md`
+   `docs/specifications/product_strategy/market_positioning_and_uvps.md`
 
 5. **The section-specific visual reference listed with each prompt**  
    Choose one of:
@@ -140,7 +140,7 @@ Do not attach competitor screenshots as style references. Competitor research sh
 
 If ChatGPT accepts only one context document in addition to the logo, attach:
 
-`docs/landing_page_redesign_implementation_plan.md`
+`docs/specifications/product_strategy/landing_page_redesign_implementation_plan.md`
 
 It contains the full product narrative, exact color system, typography rules, interaction model, section order, and product constraints.
 

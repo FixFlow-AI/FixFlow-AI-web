@@ -79,7 +79,7 @@ The frontend implementation is organized into **four focused sprints** spanning 
 For any frontend implementation ticket to be closed, the following standards must be satisfied:
 
 1. **Visual Consistency (Aesthetics)**:
-   - Must strictly match the light-mode only, clean borders, minimal color aesthetic rules from [landing_page_redesign_implementation_plan.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/landing_page_redesign_implementation_plan.md).
+   - Must strictly match the light-mode only, clean borders, minimal color aesthetic rules from [landing_page_redesign_implementation_plan.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/landing_page_redesign_implementation_plan.md).
    - Responsive layout checks for mobile, tablet, and desktop breakpoints.
 2. **Performance Metrics**:
    - Google Lighthouse performance, accessibility, and best practices scores must stay $>90$.

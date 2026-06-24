@@ -6,7 +6,7 @@ This document details the functional and non-functional requirements for the **r
 
 ## 🗺️ 1. Architecture Alignment & Gap Analysis
 
-Currently, the frontend SPA provides interactive mock views for key dashboard areas. To fully support the backend systems specified in the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/skills.md) and [opportunity_intelligence_implementation.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/opportunity_intelligence_implementation.md) manuals, the frontend requires several net-new views and interaction flows.
+Currently, the frontend SPA provides interactive mock views for key dashboard areas. To fully support the backend systems specified in the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/skills.md) and [opportunity_intelligence_implementation.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/opportunity_intelligence_implementation.md) manuals, the frontend requires several net-new views and interaction flows.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -35,7 +35,7 @@ Currently, the frontend SPA provides interactive mock views for key dashboard ar
 *   **Description**: A feed where freelancers browse open-web opportunities collected from Tavily, Brave Search, SerpAPI, and Apify (Reddit, Hacker News, RSS feeds).
 
 #### Layout & Visual Design
-- **Editorial Aesthetic**: Follow the light-mode only, clean borders, minimal color rule defined in the [landing_page_redesign_implementation_plan.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/landing_page_redesign_implementation_plan.md).
+- **Editorial Aesthetic**: Follow the light-mode only, clean borders, minimal color rule defined in the [landing_page_redesign_implementation_plan.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/landing_page_redesign_implementation_plan.md).
 - **Core Widgets**:
   1. **Control Panel**: Filter by skills (e.g., React, Go, PyTorch), budget ranges, and sources (e.g., Google Jobs, WeWorkRemotely, Hacker News). Toggle sorting by `Recency` or `OpportunityScore`.
   2. **Opportunity Cards**: List items displaying:

@@ -47,12 +47,12 @@ Relevant existing pieces:
 
 | Existing doc/module | Useful for ingestion idea | Gap |
 | --- | --- | --- |
-| `docs/market_positioning_and_uvps.md` | Positions FixFlow as a trust-first, zero-noise, outcome-based workspace. This matches filtered opportunity delivery better than open bidding chaos. | Needs a clear policy that third-party posts are opportunities, not onboarded clients. |
-| `docs/database_design.md` | Includes `Lead`, `Proposal`, `Escrow`, `Workspace`, and BullMQ scraping queue references. | `Lead` is tied to `FreelancerProfile`; there is no neutral raw source post table, client consent table, source policy table, or ingestion run table. |
-| `docs/erd_and_api_contracts.md` | Has `GET /api/leads`, `PATCH /api/leads/:leadId`, `POST /api/proposals`, and escrow endpoints. | Missing source connectors, ingestion runs, dedupe, compliance decisions, and client claim flow. |
-| `docs/skills.md` | Brief parser, Confidence Grid, client scoring, interview generator, escrow FSM, and reputation modules can power ranking and conversion. | Brief parser currently generates proposal output; ingestion needs a separate project-post extraction schema before proposal generation. |
-| `docs/security_architecture.md` | Strong auth, RBAC, rate limiting, audit logs, and session model are compatible with ingestion and client claim links. | Needs source credentials vaulting and audit logs for external API access. |
-| `docs/extra_implementation_roadmap.md` | Client scoring and interview/vetting modules are useful once a post is normalized. | External clients have little or no FixFlow history, so risk scoring must start from post quality and source metadata, then evolve after transactions. |
+| `docs/specifications/product_strategy/market_positioning_and_uvps.md` | Positions FixFlow as a trust-first, zero-noise, outcome-based workspace. This matches filtered opportunity delivery better than open bidding chaos. | Needs a clear policy that third-party posts are opportunities, not onboarded clients. |
+| `docs/specifications/architecture/database_design.md` | Includes `Lead`, `Proposal`, `Escrow`, `Workspace`, and BullMQ scraping queue references. | `Lead` is tied to `FreelancerProfile`; there is no neutral raw source post table, client consent table, source policy table, or ingestion run table. |
+| `docs/specifications/architecture/erd_and_api_contracts.md` | Has `GET /api/leads`, `PATCH /api/leads/:leadId`, `POST /api/proposals`, and escrow endpoints. | Missing source connectors, ingestion runs, dedupe, compliance decisions, and client claim flow. |
+| `docs/specifications/core_subsystems/skills.md` | Brief parser, Confidence Grid, client scoring, interview generator, escrow FSM, and reputation modules can power ranking and conversion. | Brief parser currently generates proposal output; ingestion needs a separate project-post extraction schema before proposal generation. |
+| `docs/specifications/architecture/security_architecture.md` | Strong auth, RBAC, rate limiting, audit logs, and session model are compatible with ingestion and client claim links. | Needs source credentials vaulting and audit logs for external API access. |
+| `docs/specifications/core_subsystems/extra_implementation_roadmap.md` | Client scoring and interview/vetting modules are useful once a post is normalized. | External clients have little or no FixFlow history, so risk scoring must start from post quality and source metadata, then evolve after transactions. |
 
 Important product interpretation:
 
@@ -896,13 +896,13 @@ The first is feasible. The second is likely to create platform, legal, and trust
 
 Reviewed project docs:
 
-- `docs/system_design.md`
-- `docs/skills.md`
-- `docs/security_architecture.md`
-- `docs/market_positioning_and_uvps.md`
-- `docs/database_design.md`
-- `docs/erd_and_api_contracts.md`
-- `docs/extra_implementation_roadmap.md`
+- `docs/specifications/architecture/system_design.md`
+- `docs/specifications/core_subsystems/skills.md`
+- `docs/specifications/architecture/security_architecture.md`
+- `docs/specifications/product_strategy/market_positioning_and_uvps.md`
+- `docs/specifications/architecture/database_design.md`
+- `docs/specifications/architecture/erd_and_api_contracts.md`
+- `docs/specifications/core_subsystems/extra_implementation_roadmap.md`
 
 External sources checked on 2026-06-20:
 

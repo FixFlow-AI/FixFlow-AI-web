@@ -124,10 +124,10 @@ sequenceDiagram
 
 ## 🔒 4. Security, Authentication & Session Specifications
 
-For detailed guidelines regarding token configurations, role matrices, security headers, XSS/CSRF protections, and API rate limits, please refer directly to the [security_architecture.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/security_architecture.md) manual.
+For detailed guidelines regarding token configurations, role matrices, security headers, XSS/CSRF protections, and API rate limits, please refer directly to the [security_architecture.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/architecture/security_architecture.md) manual.
 
-For architectural and implementation details regarding the five core engineering subsystems (Semantic Brief Parsing, Multi-Agent Orchestration, Milestone State Machine, Real-time Sync, and Self-Correction Loops), see the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/skills.md) manual.
+For architectural and implementation details regarding the five core engineering subsystems (Semantic Brief Parsing, Multi-Agent Orchestration, Milestone State Machine, Real-time Sync, and Self-Correction Loops), see the [skills.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/core_subsystems/skills.md) manual.
 
-For the product strategy overview detailing how client and freelancer pain points translate into platform UVPs and engineering features, refer to the [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/market_positioning_and_uvps.md) guide.
+For the product strategy overview detailing how client and freelancer pain points translate into platform UVPs and engineering features, refer to the [market_positioning_and_uvps.md](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/docs/specifications/product_strategy/market_positioning_and_uvps.md) guide.
 
 
