@@ -178,6 +178,17 @@ To replace mock data with active database connections and APIs, we follow a 4-ph
 
 ```
 FixFlowAI/
+├── 📁 .agents/                         ← AI Agent Skills (auto-discovered)
+│   ├── 📄 AGENTS.md                    ← Project-wide rules & conventions
+│   └── 📁 skills/                      ← 8 specialized AI coding skills
+│       ├── 📁 fixflow-system-architect/
+│       ├── 📁 fixflow-fullstack-engineer/
+│       ├── 📁 fixflow-gemini-orchestrator/
+│       ├── 📁 fixflow-escrow-fsm-expert/
+│       ├── 📁 fixflow-react-ui-craftsman/
+│       ├── 📁 fixflow-testing-sentinel/
+│       ├── 📁 fixflow-devops-deployer/
+│       └── 📁 fixflow-security-auditor/
 ├── 📁 backend/                         ← Production Node.js + Express API
 │   ├── 📁 src/
 │   │   ├── 📁 skills/                  ← 9 Backend production skill modules
@@ -269,6 +280,28 @@ For cloud deployments, FixFlowAI uses a 100% pay-as-you-go architecture to suppo
 
 > [!NOTE]
 > The platform can scale seamlessly to handle thousands of requests without server upgrades, incurring costs only proportional to active user growth.
+
+---
+
+## 🧠 AI Agent Skills (`.agents/skills/`)
+
+This project ships with **8 specialized AI agent skills** that automatically load when any AI coding assistant (Antigravity, Copilot, Cursor, Windsurf, etc.) opens the workspace. These skills transform any LLM into an AGI-level full-stack engineer with deep knowledge of FixFlowAI's architecture, patterns, and conventions.
+
+| Skill | Role | What It Teaches the AI |
+| :--- | :--- | :--- |
+| **`fixflow-system-architect`** | Principal Architect | Full system topology, module responsibilities, architectural decision framework, scaling strategy |
+| **`fixflow-fullstack-engineer`** | AGI Engineer | End-to-end feature workflow (Schema → API → UI → Test), code templates from existing codebase |
+| **`fixflow-gemini-orchestrator`** | AI/ML Lead | `@google/genai` SDK patterns, multi-agent personas, self-correction loops, temperature tuning |
+| **`fixflow-escrow-fsm-expert`** | Financial Systems Lead | FSM state transitions, SHA-256 audit trails, optimistic concurrency, Razorpay webhooks |
+| **`fixflow-react-ui-craftsman`** | Frontend Lead | Glassmorphism design system, Zustand patterns, Framer Motion animations, dashboard architecture |
+| **`fixflow-testing-sentinel`** | QA Lead | Zod schema tests, FSM transition tests, LLM mock strategies, edge case checklists |
+| **`fixflow-devops-deployer`** | Cloud Infra Lead | AWS Serverless deployment, CI/CD pipelines, Lambda packaging, cost optimization |
+| **`fixflow-security-auditor`** | Security Lead | Threat modeling, JWT/RBAC auth, rate limiting, prompt injection defense, Web3 wallet security |
+
+Additionally, the master [AGENTS.md](.agents/AGENTS.md) file enforces project-wide coding conventions, naming patterns, and quality gates across all AI interactions.
+
+> [!TIP]
+> Clone this repo and open it in any AI-powered IDE — the agent skills are auto-discovered from `.agents/skills/`, giving you an AI assistant that already understands the entire FixFlowAI codebase.
 
 ---
 
