@@ -1,13 +1,39 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 import {
   FileText,
   Cpu,
   AlertTriangle,
-  CheckCircle,
+  Check,
   RefreshCw,
+  Paperclip,
+  ChevronRight,
+  HelpCircle,
+  Minus,
+  ArrowRight,
 } from "lucide-react";
+
+/* Static attachments shown in the mockup */
+const attachments = [
+  { name: "billing-context.pdf", icon: "📄", color: "#ef4444" },
+  { name: "current-webhooks.csv", icon: "📊", color: "#16a34a" },
+];
+
+/* Default parsed requirements when using mock data */
+const defaultRequirements = [
+  { text: "Preserve active subscription state", status: "Confirmed" },
+  { text: "Make webhook processing idempotent", status: "Confirmed" },
+  { text: "Provide a tested rollback plan", status: "In scope" },
+  { text: "Reconcile migrated billing records", status: "In scope" },
+  { text: "Complete within six weeks", status: "Constraint" },
+];
+
+const defaultDecisions = [
+  "Who owns rollback approval?",
+  "Which reconciliation variance is acceptable?",
+  "Confirm target runtime version",
+];
 
 export function BriefIntelligence() {
   const {
@@ -27,11 +53,6 @@ export function BriefIntelligence() {
   const [parsing, setParsing] = useState(false);
   const [parsingStep, setParsingStep] = useState(0);
 
-  // Clarification questions answered state
-  const [q1Answer, setQ1Answer] = useState("");
-  const [q2Answer, setQ2Answer] = useState("");
-  const [answersSubmitted, setAnswersSubmitted] = useState(false);
-
   const handleParse = async (e) => {
     e.preventDefault();
     setBriefText(text);
@@ -39,7 +60,6 @@ export function BriefIntelligence() {
     setParsing(true);
     setParsingStep(1);
 
-    // Drive the staged status copy while the request is in flight.
     const stepTimers = [
       setTimeout(() => setParsingStep(2), 600),
       setTimeout(() => setParsingStep(3), 1200),
@@ -51,8 +71,6 @@ export function BriefIntelligence() {
       setBriefSource("api");
       setBriefParsed(true);
     } catch (err) {
-      // Backend down or no Gemini key configured: fall back to the local
-      // mock view so the workspace stays usable, but surface why.
       const reason =
         err instanceof ApiError && err.status === 503
           ? "AI is not configured on the server (missing GEMINI_API_KEY). Showing a sample result."
@@ -67,310 +85,376 @@ export function BriefIntelligence() {
     }
   };
 
-  // Preset briefs for quick testing
-  const presets = [
-    {
-      title: "Stripe to Razorpay + Web3 Migration",
-      text: "Migrate our payment infrastructure to Razorpay and deploy a secondary Polygon USDC payment pathway. Keep the transition seamless without subscription downtime.",
-    },
-    {
-      title: "Basic Escrow Integration (Ambiguous)",
-      text: "Need to add escrow payments to our site. Just make it work quickly.",
-    },
-  ];
+  /* Build requirements list from parsed proposal or defaults */
+  const requirements =
+    parsedProposal && parsedProposal.features
+      ? parsedProposal.features.map((f) => ({
+          text: f.title,
+          status:
+            f.confidence_pct >= 80
+              ? "Confirmed"
+              : f.confidence_pct >= 50
+              ? "In scope"
+              : "Constraint",
+        }))
+      : defaultRequirements;
 
-  // Calculate scope stability metric dynamically
-  const isAmbiguous = text.length < 100;
-  const stabilityScore = isAmbiguous ? 45 : answersSubmitted ? 95 : 72;
-  const riskLabel =
-    stabilityScore < 50
-      ? "HIGH SCOPE CREEP RISK"
-      : stabilityScore < 80
-        ? "MODERATE RISK"
-        : "PREMIUM SCOPE";
+  const decisions =
+    parsedProposal && parsedProposal.risks
+      ? parsedProposal.risks.map((r) => r.label || r.description || r)
+      : defaultDecisions;
+
+  const reqCounts = {
+    outcomes: requirements.filter((r) => r.status !== "Constraint").length,
+    constraints: requirements.filter((r) => r.status === "Constraint").length,
+    decisions: decisions.length,
+  };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Title */}
-      <div>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Subsystem 01
-        </span>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <FileText className="text-[#2563EB]" /> Brief Intelligence Workspace
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Input your raw project briefs to automatically structure deliverables,
-          dependencies, and risk scores.
+    <div>
+      {/* Page header */}
+      <div className="panel-page-header">
+        <h1 className="panel-page-title">Brief intelligence</h1>
+        <p className="panel-page-subtitle">
+          Northstar Billing Migration · Source brief v1.2
         </p>
       </div>
 
-      {/* Grid: Editor & Output */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Input panel */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg space-y-6">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2">
-            Project Brief Editor
+      {/* Three-column grid */}
+      <div className="panel-grid panel-grid--3">
+        {/* Left: Source request */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Source request</h2>
           </div>
 
-          {/* Presets */}
-          <div className="flex gap-2">
-            {presets.map((p, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setText(p.text);
-                  setBriefParsed(false);
-                  setAnswersSubmitted(false);
-                }}
-                className="px-3 py-1.5 bg-[#F7F8FA] border border-[#D9E0E8] text-slate-700 text-xs font-semibold rounded hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                Preset v{idx + 1}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleParse} className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="brief"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-              >
-                Raw Requirements Text
-              </label>
+          {/* Input / display area */}
+          {!isBriefParsed ? (
+            <form onSubmit={handleParse}>
               <textarea
-                id="brief"
-                rows={8}
                 value={text}
                 onChange={(e) => {
                   setText(e.target.value);
                   if (isBriefParsed) setBriefParsed(false);
                 }}
-                placeholder="Describe your project, deadlines, tech stack, and goals..."
-                className="w-full p-4 bg-white border border-[#D9E0E8] rounded focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] text-sm text-slate-900 transition-colors"
+                placeholder="Describe your project requirements..."
+                rows={6}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: "#0f172a",
+                  resize: "vertical",
+                  fontFamily: "inherit",
+                }}
                 required
               />
-            </div>
+              <button
+                type="submit"
+                disabled={parsing}
+                className="panel-btn"
+                style={{ width: "100%", marginTop: 12 }}
+              >
+                {parsing ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    {parsingStep === 1
+                      ? "Structuring..."
+                      : parsingStep === 2
+                      ? "Analyzing gaps..."
+                      : "Mapping risks..."}
+                  </>
+                ) : (
+                  <>
+                    <Cpu size={14} /> Parse Project Brief
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <>
+              <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, margin: "0 0 20px" }}>
+                {text ||
+                  "Move our billing service without interrupting active subscriptions. We need a safe rollback path and clear reconciliation before cutover."}
+              </p>
 
-            <button
-              type="submit"
-              disabled={parsing}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 hover:bg-[#2563EB] text-white font-bold text-sm rounded transition-colors disabled:opacity-75 cursor-pointer"
-            >
-              {parsing ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  {parsingStep === 1
-                    ? "Structuring Ingestion..."
-                    : parsingStep === 2
-                      ? "Analyzing Technical Gaps..."
-                      : "Mapping Risk Scores..."}
-                </>
-              ) : isBriefParsed ? (
-                "Reparse Brief"
-              ) : (
-                "Parse Project Brief"
-              )}
-            </button>
-          </form>
+              {/* Attachments */}
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+                Attachments
+              </h3>
+              {attachments.map((att) => (
+                <div
+                  key={att.name}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    marginBottom: 8,
+                    fontSize: 13,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 6,
+                      background: att.color + "15",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 16,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {att.icon}
+                  </span>
+                  <span style={{ fontWeight: 500, color: "#334155" }}>{att.name}</span>
+                </div>
+              ))}
+
+              <hr className="panel-divider" />
+
+              {/* Source info */}
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
+                Source
+              </h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "#dbeafe",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#2563eb",
+                  }}
+                >
+                  EP
+                </div>
+                <span style={{ fontSize: 13, color: "#64748b" }}>Provided by Elena Park</span>
+              </div>
+
+              {/* Reparse button */}
+              <button
+                type="button"
+                className="panel-link"
+                style={{ marginTop: 16 }}
+                onClick={() => setBriefParsed(false)}
+              >
+                <RefreshCw size={13} /> Edit and reparse
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Output panel */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2 flex items-center justify-between">
-            <span>System Output</span>
-            {isBriefParsed && (
-              <span className="flex items-center gap-1 text-xs text-emerald-600 font-bold uppercase">
-                <CheckCircle size={14} /> Synced
-              </span>
-            )}
+        {/* Center: Parsed requirements */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Parsed requirements</h2>
           </div>
 
-          {!isBriefParsed && !parsing ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-center space-y-2">
-              <Cpu size={32} className="stroke-[1.5]" />
-              <p className="text-sm">
-                Click "Parse Project Brief" to run the system scoping parser.
-              </p>
-            </div>
-          ) : parsing ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-center space-y-4">
-              <RefreshCw size={36} className="animate-spin text-[#2563EB]" />
-              <div className="text-sm space-y-1">
-                <p className="font-bold text-slate-800">
-                  Autonomous Parser Running
-                </p>
-                <p className="text-xs text-slate-400">
-                  Reviewing grammar, identifying dependencies, and tagging
-                  unknowns.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-fadeIn py-2">
-              {/* Data source / fallback banner */}
-              {briefSource === "api" ? (
-                <div className="p-2.5 bg-blue-50 border border-blue-200 text-[#173EA5] rounded text-xs flex items-center gap-2">
-                  <Cpu size={14} /> Parsed live by the Gemini brief parser.
-                </div>
-              ) : briefError ? (
-                <div className="p-2.5 bg-orange-50 border border-orange-200 text-[#C2410C] rounded text-xs flex items-center gap-2">
-                  <AlertTriangle size={14} /> {briefError}
-                </div>
-              ) : null}
-
-              {/* Scope Stability Card */}
-              <div className="p-4 border border-[#D9E0E8] rounded bg-[#F7F8FA] flex justify-between items-center">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Scope Stability Rating
-                  </span>
-                  <div className="text-xl font-extrabold text-slate-900 mt-1">
-                    {stabilityScore}%
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Risk Label
-                  </span>
-                  <div
-                    className={`text-xs font-extrabold px-2 py-0.5 border rounded-full mt-1 ${
-                      stabilityScore < 50
-                        ? "bg-orange-50 border-orange-200 text-[#C2410C]"
-                        : stabilityScore < 80
-                          ? "bg-yellow-50 border-yellow-200 text-yellow-800"
-                          : "bg-emerald-50 border-emerald-200 text-[#16A34A]"
-                    }`}
-                  >
-                    {riskLabel}
-                  </div>
-                </div>
-              </div>
-
-              {/* Parsed Outcomes */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Parsed Outcomes
-                </h4>
-                {parsedProposal ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-slate-600">
-                      {parsedProposal.project_summary}
-                    </p>
-                    <ul className="text-sm text-slate-600 space-y-1.5 list-disc pl-4">
-                      {parsedProposal.features.map((feature, idx) => (
-                        <li key={idx}>
-                          <span className="font-semibold text-slate-800">
-                            {feature.title}
-                          </span>{" "}
-                          <span className="text-slate-400">
-                            ({feature.area} · {feature.complexity} complexity ·{" "}
-                            {feature.confidence_pct}% confidence)
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    {parsedProposal.risks?.length > 0 && (
-                      <p className="text-xs text-[#C2410C] font-semibold flex items-center gap-1">
-                        <AlertTriangle size={14} /> Top risk:{" "}
-                        {parsedProposal.risks[0].label} (severity{" "}
-                        {parsedProposal.risks[0].severity})
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <ul className="text-sm text-slate-600 space-y-1.5 list-disc pl-4">
-                    <li>
-                      Configure virtual routing accounts for split-payout mapping.
-                    </li>
-                    <li>
-                      Build a secondary Web3 transaction dispatcher utilizing USDC
-                      on Polygon.
-                    </li>
-                    {isAmbiguous ? (
-                      <li className="text-[#C2410C] font-semibold list-none pl-0 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={14} /> Gaps found: Describe the
-                        subscription system for detailed outcomes.
-                      </li>
-                    ) : (
-                      <>
-                        <li>
-                          Integrate Stripe-compatible legacy webhooks for backup
-                          verification.
-                        </li>
-                        <li>
-                          Deploy automated rollback triggers on sync
-                          discrepancies.
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                )}
-              </div>
-
-              {/* Clarification Gaps */}
-              <div className="space-y-3 pt-3 border-t border-[#D9E0E8]">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 text-orange-600">
-                  <AlertTriangle size={14} /> Clarification Gaps (
-                  {answersSubmitted ? "0" : "2"} Gaps Open)
-                </h4>
-
-                {answersSubmitted ? (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-[#16A34A] rounded text-xs">
-                    All clarifications answered. Scope stability rating
-                    upgraded.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="q1"
-                        className="block text-xs font-semibold text-slate-600"
-                      >
-                        1. What is the expected maximum latency for Web3 deposit
-                        recognition?
-                      </label>
-                      <input
-                        id="q1"
-                        type="text"
-                        value={q1Answer}
-                        onChange={(e) => setQ1Answer(e.target.value)}
-                        placeholder="e.g., Under 15 seconds / within 5 blocks"
-                        className="w-full px-3 py-2 bg-white border border-[#D9E0E8] rounded text-xs focus:outline-none focus:border-[#2563EB]"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        htmlFor="q2"
-                        className="block text-xs font-semibold text-slate-600"
-                      >
-                        2. Do you require real-time email alerts for customer
-                        webhook failures?
-                      </label>
-                      <input
-                        id="q2"
-                        type="text"
-                        value={q2Answer}
-                        onChange={(e) => setQ2Answer(e.target.value)}
-                        placeholder="e.g., Yes, send Slack/email alerts"
-                        className="w-full px-3 py-2 bg-white border border-[#D9E0E8] rounded text-xs focus:outline-none focus:border-[#2563EB]"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setAnswersSubmitted(true)}
-                      className="px-4 py-2 bg-slate-900 hover:bg-[#2563EB] text-white font-bold text-xs rounded transition-colors cursor-pointer"
-                    >
-                      Submit Answers
-                    </button>
-                  </div>
-                )}
-              </div>
+          {/* Status banner */}
+          {briefSource === "api" && isBriefParsed && (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: 6,
+                fontSize: 12,
+                color: "#1d4ed8",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 12,
+              }}
+            >
+              <Cpu size={13} /> Parsed live by Gemini brief parser.
             </div>
           )}
+          {briefError && isBriefParsed && (
+            <div
+              style={{
+                padding: "8px 12px",
+                background: "#fff7ed",
+                border: "1px solid #fed7aa",
+                borderRadius: 6,
+                fontSize: 12,
+                color: "#c2410c",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 12,
+              }}
+            >
+              <AlertTriangle size={13} /> {briefError}
+            </div>
+          )}
+
+          {isBriefParsed || parsing ? (
+            <>
+              {/* Counts */}
+              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+                {reqCounts.outcomes} outcomes · {reqCounts.constraints} constraints ·{" "}
+                {reqCounts.decisions} open decisions
+              </p>
+
+              {parsing ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 200,
+                    color: "#64748b",
+                    gap: 12,
+                  }}
+                >
+                  <RefreshCw size={28} className="animate-spin" style={{ color: "#2563eb" }} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Parsing requirements...</span>
+                </div>
+              ) : (
+                requirements.map((req) => (
+                  <div
+                    key={req.text}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 0",
+                      borderBottom: "1px solid #f1f5f9",
+                    }}
+                  >
+                    <span style={{ fontSize: 14, color: "#334155" }}>{req.text}</span>
+                    <span
+                      className={`panel-badge ${
+                        req.status === "Confirmed"
+                          ? "panel-badge--green"
+                          : req.status === "In scope"
+                          ? "panel-badge--outline"
+                          : "panel-badge--gray"
+                      }`}
+                      style={{ flexShrink: 0, marginLeft: 12, display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      {req.status === "Confirmed" && <Check size={11} />}
+                      {req.status === "In scope" && <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid #94a3b8" }} />}
+                      {req.status === "Constraint" && <Minus size={11} />}
+                      {req.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 280,
+                color: "#94a3b8",
+                textAlign: "center",
+                gap: 8,
+              }}
+            >
+              <FileText size={28} />
+              <span style={{ fontSize: 13 }}>
+                Parse a brief to see structured requirements here.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Needs a decision */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Needs a decision</h2>
+          </div>
+
+          {isBriefParsed ? (
+            <>
+              {decisions.map((q) => (
+                <div
+                  key={typeof q === "string" ? q : q.label || JSON.stringify(q)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "14px 0",
+                    borderBottom: "1px solid #f1f5f9",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: "#fff7ed",
+                      border: "1px solid #fed7aa",
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
+                      color: "#ea580c",
+                    }}
+                  >
+                    <HelpCircle size={14} />
+                  </span>
+                  <span style={{ fontSize: 13, color: "#334155", flex: 1, fontWeight: 500 }}>
+                    {typeof q === "string" ? q : q.label || q.description || "Unresolved risk"}
+                  </span>
+                  <ChevronRight size={16} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                </div>
+              ))}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 20 }}>
+                <button type="button" className="panel-btn" style={{ width: "100%" }}>
+                  Request clarification
+                </button>
+                <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
+                  Mark as assumption
+                </button>
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 200,
+                color: "#94a3b8",
+                textAlign: "center",
+                gap: 8,
+              }}
+            >
+              <HelpCircle size={28} />
+              <span style={{ fontSize: 13 }}>
+                Decisions will appear after parsing.
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom info bar */}
+      <div className="panel-action-bar">
+        <div className="panel-action-bar-left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#2563eb" }}>ℹ</span>
+          <span style={{ fontSize: 13, color: "#64748b" }}>
+            Every interpretation remains linked to the source request.
+          </span>
         </div>
       </div>
     </div>
