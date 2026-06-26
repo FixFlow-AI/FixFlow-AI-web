@@ -78,6 +78,15 @@ export const useLandingStore = create((set) => ({
   setBriefText: (rawBriefText) => set({ rawBriefText }),
   setBriefParsed: (isBriefParsed) => set({ isBriefParsed }),
 
+  // Structured proposal returned by the backend brief parser (null until parsed).
+  // `briefSource` records whether the data came from the live API or the local mock fallback.
+  parsedProposal: null,
+  briefSource: null, // "api" | "mock" | null
+  briefError: "",
+  setParsedProposal: (parsedProposal) => set({ parsedProposal }),
+  setBriefSource: (briefSource) => set({ briefSource }),
+  setBriefError: (briefError) => set({ briefError }),
+
   // Proposal
   generatedProposal: "",
   isProposalGenerated: false,
@@ -184,5 +193,8 @@ export const useLandingStore = create((set) => ({
       isBriefParsed: false,
       isProposalGenerated: false,
       generatedProposal: "",
+      parsedProposal: null,
+      briefSource: null,
+      briefError: "",
     }),
 }));
