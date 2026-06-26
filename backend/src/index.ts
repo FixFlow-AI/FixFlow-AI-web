@@ -13,6 +13,8 @@ import {
   buildSBTMetadata,
 } from './skills/reputationCalculator.js';
 import { calculateClientScore } from './skills/clientScoring.js';
+import { generateShortlist } from './services/matchingEngine.js';
+import { getFreelancerRepository } from './services/freelancerRepository.js';
 import { SyncServer } from './skills/syncServer.js';
 import {
   createMilestone,
@@ -177,6 +179,35 @@ app.post('/api/client-score', (req: Request, res: Response) => {
   const { clientHistory = [] } = req.body ?? {};
   res.json(calculateClientScore(clientHistory));
 });
+
+// ==========================================
+// AI-006: Freelancer ↔ Client Matching (deterministic, no key required)
+// ==========================================
+
+app.post(
+  '/api/leads/match',
+  asyncRoute(async (req, res) => {
+    const { requiredSkills = [], budget, limit, domains } = req.body ?? {};
+    if (!Array.isArray(requiredSkills)) {
+      res.status(400).json({ error: 'requiredSkills must be an array of strings.' });
+      return;
+    }
+    // Roster comes from the repository layer (seed file / HTTP API / future DB),
+    // never hardcoded in the engine.
+    const roster = await getFreelancerRepository().listActiveFreelancers();
+    res.json(
+      generateShortlist(
+        {
+          requiredSkills,
+          budget: typeof budget === 'number' ? budget : undefined,
+          limit: typeof limit === 'number' ? limit : undefined,
+          domains: Array.isArray(domains) ? domains : undefined,
+        },
+        roster,
+      ),
+    );
+  }),
+);
 
 // ==========================================
 // Escrow State Machine (milestones + cryptographic audit trail)
