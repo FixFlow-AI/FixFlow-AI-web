@@ -1,0 +1,4 @@
+{
+  "_comment": "Sample/seed user store used only when USER_PROVIDER=seed. Real users are created automatically on first Google sign-in. Replace by setting USER_PROVIDER=http (USER_API_URL) or by implementing a database-backed UserRepository (e.g. DynamoDB).",
+  "users": []
+}
