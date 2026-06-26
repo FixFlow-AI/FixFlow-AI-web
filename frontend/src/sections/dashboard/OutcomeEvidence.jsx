@@ -1,224 +1,288 @@
-import { useState } from "react";
-import { useLandingStore } from "../../store/useLandingStore";
 import {
+  Check,
+  AlertTriangle,
+  Link2,
+  FileText,
+  Handshake,
   Award,
-  CheckCircle,
-  RefreshCw,
-  Layers,
-  ExternalLink,
+  Clock,
+  ArrowRight,
+  ArrowUpRight,
+  Eye,
+  Shield,
+  Sparkles,
+  ToggleLeft,
 } from "lucide-react";
 
+const acceptedCriteria = [
+  "Dependency map is complete",
+  "Rollback owner is named",
+  "Reconciliation tests are approved",
+];
+
+const timelineEvents = [
+  { icon: FileText, color: "blue", title: "Requirement captured", time: "May 1, 9:12 AM" },
+  { icon: AlertTriangle, color: "orange", title: "Risk acknowledged", time: "May 1, 10:05 AM" },
+  { icon: Link2, color: "blue", title: "Proof connected", time: "May 2, 11:18 AM" },
+  { icon: Handshake, color: "green", title: "Agreement approved", time: "May 3, 1:40 PM" },
+  { icon: Shield, color: "green", title: "Milestone funded", time: "May 4, 9:00 AM" },
+  { icon: ArrowUpRight, color: "blue", title: "Delivery submitted", time: "May 8, 11:15 AM" },
+  { icon: Check, color: "green", title: "Outcome accepted", time: "May 8, 2:15 PM", highlight: true },
+  { icon: Sparkles, color: "blue", title: "Reputation updated", time: "May 8, 2:18 PM" },
+];
+
+const sourceConnections = [
+  { icon: FileText, label: "Source brief v1.2" },
+  { icon: Handshake, label: "Agreement v2.0" },
+  { icon: FileText, label: "Rollback design.pdf" },
+  { icon: Check, label: "Client acceptance event" },
+];
+
 export function OutcomeEvidence() {
-  const { milestones } = useLandingStore();
-
-  const [minting, setMinting] = useState(false);
-  const [mintStep, setMintStep] = useState(0);
-  const [isMinted, setIsMinted] = useState(false);
-
-  // Calculate completed statistics
-  const totalCount = milestones.length;
-  const releasedCount = milestones.filter(
-    (m) => m.status === "released",
-  ).length;
-  const allReleased = releasedCount === totalCount;
-
-  const handleMint = () => {
-    setMinting(true);
-    setMintStep(1);
-
-    setTimeout(() => setMintStep(2), 700);
-    setTimeout(() => setMintStep(3), 1400);
-    setTimeout(() => {
-      setMinting(false);
-      setIsMinted(true);
-    }, 2100);
-  };
-
-  // SBT Trait Metadata JSON Preview
-  const sbtMetadata = {
-    name: "FixFlow AI Verifiable Reputation SBT",
-    description:
-      "Verification of performance milestones and trust indicators for the DID profile.",
-    image: "ipfs://QmReputationBadgeHash_NorthstarMigration",
-    attributes: [
-      { trait_type: "OnTimeRate", value: 100.0 },
-      { trait_type: "RevisionEfficiency", value: 92.5 },
-      { trait_type: "RepeatClientRate", value: 33.3 },
-      { trait_type: "DisputeFreeRate", value: 100.0 },
-      {
-        trait_type: "VerificationStandard",
-        value: "FixFlow AI Consensus Engine v1",
-      },
-    ],
-  };
-
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Title */}
-      <div>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Subsystem 07
-        </span>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <Award className="text-[#2563EB]" /> Outcome Evidence and Reputation
-          Trail
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Lock completed project metrics into immutable Soulbound Tokens to
-          build a portable reputation portfolio.
+    <div>
+      {/* Page header */}
+      <div className="panel-page-header">
+        <h1 className="panel-page-title">Verified outcome record</h1>
+        <p className="panel-page-subtitle">
+          Northstar Billing Migration · <span style={{ color: "#16a34a", fontWeight: 600 }}>Milestone 01 accepted</span>
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Summary cards */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg lg:col-span-1 space-y-6">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2">
-            Outcome Analytics
+      {/* Three-column grid */}
+      <div className="panel-grid panel-grid--3">
+        {/* Left: Accepted outcome */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Accepted outcome</h2>
           </div>
 
-          <div className="space-y-4">
-            <div className="p-4 border border-[#D9E0E8] rounded bg-[#F7F8FA] flex justify-between items-center">
+          {/* Highlighted item */}
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: 8,
+              padding: "14px 16px",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="panel-check panel-check--done">
+                <Check size={11} strokeWidth={3} />
+              </span>
               <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Milestone Progress
-                </span>
-                <div className="text-lg font-bold text-slate-900 mt-1">
-                  {releasedCount} / {totalCount} Cleared
+                <div style={{ fontSize: 14, fontWeight: 700 }}>
+                  Migration plan and rollback design
+                </div>
+                <div style={{ fontSize: 12, color: "#16a34a" }}>
+                  Accepted against 3 criteria
                 </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500">
-                {Math.round((releasedCount / totalCount) * 100)}% Complete
-              </span>
             </div>
+          </div>
 
-            <div className="p-4 border border-[#D9E0E8] rounded bg-[#F7F8FA] flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  On-Time delivery rate
-                </span>
-                <div className="text-lg font-bold text-slate-900 mt-1">
-                  100%
-                </div>
-              </div>
-              <span className="text-xs text-emerald-600 font-bold">
-                Premium
+          {acceptedCriteria.map((item) => (
+            <div className="panel-checklist-item" key={item}>
+              <span className="panel-check panel-check--done">
+                <Check size={11} strokeWidth={3} />
               </span>
+              <div className="panel-checklist-content">
+                <div className="panel-checklist-label">{item}</div>
+              </div>
             </div>
+          ))}
 
-            <div className="p-4 border border-[#D9E0E8] rounded bg-[#F7F8FA] flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Dispute-Free Rate
-                </span>
-                <div className="text-lg font-bold text-slate-900 mt-1">
-                  100%
-                </div>
-              </div>
-              <span className="text-xs text-emerald-600 font-bold">
-                Consensus
-              </span>
+          <hr className="panel-divider" />
+
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Outcome</h3>
+          <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: "0 0 16px" }}>
+            The approved migration plan is ready for implementation.
+          </p>
+
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Accepted by</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "#e2e8f0",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#475569",
+              }}
+            >
+              EP
             </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Elena Park</div>
+              <div style={{ fontSize: 12, color: "#94a3b8" }}>May 8, 2:15 PM</div>
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Accepted version</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+            <FileText size={14} /> Agreement v2.0
           </div>
         </div>
 
-        {/* Right: SBT Minting Portal */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg lg:col-span-2 space-y-6">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2">
-            Polygon DID Reputation SBT Minting
+        {/* Center: Evidence timeline */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Evidence timeline</h2>
           </div>
 
-          {!allReleased ? (
-            <div className="p-6 border border-orange-200 bg-orange-50 rounded text-center space-y-3">
-              <Layers size={32} className="text-orange-500 mx-auto" />
-              <h4 className="font-bold text-slate-900 text-sm">
-                Escrow Milestones Open
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
-                You can only mint the reputation SBT credential when all scoped
-                milestones are successfully completed, approved, and released.
-                Currently, {releasedCount} of {totalCount} milestones are
-                released.
-              </p>
-            </div>
-          ) : !isMinted && !minting ? (
-            <div className="space-y-4 text-center py-6">
-              <Layers
-                size={44}
-                className="text-[#2563EB] mx-auto animate-bounce"
-              />
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-800 text-sm">
-                  Reputation SBT Eligible
-                </h4>
-                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  All milestones are completed. Mint your portable performance
-                  SBT to Polygon blockchain to record this work history
-                  on-chain.
-                </p>
-              </div>
-              <button
-                onClick={handleMint}
-                className="px-6 py-2.5 bg-slate-900 hover:bg-[#2563EB] text-white font-bold text-xs rounded transition-colors cursor-pointer"
+          {timelineEvents.map((evt) => {
+            const Icon = evt.icon;
+            return (
+              <div
+                className="panel-timeline-item"
+                key={evt.title}
+                style={
+                  evt.highlight
+                    ? {
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: 8,
+                        padding: "10px 12px",
+                        margin: "4px -12px",
+                      }
+                    : undefined
+                }
               >
-                Mint Reputation SBT
-              </button>
-            </div>
-          ) : minting ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-500 text-center space-y-4">
-              <RefreshCw size={36} className="animate-spin text-[#2563EB]" />
-              <div className="text-xs space-y-1">
-                <p className="font-bold text-slate-800">
-                  {mintStep === 1
-                    ? "1/3 Compiling SBT Metadata..."
-                    : mintStep === 2
-                      ? "2/3 Signing wallet transaction..."
-                      : "3/3 Broadcasting to Polygon block ledger..."}
-                </p>
-                <p className="text-slate-400">
-                  Please do not refresh the browser or disconnect your wallet
-                  provider.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded flex gap-3">
-                <CheckCircle
-                  size={20}
-                  className="shrink-0 mt-0.5 text-emerald-600"
-                />
-                <div className="text-xs space-y-1">
-                  <span className="font-bold block">
-                    Soulbound DID Minted Successfully
-                  </span>
-                  <p>
-                    Transaction hash:{" "}
-                    <span className="font-mono font-semibold">
-                      0x4ae8...392fc
-                    </span>
-                  </p>
-                  <a
-                    href="https://polygonscan.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-bold text-[#2563EB] hover:underline mt-1"
-                  >
-                    View on Polygonscan <ExternalLink size={12} />
-                  </a>
-                </div>
-              </div>
-
-              {/* SBT Metadata Preview */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  SBT Token Metadata Schema
+                <span className={`panel-timeline-icon panel-timeline-icon--${evt.color}`}>
+                  <Icon size={15} strokeWidth={1.8} />
                 </span>
-                <div className="border border-[#D9E0E8] bg-[#F7F8FA] rounded p-4 font-mono text-[10px] text-slate-700 h-44 overflow-y-auto whitespace-pre-wrap">
-                  {JSON.stringify(sbtMetadata, null, 2)}
+                <div className="panel-timeline-body">
+                  <div className="panel-timeline-title">{evt.title}</div>
+                  <div className="panel-timeline-meta">{evt.time}</div>
                 </div>
               </div>
+            );
+          })}
+
+          <hr className="panel-divider" />
+
+          {/* Source connections */}
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Source connections</h3>
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            {sourceConnections.map((src) => {
+              const SrcIcon = src.icon;
+              return (
+                <div
+                  key={src.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 0",
+                    fontSize: 13,
+                    color: "#475569",
+                  }}
+                >
+                  <SrcIcon size={14} strokeWidth={1.8} />
+                  {src.label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: Reputation and reuse */}
+        <div className="panel-card">
+          <div className="panel-card-header">
+            <h2 className="panel-card-title">Reputation and reuse</h2>
+          </div>
+
+          {/* Reuse CTA */}
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Award size={18} strokeWidth={1.8} style={{ color: "#16a34a" }} />
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Reuse this proof</span>
             </div>
-          )}
+            <p style={{ fontSize: 12, color: "#64748b", margin: 0, lineHeight: 1.5 }}>
+              This accepted outcome can support future recommendations.
+            </p>
+          </div>
+
+          <div className="panel-info-row">
+            <span className="panel-info-label">Requirement relevance</span>
+            <span className="panel-info-value">Billing migration</span>
+          </div>
+          <div className="panel-info-row">
+            <span className="panel-info-label">Evidence type</span>
+            <span className="panel-info-value">Accepted outcome</span>
+          </div>
+          <div className="panel-info-row">
+            <span className="panel-info-label">Visibility</span>
+            <span className="panel-info-value">Private to network</span>
+          </div>
+          <div className="panel-info-row">
+            <span className="panel-info-label">Available for matching</span>
+            <span className="panel-info-value" style={{ color: "#16a34a" }}>Yes</span>
+          </div>
+
+          <hr className="panel-divider" />
+
+          {/* Toggle controls */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Use for future recommendations</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                Allow FixFlowAI to surface this proof in relevant opportunities.
+              </div>
+            </div>
+            <button type="button" className="panel-toggle is-on" aria-label="Toggle recommendations" />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Show project name publicly</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                Hide project name when shared in external recommendations.
+              </div>
+            </div>
+            <button type="button" className="panel-toggle" aria-label="Toggle public name" />
+          </div>
+
+          <hr className="panel-divider" />
+
+          <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
+            Preview proof record <ArrowUpRight size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom info bar */}
+      <div className="panel-action-bar">
+        <div className="panel-action-bar-left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#2563eb" }}>ℹ</span>
+          <span style={{ fontSize: 13, color: "#64748b" }}>
+            Trust is a trail of sources, decisions, delivery evidence, and accepted outcomes.
+          </span>
+        </div>
+        <div className="panel-action-bar-right">
+          <button type="button" className="panel-link">
+            View full outcome history <ArrowRight size={14} />
+          </button>
         </div>
       </div>
     </div>
