@@ -15,6 +15,7 @@ import {
 import { calculateClientScore } from './skills/clientScoring.js';
 import { generateShortlist } from './services/matchingEngine.js';
 import { getFreelancerRepository } from './services/freelancerRepository.js';
+import { authRouter } from './routes/auth.js';
 import { SyncServer } from './skills/syncServer.js';
 import {
   createMilestone,
@@ -36,6 +37,12 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+
+// Mount authentication routes. They live at /api/auth/* and are intentionally
+// public — they're the entry point that issues access tokens to the rest of
+// the API. Other routes can opt in to protection with the `requireAuth`
+// middleware from ./auth/middleware.
+app.use('/api/auth', authRouter);
 
 /**
  * Small wrapper so async route handlers forward errors to the error middleware
@@ -67,6 +74,9 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     aiEnabled: Boolean(GEMINI_API_KEY.trim()),
+    authEnabled:
+      Boolean((process.env.JWT_SECRET || '').trim()) &&
+      Boolean((process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim()),
     model: GEMINI_MODEL,
     time: new Date().toISOString(),
   });
