@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
+import { api, ApiError } from "../../lib/api";
 import {
   FileText,
   Cpu,
@@ -9,8 +10,18 @@ import {
 } from "lucide-react";
 
 export function BriefIntelligence() {
-  const { rawBriefText, isBriefParsed, setBriefText, setBriefParsed } =
-    useLandingStore();
+  const {
+    rawBriefText,
+    isBriefParsed,
+    setBriefText,
+    setBriefParsed,
+    parsedProposal,
+    briefSource,
+    briefError,
+    setParsedProposal,
+    setBriefSource,
+    setBriefError,
+  } = useLandingStore();
 
   const [text, setText] = useState(rawBriefText);
   const [parsing, setParsing] = useState(false);
@@ -21,19 +32,39 @@ export function BriefIntelligence() {
   const [q2Answer, setQ2Answer] = useState("");
   const [answersSubmitted, setAnswersSubmitted] = useState(false);
 
-  const handleParse = (e) => {
+  const handleParse = async (e) => {
     e.preventDefault();
     setBriefText(text);
+    setBriefError("");
     setParsing(true);
     setParsingStep(1);
 
-    // Simulate multi-stage parsing steps
-    setTimeout(() => setParsingStep(2), 600);
-    setTimeout(() => setParsingStep(3), 1200);
-    setTimeout(() => {
-      setParsing(false);
+    // Drive the staged status copy while the request is in flight.
+    const stepTimers = [
+      setTimeout(() => setParsingStep(2), 600),
+      setTimeout(() => setParsingStep(3), 1200),
+    ];
+
+    try {
+      const { proposal } = await api.parseBrief(text);
+      setParsedProposal(proposal);
+      setBriefSource("api");
       setBriefParsed(true);
-    }, 1800);
+    } catch (err) {
+      // Backend down or no Gemini key configured: fall back to the local
+      // mock view so the workspace stays usable, but surface why.
+      const reason =
+        err instanceof ApiError && err.status === 503
+          ? "AI is not configured on the server (missing GEMINI_API_KEY). Showing a sample result."
+          : "Couldn't reach the live parser. Showing a sample result.";
+      setBriefError(reason);
+      setParsedProposal(null);
+      setBriefSource("mock");
+      setBriefParsed(true);
+    } finally {
+      stepTimers.forEach(clearTimeout);
+      setParsing(false);
+    }
   };
 
   // Preset briefs for quick testing
@@ -178,6 +209,17 @@ export function BriefIntelligence() {
             </div>
           ) : (
             <div className="space-y-6 animate-fadeIn py-2">
+              {/* Data source / fallback banner */}
+              {briefSource === "api" ? (
+                <div className="p-2.5 bg-blue-50 border border-blue-200 text-[#173EA5] rounded text-xs flex items-center gap-2">
+                  <Cpu size={14} /> Parsed live by the Gemini brief parser.
+                </div>
+              ) : briefError ? (
+                <div className="p-2.5 bg-orange-50 border border-orange-200 text-[#C2410C] rounded text-xs flex items-center gap-2">
+                  <AlertTriangle size={14} /> {briefError}
+                </div>
+              ) : null}
+
               {/* Scope Stability Card */}
               <div className="p-4 border border-[#D9E0E8] rounded bg-[#F7F8FA] flex justify-between items-center">
                 <div>
@@ -211,32 +253,60 @@ export function BriefIntelligence() {
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Parsed Outcomes
                 </h4>
-                <ul className="text-sm text-slate-600 space-y-1.5 list-disc pl-4">
-                  <li>
-                    Configure virtual routing accounts for split-payout mapping.
-                  </li>
-                  <li>
-                    Build a secondary Web3 transaction dispatcher utilizing USDC
-                    on Polygon.
-                  </li>
-                  {isAmbiguous ? (
-                    <li className="text-[#C2410C] font-semibold list-none pl-0 mt-1 flex items-center gap-1">
-                      <AlertTriangle size={14} /> Gaps found: Describe the
-                      subscription system for detailed outcomes.
+                {parsedProposal ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600">
+                      {parsedProposal.project_summary}
+                    </p>
+                    <ul className="text-sm text-slate-600 space-y-1.5 list-disc pl-4">
+                      {parsedProposal.features.map((feature, idx) => (
+                        <li key={idx}>
+                          <span className="font-semibold text-slate-800">
+                            {feature.title}
+                          </span>{" "}
+                          <span className="text-slate-400">
+                            ({feature.area} · {feature.complexity} complexity ·{" "}
+                            {feature.confidence_pct}% confidence)
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {parsedProposal.risks?.length > 0 && (
+                      <p className="text-xs text-[#C2410C] font-semibold flex items-center gap-1">
+                        <AlertTriangle size={14} /> Top risk:{" "}
+                        {parsedProposal.risks[0].label} (severity{" "}
+                        {parsedProposal.risks[0].severity})
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <ul className="text-sm text-slate-600 space-y-1.5 list-disc pl-4">
+                    <li>
+                      Configure virtual routing accounts for split-payout mapping.
                     </li>
-                  ) : (
-                    <>
-                      <li>
-                        Integrate Stripe-compatible legacy webhooks for backup
-                        verification.
+                    <li>
+                      Build a secondary Web3 transaction dispatcher utilizing USDC
+                      on Polygon.
+                    </li>
+                    {isAmbiguous ? (
+                      <li className="text-[#C2410C] font-semibold list-none pl-0 mt-1 flex items-center gap-1">
+                        <AlertTriangle size={14} /> Gaps found: Describe the
+                        subscription system for detailed outcomes.
                       </li>
-                      <li>
-                        Deploy automated rollback triggers on sync
-                        discrepancies.
-                      </li>
-                    </>
-                  )}
-                </ul>
+                    ) : (
+                      <>
+                        <li>
+                          Integrate Stripe-compatible legacy webhooks for backup
+                          verification.
+                        </li>
+                        <li>
+                          Deploy automated rollback triggers on sync
+                          discrepancies.
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                )}
               </div>
 
               {/* Clarification Gaps */}

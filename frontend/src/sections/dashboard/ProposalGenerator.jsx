@@ -16,22 +16,55 @@ export function ProposalGenerator() {
     setGeneratedProposal,
     setProposalGenerated,
     setDashboardTab,
+    parsedProposal,
   } = useLandingStore();
 
   const [generating, setGenerating] = useState(false);
   const [streamProgress, setStreamProgress] = useState("");
 
-  const handleGenerate = () => {
-    setGenerating(true);
-    setStreamProgress("");
+  // Build the proposal sections from the real parsed brief when available,
+  // otherwise fall back to the illustrative sample content.
+  const buildSections = () => {
+    if (parsedProposal) {
+      const featureLines = parsedProposal.features
+        .map(
+          (f) =>
+            `- **${f.title}** (${f.area}, ${f.complexity} complexity): ${f.description}`,
+        )
+        .join("\n");
+      const milestoneLines = parsedProposal.timeline
+        .map(
+          (phase, idx) =>
+            `- **Phase ${idx + 1}: ${phase.phase}** (${phase.duration}) — ${phase.tasks.join(", ")}`,
+        )
+        .join("\n");
+      const riskLines = parsedProposal.risks
+        .map((r) => `- **${r.label}** (severity ${r.severity}): ${r.mitigation}`)
+        .join("\n");
 
-    const sections = [
+      return [
+        "# PROJECT PROPOSAL\n\n",
+        `## 1. Project Summary\n${parsedProposal.project_summary}\n\n`,
+        `## 2. Scope & Features\n${featureLines}\n\n`,
+        `## 3. Timeline & Milestones\n${milestoneLines}\n\n`,
+        `## 4. Risks & Mitigations\n${riskLines}`,
+      ];
+    }
+
+    return [
       "# PROJECT PROPOSAL: Northstar Billing Migration\n\n",
       "## 1. Project Summary\nThis proposal establishes a secure payment workflow to replace the legacy Stripe pipeline with Razorpay, backed by a secondary Web3 escrow path using USDC on Polygon.\n\n",
       "## 2. Technical Architecture\n- **Backend**: Express + Redis deduplication webhooks.\n- **Web3**: Polygon ERC-20 Escrow contract calls.\n- **Database**: PostgreSQL transactional ledger updates via Prisma.\n\n",
       "## 3. Milestones & Escrow Release Rules\n- **Milestone 1 ($8,000)**: Database migration plan and validation scripts.\n- **Milestone 2 ($10,500)**: Webhook caches and live payment controllers.\n- **Milestone 3 ($6,000)**: Polygon SBT reputation credential contract deployments.\n\n",
       "## 4. Assumptions & Exclusions\n- Excludes legacy database performance tuning.\n- Client must provide sandbox API credentials.",
     ];
+  };
+
+  const handleGenerate = () => {
+    setGenerating(true);
+    setStreamProgress("");
+
+    const sections = buildSections();
 
     let currentSectionIdx = 0;
     let currentText = "";
