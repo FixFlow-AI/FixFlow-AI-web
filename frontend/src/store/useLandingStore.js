@@ -93,6 +93,24 @@ export const useLandingStore = create((set) => ({
   setGeneratedProposal: (generatedProposal) => set({ generatedProposal }),
   setProposalGenerated: (isProposalGenerated) => set({ isProposalGenerated }),
 
+  // AI-002: Confidence Grid evaluation result (null until evaluated)
+  confidenceResult: null,
+  confidenceSource: null, // "api" | "mock" | null
+  setConfidenceResult: (confidenceResult) => set({ confidenceResult }),
+  setConfidenceSource: (confidenceSource) => set({ confidenceSource }),
+
+  // AI-003: Generated interview questions
+  interviewQuestions: null,
+  interviewSource: null,
+  setInterviewQuestions: (interviewQuestions) => set({ interviewQuestions }),
+  setInterviewSource: (interviewSource) => set({ interviewSource }),
+
+  // AI-004: Contract extension suggestions
+  contractExtensions: null,
+  extensionsSource: null,
+  setContractExtensions: (contractExtensions) => set({ contractExtensions }),
+  setExtensionsSource: (extensionsSource) => set({ extensionsSource }),
+
   // Contract & Escrow
   isAgreementSigned: { client: false, freelancer: false },
   escrowState: "CREATED",
@@ -196,5 +214,11 @@ export const useLandingStore = create((set) => ({
       parsedProposal: null,
       briefSource: null,
       briefError: "",
+      confidenceResult: null,
+      confidenceSource: null,
+      interviewQuestions: null,
+      interviewSource: null,
+      contractExtensions: null,
+      extensionsSource: null,
     }),
 }));
