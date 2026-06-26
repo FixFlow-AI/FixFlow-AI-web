@@ -2,18 +2,22 @@
 
 > Master reference for all AI-powered features in FixFlowAI. Each feature has its own dedicated implementation guide linked below.
 
+> 🛠️ **Building these features?** Start with the **[AI Features Implementation Playbook](./ai_features_implementation_playbook.md)** — a sequenced, step-by-step "how to actually make it work" guide (setup → per-feature steps → end-to-end test → checklist) that reflects the current state of the codebase.
+
 ---
 
 ## Feature Registry
 
 | ID | Feature Name | Priority | Backend Status | Frontend Status | Doc |
 |:---|:---|:---:|:---:|:---:|:---|
-| `AI-001` | Semantic Brief Parsing & Proposal Generation | 🔴 Critical | ✅ Built | ❌ Mock only | [ai_001_semantic_brief_parsing.md](./ai_001_semantic_brief_parsing.md) |
-| `AI-002` | Multi-Agent Confidence Grid & Self-Correction | 🔴 Critical | ✅ Built | ❌ Mock only | [ai_002_confidence_grid_self_correction.md](./ai_002_confidence_grid_self_correction.md) |
-| `AI-003` | AI Interview & Technical Vetting Generation | 🟡 High | ✅ Built | ❌ No UI | [ai_003_interview_vetting_generation.md](./ai_003_interview_vetting_generation.md) |
-| `AI-004` | Contextual Contract Extensions & Retention | 🟢 Medium-High | ✅ Built | ❌ No widget | [ai_004_contextual_contract_extensions.md](./ai_004_contextual_contract_extensions.md) |
+| `AI-001` | Semantic Brief Parsing & Proposal Generation | 🔴 Critical | ✅ Built + route | ⚠️ Wired (partial) | [ai_001_semantic_brief_parsing.md](./ai_001_semantic_brief_parsing.md) |
+| `AI-002` | Multi-Agent Confidence Grid & Self-Correction | 🔴 Critical | ✅ Built + route | ❌ Mock only | [ai_002_confidence_grid_self_correction.md](./ai_002_confidence_grid_self_correction.md) |
+| `AI-003` | AI Interview & Technical Vetting Generation | 🟡 High | ✅ Built + route | ❌ No UI | [ai_003_interview_vetting_generation.md](./ai_003_interview_vetting_generation.md) |
+| `AI-004` | Contextual Contract Extensions & Retention | 🟢 Medium-High | ✅ Built + route | ❌ No widget | [ai_004_contextual_contract_extensions.md](./ai_004_contextual_contract_extensions.md) |
 | `AI-005` | Opportunity Intelligence & Smart Scoring | 🟡 High | ❌ Not built | ❌ No board | [ai_005_opportunity_intelligence_scoring.md](./ai_005_opportunity_intelligence_scoring.md) |
 | `AI-006` | Freelancer-Client Matching & Lead Scoring | 🔴 Critical | ⚠️ Partial | ❌ No UI | [ai_006_smart_matching_lead_scoring.md](./ai_006_smart_matching_lead_scoring.md) |
+
+> **Note:** AI-001 through AI-004 now have live HTTP routes (`/api/proposals/parse`, `/api/proposals/evaluate`, `/api/interview-questions`, `/api/contract-extensions`). See the [Implementation Playbook](./ai_features_implementation_playbook.md) Section 1 for the exact current state.
 
 ---
 
