@@ -215,6 +215,8 @@ stateDiagram-v2
 
 **State:** nothing built. This is a multi-day pipeline. Build it in the order below; each stage is independently testable.
 
+> 📘 **Detailed companion guide:** see [opportunity_intelligence_build_guide.md](./opportunity_intelligence_build_guide.md) for the full 7-stage build (legal foundation, free vs. paid sources, env contract, scheduling, troubleshooting). The summary below is the short version.
+
 ### Build order (each bullet is a stage you can verify before moving on)
 1. **Source Policy Gate first.** Create `backend/src/connectors/sourcePolicy.ts` defining allowed/blocked domains (block Upwork/Fiverr/etc.) and per-source rules (cache TTL, attribution, whether apply-on-source). Nothing else can run until this exists.
 2. **Discovery connectors.** Add search connectors (Tavily, Brave, SerpAPI) that return raw results. Run them through the policy gate. Start with **one** connector to prove the path, then add the others.
