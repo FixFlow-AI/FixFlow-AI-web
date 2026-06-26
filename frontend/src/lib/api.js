@@ -103,4 +103,33 @@ export const api = {
       body: { clientHistory },
       signal,
     }),
+
+  // Escrow state machine (milestones + cryptographic audit trail)
+  createMilestone: (proposalId, title, amount, signal) =>
+    request("/escrow/milestones", {
+      method: "POST",
+      body: { proposalId, title, amount },
+      signal,
+    }),
+
+  listMilestones: (proposalId, signal) =>
+    request(
+      `/escrow/milestones${proposalId ? `?proposalId=${encodeURIComponent(proposalId)}` : ""}`,
+      { signal },
+    ),
+
+  getMilestone: (id, signal) => request(`/escrow/milestones/${id}`, { signal }),
+
+  getMilestoneAudit: (id, signal) =>
+    request(`/escrow/milestones/${id}/audit`, { signal }),
+
+  transitionMilestone: (id, payload, signal) =>
+    request(`/escrow/milestones/${id}/transition`, {
+      method: "POST",
+      body: payload,
+      signal,
+    }),
+
+  getSyncRoom: (proposalId, signal) =>
+    request(`/sync/rooms/${encodeURIComponent(proposalId)}`, { signal }),
 };
