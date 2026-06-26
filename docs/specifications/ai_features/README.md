@@ -3,6 +3,8 @@
 > Master reference for all AI-powered features in FixFlowAI. Each feature has its own dedicated implementation guide linked below.
 
 > 🛠️ **Building these features?** Start with the **[AI Features Implementation Playbook](./ai_features_implementation_playbook.md)** — a sequenced, step-by-step "how to actually make it work" guide (setup → per-feature steps → end-to-end test → checklist) that reflects the current state of the codebase.
+>
+> 🔍 **Building AI-005 (Opportunity Intelligence / client-data discovery)?** Use the focused **[Opportunity Intelligence Build Guide](./opportunity_intelligence_build_guide.md)** — covers legal foundations, free-vs-paid sources, the 7-stage build order, env contract, scheduling, and troubleshooting.
 
 ---
 
