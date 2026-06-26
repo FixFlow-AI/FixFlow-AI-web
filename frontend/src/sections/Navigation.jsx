@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { Brand } from "../components/Brand";
 import { useActiveSection } from "../hooks/useActiveSection";
 
@@ -55,16 +55,16 @@ export function Navigation() {
             </a>
           ))}
         </nav>
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
           <a
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+            className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
             href="#/login"
           >
             Log in
           </a>
           <a className="button button--small nav-cta" href="#/signup">
             Request access
-            <ArrowUpRight aria-hidden="true" size={15} strokeWidth={2} />
+            <ArrowRight aria-hidden="true" size={15} strokeWidth={2} />
           </a>
         </div>
         <button
@@ -103,8 +103,8 @@ export function Navigation() {
           href="#/signup"
           onClick={() => setMobileOpen(false)}
         >
-          Request early access
-          <ArrowUpRight aria-hidden="true" size={17} />
+          Request access
+          <ArrowRight aria-hidden="true" size={17} />
         </a>
       </nav>
     </header>
