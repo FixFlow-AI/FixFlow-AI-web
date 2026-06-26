@@ -235,16 +235,23 @@ Follow these steps to spin up the local development environments:
    ```bash
    npm install
    ```
-3. Configure the environment variables. Create a `.env` file in the backend root:
+3. Configure the environment variables. Copy `.env.example` to `.env` in the backend root and fill it in:
    ```env
-   PORT=5000
+   PORT=4000
    GEMINI_API_KEY=your_gemini_api_key_here
+   GEMINI_MODEL=gemini-2.5-pro
    ```
+   > The deterministic calculators (earnings, reputation, client scoring) work without a key.
+   > The AI endpoints (brief parsing, confidence grid, interview, contract extensions)
+   > return a clear 503 until `GEMINI_API_KEY` is set.
 4. Transpile typescript and start the server:
    ```bash
    npm run build
    npm start
+   # or, in one step:
+   npm run dev
    ```
+   The API listens on `http://localhost:4000`. Verify it with `GET /api/health`.
 
 ### 2. Set Up the Frontend
 1. Navigate to the frontend directory:
@@ -260,6 +267,13 @@ Follow these steps to spin up the local development environments:
    npm run dev
    ```
 4. Access the dashboard via `http://localhost:5173`.
+
+> **Frontend ↔ backend wiring:** the frontend calls the API through a relative
+> `/api` path. In development, Vite proxies `/api` to `http://localhost:4000`
+> (configurable via `VITE_API_PROXY_TARGET`). To target a deployed backend in a
+> build, set `VITE_API_BASE_URL` (e.g. `https://api.fixflow.ai`). All API calls
+> are centralized in `frontend/src/lib/api.js`. If the backend is unreachable or
+> the AI key is missing, the dashboard gracefully falls back to sample data.
 
 ---
 
