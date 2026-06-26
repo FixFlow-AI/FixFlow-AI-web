@@ -1,274 +1,362 @@
-import { useState } from "react";
-import { useLandingStore } from "../../store/useLandingStore";
 import {
-  FileSignature,
-  CheckCircle,
-  ShieldAlert,
-  Edit3,
-  Save,
+  Check,
+  Target,
+  Flag,
+  ListChecks,
+  AlertTriangle,
+  RefreshCw,
+  Shield,
+  Send,
+  GitCompare,
+  FileText,
+  List,
+  Pencil,
+  MoreHorizontal,
+  ArrowRight,
+  Users,
+  Building2,
 } from "lucide-react";
 
+const agreementChecks = [
+  { icon: Check, label: "Requirements covered", value: "5 of 5", color: "green" },
+  { icon: ListChecks, label: "Acceptance criteria", value: "3 defined", color: "blue" },
+  { icon: AlertTriangle, label: "Unresolved assumptions", value: "1", color: "red" },
+  { icon: RefreshCw, label: "Change process", value: "Included", color: "green" },
+  { icon: Shield, label: "Funding state", value: "Starts after approval", color: "gray" },
+];
+
+const activityItems = [
+  {
+    avatar: "MC",
+    name: "Maya Chen",
+    action: "Draft v2.0 created",
+    time: "May 8, 11:32 AM",
+    color: "#16a34a",
+  },
+  {
+    avatar: "MC",
+    name: "Maya Chen",
+    action: "Changes from v1.4 reviewed",
+    time: "May 8, 11:35 AM",
+    color: "#2563eb",
+  },
+];
+
 export function AgreementComposer() {
-  const { milestones, isAgreementSigned, signAgreement } = useLandingStore();
-
-  const [selectedMilestoneId, setSelectedMilestoneId] = useState("m1");
-  const [editingTitle, setEditingTitle] = useState("");
-  const [editingAmount, setEditingAmount] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
-
-  const activeMilestone = milestones.find((m) => m.id === selectedMilestoneId);
-
-  const handleEditClick = () => {
-    if (activeMilestone) {
-      setEditingTitle(activeMilestone.title);
-      setEditingAmount(activeMilestone.amount);
-      setIsEditing(true);
-    }
-  };
-
-  const handleSave = () => {
-    if (activeMilestone) {
-      activeMilestone.title = editingTitle;
-      activeMilestone.amount = Number(editingAmount);
-      setIsEditing(false);
-    }
-  };
-
-  const bothSigned = isAgreementSigned.client && isAgreementSigned.freelancer;
-
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Title */}
-      <div>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Subsystem 04
-        </span>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <FileSignature className="text-[#2563EB]" /> Working Agreement
-          Composer
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Harden proposal terms into scoped milestones with binding acceptance
-          criteria and escrow release rules.
+    <div>
+      {/* Page header */}
+      <div className="panel-page-header">
+        <h1 className="panel-page-title">Working agreement</h1>
+        <p className="panel-page-subtitle">
+          Scope, acceptance, ownership, and protected funds in one review.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Panel: Milestone Editor */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg lg:col-span-1 space-y-6">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2">
-            Milestone Composer
+      {/* Metadata bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          marginBottom: 24,
+          flexWrap: "wrap",
+        }}
+      >
+        <span className="panel-badge panel-badge--blue">Draft v2.0</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+          <Building2 size={14} /> Client: Atlas Commerce
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+          <Users size={14} /> Delivery team: Northline Studio
+        </span>
+      </div>
+
+      {/* Grid with sidebar */}
+      <div className="panel-grid panel-grid--sidebar">
+        {/* Left: Agreement content */}
+        <div className="panel-card">
+          {/* Toolbar */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 4,
+              marginBottom: 20,
+            }}
+          >
+            <button type="button" className="panel-btn--ghost panel-btn" style={{ padding: "8px 10px", minHeight: 0, minWidth: 0, borderRadius: 6 }}>
+              <List size={16} />
+            </button>
+            <button type="button" className="panel-btn--ghost panel-btn" style={{ padding: "8px 10px", minHeight: 0, minWidth: 0, borderRadius: 6 }}>
+              <Pencil size={16} />
+            </button>
+            <button type="button" className="panel-btn--ghost panel-btn" style={{ padding: "8px 10px", minHeight: 0, minWidth: 0, borderRadius: 6 }}>
+              <MoreHorizontal size={16} />
+            </button>
           </div>
 
-          <div className="space-y-3">
-            {milestones.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  setSelectedMilestoneId(m.id);
-                  setIsEditing(false);
-                }}
-                className={`w-full text-left p-3 border rounded text-xs transition-all flex justify-between items-center cursor-pointer ${
-                  selectedMilestoneId === m.id
-                    ? "border-[#2563EB] bg-[#EDF4FF] ring-1 ring-[#2563EB]"
-                    : "border-[#D9E0E8] bg-white hover:border-slate-400"
-                }`}
-              >
-                <span className="font-semibold line-clamp-1">{m.title}</span>
-                <span className="font-bold text-slate-700 font-mono text-[10px]">
-                  ${m.amount.toLocaleString()}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {activeMilestone && (
-            <div className="pt-4 border-t border-[#D9E0E8] space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Inspect Milestone
-                </span>
-                {!isEditing && !bothSigned && (
-                  <button
-                    onClick={handleEditClick}
-                    className="text-[#2563EB] hover:text-[#173EA5] text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit3 size={12} /> Edit
-                  </button>
-                )}
-              </div>
-
-              {isEditing ? (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="m-title"
-                      className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-                    >
-                      Milestone Title
-                    </label>
-                    <input
-                      id="m-title"
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      className="w-full p-2 bg-white border border-[#D9E0E8] rounded text-xs focus:outline-none focus:border-[#2563EB]"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="m-amount"
-                      className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-                    >
-                      Scope Budget (USDC)
-                    </label>
-                    <input
-                      id="m-amount"
-                      type="number"
-                      value={editingAmount}
-                      onChange={(e) => setEditingAmount(Number(e.target.value))}
-                      className="w-full p-2 bg-white border border-[#D9E0E8] rounded text-xs focus:outline-none focus:border-[#2563EB]"
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleSave}
-                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Save size={12} /> Save Changes
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2 text-xs text-slate-600 leading-relaxed bg-[#F7F8FA] p-4 rounded border border-slate-100">
-                  <p>
-                    <strong>Title:</strong> {activeMilestone.title}
-                  </p>
-                  <p>
-                    <strong>Escrow Value:</strong> $
-                    {activeMilestone.amount.toLocaleString()} USDC
-                  </p>
-                  <p className="mt-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Agreed Release Checklists:
-                  </p>
-                  <ul className="list-disc pl-4 space-y-1 mt-1 text-[11px]">
-                    <li>Verified code commits pushed on main branch.</li>
-                    <li>Successful test coverage run reporting &gt;85%.</li>
-                    <li>Technical document artifact generated.</li>
-                  </ul>
-                </div>
-              )}
+          {/* Objective */}
+          <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+            <span
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "#eff6ff",
+                display: "grid",
+                placeItems: "center",
+                color: "#2563eb",
+                flexShrink: 0,
+              }}
+            >
+              <Target size={16} />
+            </span>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>Objective</h3>
+              <p style={{ fontSize: 14, color: "#475569", margin: 0, lineHeight: 1.6 }}>
+                Move the billing service without interrupting active subscriptions.
+              </p>
             </div>
-          )}
-        </div>
-
-        {/* Right Panel: Contract Preview & Signatures */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg lg:col-span-2 space-y-6">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2">
-            Agreement Executive Deed
           </div>
 
-          <div className="space-y-4 text-xs text-slate-600 bg-slate-50 p-6 rounded border border-slate-200 leading-relaxed font-sans">
-            <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2 mb-3">
-              COVENANT OF WORK AGREEMENT
-            </h3>
-            <p>
-              This document legally binds the client and freelancer under the
-              terms of the Northstar Billing Migration project. Funds deposited
-              in the virtual smart escrow contract are subject to strict release
-              checkpoints.
-            </p>
-            <p className="font-semibold text-slate-800 mt-3">
-              Active Escrow Milestones:
-            </p>
-            <ol className="list-decimal pl-4 space-y-1.5 mt-1 font-mono text-[11px]">
-              {milestones.map((m) => (
-                <li key={m.id}>
-                  {m.title} —{" "}
-                  <span className="font-bold">
-                    ${m.amount.toLocaleString()} USDC
-                  </span>
-                </li>
-              ))}
-            </ol>
+          <hr className="panel-divider" />
 
-            {bothSigned && (
-              <div className="mt-4 pt-3 border-t border-slate-200 space-y-1 font-mono text-[10px] text-slate-500">
-                <p>
-                  Escrow State Machine Address:{" "}
-                  <span className="text-slate-700 font-semibold">
-                    0x2b8d96e5782782b6c69f2e463a5f782737ef39ce
-                  </span>
-                </p>
-                <p>
-                  Polygon Network Registry Status:{" "}
-                  <span className="text-emerald-600 font-semibold">ACTIVE</span>
-                </p>
+          {/* Milestone 01 */}
+          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+            <span
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "#eff6ff",
+                display: "grid",
+                placeItems: "center",
+                color: "#2563eb",
+                flexShrink: 0,
+              }}
+            >
+              <Flag size={16} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+                  Milestone 01 — Migration plan and rollback design
+                </h3>
+                <span className="panel-badge panel-badge--green">
+                  <Check size={11} /> Ready for approval
+                </span>
               </div>
+            </div>
+          </div>
+
+          {/* Acceptance criteria */}
+          <div style={{ marginLeft: 48 }}>
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+              Acceptance criteria
+            </h4>
+            {["Dependency map is complete", "Rollback owner is named", "Reconciliation test cases are approved"].map(
+              (item) => (
+                <div
+                  key={item}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 0",
+                    fontSize: 14,
+                    color: "#334155",
+                  }}
+                >
+                  <Check size={16} style={{ color: "#16a34a" }} />
+                  {item}
+                </div>
+              )
+            )}
+
+            <hr className="panel-divider" />
+
+            {/* Assumptions */}
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+              Assumptions
+            </h4>
+            {["Client provides current billing event samples", "Target runtime is confirmed before implementation"].map(
+              (item) => (
+                <div
+                  key={item}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 0",
+                    fontSize: 14,
+                    color: "#475569",
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#94a3b8", flexShrink: 0 }} />
+                  {item}
+                </div>
+              )
+            )}
+
+            <hr className="panel-divider" />
+
+            {/* Out of scope */}
+            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+              Out of scope
+            </h4>
+            {["Pricing model redesign", "Historical invoice correction"].map(
+              (item) => (
+                <div
+                  key={item}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 0",
+                    fontSize: 14,
+                    color: "#94a3b8",
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#cbd5e1", flexShrink: 0 }} />
+                  {item}
+                </div>
+              )
             )}
           </div>
+        </div>
 
-          {/* Signatures Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-[#D9E0E8] pt-6">
-            <div className="p-4 border border-[#D9E0E8] rounded space-y-3 bg-[#F7F8FA] flex flex-col justify-between h-32">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Client Authentication
-                </span>
-                <span className="text-xs font-bold text-slate-800 mt-1 block">
-                  Northstar Org Officer
-                </span>
-              </div>
-              {isAgreementSigned.client ? (
-                <span className="text-emerald-600 font-bold text-xs flex items-center gap-1.5">
-                  <CheckCircle size={16} /> Signed cryptographically
-                </span>
-              ) : (
-                <button
-                  onClick={() => signAgreement("client")}
-                  className="w-full py-2 bg-slate-900 hover:bg-[#2563EB] text-white font-bold text-xs rounded transition-colors cursor-pointer"
-                >
-                  Authorize Signature
-                </button>
-              )}
+        {/* Right: Agreement check sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Agreement check */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Agreement check</h2>
             </div>
 
-            <div className="p-4 border border-[#D9E0E8] rounded space-y-3 bg-[#F7F8FA] flex flex-col justify-between h-32">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Freelancer Authentication
-                </span>
-                <span className="text-xs font-bold text-slate-800 mt-1 block">
-                  Match Candidate
-                </span>
-              </div>
-              {isAgreementSigned.freelancer ? (
-                <span className="text-emerald-600 font-bold text-xs flex items-center gap-1.5">
-                  <CheckCircle size={16} /> Signed cryptographically
-                </span>
-              ) : (
-                <button
-                  onClick={() => signAgreement("freelancer")}
-                  className="w-full py-2 bg-slate-900 hover:bg-[#2563EB] text-white font-bold text-xs rounded transition-colors cursor-pointer"
+            {agreementChecks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 0",
+                    borderBottom: "1px solid #f1f5f9",
+                  }}
                 >
-                  Authorize Signature
-                </button>
-              )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Icon
+                      size={16}
+                      style={{
+                        color:
+                          item.color === "green"
+                            ? "#16a34a"
+                            : item.color === "blue"
+                            ? "#2563eb"
+                            : item.color === "red"
+                            ? "#dc2626"
+                            : "#64748b",
+                      }}
+                    />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#334155" }}>
+                      {item.label}
+                    </span>
+                  </div>
+                  <span
+                    className={`panel-badge panel-badge--${item.color}`}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {item.value}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Revision note */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Revision note</h2>
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "#eff6ff",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#2563eb",
+                  flexShrink: 0,
+                }}
+              >
+                EP
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
+                  Client requested explicit rollback ownership
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                  Elena Park · May 8, 10:07 AM
+                </div>
+              </div>
             </div>
           </div>
 
-          {bothSigned ? (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-[#16A34A] rounded text-xs flex items-center gap-2">
-              <CheckCircle size={16} /> Both parties signed. Escrow is locked.
-              Ready to deposit capital.
+          {/* Activity */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Activity</h2>
+              <button type="button" className="panel-link" style={{ fontSize: 12 }}>
+                View full activity
+              </button>
             </div>
-          ) : (
-            <div className="p-3 bg-orange-50 border border-orange-200 text-[#C2410C] rounded text-xs flex items-center gap-2">
-              <ShieldAlert size={16} /> Waiting for signatures before escrow
-              state transitions can execute.
-            </div>
-          )}
+
+            {activityItems.map((item) => (
+              <div className="panel-timeline-item" key={item.action}>
+                <span
+                  className={`panel-timeline-icon panel-timeline-icon--${item.color === "#16a34a" ? "green" : "blue"}`}
+                >
+                  {item.color === "#16a34a" ? (
+                    <Check size={14} strokeWidth={2.5} />
+                  ) : (
+                    <FileText size={14} />
+                  )}
+                </span>
+                <div className="panel-timeline-body">
+                  <div className="panel-timeline-title">{item.action}</div>
+                  <div className="panel-timeline-meta">
+                    {item.name} · {item.time}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom action bar */}
+      <div className="panel-action-bar">
+        <div className="panel-action-bar-left">
+          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+            <FileText size={14} /> Agreement history
+          </span>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>v1.4 · Apr 30, 2:15 PM</span>
+        </div>
+        <div className="panel-action-bar-right">
+          <button type="button" className="panel-btn--ghost panel-btn">
+            <GitCompare size={14} /> Compare with v1.4
+          </button>
+          <button type="button" className="panel-btn">
+            <Send size={14} /> Send for approval
+          </button>
         </div>
       </div>
     </div>
