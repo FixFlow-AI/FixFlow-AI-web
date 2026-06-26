@@ -132,4 +132,12 @@ export const api = {
 
   getSyncRoom: (proposalId, signal) =>
     request(`/sync/rooms/${encodeURIComponent(proposalId)}`, { signal }),
+
+  // AI-006: freelancer ↔ client matching shortlist
+  matchFreelancers: (requiredSkills, budget, domains, limit, signal) =>
+    request("/leads/match", {
+      method: "POST",
+      body: { requiredSkills, budget, domains, limit },
+      signal,
+    }),
 };
