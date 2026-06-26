@@ -1,288 +1,263 @@
-import { useLandingStore } from "../../store/useLandingStore";
 import {
-  LayoutDashboard,
-  AlertCircle,
-  Calendar,
   ArrowRight,
-  UserCheck,
-  Shield,
-  CheckCircle,
+  Check,
+  FileText,
+  GitBranch,
+  Handshake,
+  Hammer,
+  ClipboardCheck,
+  Award,
+  AlertTriangle,
+  Clock,
+  ShieldCheck,
+  Users,
+  Target,
 } from "lucide-react";
 
+const steps = [
+  { label: "Brief", done: true },
+  { label: "Evidence", done: true },
+  { label: "Agreement", active: true },
+  { label: "Build", done: false },
+  { label: "Approval", done: false },
+  { label: "Outcome", done: false },
+];
+
+const recentEvents = [
+  {
+    icon: GitBranch,
+    color: "blue",
+    title: "Evidence linked to 4 requirements",
+    time: "Today, 2:15 PM",
+  },
+  {
+    icon: AlertTriangle,
+    color: "orange",
+    title: "Risk flagged: rollback ownership unresolved",
+    time: "Today, 11:30 AM",
+  },
+  {
+    icon: FileText,
+    color: "green",
+    title: "Brief v1.2 parsed — 6 requirements extracted",
+    time: "Yesterday, 4:45 PM",
+  },
+  {
+    icon: Users,
+    color: "blue",
+    title: "Maya Chen added to project workspace",
+    time: "Yesterday, 10:00 AM",
+  },
+];
+
 export function Overview() {
-  const {
-    userRole,
-    userEmail,
-    escrowState,
-    milestones,
-    changeRequests,
-    isAgreementSigned,
-    setDashboardTab,
-  } = useLandingStore();
-
-  // Calculate totals
-  const totalAmount = milestones.reduce((sum, m) => sum + m.amount, 0);
-  const fundedAmount = milestones.reduce(
-    (sum, m) => sum + (m.status !== "unfunded" ? m.amount : 0),
-    0,
-  );
-  const releasedAmount = milestones.reduce(
-    (sum, m) => sum + (m.status === "released" ? m.amount : 0),
-    0,
-  );
-
-  // Status mapping
-  const signedPercent =
-    (isAgreementSigned.client ? 50 : 0) +
-    (isAgreementSigned.freelancer ? 50 : 0);
-  const openChanges = changeRequests.filter((r) => r.status === "pending");
-
-  // Generate action list dynamically based on workspace state
-  const getNextAction = () => {
-    if (!isAgreementSigned.client || !isAgreementSigned.freelancer) {
-      return {
-        text: "Sign the Working Agreement",
-        desc: "Both client and freelancer must sign the contract terms to enable escrow.",
-        tab: "agreement-composer",
-      };
-    }
-    const nextUnfunded = milestones.find((m) => m.status === "unfunded");
-    if (nextUnfunded) {
-      return {
-        text: `Fund Milestone: ${nextUnfunded.title}`,
-        desc: `Client must deposit funds ($${nextUnfunded.amount.toLocaleString()}) to escrow to start work safely.`,
-        tab: "milestone-funds",
-      };
-    }
-    const nextFunded = milestones.find((m) => m.status === "funded");
-    if (nextFunded) {
-      return {
-        text: `Verify & Release: ${nextFunded.title}`,
-        desc: `Freelancer has submitted deliverables. Verify acceptance criteria to release funds.`,
-        tab: "milestone-funds",
-      };
-    }
-    return {
-      text: "Mint Reputation Soulbound Token",
-      desc: "All milestones completed and released. Mint your Verifiable Reputation SBT on Polygon.",
-      tab: "outcome-evidence",
-    };
-  };
-
-  const nextAction = getNextAction();
-
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* Title */}
-      <div>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Project Control Room
-        </span>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <LayoutDashboard className="text-[#2563EB]" /> Northstar Billing
-          Migration
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Currently logged in as{" "}
-          <span className="font-semibold text-slate-700">{userEmail}</span> (
-          {userRole})
+    <div>
+      {/* Page header */}
+      <div className="panel-page-header">
+        <h1 className="panel-page-title">Northstar Billing Migration</h1>
+        <p className="panel-page-subtitle">
+          Atlas Commerce · Real-time billing migration with zero downtime
         </p>
       </div>
 
-      {/* Grid: Health Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#D9E0E8] p-5 rounded-lg flex flex-col justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Escrow State
-          </span>
-          <div className="mt-2 flex items-center gap-2">
-            <span
-              className={`w-3 h-3 rounded-full ${
-                escrowState === "RELEASED"
-                  ? "bg-emerald-500"
-                  : escrowState === "FUNDED"
-                    ? "bg-blue-500 animate-pulse"
-                    : "bg-orange-500"
-              }`}
-            />
-
-            <span className="text-xl font-bold text-slate-900">
-              {escrowState}
-            </span>
-          </div>
-          <span className="text-slate-400 text-xs mt-2">
-            Trust layer active on Polygon Amoy
-          </span>
-        </div>
-
-        <div className="bg-white border border-[#D9E0E8] p-5 rounded-lg flex flex-col justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Total Scoped Value
-          </span>
-          <div className="mt-2 text-2xl font-bold text-slate-900">
-            ${totalAmount.toLocaleString()}
-          </div>
-          <span className="text-slate-400 text-xs mt-2">
-            USDC locked by agreement rules
-          </span>
-        </div>
-
-        <div className="bg-white border border-[#D9E0E8] p-5 rounded-lg flex flex-col justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Deposited in Escrow
-          </span>
-          <div className="mt-2 text-2xl font-bold text-blue-600">
-            ${fundedAmount.toLocaleString()}{" "}
-            <span className="text-slate-400 text-xs font-normal">
-              ({Math.round((fundedAmount / totalAmount) * 100)}%)
-            </span>
-          </div>
-          <span className="text-slate-400 text-xs mt-2">
-            Protected gateway capital
-          </span>
-        </div>
-
-        <div className="bg-white border border-[#D9E0E8] p-5 rounded-lg flex flex-col justify-between">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Disbursed Earnings
-          </span>
-          <div className="mt-2 text-2xl font-bold text-emerald-600">
-            ${releasedAmount.toLocaleString()}{" "}
-            <span className="text-slate-400 text-xs font-normal">
-              ({Math.round((releasedAmount / totalAmount) * 100)}%)
-            </span>
-          </div>
-          <span className="text-slate-400 text-xs mt-2">
-            Transferred to talent ledger
-          </span>
-        </div>
-      </div>
-
-      {/* Grid: Actions & Risk Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Next Recommended Action */}
-        <div className="lg:col-span-2 bg-[#EDF4FF] border border-blue-200 p-6 rounded-lg flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-[#2563EB] uppercase tracking-wider mb-2">
-              <UserCheck size={16} /> Recommended Workspace Action
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">
-              {nextAction.text}
-            </h3>
-            <p className="text-slate-600 text-sm mt-1.5">{nextAction.desc}</p>
-          </div>
-          <button
-            onClick={() => setDashboardTab(nextAction.tab)}
-            className="mt-6 self-start flex items-center gap-2 px-4 py-2 bg-[#2563EB] hover:bg-[#173EA5] text-white font-bold text-xs rounded transition-colors cursor-pointer"
-          >
-            Go to Section <ArrowRight size={14} />
-          </button>
-        </div>
-
-        {/* System Risk Signals */}
-        <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg space-y-4">
-          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-[#D9E0E8] pb-2 flex items-center gap-1.5">
-            <AlertCircle size={14} className="text-orange-500" /> Active Risk
-            Monitor
-          </div>
-
-          <div className="space-y-3">
-            {openChanges.length > 0 ? (
-              <div className="p-3 bg-orange-50 border border-orange-200 text-[#C2410C] rounded text-xs flex gap-2">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">Scope Change Pending</span>
-                  {openChanges.length} change request(s) require review before
-                  milestones lock.
-                </div>
-              </div>
-            ) : null}
-
-            {signedPercent < 100 ? (
-              <div className="p-3 bg-orange-50 border border-orange-200 text-[#C2410C] rounded text-xs flex gap-2">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">Contract Unsigned</span>
-                  Agreement signatures are incomplete (Client:{" "}
-                  {isAgreementSigned.client ? "Signed" : "Open"}, Freelancer:{" "}
-                  {isAgreementSigned.freelancer ? "Signed" : "Open"}).
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-[#16A34A] rounded text-xs flex gap-2">
-                <CheckCircle size={16} className="shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">Agreement Locked</span>
-                  Smart contract rules are active. Scope changes require dual
-                  confirmation.
-                </div>
-              </div>
-            )}
-
-            <div className="p-3 bg-slate-50 border border-slate-200 text-slate-600 rounded text-xs flex gap-2">
-              <Shield size={16} className="shrink-0 mt-0.5 text-blue-500" />
-              <div>
-                <span className="font-bold block">Audit Trail Connected</span>
-                All milestones are cryptographically signed with the consensus
-                ledger.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section: Milestone Deliverable Timeline */}
-      <div className="bg-white border border-[#D9E0E8] p-6 rounded-lg">
-        <h2 className="text-lg font-bold text-slate-900 border-b border-[#D9E0E8] pb-3 mb-4 flex items-center gap-2">
-          <Calendar size={18} className="text-slate-500" /> Milestone Tracking
-          Timeline
-        </h2>
-
-        <div className="space-y-4">
-          {milestones.map((m, idx) => (
+      {/* Horizontal stepper */}
+      <div className="panel-stepper">
+        {steps.map((step, i) => (
+          <div key={step.label} style={{ display: "flex", alignItems: "center" }}>
             <div
-              key={m.id}
-              className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 border border-[#D9E0E8] hover:border-slate-300 rounded transition-colors"
+              className={`panel-step${step.done ? " panel-step--done" : ""}${step.active ? " panel-step--active" : ""}`}
             >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-400">
-                    0{idx + 1}
-                  </span>
-                  <h4 className="font-bold text-slate-800 text-sm">
-                    {m.title}
-                  </h4>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Budget: ${m.amount.toLocaleString()} USDC
-                </p>
-              </div>
+              <span className="panel-step-num">
+                {step.done ? <Check size={13} strokeWidth={3} /> : i + 1}
+              </span>
+              {step.label}
+            </div>
+            {i < steps.length - 1 && (
+              <ArrowRight size={14} className="panel-step-arrow" />
+            )}
+          </div>
+        ))}
+      </div>
 
-              <div className="flex items-center gap-4">
-                <span
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${
-                    m.status === "released"
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      : m.status === "funded"
-                        ? "bg-blue-50 border-blue-200 text-blue-700"
-                        : "bg-slate-50 border-slate-200 text-slate-600"
-                  }`}
-                >
-                  {m.status === "released"
-                    ? "Released"
-                    : m.status === "funded"
-                      ? "Funded"
-                      : "Unfunded"}
-                </span>
-                <button
-                  onClick={() => setDashboardTab("milestone-funds")}
-                  className="px-3 py-1.5 border border-[#D9E0E8] hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded transition-all cursor-pointer"
-                >
-                  Inspect
-                </button>
+      {/* Main grid */}
+      <div className="panel-grid panel-grid--sidebar">
+        {/* Left column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Project truth */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Project truth</h2>
+              <span className="panel-badge panel-badge--blue">In progress</span>
+            </div>
+
+            <div className="panel-info-row">
+              <span className="panel-info-label">Objective</span>
+              <span className="panel-info-value">
+                Migrate billing without interrupting active subscriptions
+              </span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Current decision</span>
+              <span className="panel-info-value" style={{ color: "#ea580c" }}>
+                Rollback ownership needs agreement
+              </span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Relevant proof</span>
+              <span className="panel-info-value">
+                4 evidence sources linked
+              </span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Next milestone</span>
+              <span className="panel-info-value">
+                Migration plan + rollback design
+              </span>
+            </div>
+          </div>
+
+          {/* Recent events */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Recent events</h2>
+              <button type="button" className="panel-link">
+                View all <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {recentEvents.map((evt) => {
+              const Icon = evt.icon;
+              return (
+                <div className="panel-timeline-item" key={evt.title}>
+                  <span className={`panel-timeline-icon panel-timeline-icon--${evt.color}`}>
+                    <Icon size={15} strokeWidth={1.8} />
+                  </span>
+                  <div className="panel-timeline-body">
+                    <div className="panel-timeline-title">{evt.title}</div>
+                    <div className="panel-timeline-meta">{evt.time}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right sidebar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Agreement state */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Agreement state</h2>
+            </div>
+
+            <div className="panel-info-row">
+              <span className="panel-info-label">Scope</span>
+              <span className="panel-info-value">
+                <span className="panel-badge panel-badge--green">Defined</span>
+              </span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Acceptance criteria</span>
+              <span className="panel-info-value">5 criteria set</span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Protected funds</span>
+              <span className="panel-info-value">$32,000 in escrow</span>
+            </div>
+            <div className="panel-info-row">
+              <span className="panel-info-label">Open risks</span>
+              <span className="panel-info-value" style={{ color: "#ea580c" }}>
+                2 unresolved
+              </span>
+            </div>
+
+            <hr className="panel-divider" />
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span className="panel-badge panel-badge--outline">
+                <ShieldCheck size={12} /> Escrow active
+              </span>
+              <span className="panel-badge panel-badge--outline">
+                <Clock size={12} /> 10–12 weeks
+              </span>
+            </div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Summary</h2>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <div className="panel-stat">
+                <div className="panel-stat-value">6</div>
+                <div className="panel-stat-label">Requirements</div>
+              </div>
+              <div className="panel-stat">
+                <div className="panel-stat-value">4</div>
+                <div className="panel-stat-label">Evidence links</div>
+              </div>
+              <div className="panel-stat">
+                <div className="panel-stat-value">3</div>
+                <div className="panel-stat-label">Milestones</div>
+              </div>
+              <div className="panel-stat">
+                <div className="panel-stat-value" style={{ color: "#16a34a" }}>88%</div>
+                <div className="panel-stat-label">Confidence</div>
               </div>
             </div>
-          ))}
+          </div>
+
+          {/* Next steps */}
+          <div className="panel-card">
+            <div className="panel-card-header">
+              <h2 className="panel-card-title">Next steps</h2>
+            </div>
+            <div className="panel-checklist-item">
+              <span className="panel-check panel-check--progress">
+                <Target size={11} />
+              </span>
+              <div className="panel-checklist-content">
+                <div className="panel-checklist-label">Resolve rollback ownership</div>
+                <div className="panel-checklist-desc">Risk needs client decision</div>
+              </div>
+            </div>
+            <div className="panel-checklist-item">
+              <span className="panel-check panel-check--pending" />
+              <div className="panel-checklist-content">
+                <div className="panel-checklist-label">Finalize agreement v2.0</div>
+                <div className="panel-checklist-desc">Pending risk resolution</div>
+              </div>
+            </div>
+            <div className="panel-checklist-item">
+              <span className="panel-check panel-check--pending" />
+              <div className="panel-checklist-content">
+                <div className="panel-checklist-label">Fund Milestone 01</div>
+                <div className="panel-checklist-desc">After agreement approval</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom progress bar */}
+      <div className="panel-action-bar">
+        <div className="panel-action-bar-left">
+          <span className="panel-badge panel-badge--outline">
+            <Handshake size={12} /> Agreement v1.2
+          </span>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>
+            Last updated 2 hours ago
+          </span>
+        </div>
+        <div className="panel-action-bar-right">
+          <button type="button" className="panel-btn--ghost panel-btn">
+            View agreement
+          </button>
+          <button type="button" className="panel-btn">
+            Continue to agreement <ArrowRight size={14} />
+          </button>
         </div>
       </div>
     </div>
