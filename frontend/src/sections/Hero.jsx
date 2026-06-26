@@ -1,9 +1,53 @@
 import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowDownRight, ArrowRight, Pause, Play } from "lucide-react";
+import { ArrowRight, Play, Pause } from "lucide-react";
 import { RevealText } from "../components/RevealText";
 import { audiences, heroSteps } from "../data/landing";
 import { useLandingStore } from "../store/useLandingStore";
+
+/* Floating code-card data — matches the hero concept image */
+const systemCards = [
+  {
+    label: "Brief",
+    icon: "📄",
+    code: `{
+  "source": "client_brief.pdf",
+  "signals": 28,
+  "clarity": 62
+}`,
+    style: { top: "8%", right: "30%", zIndex: 3 },
+  },
+  {
+    label: "Proof",
+    icon: "✓",
+    code: `{
+  "match_quality": 0.92,
+  "verified_skills": 14,
+  "fit_reason": "Strong"
+}`,
+    style: { top: "38%", right: "55%", zIndex: 2 },
+  },
+  {
+    label: "Scope",
+    icon: "⊕",
+    code: `{
+  "estimate": "120h",
+  "milestones": 6,
+  "confidence": 0.86
+}`,
+    style: { top: "12%", right: "2%", zIndex: 1 },
+  },
+  {
+    label: "Escrow",
+    icon: "🔒",
+    code: `{
+  "protection": "escrow",
+  "release": "milestone",
+  "status": "secured"
+}`,
+    style: { top: "52%", right: "5%", zIndex: 1 },
+  },
+];
 
 export function Hero() {
   const heroStep = useLandingStore((state) => state.heroStep);
@@ -12,16 +56,13 @@ export function Hero() {
   const setDemoRunning = useLandingStore((state) => state.setDemoRunning);
   const setAudience = useLandingStore((state) => state.setAudience);
   const reducedMotion = useReducedMotion();
-  const activeStep = heroSteps[heroStep];
 
   useEffect(() => {
     if (!demoRunning || reducedMotion) return undefined;
-
     if (heroStep >= heroSteps.length - 1) {
       const stopTimer = window.setTimeout(() => setDemoRunning(false), 900);
       return () => window.clearTimeout(stopTimer);
     }
-
     const timer = window.setTimeout(() => setHeroStep(heroStep + 1), 1050);
     return () => window.clearTimeout(timer);
   }, [demoRunning, heroStep, reducedMotion, setDemoRunning, setHeroStep]);
@@ -41,17 +82,19 @@ export function Hero() {
 
   return (
     <section className="hero section-grid" id="top">
+      {/* Left: Copy */}
       <div className="hero-copy">
         <RevealText as="h1" className="hero-title">
-          Work moves when trust is already built.
+          Work moves when trust is{" "}
+          <span style={{ color: "var(--brand)" }}>already built.</span>
         </RevealText>
         <p className="hero-description">
-          FixFlowAI turns a raw project brief into a verified plan, proof-led
-          match, protected milestones, and one shared delivery record.
+          FixFlowAI turns messy briefs, verified skills, scoped proposals, and
+          milestone payments into one shared operating layer.
         </p>
         <div className="hero-actions">
           <a className="button" href="#/signup">
-            Request early access
+            Request access
             <ArrowRight aria-hidden="true" size={18} />
           </a>
           <button
@@ -81,85 +124,36 @@ export function Hero() {
         </div>
       </div>
 
-      <motion.div
-        className="hero-system"
-        initial={{ opacity: 0, y: reducedMotion ? 0 : 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: reducedMotion ? 0 : 0.7,
-          delay: reducedMotion ? 0 : 0.25,
-        }}
-      >
-        <div className="system-topbar">
-          <div>
-            <span className="system-kicker">Live agreement path</span>
-            <strong>Billing service migration</strong>
-          </div>
-          <span className="system-state">{activeStep.status}</span>
-        </div>
-
-        <div className="hero-flow" aria-label="Project trust workflow">
-          {heroSteps.map((step, index) => {
-            const StepIcon = step.icon;
-            const isComplete = index < heroStep;
-            const isActive = index === heroStep;
-            return (
-              <button
-                className={`hero-flow-step${isActive ? " is-active" : ""}${isComplete ? " is-complete" : ""}`}
-                key={step.label}
-                type="button"
-                aria-current={isActive ? "step" : undefined}
-                onClick={() => {
-                  setDemoRunning(false);
-                  setHeroStep(index);
-                }}
-              >
-                <span className="hero-flow-icon">
-                  <StepIcon aria-hidden="true" size={18} strokeWidth={1.9} />
-                </span>
-                <span>
-                  <small>0{index + 1}</small>
-                  <strong>{step.label}</strong>
-                </span>
-              </button>
-            );
-          })}
-          <div
-            className="hero-flow-line"
-            style={{
-              "--flow-progress": `${(heroStep / (heroSteps.length - 1)) * 100}%`,
+      {/* Right: Floating system cards */}
+      <div className="hero-system hero-system--cards">
+        {systemCards.map((card, idx) => (
+          <motion.div
+            key={card.label}
+            className="hero-card"
+            style={card.style}
+            initial={{ opacity: 0, y: reducedMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: reducedMotion ? 0 : 0.6,
+              delay: reducedMotion ? 0 : 0.2 + idx * 0.12,
             }}
-            aria-hidden="true"
-          />
-        </div>
+          >
+            <div className="hero-card-header">
+              <span className="hero-card-icon">{card.icon}</span>
+              <span className="hero-card-label">{card.label}</span>
+              <span className="hero-card-dots">•••</span>
+            </div>
+            <pre className="hero-card-code">{card.code}</pre>
+          </motion.div>
+        ))}
 
-        <motion.div
-          className="system-insight"
-          key={activeStep.label}
-          initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reducedMotion ? 0 : 0.28 }}
-          aria-live="polite"
-        >
-          <span className="system-insight-index">0{heroStep + 1}</span>
-          <div>
-            <strong>{activeStep.label}</strong>
-            <p>{activeStep.detail}</p>
-          </div>
-          <ArrowDownRight aria-hidden="true" size={20} />
-        </motion.div>
+        {/* Connecting dots */}
+        <div className="hero-card-dot" style={{ top: "50%", left: "50%", width: 10, height: 10, background: "var(--brand)" }} />
+      </div>
 
-        <div className="system-footer">
-          <span>Source brief v1.2</span>
-          <span>
-            {heroStep + 1} / {heroSteps.length}
-          </span>
-        </div>
-      </motion.div>
-
-      <a className="hero-next" href="#problem">
-        The old marketplace makes everyone do the wrong work.
-        <ArrowDownRight aria-hidden="true" size={18} />
+      {/* Anchor to next section */}
+      <a className="hero-next" href="#problem" style={{ visibility: "hidden", position: "absolute" }}>
+        Next
       </a>
     </section>
   );
