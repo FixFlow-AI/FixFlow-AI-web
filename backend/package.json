@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",
