@@ -9,6 +9,7 @@ import { DeliveryControl } from "./dashboard/DeliveryControl";
 import { MilestoneFunds } from "./dashboard/MilestoneFunds";
 import { OutcomeEvidence } from "./dashboard/OutcomeEvidence";
 import { RoleOnboarding } from "./dashboard/RoleOnboarding";
+import { MatchResults } from "./dashboard/MatchResults";
 
 import {
   Home,
@@ -26,6 +27,7 @@ import {
   RefreshCw,
   UserCircle2,
   Sparkles,
+  Users,
 } from "lucide-react";
 
 /* ——————————————————————————————————————————
@@ -36,6 +38,7 @@ const menuItems = [
   { id: "overview", label: "Overview", icon: Home },
   { id: "brief-intelligence", label: "Brief", icon: FileText },
   { id: "evidence-confidence", label: "Evidence", icon: BadgeCheck },
+  { id: "matching", label: "Matches", icon: Users },
   { id: "proposal-generator", label: "Talent", icon: Sparkles },
   { id: "agreement-composer", label: "Agreement", icon: Handshake },
   { id: "delivery-control", label: "Delivery", icon: PackageCheck },
@@ -47,6 +50,7 @@ const tabMap = {
   overview: Overview,
   "brief-intelligence": BriefIntelligence,
   "evidence-confidence": EvidenceConfidence,
+  matching: MatchResults,
   "proposal-generator": ProposalGenerator,
   "agreement-composer": AgreementComposer,
   "delivery-control": DeliveryControl,
