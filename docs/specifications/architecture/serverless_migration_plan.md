@@ -9,6 +9,8 @@
 >
 > Explanation-first, diagrams included, minimal code. Follow the phases in order.
 
+> ✅ **Decision (chosen approach):** **One single Lambda** running the whole Express app, fronted by **API Gateway HTTP API** for all `/api/*` routes. This keeps a familiar, single codebase while gaining scale-to-zero pricing. **Performance is explicitly protected** against cold starts and connection overhead — see the new [Section 3.5 Performance](#35-performance--guaranteeing-no-degradation). WebSocket sync is handled separately (Section 4) and can be deferred.
+
 ---
 
 ## 1. Where these live in the project today
@@ -91,14 +93,14 @@ graph LR
 
 ## 3. REST migration — Lambda + API Gateway HTTP API
 
-### 3.1 Choose the packaging strategy
+### 3.1 Packaging strategy — DECIDED: one Lambda + HTTP API
 
-| Option | What you do | When to pick |
+| Option | What you do | Decision |
 |:---|:---|:---|
-| **A — Wrap the whole Express app** *(recommended)* | One Lambda runs the existing app via an adapter; API Gateway routes all `/api/*` to it | Now. Fastest, least risk, identical local + cloud code |
-| **B — One Lambda per route** | Split each route into its own function | Later, only if a specific route gets hot and needs independent scaling/cold-start tuning |
+| **A — Wrap the whole Express app in ONE Lambda** | One Lambda runs the existing app via an adapter; API Gateway HTTP API routes all `/api/*` to it | ✅ **CHOSEN** — fastest, least risk, identical local + cloud code, one deployable |
+| **B — One Lambda per route** | Split each route into its own function | ❌ Not now — more cold-start surfaces, more deploy complexity, no benefit at this scale |
 
-**Pick A.** Your routes are small; Gemini latency dominates anyway. You can carve out hot routes later without rewriting.
+**Why one Lambda is the right call (and not slower):** a single warm Lambda serves every route, so requests reuse the same warm container, the same cached DB clients, and the same loaded secrets. Splitting into many functions would *increase* cold starts (each function warms independently) and fragment connection reuse. One Lambda + the performance tactics in 3.5 gives container-like latency with serverless pricing.
 
 ### 3.2 Steps (Option A)
 
@@ -136,6 +138,137 @@ flowchart TD
 LOCAL=                       # set "1" only for local Express dev
 SECRETS_PROVIDER=env         # env | secretsmanager | ssm
 SECRETS_PREFIX=/fixflow/      # when using SSM Parameter Store
+```
+
+### 3.5 Performance — guaranteeing no degradation
+
+The only real risk in moving Express → Lambda is **cold-start latency**. Everything else (steady-state throughput, DB latency) is equal or better. Here is how each is neutralized so users see **no slowdown** versus the always-on server.
+
+```mermaid
+flowchart TD
+    classDef good fill:#22c55e,stroke:#16a34a,color:#fff
+    R["Incoming request"] --> Q{"Warm container<br/>available?"}
+    Q -->|"Yes (most requests)"| W["Reuse warm Lambda<br/>cached DB client + secrets"]:::good
+    Q -->|"No (cold start)"| P{"Provisioned<br/>concurrency on?"}
+    P -->|"Yes"| W
+    P -->|"No"| C["Cold init (~200-500ms)<br/>minimized by small bundle"]
+    W --> H["Handler runs<br/>(Gemini latency dominates)"]
+```
+
+| Risk | Mitigation | Result |
+|:---|:---|:---|
+| **Cold starts** on first/idle requests | **Provisioned Concurrency** (keep e.g. 1–2 instances warm) on the single function, *or* a lightweight scheduled "ping" every 5 min | First request is as fast as a warm one for interactive traffic |
+| Slow init | **Bundle with esbuild** (tree-shaken, single file), Node 20 runtime, avoid heavy top-level imports | Cold init drops to ~200–400 ms |
+| Re-creating DB/HTTP clients per request | **Initialize SDK clients in module scope** (outside the handler) so warm invocations reuse them; enable **AWS SDK keep-alive** | No per-request connection setup |
+| Re-fetching secrets each call | **Load secrets once per cold start** into module scope (cache), not per request | Secrets cost ~0 after first call |
+| Right-sizing | **512 MB memory** (more memory = proportionally more CPU → faster cold start *and* execution); benchmark 256 vs 512 vs 1024 | Often 512 MB is cheapest *per request* because it finishes faster |
+| Repeated identical AI work | **Cache AI results** (DynamoDB) so repeat parses/evaluations skip Gemini | Instant responses + lower cost |
+| Static/cacheable responses | **CloudFront** in front of the HTTP API caches GET responses at the edge | Fewer Lambda hits, lower latency globally |
+| Payentry latency from far regions | Deploy in **ap-south-1** (matches your S3/users) and front with CloudFront | Edge-terminated TLS, short hops |
+
+**Reality check on where the time goes:** for your AI routes, a single Gemini call is 1–5 seconds — that dwarfs any 200–400 ms cold start. So even worst-case cold starts are a small fraction of total latency on the expensive routes, and Provisioned Concurrency removes them on the cheap routes (auth, escrow reads). Net effect: **equal-or-better perceived performance**, at scale-to-zero cost.
+
+**Recommended baseline config for the single function:**
+- Runtime: Node 20, **memory 512 MB**, timeout 30 s (covers Gemini)
+- **Provisioned Concurrency: 1–2** during business hours (schedule it down overnight to save cost)
+- esbuild bundling, SDK clients + secrets in module scope, AWS SDK keep-alive enabled
+- CloudFront in front of the HTTP API for caching + custom domain
+
+> **Cost note:** Provisioned Concurrency has a small always-on charge (~a few dollars/month for 1–2 instances). If you want strict scale-to-zero, skip it and rely on the 5-minute warmer ping + small bundle — cold starts then only affect the rare truly-idle request.
+
+### 3.6 Region consistency (action needed)
+
+Your **S3 bucket and `.env` are in `ap-south-1`**, but the **DynamoDB tables were created in `us-east-1`**. Cross-region calls add latency and complexity. Standardize on **`ap-south-1`** (best for India/Razorpay): recreate the (empty) tables there and delete the `us-east-1` ones, then deploy the Lambda + HTTP API in `ap-south-1` too so compute, data, and storage are co-located.
+
+### 3.7 Handling long-running AI requests (the 30-second wall)
+
+**The problem:** API Gateway HTTP API has a **hard 30-second integration timeout** that cannot be raised. A Lambda can run up to 15 minutes, but anything called synchronously through API Gateway must respond within 30 s or the user gets a `504` (while the Lambda keeps running uselessly in the background).
+
+**Where it bites in this project:**
+
+| Route | Typical time | Risk at 30s |
+|:---|:---|:---|
+| `/api/proposals/parse` (AI-001) | 3–8 s | ✅ Safe |
+| `/api/interview-questions` (AI-003) | 3–8 s | ✅ Safe |
+| `/api/contract-extensions` (AI-004) | 3–8 s | ✅ Safe |
+| `/api/leads/match` (AI-006) | <1 s (math) | ✅ Safe |
+| **`/api/proposals/evaluate` (AI-002)** | **15–40 s** (2–3 sequential Gemini calls + optional self-correction) | ⚠️ **Can exceed 30 s** |
+
+So only **AI-002** genuinely needs special handling. The fix is layered — do the cheap optimizations first, add the async pattern only where needed.
+
+#### Resolution, in order of effort
+
+```mermaid
+flowchart TD
+    L1["Layer 1 — Make it fast enough<br/>(fixes most cases)"] --> L2["Layer 2 — Stream progress<br/>(keeps long calls alive + good UX)"]
+    L2 --> L3["Layer 3 — Async job + poll<br/>(removes the 30s wall entirely)"]
+```
+
+**Layer 1 — Make the call fit inside 30 s (do this first, fixes ~90%)**
+- Use a **Flash model**, not Pro — 2–4× faster per call.
+- Run the two confidence-grid agents in **parallel** (`Promise.all`) — your `confidenceGrid.ts` already does this. Keep it.
+- On the *synchronous* path, **skip the optional self-correction loop** (the second round). Run it only in the async path or on demand.
+- **Cache results** — a repeated identical evaluation returns instantly from DynamoDB, never calling Gemini.
+- Cap output tokens. These together usually bring AI-002 under 30 s.
+
+**Layer 2 — Stream the response (great UX, sidesteps the wall for generation)**
+- Stream partial output so the user sees progress and the connection stays alive.
+- ⚠️ API Gateway HTTP API does **not** stream well. For streamed routes use a **Lambda Function URL with response streaming** (`awslambda.streamifyResponse`) instead of API Gateway. So: keep most routes on API Gateway, expose the streaming route via a Function URL.
+- Your AI-001 spec already anticipates SSE — this is where it pays off.
+
+**Layer 3 — Async job + poll (the robust fix for anything that can exceed 30 s)**
+For AI-002 specifically, don't make the browser hold one request open. Split it:
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant AG as API Gateway (HTTP API)
+    participant L as API Lambda
+    participant Q as SQS / Step Functions
+    participant W as Worker Lambda (no 30s cap)
+    participant G as Gemini
+    participant D as DynamoDB (jobs table)
+
+    U->>AG: POST /api/proposals/evaluate
+    AG->>L: invoke
+    L->>D: create job { status: "running" }
+    L->>Q: enqueue jobId
+    L-->>U: 202 Accepted { jobId } (fast, <1s)
+    Q->>W: trigger
+    W->>G: run agents + self-correction (up to 15 min)
+    G-->>W: result
+    W->>D: update job { status: "done", result }
+    loop every 2s
+        U->>AG: GET /api/proposals/evaluate/:jobId
+        AG->>L: invoke
+        L->>D: read job
+        L-->>U: { status } or { status:"done", result }
+    end
+```
+
+**Steps to implement Layer 3:**
+1. Add a `jobs` DynamoDB table: PK `jobId`, attributes `status` (`running|done|failed`), `result`, `error`, `ttl` (auto-expire after, say, 24 h).
+2. Change `POST /api/proposals/evaluate` to: create a job row, enqueue the work (SQS is simplest; Step Functions if you want retries/visibility), return **`202 { jobId }`** immediately.
+3. Add a **worker Lambda** triggered by the queue. It has no API Gateway in front, so it can run up to 15 min. It runs the full confidence grid (including self-correction), then writes the result to the `jobs` table.
+4. Add `GET /api/proposals/evaluate/:jobId` that reads and returns the job status/result.
+5. Frontend: on `202`, poll the status endpoint every ~2 s (or use a WebSocket push) and render when `done`. Show a progress state meanwhile.
+
+#### Recommended configuration
+
+| Setting | Value | Reason |
+|:---|:---|:---|
+| API Lambda timeout | **30 s** | Matches the API Gateway wall for sync routes |
+| Worker Lambda timeout | **2–5 min** | Headroom for multi-call AI-002 with self-correction |
+| API Gateway HTTP API timeout | **30 s** (max) | Hard cap — cannot change |
+| Job TTL | 24 h | Auto-clean finished jobs |
+
+**Bottom line:** apply **Layer 1 to all AI routes** (fast + cached). That alone keeps AI-001/003/004 comfortably synchronous. Use **Layer 3 (async job + poll) only for AI-002**, the one route that can exceed 30 s. This removes the timeout risk entirely with no user-visible degradation — the user gets an instant `202` and a progress indicator instead of a frozen spinner that 504s.
+
+#### Env / infra additions for Layer 3
+```dotenv
+JOBS_TABLE=fixflow_jobs
+EVAL_QUEUE_URL=               # SQS queue URL for the evaluate worker
+JOB_TTL_HOURS=24
 ```
 
 ---
@@ -258,12 +391,16 @@ graph TD
 
 Ship in this order; each phase is independently deployable.
 
-- [ ] **Phase A — REST on Lambda**
+- [ ] **Phase A — REST on ONE Lambda + HTTP API**
   - [ ] Export Express `app` without auto-`listen` in the Lambda path
   - [ ] Add `lambda.ts` with serverless-express adapter
-  - [ ] `config/secrets.ts` (env → Secrets Manager/SSM)
-  - [ ] SAM/Serverless template: HTTP API + function + IAM
-  - [ ] Deploy; `GET /api/health` green
+  - [ ] `config/secrets.ts` (env → Secrets Manager/SSM), loaded once in module scope
+  - [ ] Initialize DynamoDB/S3/HTTP clients in module scope + enable SDK keep-alive
+  - [ ] esbuild bundling; memory 512 MB; timeout 30 s
+  - [ ] SAM/Serverless template: HTTP API (`ANY /api/{proxy+}`) + function + IAM
+  - [ ] Provisioned Concurrency 1–2 (or scheduled warmer) to kill cold starts
+  - [ ] Deploy in `ap-south-1`; `GET /api/health` green
+  - [ ] (Optional) CloudFront in front for edge caching + custom domain
   - [ ] Frontend `VITE_API_BASE_URL` points at the API
 - [ ] **Phase B — persistence (prerequisite for multi-instance)**
   - [ ] DynamoDB-backed repositories replace in-memory `Map`s (escrow, users, etc.)
@@ -298,6 +435,8 @@ Ship in this order; each phase is independently deployable.
 
 ## 8. Decision summary
 
-1. **REST → Lambda + HTTP API now**, using the wrap-Express approach. Low risk, no route rewrites, near-zero cost.
-2. **Persistence first** (DynamoDB repositories) before relying on multi-instance Lambda — the in-memory escrow `Map` is the current blocker.
-3. **WebSocket → API Gateway WebSocket** when real-time collaboration becomes a priority; until then it's safe to **defer** or run on **Fargate**. The frontend protocol doesn't change — only the connect URL and where room state lives.
+1. **REST → ONE Lambda + API Gateway HTTP API** (chosen). Wrap the existing Express app in a single function — no route rewrites, one deployable, scale-to-zero pricing.
+2. **No performance degradation** is engineered in via Section 3.5: provisioned concurrency (or a warmer), esbuild bundling, module-scope SDK clients + cached secrets, 512 MB memory, AI-result caching, and CloudFront edge caching. On AI routes, Gemini latency dominates anyway, so cold starts are negligible.
+3. **Persistence first** (DynamoDB repositories) before relying on multi-instance Lambda — the in-memory escrow `Map` is the current blocker.
+4. **Co-locate in `ap-south-1`** — move the DynamoDB tables there to match S3 and the deployed Lambda (Section 3.6).
+5. **WebSocket → API Gateway WebSocket** when real-time collaboration becomes a priority; until then it's safe to **defer** or run on **Fargate**. The frontend protocol doesn't change — only the connect URL and where room state lives.
