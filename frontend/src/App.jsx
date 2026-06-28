@@ -18,6 +18,7 @@ import {
   ProposalAgreementMoments,
   RoleOnboardingMoment,
 } from "./sections/ProductMoments";
+import { SocialProof } from "./sections/SocialProof";
 import { SystemIntelligence } from "./sections/SystemIntelligence";
 import { Trust } from "./sections/Trust";
 import { Workflow } from "./sections/Workflow";
@@ -106,6 +107,7 @@ export function App() {
       <Navigation />
       <main id="main-content">
         <Hero />
+        <SocialProof />
         <ProductOverviewMoment />
         <Problem />
         <IntelligenceProductMoments />

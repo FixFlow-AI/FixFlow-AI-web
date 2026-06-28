@@ -338,3 +338,40 @@ export const roleMessages = {
   developer:
     "Let repositories and shipped engineering work support each recommendation.",
 };
+
+// Concrete, truthful product metrics used as trust signals on the landing
+// page. These map to the FixFlowAI UVPs (zero-noise shortlist, instant
+// matching, protected-by-default escrow, immutable audit trail) rather than
+// fabricated customer counts, which would be dishonest for an early-access
+// product.
+export const proofStats = [
+  {
+    value: "<60s",
+    label: "Brief to structured requirements",
+    detail: "Unstructured intent becomes outcomes, constraints, and open decisions.",
+  },
+  {
+    value: "Top 3–5",
+    label: "Zero-noise shortlist",
+    detail: "Explainable matches tied to evidence instead of open-bidding spam.",
+  },
+  {
+    value: "100%",
+    label: "Milestones funded before build",
+    detail: "Escrow confirms protected funds before any work begins.",
+  },
+  {
+    value: "SHA-256",
+    label: "Chained audit trail",
+    detail: "Every state change is cryptographically verifiable for both sides.",
+  },
+];
+
+// Capability badges shown alongside the stats as a lightweight "trusted by
+// design" row in place of partner logos for an early-access product.
+export const proofBadges = [
+  "Evidence-linked matching",
+  "Finite-state escrow",
+  "Shared decision history",
+  "Verifiable reputation",
+];
