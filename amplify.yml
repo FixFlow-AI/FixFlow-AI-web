@@ -20,7 +20,11 @@ applications:
         preBuild:
           commands:
             # Inject Amplify environment variables (VITE_*) into the build .env
-            - 'env | grep -E "^VITE_" >> .env || true'
+            - 'echo "Injected env vars:"'
+            - 'echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}"'
+            - 'echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}"'
+            - 'echo "VITE_API_BASE_URL=${VITE_API_BASE_URL}" > .env'
+            - 'echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}" >> .env'
             # Use `npm install` (not `npm ci`) so a slightly out-of-sync
             # package-lock.json reconciles instead of failing the build.
             - npm install --no-audit --no-fund
