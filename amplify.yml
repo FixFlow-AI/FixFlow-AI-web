@@ -1,0 +1,37 @@
+# AWS Amplify Hosting build spec for FixFlowAI.
+#
+# This is a MONOREPO: the deployable web app is the Vite SPA in `frontend/`,
+# while `backend/` is a separate API (deployed elsewhere — Lambda/API Gateway).
+# Amplify only builds and hosts the frontend, so we use the `applications`
+# block with `appRoot: frontend`.
+#
+# Vite reads VITE_-prefixed variables at BUILD time. Because `.env` is
+# git-ignored, set these as Amplify environment variables for the branch:
+#   VITE_GOOGLE_CLIENT_ID   (your Google OAuth Web client ID)
+#   VITE_API_BASE_URL       (your deployed backend URL, e.g. https://api.fixflow.ai)
+# The preBuild step writes any VITE_* env vars into frontend/.env so Vite picks
+# them up reliably.
+
+version: 1
+applications:
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # Inject Amplify environment variables (VITE_*) into the build .env
+            - 'env | grep -E "^VITE_" >> .env || true'
+            # Use `npm install` (not `npm ci`) so a slightly out-of-sync
+            # package-lock.json reconciles instead of failing the build.
+            - npm install --no-audit --no-fund
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        # Paths are relative to appRoot (frontend/), so this is frontend/dist
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
