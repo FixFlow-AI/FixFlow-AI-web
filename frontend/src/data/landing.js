@@ -375,3 +375,94 @@ export const proofBadges = [
   "Shared decision history",
   "Verifiable reputation",
 ];
+
+// Hero reassurance markers shown directly under the primary CTA. Kept honest
+// for an early-access product (no fake "free trial" promises that imply a
+// live billing system).
+export const heroTrustMarkers = [
+  "No credit card required",
+  "Early access",
+  "Your project data stays private",
+];
+
+// Pricing tiers with monthly + annual prices for the interactive billing
+// toggle. NOTE: these figures are placeholders for the landing page until
+// commercial pricing is finalised — update `monthly`/`annual` before launch.
+export const pricingTiers = [
+  {
+    id: "starter",
+    name: "Starter",
+    tagline: "For individuals testing the trust workflow.",
+    monthly: 0,
+    annual: 0,
+    cta: "Start free",
+    featured: false,
+    features: [
+      "1 active project",
+      "Structured brief parsing",
+      "Evidence-linked matching",
+      "Milestone escrow (standard fees)",
+    ],
+  },
+  {
+    id: "professional",
+    name: "Professional",
+    tagline: "For active freelancers and clients shipping real work.",
+    monthly: 24,
+    annual: 19,
+    cta: "Request access",
+    featured: true,
+    features: [
+      "Unlimited active projects",
+      "Confidence-grid shortlisting",
+      "Working agreement composer",
+      "Reduced escrow fees",
+      "Verifiable reputation trail",
+    ],
+  },
+  {
+    id: "scale",
+    name: "Scale",
+    tagline: "For agencies and teams with shared governance.",
+    monthly: 79,
+    annual: 63,
+    cta: "Talk to us",
+    featured: false,
+    features: [
+      "Everything in Professional",
+      "Team proof and role governance",
+      "Standardised client intake",
+      "Priority dispute resolution",
+      "Audit-ready delivery exports",
+    ],
+  },
+];
+
+// FAQ accordion content, written to answer the objections most likely to
+// block conversion for a trust-first freelance workspace.
+export const faqs = [
+  {
+    q: "How is FixFlowAI different from Upwork or Fiverr?",
+    a: "Traditional marketplaces are open-bidding boards. FixFlowAI structures the brief first, matches on verified proof instead of profile polish, and keeps scope, milestones, and escrow in one shared trail — so both sides agree on outcomes before work starts.",
+  },
+  {
+    q: "How does escrow protect my payments?",
+    a: "Each milestone must be funded before work begins. Funds are held in escrow and released against acceptance criteria you agreed to up front. Every funding and release event is recorded in a cryptographically chained audit trail.",
+  },
+  {
+    q: "What counts as verified proof?",
+    a: "Repositories, shipped work, delivery history, and domain artefacts are linked directly to the requirements they support. Recommendations point to evidence sources you can inspect, with remaining uncertainty left visible.",
+  },
+  {
+    q: "Do I need a crypto wallet to use FixFlowAI?",
+    a: "No. Payments run through standard fiat escrow. Verifiable reputation credentials are optional and never required to start a project or get paid.",
+  },
+  {
+    q: "Is my project data private?",
+    a: "Yes. Project context stays private between participants. You choose what becomes contractual evidence and what, if anything, becomes part of a public reputation record.",
+  },
+  {
+    q: "When can I start?",
+    a: "FixFlowAI is in early access. Request access with your role and we will reach out with the onboarding path that fits how you work.",
+  },
+];

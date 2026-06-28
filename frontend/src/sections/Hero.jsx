@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Play, Pause } from "lucide-react";
+import { ArrowRight, Play, Pause, Check } from "lucide-react";
 import { RevealText } from "../components/RevealText";
-import { audiences, heroSteps } from "../data/landing";
+import { audiences, heroSteps, heroTrustMarkers } from "../data/landing";
 import { useLandingStore } from "../store/useLandingStore";
 
 /* Floating code-card data — matches the hero concept image */
@@ -110,6 +110,14 @@ export function Hero() {
             {demoRunning ? "Pause system" : "Watch the system think"}
           </button>
         </div>
+        <ul className="hero-trust" aria-label="What to expect">
+          {heroTrustMarkers.map((marker) => (
+            <li key={marker}>
+              <Check aria-hidden="true" size={14} strokeWidth={2.4} />
+              {marker}
+            </li>
+          ))}
+        </ul>
         <div className="hero-audiences" aria-label="Built for">
           <span>Built for</span>
           {audiences.map((audience) => (

@@ -19,6 +19,8 @@ import {
   RoleOnboardingMoment,
 } from "./sections/ProductMoments";
 import { SocialProof } from "./sections/SocialProof";
+import { Pricing } from "./sections/Pricing";
+import { Faq } from "./sections/Faq";
 import { SystemIntelligence } from "./sections/SystemIntelligence";
 import { Trust } from "./sections/Trust";
 import { Workflow } from "./sections/Workflow";
@@ -120,6 +122,8 @@ export function App() {
         <Trust />
         <OutcomeProductMoment />
         <RoleOnboardingMoment />
+        <Pricing />
+        <Faq />
         <FinalCta />
       </main>
       <Footer />

@@ -7,6 +7,7 @@ const navItems = [
   ["Problem", "problem"],
   ["Intelligence", "intelligence"],
   ["Workflow", "workflow"],
+  ["Pricing", "pricing"],
   ["Trust", "trust"],
 ];
 
