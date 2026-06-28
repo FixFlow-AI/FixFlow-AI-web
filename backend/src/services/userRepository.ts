@@ -219,6 +219,106 @@ export function hashRefreshToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
+// ---------- DynamoDB provider ----------
+
+class DynamoDbUserRepository implements UserRepository {
+  // The table's partition key is `userId`; the domain object uses `id`.
+  private toItem(u: User) {
+    return { ...u, userId: u.id };
+  }
+
+  async findByGoogleSub(googleSub: string): Promise<User | null> {
+    const { ddb, table } = await import('../config/aws.js');
+    const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: table('users'),
+        IndexName: 'GoogleSubIndex',
+        KeyConditionExpression: 'googleSub = :g',
+        ExpressionAttributeValues: { ':g': googleSub },
+        Limit: 1,
+      }),
+    );
+    return (res.Items?.[0] as User) ?? null;
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const { ddb, table } = await import('../config/aws.js');
+    const { GetCommand } = await import('@aws-sdk/lib-dynamodb');
+    const res = await ddb.send(
+      new GetCommand({ TableName: table('users'), Key: { userId: id } }),
+    );
+    return (res.Item as User) ?? null;
+  }
+
+  async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
+    const existing = await this.findByGoogleSub(input.googleSub);
+    const now = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    if (existing) {
+      const updated: User = {
+        ...existing,
+        email: input.email,
+        emailVerified: input.emailVerified,
+        name: input.name,
+        picture: input.picture,
+        updatedAt: now,
+      };
+      await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(updated) }));
+      return updated;
+    }
+
+    const created: User = {
+      id: randomUUID(),
+      email: input.email,
+      emailVerified: input.emailVerified,
+      name: input.name,
+      picture: input.picture,
+      googleSub: input.googleSub,
+      role: 'client',
+      createdAt: now,
+      updatedAt: now,
+      refreshTokenHashes: [],
+    };
+    await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(created) }));
+    return created;
+  }
+
+  private async mutate(userId: string, fn: (u: User) => void): Promise<User | null> {
+    const u = await this.findById(userId);
+    if (!u) return null;
+    fn(u);
+    u.updatedAt = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(u) }));
+    return u;
+  }
+
+  async addRefreshTokenHash(userId: string, hash: string): Promise<void> {
+    await this.mutate(userId, (u) => {
+      if (!u.refreshTokenHashes.includes(hash)) u.refreshTokenHashes.push(hash);
+    });
+  }
+  async removeRefreshTokenHash(userId: string, hash: string): Promise<void> {
+    await this.mutate(userId, (u) => {
+      u.refreshTokenHashes = u.refreshTokenHashes.filter((h) => h !== hash);
+    });
+  }
+  async clearRefreshTokens(userId: string): Promise<void> {
+    await this.mutate(userId, (u) => {
+      u.refreshTokenHashes = [];
+    });
+  }
+  async updateRole(userId: string, role: UserRole): Promise<User | null> {
+    return this.mutate(userId, (u) => {
+      u.role = role;
+    });
+  }
+}
+
 // ---------- Factory ----------
 
 let cached: UserRepository | null = null;
@@ -227,7 +327,9 @@ export function getUserRepository(): UserRepository {
   if (cached) return cached;
 
   const provider = (process.env.USER_PROVIDER || 'seed').toLowerCase();
-  if (provider === 'http') {
+  if (provider === 'dynamodb') {
+    cached = new DynamoDbUserRepository();
+  } else if (provider === 'http') {
     const url = process.env.USER_API_URL;
     if (!url) throw new Error('USER_PROVIDER=http requires USER_API_URL.');
     cached = new HttpUserRepository(url);

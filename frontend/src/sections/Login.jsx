@@ -1,34 +1,10 @@
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Mail, Lock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Brand } from "../components/Brand";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 
 export function Login() {
-  const { login, setPage } = useLandingStore();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (!email) { setError("Email is required."); return; }
-    if (!email.includes("@")) { setError("Please enter a valid work email."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      let mockRole = "client";
-      if (email.includes("dev") || email.includes("coder")) mockRole = "developer";
-      else if (email.includes("free") || email.includes("design")) mockRole = "freelancer";
-      else if (email.includes("agency") || email.includes("firm")) mockRole = "agency";
-      login(email, mockRole);
-      window.location.hash = "#/dashboard/overview";
-    }, 800);
-  };
+  const { setPage } = useLandingStore();
 
   return (
     <div
@@ -85,103 +61,10 @@ export function Login() {
       >
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px" }}>Welcome back</h1>
         <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 28px" }}>
-          Enter your work credentials to open your project workspace.
+          Sign in with Google to open your project workspace.
         </p>
 
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "#fff7ed",
-                border: "1px solid #fed7aa",
-                borderRadius: 8,
-                fontSize: 13,
-                color: "#c2410c",
-                marginBottom: 20,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          {/* Email */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Work email
-            </label>
-            <div style={{ position: "relative" }}>
-              <Mail
-                size={16}
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                autoComplete="email"
-                style={{
-                  width: "100%",
-                  padding: "10px 14px 10px 38px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Password
-            </label>
-            <div style={{ position: "relative" }}>
-              <Lock
-                size={16}
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                style={{
-                  width: "100%",
-                  padding: "10px 14px 10px 38px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="button"
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            {loading ? "Signing in..." : (
-              <>Sign in <ArrowRight size={16} /></>
-            )}
-          </button>
-        </form>
+        <GoogleSignInButton nextHash="#/dashboard/overview" />
 
         <div
           style={{
@@ -189,7 +72,7 @@ export function Login() {
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
-            marginTop: 20,
+            marginTop: 24,
             fontSize: 12,
             color: "#94a3b8",
           }}

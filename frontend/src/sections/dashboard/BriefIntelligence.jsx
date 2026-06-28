@@ -66,8 +66,9 @@ export function BriefIntelligence() {
     ];
 
     try {
-      const { proposal } = await api.parseBrief(text);
+      const { proposal, proposalId } = await api.parseBrief(text);
       setParsedProposal(proposal);
+      useLandingStore.getState().setParsedProposalId(proposalId);
       setBriefSource("api");
       setBriefParsed(true);
     } catch (err) {

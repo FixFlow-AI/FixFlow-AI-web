@@ -25,10 +25,17 @@ import { Workflow } from "./sections/Workflow";
 import { Login } from "./sections/Login";
 import { Signup } from "./sections/Signup";
 import { Dashboard } from "./sections/Dashboard";
+import { getUser, isAuthenticated } from "./lib/auth";
 
 export function App() {
   useSmoothScroll();
-  const { page, setPage, setDashboardTab } = useLandingStore();
+  const { page, setPage, setDashboardTab, hydrateAuth } = useLandingStore();
+
+  // Rehydrate the session from localStorage on first load so a refresh keeps
+  // the user logged in.
+  useEffect(() => {
+    hydrateAuth(getUser());
+  }, [hydrateAuth]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -40,6 +47,12 @@ export function App() {
       } else if (hash === "#/signup") {
         setPage("signup");
       } else if (hash.startsWith("#/dashboard")) {
+        // Guard: only authenticated users can reach the dashboard.
+        if (!isAuthenticated()) {
+          setPage("login");
+          window.location.hash = "#/login";
+          return;
+        }
         setPage("dashboard");
         const parts = hash.split("/");
         const tab = parts[2];

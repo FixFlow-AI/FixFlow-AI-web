@@ -115,7 +115,11 @@ export function EvidenceConfidence() {
         setConfidenceSource("mock");
         return;
       }
-      const result = await api.evaluateProposal(rawBriefText, parsedProposal);
+      const result = await api.evaluateProposal(
+        rawBriefText,
+        parsedProposal,
+        useLandingStore.getState().parsedProposalId,
+      );
       setConfidenceResult(result);
       setConfidenceSource("api");
     } catch (err) {

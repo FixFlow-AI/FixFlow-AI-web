@@ -43,18 +43,30 @@ export const useLandingStore = create((set) => ({
   isLoggedIn: false,
   userEmail: "",
   userRole: "client",
+  user: null,
   setPage: (page) => set({ page }),
   setDashboardTab: (dashboardTab) => set({ dashboardTab }),
-  login: (email, role) =>
+  // Called after a successful Google sign-in (real user object from the backend).
+  login: (user) =>
     set({
       isLoggedIn: true,
-      userEmail: email,
-      userRole: role,
+      user,
+      userEmail: user?.email || "",
+      userRole: user?.role || "client",
       page: "dashboard",
+    }),
+  // Rehydrate auth state from a persisted session on app load.
+  hydrateAuth: (user) =>
+    set({
+      isLoggedIn: Boolean(user),
+      user: user || null,
+      userEmail: user?.email || "",
+      userRole: user?.role || "client",
     }),
   logout: () =>
     set({
       isLoggedIn: false,
+      user: null,
       userEmail: "",
       page: "landing",
       dashboardTab: "overview",
@@ -81,9 +93,11 @@ export const useLandingStore = create((set) => ({
   // Structured proposal returned by the backend brief parser (null until parsed).
   // `briefSource` records whether the data came from the live API or the local mock fallback.
   parsedProposal: null,
+  parsedProposalId: null,
   briefSource: null, // "api" | "mock" | null
   briefError: "",
   setParsedProposal: (parsedProposal) => set({ parsedProposal }),
+  setParsedProposalId: (parsedProposalId) => set({ parsedProposalId }),
   setBriefSource: (briefSource) => set({ briefSource }),
   setBriefError: (briefError) => set({ briefError }),
 

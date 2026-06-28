@@ -15,7 +15,9 @@ import {
 import { calculateClientScore } from './skills/clientScoring.js';
 import { generateShortlist } from './services/matchingEngine.js';
 import { getFreelancerRepository } from './services/freelancerRepository.js';
+import { getProposalRepository } from './services/proposalRepository.js';
 import { authRouter } from './routes/auth.js';
+import { requireAuth } from './auth/middleware.js';
 import { SyncServer } from './skills/syncServer.js';
 import {
   createMilestone,
@@ -33,7 +35,7 @@ import {
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -88,6 +90,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 app.post(
   '/api/proposals/parse',
+  requireAuth,
   asyncRoute(async (req, res) => {
     if (!requireGeminiKey(res)) return;
     const { briefText } = req.body ?? {};
@@ -96,7 +99,36 @@ app.post(
       return;
     }
     const proposal = await parseBrief(briefText, GEMINI_API_KEY, GEMINI_MODEL);
-    res.json({ proposal });
+    // Persist the parsed proposal under the authenticated user.
+    const stored = await getProposalRepository().create({
+      userId: req.auth!.sub,
+      briefText,
+      proposal,
+    });
+    res.json({ proposal, proposalId: stored.proposalId });
+  })
+);
+
+// List + fetch the authenticated user's proposals (real, persisted data).
+app.get(
+  '/api/proposals',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const items = await getProposalRepository().listByUser(req.auth!.sub);
+    res.json({ proposals: items });
+  })
+);
+
+app.get(
+  '/api/proposals/:id',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const sp = await getProposalRepository().get(req.params.id);
+    if (!sp || sp.userId !== req.auth!.sub) {
+      res.status(404).json({ error: 'Proposal not found.' });
+      return;
+    }
+    res.json(sp);
   })
 );
 
@@ -106,9 +138,10 @@ app.post(
 
 app.post(
   '/api/proposals/evaluate',
+  requireAuth,
   asyncRoute(async (req, res) => {
     if (!requireGeminiKey(res)) return;
-    const { briefText, proposal } = req.body ?? {};
+    const { briefText, proposal, proposalId } = req.body ?? {};
     if (typeof briefText !== 'string' || !briefText.trim()) {
       res.status(400).json({ error: 'briefText is required and must be a non-empty string.' });
       return;
@@ -118,6 +151,10 @@ app.post(
       return;
     }
     const result = await processConfidenceGrid(briefText, proposal, GEMINI_API_KEY, GEMINI_MODEL);
+    // Persist the evaluation against the proposal when an id is supplied.
+    if (typeof proposalId === 'string' && proposalId) {
+      await getProposalRepository().setEvaluation(proposalId, result);
+    }
     res.json(result);
   })
 );
@@ -128,6 +165,7 @@ app.post(
 
 app.post(
   '/api/interview-questions',
+  requireAuth,
   asyncRoute(async (req, res) => {
     if (!requireGeminiKey(res)) return;
     const { briefText, githubScan = '', missingSkills = [] } = req.body ?? {};
@@ -152,6 +190,7 @@ app.post(
 
 app.post(
   '/api/contract-extensions',
+  requireAuth,
   asyncRoute(async (req, res) => {
     if (!requireGeminiKey(res)) return;
     const { completedDeliverables = '', chatSummary = '' } = req.body ?? {};
@@ -196,6 +235,7 @@ app.post('/api/client-score', (req: Request, res: Response) => {
 
 app.post(
   '/api/leads/match',
+  requireAuth,
   asyncRoute(async (req, res) => {
     const { requiredSkills = [], budget, limit, domains } = req.body ?? {};
     if (!Array.isArray(requiredSkills)) {
@@ -223,102 +263,122 @@ app.post(
 // Escrow State Machine (milestones + cryptographic audit trail)
 // ==========================================
 
-app.post('/api/escrow/milestones', (req: Request, res: Response) => {
-  const { proposalId, title, amount } = req.body ?? {};
-  if (typeof proposalId !== 'string' || !proposalId.trim()) {
-    res.status(400).json({ error: 'proposalId is required.' });
-    return;
-  }
-  if (typeof title !== 'string' || !title.trim()) {
-    res.status(400).json({ error: 'title is required.' });
-    return;
-  }
-  if (typeof amount !== 'number' || amount < 0) {
-    res.status(400).json({ error: 'amount is required and must be a non-negative number.' });
-    return;
-  }
-  res.status(201).json(createMilestone({ proposalId, title, amount }));
-});
+app.post(
+  '/api/escrow/milestones',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { proposalId, title, amount } = req.body ?? {};
+    if (typeof proposalId !== 'string' || !proposalId.trim()) {
+      res.status(400).json({ error: 'proposalId is required.' });
+      return;
+    }
+    if (typeof title !== 'string' || !title.trim()) {
+      res.status(400).json({ error: 'title is required.' });
+      return;
+    }
+    if (typeof amount !== 'number' || amount < 0) {
+      res.status(400).json({ error: 'amount is required and must be a non-negative number.' });
+      return;
+    }
+    res.status(201).json(await createMilestone({ proposalId, title, amount }));
+  }),
+);
 
-app.get('/api/escrow/milestones', (req: Request, res: Response) => {
-  const proposalId = typeof req.query.proposalId === 'string' ? req.query.proposalId : undefined;
-  res.json({ milestones: listMilestones(proposalId) });
-});
+app.get(
+  '/api/escrow/milestones',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const proposalId = typeof req.query.proposalId === 'string' ? req.query.proposalId : undefined;
+    res.json({ milestones: await listMilestones(proposalId) });
+  }),
+);
 
-app.get('/api/escrow/milestones/:id', (req: Request, res: Response) => {
-  const milestone = getMilestone(req.params.id);
-  if (!milestone) {
-    res.status(404).json({ error: 'Milestone not found.' });
-    return;
-  }
-  res.json(milestone);
-});
+app.get(
+  '/api/escrow/milestones/:id',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+    res.json(milestone);
+  }),
+);
 
-app.get('/api/escrow/milestones/:id/audit', (req: Request, res: Response) => {
-  if (!getMilestone(req.params.id)) {
-    res.status(404).json({ error: 'Milestone not found.' });
-    return;
-  }
-  res.json(getAuditChain(req.params.id));
-});
+app.get(
+  '/api/escrow/milestones/:id/audit',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    if (!(await getMilestone(req.params.id))) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+    res.json(await getAuditChain(req.params.id));
+  }),
+);
 
-app.post('/api/escrow/milestones/:id/transition', (req: Request, res: Response) => {
-  const {
-    toState,
-    triggerUserId,
-    triggerUserRole,
-    expectedVersion,
-    metadata,
-    mfaToken,
-  } = req.body ?? {};
-
-  if (typeof toState !== 'string') {
-    res.status(400).json({ error: 'toState is required.' });
-    return;
-  }
-  if (typeof triggerUserId !== 'string' || !triggerUserId.trim()) {
-    res.status(400).json({ error: 'triggerUserId is required.' });
-    return;
-  }
-  if (typeof expectedVersion !== 'number') {
-    res.status(400).json({ error: 'expectedVersion (number) is required for concurrency control.' });
-    return;
-  }
-
-  try {
-    const result = applyTransition(req.params.id, {
-      toState: toState as any,
+app.post(
+  '/api/escrow/milestones/:id/transition',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const {
+      toState,
       triggerUserId,
-      triggerUserRole: (triggerUserRole as any) || 'System',
+      triggerUserRole,
       expectedVersion,
       metadata,
       mfaToken,
-    });
-    res.json(result);
-  } catch (err) {
-    if (err instanceof VersionMismatchError) {
-      res.status(409).json({ error: err.message, code: 'VERSION_MISMATCH' });
+    } = req.body ?? {};
+
+    if (typeof toState !== 'string') {
+      res.status(400).json({ error: 'toState is required.' });
       return;
     }
-    if (err instanceof InvalidTransitionError) {
-      res.status(422).json({ error: err.message, code: 'INVALID_TRANSITION' });
+    if (typeof triggerUserId !== 'string' || !triggerUserId.trim()) {
+      res.status(400).json({ error: 'triggerUserId is required.' });
       return;
     }
-    if (err instanceof MFARequiredError) {
-      res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+    if (typeof expectedVersion !== 'number') {
+      res.status(400).json({ error: 'expectedVersion (number) is required for concurrency control.' });
       return;
     }
-    if (err instanceof Error && err.message.startsWith('MFA Verification Failed')) {
-      res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
-      return;
+
+    try {
+      const result = await applyTransition(req.params.id, {
+        toState: toState as any,
+        triggerUserId,
+        triggerUserRole: (triggerUserRole as any) || 'System',
+        expectedVersion,
+        metadata,
+        mfaToken,
+      });
+      res.json(result);
+    } catch (err) {
+      if (err instanceof VersionMismatchError) {
+        res.status(409).json({ error: err.message, code: 'VERSION_MISMATCH' });
+        return;
+      }
+      if (err instanceof InvalidTransitionError) {
+        res.status(422).json({ error: err.message, code: 'INVALID_TRANSITION' });
+        return;
+      }
+      if (err instanceof MFARequiredError) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      if (err instanceof Error && err.message.startsWith('MFA Verification Failed')) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      if (err instanceof Error && err.message.includes('not found')) {
+        res.status(404).json({ error: err.message });
+        return;
+      }
+      throw err;
     }
-    if (err instanceof Error && err.message.includes('not found')) {
-      res.status(404).json({ error: err.message });
-      return;
-    }
-    throw err;
-  }
-});
+  }),
+);
 
 // ==========================================
 // Real-time sync telemetry (the live socket is at ws://<host>/sync)
@@ -330,6 +390,46 @@ app.get('/api/sync/rooms/:proposalId', (req: Request, res: Response) => {
   const details = syncServerRef?.getRoomDetails(req.params.proposalId) ?? null;
   res.json({ room: details });
 });
+
+// ==========================================
+// Overview — aggregated, per-user dashboard summary (real data)
+// ==========================================
+
+app.get(
+  '/api/overview',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const userId = req.auth!.sub;
+    const proposals = await getProposalRepository().listByUser(userId);
+    const latest = proposals[0] ?? null;
+    const milestones = latest ? await listMilestones(latest.proposalId) : [];
+
+    const milestoneSummary = {
+      total: milestones.length,
+      funded: milestones.filter((m) => m.state === 'Active' || m.state === 'In_Review').length,
+      released: milestones.filter((m) => m.state === 'Funds_Released').length,
+    };
+
+    res.json({
+      user: { id: userId, email: req.auth!.email, role: req.auth!.role, name: req.auth!.name },
+      counts: {
+        proposals: proposals.length,
+        milestones: milestoneSummary.total,
+      },
+      latestProposal: latest
+        ? {
+            proposalId: latest.proposalId,
+            title: latest.title,
+            createdAt: latest.createdAt,
+            features: latest.proposal.features?.length ?? 0,
+            risks: latest.proposal.risks?.length ?? 0,
+            hasEvaluation: Boolean(latest.evaluation),
+          }
+        : null,
+      milestoneSummary,
+    });
+  })
+);
 
 // ==========================================
 // Error handling

@@ -9,6 +9,8 @@
     "dev": "tsc && node dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1075.0",
+    "@aws-sdk/lib-dynamodb": "^3.1075.0",
     "@google/genai": "^1.50.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

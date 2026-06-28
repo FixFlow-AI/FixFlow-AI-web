@@ -1,32 +1,13 @@
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, ShieldCheck, Mail, Lock, UserRound } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Brand } from "../components/Brand";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { audiences } from "../data/landing";
 
 export function Signup() {
-  const { login, setPage } = useLandingStore();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { setPage } = useLandingStore();
   const [selectedRole, setSelectedRole] = useState("client");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (!email) { setError("Email is required."); return; }
-    if (!email.includes("@")) { setError("Please enter a valid work email."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      login(email, selectedRole);
-      window.location.hash = "#/dashboard/role-onboarding";
-    }, 850);
-  };
 
   const activeAudience = audiences.find((a) => a.id === selectedRole);
 
@@ -88,23 +69,7 @@ export function Signup() {
           Choose your role and start building trust-backed agreements.
         </p>
 
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "#fff7ed",
-                border: "1px solid #fed7aa",
-                borderRadius: 8,
-                fontSize: 13,
-                color: "#c2410c",
-                marginBottom: 20,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
+        <form onSubmit={(e) => e.preventDefault()}>
           {/* Role selector */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
@@ -156,82 +121,11 @@ export function Signup() {
             )}
           </div>
 
-          {/* Email */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Work email
-            </label>
-            <div style={{ position: "relative" }}>
-              <Mail
-                size={16}
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                autoComplete="email"
-                style={{
-                  width: "100%",
-                  padding: "10px 14px 10px 38px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Password
-            </label>
-            <div style={{ position: "relative" }}>
-              <Lock
-                size={16}
-                style={{
-                  position: "absolute",
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Choose a password (6+ characters)"
-                autoComplete="new-password"
-                style={{
-                  width: "100%",
-                  padding: "10px 14px 10px 38px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="button"
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            {loading ? "Creating workspace..." : (
-              <>Create workspace <ArrowRight size={16} /></>
-            )}
-          </button>
+          {/* Real Google sign-up — creates the account, then applies the chosen role */}
+          <GoogleSignInButton
+            nextHash="#/dashboard/role-onboarding"
+            roleToSet={selectedRole}
+          />
         </form>
 
         <div

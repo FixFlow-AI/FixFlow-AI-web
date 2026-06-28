@@ -29,6 +29,8 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { api } from "../lib/api";
+import { getRefreshToken, getUser, clearSession } from "../lib/auth";
 
 /* ——————————————————————————————————————————
    Sidebar menu – matches the 7 product screens
@@ -71,7 +73,13 @@ export function Dashboard() {
     window.location.hash = `#/dashboard/${tabId}`;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const rt = getRefreshToken();
+    const u = getUser();
+    if (rt && u?.id) {
+      try { await api.logout(rt, u.id); } catch { /* best-effort */ }
+    }
+    clearSession();
     logout();
     window.location.hash = "#/";
   };

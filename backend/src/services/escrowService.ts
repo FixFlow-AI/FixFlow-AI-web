@@ -7,18 +7,14 @@ import {
   transitionMilestone,
   verifyAuditChain,
 } from '../skills/escrowStateMachine.js';
+import { getMilestoneRepository } from './milestoneRepository.js';
 
 /**
- * In-memory escrow service.
- *
- * Wraps the stateless escrow FSM (escrowStateMachine.ts) with a process-local
- * store so milestones and their cryptographic audit chains can be created,
- * transitioned, and inspected over HTTP. In production this map would be backed
- * by PostgreSQL/Prisma, but the FSM logic and audit guarantees are identical.
+ * Escrow service — orchestrates the pure FSM (escrowStateMachine.ts) with a
+ * persistence layer (milestoneRepository.ts). State lives in DynamoDB (or an
+ * in-memory store for local dev), never in this module, so it survives across
+ * Lambda cold starts and multiple instances.
  */
-
-const milestones = new Map<string, Milestone>();
-const auditChains = new Map<string, AuditTrailBlock[]>();
 
 export interface CreateMilestoneInput {
   proposalId: string;
@@ -26,10 +22,9 @@ export interface CreateMilestoneInput {
   amount: number;
 }
 
-export function createMilestone(input: CreateMilestoneInput): Milestone {
-  const id = randomUUID();
+export async function createMilestone(input: CreateMilestoneInput): Promise<Milestone> {
   const milestone: Milestone = {
-    id,
+    id: randomUUID(),
     proposalId: input.proposalId,
     title: input.title,
     amount: input.amount,
@@ -37,18 +32,16 @@ export function createMilestone(input: CreateMilestoneInput): Milestone {
     version: 0,
     lastAuditHash: '',
   };
-  milestones.set(id, milestone);
-  auditChains.set(id, []);
+  await getMilestoneRepository().create(milestone);
   return milestone;
 }
 
-export function getMilestone(id: string): Milestone | undefined {
-  return milestones.get(id);
+export async function getMilestone(id: string): Promise<Milestone | null> {
+  return getMilestoneRepository().get(id);
 }
 
-export function listMilestones(proposalId?: string): Milestone[] {
-  const all = Array.from(milestones.values());
-  return proposalId ? all.filter((m) => m.proposalId === proposalId) : all;
+export async function listMilestones(proposalId?: string): Promise<Milestone[]> {
+  return getMilestoneRepository().list(proposalId);
 }
 
 export interface TransitionInput {
@@ -61,16 +54,17 @@ export interface TransitionInput {
   mfaToken?: string;
 }
 
-export function applyTransition(
+export async function applyTransition(
   id: string,
   input: TransitionInput,
-): { milestone: Milestone; block: AuditTrailBlock } {
-  const milestone = milestones.get(id);
+): Promise<{ milestone: Milestone; block: AuditTrailBlock }> {
+  const repo = getMilestoneRepository();
+  const milestone = await repo.get(id);
   if (!milestone) {
     throw new Error(`Milestone [${id}] not found.`);
   }
 
-  const chain = auditChains.get(id) ?? [];
+  const chain = await repo.getAuditBlocks(id);
   const previousBlockIndex = chain.length;
 
   const mfaVerifier = (_mid: string, _state: MilestoneState) =>
@@ -87,19 +81,15 @@ export function applyTransition(
     mfaVerifier,
   );
 
-  milestones.set(id, updatedMilestone);
-  auditChains.set(id, [...chain, newBlock]);
+  await repo.save(updatedMilestone);
+  await repo.appendAuditBlock(newBlock);
 
   return { milestone: updatedMilestone, block: newBlock };
 }
 
-export function getAuditChain(id: string): { blocks: AuditTrailBlock[]; valid: boolean } {
-  const blocks = auditChains.get(id) ?? [];
+export async function getAuditChain(
+  id: string,
+): Promise<{ blocks: AuditTrailBlock[]; valid: boolean }> {
+  const blocks = await getMilestoneRepository().getAuditBlocks(id);
   return { blocks, valid: verifyAuditChain(blocks) };
-}
-
-/** Reset helper for tests / demos. */
-export function resetEscrowStore(): void {
-  milestones.clear();
-  auditChains.clear();
 }

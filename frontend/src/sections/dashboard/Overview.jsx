@@ -1,265 +1,143 @@
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  Check,
   FileText,
-  GitBranch,
-  Handshake,
-  Hammer,
-  ClipboardCheck,
-  Award,
+  RefreshCw,
   AlertTriangle,
-  Clock,
-  ShieldCheck,
-  Users,
-  Target,
+  Cpu,
+  Coins,
+  Award,
 } from "lucide-react";
-
-const steps = [
-  { label: "Brief", done: true },
-  { label: "Evidence", done: true },
-  { label: "Agreement", active: true },
-  { label: "Build", done: false },
-  { label: "Approval", done: false },
-  { label: "Outcome", done: false },
-];
-
-const recentEvents = [
-  {
-    icon: GitBranch,
-    color: "blue",
-    title: "Evidence linked to 4 requirements",
-    time: "Today, 2:15 PM",
-  },
-  {
-    icon: AlertTriangle,
-    color: "orange",
-    title: "Risk flagged: rollback ownership unresolved",
-    time: "Today, 11:30 AM",
-  },
-  {
-    icon: FileText,
-    color: "green",
-    title: "Brief v1.2 parsed — 6 requirements extracted",
-    time: "Yesterday, 4:45 PM",
-  },
-  {
-    icon: Users,
-    color: "blue",
-    title: "Maya Chen added to project workspace",
-    time: "Yesterday, 10:00 AM",
-  },
-];
+import { useLandingStore } from "../../store/useLandingStore";
+import { api, ApiError } from "../../lib/api";
 
 export function Overview() {
+  const { user, setDashboardTab } = useLandingStore();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.overview();
+      setData(res);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not load your overview.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const go = (tab) => {
+    setDashboardTab(tab);
+    window.location.hash = `#/dashboard/${tab}`;
+  };
+
   return (
     <div>
-      {/* Page header */}
       <div className="panel-page-header">
-        <h1 className="panel-page-title">Northstar Billing Migration</h1>
+        <h1 className="panel-page-title">
+          Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+        </h1>
         <p className="panel-page-subtitle">
-          Atlas Commerce · Real-time billing migration with zero downtime
+          {user?.email} · {user?.role}
         </p>
       </div>
 
-      {/* Horizontal stepper */}
-      <div className="panel-stepper">
-        {steps.map((step, i) => (
-          <div key={step.label} style={{ display: "flex", alignItems: "center" }}>
-            <div
-              className={`panel-step${step.done ? " panel-step--done" : ""}${step.active ? " panel-step--active" : ""}`}
-            >
-              <span className="panel-step-num">
-                {step.done ? <Check size={13} strokeWidth={3} /> : i + 1}
-              </span>
-              {step.label}
-            </div>
-            {i < steps.length - 1 && (
-              <ArrowRight size={14} className="panel-step-arrow" />
-            )}
+      {loading ? (
+        <div className="panel-card" style={{ textAlign: "center", padding: 48 }}>
+          <RefreshCw size={28} className="animate-spin" style={{ color: "#2563eb" }} />
+          <p style={{ fontSize: 13, color: "#64748b", marginTop: 12 }}>Loading your workspace…</p>
+        </div>
+      ) : error ? (
+        <div className="panel-card">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#c2410c" }}>
+            <AlertTriangle size={16} /> {error}
           </div>
-        ))}
-      </div>
-
-      {/* Main grid */}
-      <div className="panel-grid panel-grid--sidebar">
-        {/* Left column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Project truth */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Project truth</h2>
-              <span className="panel-badge panel-badge--blue">In progress</span>
+          <button type="button" className="panel-btn" style={{ marginTop: 12 }} onClick={load}>
+            <RefreshCw size={14} /> Retry
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Real counts */}
+          <div className="panel-grid panel-grid--3" style={{ marginBottom: 20 }}>
+            <div className="panel-stat">
+              <div className="panel-stat-value">{data?.counts?.proposals ?? 0}</div>
+              <div className="panel-stat-label">Proposals</div>
             </div>
-
-            <div className="panel-info-row">
-              <span className="panel-info-label">Objective</span>
-              <span className="panel-info-value">
-                Migrate billing without interrupting active subscriptions
-              </span>
+            <div className="panel-stat">
+              <div className="panel-stat-value">{data?.milestoneSummary?.total ?? 0}</div>
+              <div className="panel-stat-label">Milestones</div>
             </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Current decision</span>
-              <span className="panel-info-value" style={{ color: "#ea580c" }}>
-                Rollback ownership needs agreement
-              </span>
-            </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Relevant proof</span>
-              <span className="panel-info-value">
-                4 evidence sources linked
-              </span>
-            </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Next milestone</span>
-              <span className="panel-info-value">
-                Migration plan + rollback design
-              </span>
+            <div className="panel-stat">
+              <div className="panel-stat-value" style={{ color: "#16a34a" }}>
+                {data?.milestoneSummary?.released ?? 0}
+              </div>
+              <div className="panel-stat-label">Released</div>
             </div>
           </div>
 
-          {/* Recent events */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Recent events</h2>
-              <button type="button" className="panel-link">
-                View all <ArrowRight size={14} />
+          {data?.latestProposal ? (
+            <div className="panel-card">
+              <div className="panel-card-header">
+                <h2 className="panel-card-title">Latest project</h2>
+                <span className="panel-badge panel-badge--blue">
+                  {data.latestProposal.hasEvaluation ? "Evaluated" : "Parsed"}
+                </span>
+              </div>
+              <div className="panel-info-row">
+                <span className="panel-info-label">Title</span>
+                <span className="panel-info-value">{data.latestProposal.title}</span>
+              </div>
+              <div className="panel-info-row">
+                <span className="panel-info-label">Features</span>
+                <span className="panel-info-value">{data.latestProposal.features}</span>
+              </div>
+              <div className="panel-info-row">
+                <span className="panel-info-label">Risks</span>
+                <span className="panel-info-value">{data.latestProposal.risks}</span>
+              </div>
+              <div className="panel-info-row">
+                <span className="panel-info-label">Created</span>
+                <span className="panel-info-value">
+                  {new Date(data.latestProposal.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <hr className="panel-divider" />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="panel-btn" onClick={() => go("evidence-confidence")}>
+                  <Cpu size={14} /> Evaluate
+                </button>
+                <button type="button" className="panel-btn--ghost panel-btn" onClick={() => go("matching")}>
+                  Find matches <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Honest empty state for a brand-new account — no mock data. */
+            <div className="panel-card" style={{ textAlign: "center", padding: 40 }}>
+              <FileText size={32} style={{ color: "#94a3b8" }} />
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
+                No projects yet
+              </h2>
+              <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
+                Start by parsing a project brief — that creates your first real proposal.
+              </p>
+              <button type="button" className="panel-btn" onClick={() => go("brief-intelligence")}>
+                Parse a brief <ArrowRight size={14} />
               </button>
             </div>
-
-            {recentEvents.map((evt) => {
-              const Icon = evt.icon;
-              return (
-                <div className="panel-timeline-item" key={evt.title}>
-                  <span className={`panel-timeline-icon panel-timeline-icon--${evt.color}`}>
-                    <Icon size={15} strokeWidth={1.8} />
-                  </span>
-                  <div className="panel-timeline-body">
-                    <div className="panel-timeline-title">{evt.title}</div>
-                    <div className="panel-timeline-meta">{evt.time}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Agreement state */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Agreement state</h2>
-            </div>
-
-            <div className="panel-info-row">
-              <span className="panel-info-label">Scope</span>
-              <span className="panel-info-value">
-                <span className="panel-badge panel-badge--green">Defined</span>
-              </span>
-            </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Acceptance criteria</span>
-              <span className="panel-info-value">5 criteria set</span>
-            </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Protected funds</span>
-              <span className="panel-info-value">$32,000 in escrow</span>
-            </div>
-            <div className="panel-info-row">
-              <span className="panel-info-label">Open risks</span>
-              <span className="panel-info-value" style={{ color: "#ea580c" }}>
-                2 unresolved
-              </span>
-            </div>
-
-            <hr className="panel-divider" />
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <span className="panel-badge panel-badge--outline">
-                <ShieldCheck size={12} /> Escrow active
-              </span>
-              <span className="panel-badge panel-badge--outline">
-                <Clock size={12} /> 10–12 weeks
-              </span>
-            </div>
-          </div>
-
-          {/* Quick stats */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Summary</h2>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div className="panel-stat">
-                <div className="panel-stat-value">6</div>
-                <div className="panel-stat-label">Requirements</div>
-              </div>
-              <div className="panel-stat">
-                <div className="panel-stat-value">4</div>
-                <div className="panel-stat-label">Evidence links</div>
-              </div>
-              <div className="panel-stat">
-                <div className="panel-stat-value">3</div>
-                <div className="panel-stat-label">Milestones</div>
-              </div>
-              <div className="panel-stat">
-                <div className="panel-stat-value" style={{ color: "#16a34a" }}>88%</div>
-                <div className="panel-stat-label">Confidence</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Next steps */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Next steps</h2>
-            </div>
-            <div className="panel-checklist-item">
-              <span className="panel-check panel-check--progress">
-                <Target size={11} />
-              </span>
-              <div className="panel-checklist-content">
-                <div className="panel-checklist-label">Resolve rollback ownership</div>
-                <div className="panel-checklist-desc">Risk needs client decision</div>
-              </div>
-            </div>
-            <div className="panel-checklist-item">
-              <span className="panel-check panel-check--pending" />
-              <div className="panel-checklist-content">
-                <div className="panel-checklist-label">Finalize agreement v2.0</div>
-                <div className="panel-checklist-desc">Pending risk resolution</div>
-              </div>
-            </div>
-            <div className="panel-checklist-item">
-              <span className="panel-check panel-check--pending" />
-              <div className="panel-checklist-content">
-                <div className="panel-checklist-label">Fund Milestone 01</div>
-                <div className="panel-checklist-desc">After agreement approval</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom progress bar */}
-      <div className="panel-action-bar">
-        <div className="panel-action-bar-left">
-          <span className="panel-badge panel-badge--outline">
-            <Handshake size={12} /> Agreement v1.2
-          </span>
-          <span style={{ fontSize: 12, color: "#94a3b8" }}>
-            Last updated 2 hours ago
-          </span>
-        </div>
-        <div className="panel-action-bar-right">
-          <button type="button" className="panel-btn--ghost panel-btn">
-            View agreement
-          </button>
-          <button type="button" className="panel-btn">
-            Continue to agreement <ArrowRight size={14} />
-          </button>
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

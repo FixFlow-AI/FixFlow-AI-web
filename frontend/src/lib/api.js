@@ -6,6 +6,12 @@
  * VITE_API_BASE_URL (e.g. "https://api.fixflow.ai").
  */
 
+import {
+  getAccessToken,
+  refreshAccessToken,
+  clearSession,
+} from "./auth.js";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 class ApiError extends Error {
@@ -16,19 +22,35 @@ class ApiError extends Error {
   }
 }
 
+async function doFetch(path, { method, body, signal, token }) {
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(`${BASE_URL}/api${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    signal,
+  });
+}
+
 async function request(path, { method = "GET", body, signal } = {}) {
   let response;
   try {
-    response = await fetch(`${BASE_URL}/api${path}`, {
-      method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-      signal,
-    });
+    response = await doFetch(path, { method, body, signal, token: getAccessToken() });
+
+    // Access token expired → try one silent refresh, then retry once.
+    if (response.status === 401 && getAccessToken()) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        response = await doFetch(path, { method, body, signal, token: newToken });
+      } else {
+        clearSession();
+      }
+    }
   } catch (networkError) {
-    // Backend unreachable (not running, wrong port, etc.)
     throw new ApiError(
-      "Could not reach the backend. Is the API server running on port 4000?",
+      "Could not reach the backend. Is the API server running?",
       0,
     );
   }
@@ -56,15 +78,26 @@ export { ApiError };
 export const api = {
   health: () => request("/health"),
 
+  // Auth
+  googleLogin: (idToken) =>
+    request("/auth/google", { method: "POST", body: { idToken } }),
+  me: () => request("/auth/me"),
+  setRole: (role) => request("/auth/me/role", { method: "PATCH", body: { role } }),
+  logout: (refreshToken, userId) =>
+    request("/auth/logout", { method: "POST", body: { refreshToken, userId } }),
+  overview: () => request("/overview"),
+  listProposals: () => request("/proposals"),
+  getProposal: (id) => request(`/proposals/${encodeURIComponent(id)}`),
+
   // Subsystem 1: semantic brief parsing -> structured proposal
   parseBrief: (briefText, signal) =>
     request("/proposals/parse", { method: "POST", body: { briefText }, signal }),
 
   // Subsystem 2: multi-agent confidence grid evaluation + self-correction
-  evaluateProposal: (briefText, proposal, signal) =>
+  evaluateProposal: (briefText, proposal, proposalId, signal) =>
     request("/proposals/evaluate", {
       method: "POST",
-      body: { briefText, proposal },
+      body: { briefText, proposal, proposalId },
       signal,
     }),
 
