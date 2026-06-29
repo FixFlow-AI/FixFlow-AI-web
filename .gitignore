@@ -7,6 +7,6 @@ frontend/dist
 *.log
 
 .vscode/
-
+docs/specifications/ai_engineering_sprints.md
 
 
