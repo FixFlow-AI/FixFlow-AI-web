@@ -16,32 +16,12 @@ import {
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
-const requirements = [
-  { icon: Check, label: "Preserve subscription state" },
-  { icon: Users, label: "Idempotent webhook processing" },
-  { icon: GitBranch, label: "Tested rollback plan" },
-  { icon: Briefcase, label: "Billing reconciliation" },
-  { icon: Calendar, label: "Six-week delivery window" },
-];
+const requirements = [];
 
-const evidenceNodes = [
-  { type: "source", icon: Code2, label: "Repository:", sub: "billing-migration" },
-  { type: "source", icon: Users, label: "Webhook:", sub: "payment webhook handler" },
-  { type: "source", icon: Briefcase, label: "Job:", sub: "billing reconciliation" },
-  { type: "target", icon: FileCheck2, label: "Outcome:", sub: "subscription cutover" },
-  { type: "target", icon: Check, label: "Artifact:", sub: "rollback test suite" },
-  { type: "target", icon: FileCheck2, label: "Delivery record:", sub: "5-week migration" },
-  { type: "ref", icon: Users, label: "Reference:", sub: "platform engineering lead" },
-];
+const evidenceNodes = [];
 
 // Used as the fallback view when no live evaluation is available.
-const fallbackConfidence = [
-  { label: "Subscription state", badge: "Strong evidence", color: "green" },
-  { label: "Webhook reliability", badge: "Strong evidence", color: "green" },
-  { label: "Rollback design", badge: "Relevant evidence", color: "blue" },
-  { label: "Reconciliation", badge: "Relevant evidence", color: "blue" },
-  { label: "Target runtime", badge: "Open question", color: "orange" },
-];
+const fallbackConfidence = [];
 
 function scoreColor(score) {
   if (score >= 80) return "green";
@@ -85,6 +65,7 @@ function ScoreBar({ label, score }) {
 
 export function EvidenceConfidence() {
   const {
+    user,
     rawBriefText,
     parsedProposal,
     confidenceResult,
@@ -187,11 +168,13 @@ export function EvidenceConfidence() {
       {/* Page header */}
       <div className="panel-page-header">
         <p style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-          Atlas Commerce / Northstar Billing Migration
+          {parsedProposal?.project_summary
+            ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+            : "No active project brief"}
         </p>
         <h1 className="panel-page-title">Evidence connected to requirements</h1>
         <p className="panel-page-subtitle">
-          Northline Studio · Review before shortlist
+          {user?.email ? user.email.split("@")[1].split(".")[0].toUpperCase() : "Workspace"} · Review before shortlist
         </p>
       </div>
 
@@ -203,40 +186,45 @@ export function EvidenceConfidence() {
             <h2 className="panel-card-title">Requirements</h2>
           </div>
 
-          {requirements.map((req) => {
-            const Icon = req.icon;
-            return (
-              <div
-                key={req.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "14px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span
+          {parsedProposal?.features?.length > 0 ? (
+            parsedProposal.features.map((req) => {
+              return (
+                <div
+                  key={req.title}
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: "#eff6ff",
-                    border: "1.5px solid #bfdbfe",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#2563eb",
-                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: "1px solid #f1f5f9",
                   }}
                 >
-                  <Icon size={15} strokeWidth={1.8} />
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: "#334155" }}>
-                  {req.label}
-                </span>
-              </div>
-            );
-          })}
+                  <span
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      background: "#eff6ff",
+                      border: "1.5px solid #bfdbfe",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#2563eb",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Check size={15} strokeWidth={1.8} />
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "#334155" }}>
+                    {req.title}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <p style={{ fontSize: 13, color: "#64748b" }}>
+              No requirements parsed. Parse a brief in the Brief Ingestion tab first.
+            </p>
+          )}
         </div>
 
         {/* Center: Evidence relationships (visual) */}
@@ -245,105 +233,111 @@ export function EvidenceConfidence() {
             <h2 className="panel-card-title">Evidence relationships</h2>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-              padding: "8px 0",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {evidenceNodes
-                .filter((n) => n.type === "source")
-                .map((node) => {
-                  const NIcon = node.icon;
-                  return (
-                    <div
-                      key={node.label + node.sub}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "10px 12px",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 8,
-                        background: "#fff",
-                      }}
-                    >
-                      <span
+          {evidenceNodes.length > 0 ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                padding: "8px 0",
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {evidenceNodes
+                  .filter((n) => n.type === "source")
+                  .map((node) => {
+                    const NIcon = node.icon;
+                    return (
+                      <div
+                        key={node.label + node.sub}
                         style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          background: "#eff6ff",
-                          display: "grid",
-                          placeItems: "center",
-                          color: "#2563eb",
-                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "10px 12px",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 8,
+                          background: "#fff",
                         }}
                       >
-                        <NIcon size={14} />
-                      </span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>
-                          {node.label}
-                        </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>
-                          {node.sub}
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            background: "#eff6ff",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "#2563eb",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <NIcon size={14} />
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>
+                            {node.label}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                            {node.sub}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-            </div>
+                    );
+                  })}
+              </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {evidenceNodes
-                .filter((n) => n.type === "target" || n.type === "ref")
-                .map((node) => {
-                  const NIcon = node.icon;
-                  return (
-                    <div
-                      key={node.label + node.sub}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "10px 12px",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: 8,
-                        background: "#fff",
-                        borderStyle: node.type === "ref" ? "dashed" : "solid",
-                      }}
-                    >
-                      <span
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {evidenceNodes
+                  .filter((n) => n.type === "target" || n.type === "ref")
+                  .map((node) => {
+                    const NIcon = node.icon;
+                    return (
+                      <div
+                        key={node.label + node.sub}
                         style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          background: node.type === "ref" ? "#f8fafc" : "#f0fdf4",
-                          display: "grid",
-                          placeItems: "center",
-                          color: node.type === "ref" ? "#64748b" : "#16a34a",
-                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "10px 12px",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 8,
+                          background: "#fff",
+                          borderStyle: node.type === "ref" ? "dashed" : "solid",
                         }}
                       >
-                        <NIcon size={14} />
-                      </span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>
-                          {node.label}
-                        </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>
-                          {node.sub}
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            background: node.type === "ref" ? "#f8fafc" : "#f0fdf4",
+                            display: "grid",
+                            placeItems: "center",
+                            color: node.type === "ref" ? "#64748b" : "#16a34a",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <NIcon size={14} />
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>
+                            {node.label}
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                            {node.sub}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "40px 0" }}>
+              Connect your GitHub repository in Onboarding to trace work evidence dynamically.
+            </p>
+          )}
 
           <div
             style={{
@@ -426,28 +420,34 @@ export function EvidenceConfidence() {
             </>
           ) : (
             <>
-              {fallbackConfidence.map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "14px 0",
-                    borderBottom: "1px solid #f1f5f9",
-                  }}
-                >
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                    {item.label}
-                  </span>
-                  <span
-                    className={`panel-badge panel-badge--${item.color}`}
-                    style={{ flexShrink: 0, fontSize: 11 }}
+              {fallbackConfidence.length > 0 ? (
+                fallbackConfidence.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "14px 0",
+                      borderBottom: "1px solid #f1f5f9",
+                    }}
                   >
-                    {item.badge}
-                  </span>
-                </div>
-              ))}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>
+                      {item.label}
+                    </span>
+                    <span
+                      className={`panel-badge panel-badge--${item.color}`}
+                      style={{ flexShrink: 0, fontSize: 11 }}
+                    >
+                      {item.badge}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "20px 0" }}>
+                  Run evaluation below to populate the confidence grid.
+                </p>
+              )}
             </>
           )}
         </div>
