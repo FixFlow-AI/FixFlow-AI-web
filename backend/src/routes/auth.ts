@@ -165,6 +165,34 @@ authRouter.patch(
   }),
 );
 
+authRouter.post(
+  '/dev-login',
+  asyncRoute(async (req, res) => {
+    const email = req.body?.email || 'dev-tester@fixflow.ai';
+    const name = req.body?.name || 'Dev Tester';
+    const profile = {
+      googleSub: 'dev-sub-123456',
+      email,
+      emailVerified: true,
+      name,
+      picture: 'https://lh3.googleusercontent.com/a/default-user',
+    };
+    const repo = getUserRepository();
+    const user = await repo.upsertFromGoogleProfile(profile);
+
+    const accessToken = signAccessToken(user);
+    const refreshToken = generateRefreshToken();
+    await repo.addRefreshTokenHash(user.id, hashRefreshToken(refreshToken));
+
+    res.json({
+      user: publicUser(user),
+      accessToken,
+      refreshToken,
+      refreshTokenExpiresInMs: refreshTtlMs(),
+    });
+  }),
+);
+
 /** Strip private fields (refresh-token hashes) from outgoing user payloads. */
 function publicUser(u: {
   id: string;
