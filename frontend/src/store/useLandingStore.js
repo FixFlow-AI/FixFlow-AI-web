@@ -1,28 +1,6 @@
 import { create } from "zustand";
 
-const initialMilestones = [
-  {
-    id: "m1",
-    title: "Phase 1: Brief Ingestion & Architecture Planning",
-    amount: 8000,
-    status: "unfunded",
-    approved: false,
-  },
-  {
-    id: "m2",
-    title: "Phase 2: Core State Machine & Escrow Gateway Integration",
-    amount: 10500,
-    status: "unfunded",
-    approved: false,
-  },
-  {
-    id: "m3",
-    title: "Phase 3: Polygon SBT Reputation DID Minting Pipeline",
-    amount: 6000,
-    status: "unfunded",
-    approved: false,
-  },
-];
+const initialMilestones = [];
 
 export const useLandingStore = create((set) => ({
   // Original state defaults
@@ -75,7 +53,7 @@ export const useLandingStore = create((set) => ({
   // Onboarding
   onboardingGithubConnected: false,
   onboardingWalletAddress: "",
-  onboardingTeam: ["lead-dev@northstar.io", "product@northstar.io"],
+  onboardingTeam: [],
   setGithubConnected: (onboardingGithubConnected) =>
     set({ onboardingGithubConnected }),
   setWalletAddress: (onboardingWalletAddress) =>
@@ -84,8 +62,7 @@ export const useLandingStore = create((set) => ({
     set((state) => ({ onboardingTeam: [...state.onboardingTeam, email] })),
 
   // Brief Ingestion
-  rawBriefText:
-    "Migrate our payment infrastructure to Razorpay and deploy a secondary Polygon USDC payment pathway. Keep the transition seamless without subscription downtime.",
+  rawBriefText: "",
   isBriefParsed: false,
   setBriefText: (rawBriefText) => set({ rawBriefText }),
   setBriefParsed: (isBriefParsed) => set({ isBriefParsed }),
@@ -129,15 +106,7 @@ export const useLandingStore = create((set) => ({
   isAgreementSigned: { client: false, freelancer: false },
   escrowState: "CREATED",
   milestones: initialMilestones,
-  changeRequests: [
-    {
-      id: "c1",
-      title: "Add idempotent event auditing log endpoints",
-      amountChange: 2000,
-      timeChange: "+4 days",
-      status: "pending",
-    },
-  ],
+  changeRequests: [],
   signAgreement: (party) =>
     set((state) => {
       const updatedSigned = { ...state.isAgreementSigned, [party]: true };
@@ -209,19 +178,11 @@ export const useLandingStore = create((set) => ({
     set({
       isAgreementSigned: { client: false, freelancer: false },
       escrowState: "CREATED",
-      milestones: initialMilestones,
-      changeRequests: [
-        {
-          id: "c1",
-          title: "Add idempotent event auditing log endpoints",
-          amountChange: 2000,
-          timeChange: "+4 days",
-          status: "pending",
-        },
-      ],
+      milestones: [],
+      changeRequests: [],
       onboardingGithubConnected: false,
       onboardingWalletAddress: "",
-      onboardingTeam: ["lead-dev@northstar.io", "product@northstar.io"],
+      onboardingTeam: [],
       isBriefParsed: false,
       isProposalGenerated: false,
       generatedProposal: "",
