@@ -1,10 +1,32 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, ShieldCheck, Terminal } from "lucide-react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Brand } from "../components/Brand";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { api } from "../lib/api";
+import { setSession } from "../lib/auth";
 
 export function Login() {
-  const { setPage } = useLandingStore();
+  const { setPage, login } = useLandingStore();
+  const [devEmail, setDevEmail] = useState("developer@company.com");
+  const [devName, setDevName] = useState("Jane Developer");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleDevLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const { user, accessToken, refreshToken } = await api.devLogin(devEmail, devName);
+      setSession({ user, accessToken, refreshToken });
+      login(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Dev login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -65,6 +87,61 @@ export function Login() {
         </p>
 
         <GoogleSignInButton nextHash="#/dashboard/overview" />
+
+        <div style={{ margin: "24px 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+          <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>OR DEV BYPASS</span>
+          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+        </div>
+
+        <form onSubmit={handleDevLogin} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {error && (
+            <div style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", padding: 8, borderRadius: 6, border: "1px solid #fee2e2" }}>
+              {error}
+            </div>
+          )}
+          <input
+            type="email"
+            value={devEmail}
+            onChange={(e) => setDevEmail(e.target.value)}
+            placeholder="Email (e.g. developer@company.com)"
+            required
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              fontSize: 13,
+            }}
+          />
+          <input
+            type="text"
+            value={devName}
+            onChange={(e) => setDevName(e.target.value)}
+            placeholder="Name (e.g. Jane Developer)"
+            required
+            style={{
+              padding: "10px 12px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              fontSize: 13,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="panel-btn"
+            style={{
+              width: "100%",
+              background: "#0f172a",
+              color: "#fff",
+              display: "flex",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <Terminal size={14} /> {loading ? "Signing in..." : "Developer Login"}
+          </button>
+        </form>
 
         <div
           style={{
