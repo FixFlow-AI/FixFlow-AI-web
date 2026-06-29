@@ -34,18 +34,17 @@ export function MatchResults() {
   const [expanded, setExpanded] = useState(null);
 
   const runMatch = async () => {
+    if (!parsedProposal) {
+      setNotice("Please parse a brief first in the Brief Ingestion tab.");
+      return;
+    }
     setNotice("");
     setLoading(true);
     try {
       // Derive required skills + domains from the parsed brief when available.
       const requiredSkills =
-        parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [
-          "Node.js",
-          "PostgreSQL",
-          "Webhooks",
-          "Redis",
-        ];
-      const domains = ["fintech", "billing"];
+        parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [];
+      const domains = parsedProposal?.features?.map((f) => f.title).filter(Boolean) ?? [];
       const data = await api.matchFreelancers(requiredSkills, 10000, domains, 5);
       setResult(data);
     } catch (err) {
@@ -63,7 +62,9 @@ export function MatchResults() {
     <div>
       <div className="panel-page-header">
         <p style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-          Atlas Commerce / Northstar Billing Migration
+          {parsedProposal?.project_summary
+            ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+            : "No active project brief"}
         </p>
         <h1 className="panel-page-title">Matched candidates</h1>
         <p className="panel-page-subtitle">
