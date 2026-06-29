@@ -81,6 +81,8 @@ export const api = {
   // Auth
   googleLogin: (idToken) =>
     request("/auth/google", { method: "POST", body: { idToken } }),
+  devLogin: (email, name) =>
+    request("/auth/dev-login", { method: "POST", body: { email, name } }),
   me: () => request("/auth/me"),
   setRole: (role) => request("/auth/me/role", { method: "PATCH", body: { role } }),
   logout: (refreshToken, userId) =>
