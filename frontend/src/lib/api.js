@@ -175,4 +175,15 @@ export const api = {
       body: { requiredSkills, budget, domains, limit },
       signal,
     }),
+
+  // Razorpay payment integration
+  fundMilestone: (id, signal) =>
+    request(`/escrow/milestones/${id}/fund`, { method: "POST", signal }),
+
+  verifyMilestonePayment: (id, payload, signal) =>
+    request(`/escrow/milestones/${id}/verify-payment`, {
+      method: "POST",
+      body: payload,
+      signal,
+    }),
 };

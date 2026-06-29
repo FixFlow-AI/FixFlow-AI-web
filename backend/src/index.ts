@@ -31,6 +31,12 @@ import {
   VersionMismatchError,
   MFARequiredError,
 } from './skills/escrowStateMachine.js';
+import { getMilestoneRepository } from './services/milestoneRepository.js';
+import {
+  createRazorpayOrder,
+  verifyPaymentSignature,
+  verifyWebhookSignature,
+} from './services/paymentService.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -378,6 +384,136 @@ app.post(
       throw err;
     }
   }),
+);
+
+app.post(
+  '/api/escrow/milestones/:id/fund',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    let milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+    if (milestone.state !== 'Draft' && milestone.state !== 'Pending_Deposit') {
+      res.status(400).json({ error: `Cannot fund milestone in state [${milestone.state}].` });
+      return;
+    }
+
+    const order = await createRazorpayOrder(milestone.id, milestone.amount);
+
+    if (milestone.state === 'Draft') {
+      const transitionResult = await applyTransition(milestone.id, {
+        toState: 'Pending_Deposit',
+        triggerUserId: req.auth!.sub,
+        triggerUserRole: (req.auth!.role as any) || 'Client',
+        expectedVersion: milestone.version,
+        metadata: `Razorpay Order generated: ${order.id}`
+      });
+      milestone = transitionResult.milestone;
+    }
+
+    milestone.razorpayOrderId = order.id;
+    await getMilestoneRepository().save(milestone);
+
+    res.json({
+      key: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      milestone
+    });
+  })
+);
+
+app.post(
+  '/api/escrow/milestones/:id/verify-payment',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body ?? {};
+    if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+      res.status(400).json({ error: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required.' });
+      return;
+    }
+
+    const milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+
+    const isValid = verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+    if (!isValid) {
+      res.status(400).json({ error: 'Invalid Razorpay signature verification.' });
+      return;
+    }
+
+    if (milestone.state === 'Pending_Deposit') {
+      const transitionResult = await applyTransition(milestone.id, {
+        toState: 'Active',
+        triggerUserId: req.auth!.sub,
+        triggerUserRole: (req.auth!.role as any) || 'Client',
+        expectedVersion: milestone.version,
+        metadata: `Payment verified. Razorpay Payment ID: ${razorpayPaymentId}`
+      });
+      const updated = {
+        ...transitionResult.milestone,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      };
+      await getMilestoneRepository().save(updated);
+      res.json({ milestone: updated });
+    } else if (milestone.state === 'Active') {
+      res.json({ milestone });
+    } else {
+      res.status(400).json({ error: `Cannot verify payment for milestone in state [${milestone.state}].` });
+    }
+  })
+);
+
+app.post(
+  '/api/webhooks/razorpay',
+  asyncRoute(async (req, res) => {
+    const signature = req.headers['x-razorpay-signature'] as string;
+    const body = JSON.stringify(req.body);
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+
+    const isValid = verifyWebhookSignature(body, signature, webhookSecret);
+    if (!isValid) {
+      res.status(400).json({ error: 'Invalid webhook signature.' });
+      return;
+    }
+
+    const { event, payload } = req.body ?? {};
+    if (event === 'payment.captured') {
+      const payment = payload.payment.entity;
+      const orderId = payment.order_id;
+      const paymentId = payment.id;
+
+      const repo = getMilestoneRepository();
+      const allMilestones = await repo.list();
+      const milestone = allMilestones.find(m => m.razorpayOrderId === orderId);
+
+      if (milestone && milestone.state === 'Pending_Deposit') {
+        console.log(`[Webhook] Processing payment.captured for milestone ${milestone.id}`);
+        const transitionResult = await applyTransition(milestone.id, {
+          toState: 'Active',
+          triggerUserId: 'system',
+          triggerUserRole: 'System',
+          expectedVersion: milestone.version,
+          metadata: `Payment captured via webhook. Razorpay Payment ID: ${paymentId}`
+        });
+        const updated = {
+          ...transitionResult.milestone,
+          razorpayPaymentId: paymentId
+        };
+        await repo.save(updated);
+      }
+    }
+
+    res.json({ status: 'ok' });
+  })
 );
 
 // ==========================================

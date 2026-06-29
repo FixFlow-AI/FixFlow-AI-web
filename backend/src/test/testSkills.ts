@@ -12,6 +12,11 @@ import { calculateClientScore } from '../skills/clientScoring.js';
 import { calculateReputationMetrics, buildSBTMetadata } from '../skills/reputationCalculator.js';
 import { generateInterviewQuestions } from '../skills/interviewGenerator.js';
 import { generateContractExtensions } from '../skills/contextExtensions.js';
+import {
+  createRazorpayOrder,
+  verifyPaymentSignature,
+  verifyWebhookSignature,
+} from '../services/paymentService.js';
 
 async function runTests() {
   console.log('==========================================');
@@ -317,6 +322,38 @@ async function runTests() {
       throw new Error('Extensions fallback returned empty suggestions list');
     }
     console.log('  -> PASSED: Interview generator and contract extension fallback engines are robust.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 9: Razorpay Payment Service (Simulated Mode)
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 9] Verifying Razorpay payment service and verification...');
+    
+    const order = await createRazorpayOrder('milestone-101', 5000);
+    if (!order.id || order.amount !== 500000 || order.currency !== 'INR') {
+      throw new Error(`Order creation failed or incorrect output: ${JSON.stringify(order)}`);
+    }
+    if (!order.isSimulated) {
+      console.log('     Note: running with real Razorpay credentials');
+    } else {
+      console.log('     Note: running in simulated mode');
+    }
+
+    const isPaymentValid = verifyPaymentSignature(order.id, 'pay_12345', 'sig_12345');
+    if (!isPaymentValid) {
+      throw new Error('Payment signature verification failed for simulated order');
+    }
+
+    const isWebhookValid = verifyWebhookSignature('{}', 'signature', '');
+    if (!isWebhookValid) {
+      throw new Error('Webhook signature verification failed');
+    }
+
+    console.log('  -> PASSED: Razorpay payment service verification successful.');
   } catch (error: any) {
     console.error('  -> FAILED:', error.message);
     passed = false;

@@ -24,6 +24,9 @@ export interface Milestone {
   state: MilestoneState;
   version: number; // Optimistic Concurrency Control Version Counter
   lastAuditHash: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
 }
 
 export interface AuditTrailBlock {

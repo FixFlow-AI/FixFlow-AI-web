@@ -41,10 +41,15 @@ const whatChanges = [
 ];
 
 export function MilestoneFunds() {
-  const { user, parsedProposal, parsedProposalId } = useLandingStore();
+  const { user, userRole, parsedProposal, parsedProposalId } = useLandingStore();
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [selectedMilestone, setSelectedMilestone] = useState(null);
+  const [breakdown, setBreakdown] = useState(null);
+  const [fundingLoading, setFundingLoading] = useState(false);
+  const [paymentLoadingMessage, setPaymentLoadingMessage] = useState("");
 
   const loadMilestones = async () => {
     if (!parsedProposalId) return;
@@ -63,6 +68,117 @@ export function MilestoneFunds() {
   useEffect(() => {
     loadMilestones();
   }, [parsedProposalId]);
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleInitiateFund = async (ms) => {
+    setSelectedMilestone(ms);
+    setFundingLoading(true);
+    setError("");
+    try {
+      const res = await api.earnings(ms.rawAmount, "FREE", "IN");
+      setBreakdown(res);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not fetch payment breakdown.");
+      setSelectedMilestone(null);
+    } finally {
+      setFundingLoading(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    setPaymentLoadingMessage("Initiating checkout...");
+    try {
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        setError("Failed to load Razorpay checkout SDK. Check your internet connection.");
+        setPaymentLoadingMessage("");
+        return;
+      }
+
+      const orderInfo = await api.fundMilestone(selectedMilestone.id);
+      
+      setPaymentLoadingMessage("Opening checkout window...");
+
+      const options = {
+        key: orderInfo.key,
+        amount: orderInfo.amount,
+        currency: orderInfo.currency,
+        name: "FixFlowAI Escrow",
+        description: `Escrow Funding: ${selectedMilestone.title}`,
+        order_id: orderInfo.orderId,
+        handler: async function (response) {
+          try {
+            setPaymentLoadingMessage("Verifying escrow signature...");
+            await api.verifyMilestonePayment(selectedMilestone.id, {
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature
+            });
+            alert("Success! Milestone funded and secured in cryptographic escrow.");
+            setSelectedMilestone(null);
+            setBreakdown(null);
+            setPaymentLoadingMessage("");
+            loadMilestones();
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Payment verification failed.");
+            setPaymentLoadingMessage("");
+          }
+        },
+        prefill: {
+          name: user?.name || "Client User",
+          email: user?.email || "client@fixflow.ai",
+        },
+        theme: {
+          color: "#2563eb",
+        },
+        modal: {
+          ondismiss: function () {
+            setPaymentLoadingMessage("");
+          }
+        }
+      };
+
+      if (orderInfo.orderId.startsWith("order_mock_")) {
+        setPaymentLoadingMessage("Simulated Mode: auto-confirming checkout...");
+        setTimeout(async () => {
+          try {
+            await api.verifyMilestonePayment(selectedMilestone.id, {
+              razorpayPaymentId: `pay_mock_${Math.random().toString(36).substr(2, 9)}`,
+              razorpayOrderId: orderInfo.orderId,
+              razorpaySignature: `sig_mock_${Math.random().toString(36).substr(2, 9)}`
+            });
+            alert("Simulated Payment Success! Milestone funded.");
+            setSelectedMilestone(null);
+            setBreakdown(null);
+            setPaymentLoadingMessage("");
+            loadMilestones();
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Payment verification failed.");
+            setPaymentLoadingMessage("");
+          }
+        }, 1500);
+      } else {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not initiate payment.");
+      setPaymentLoadingMessage("");
+    }
+  };
 
   if (!parsedProposal) {
     return (
@@ -92,6 +208,7 @@ export function MilestoneFunds() {
 
   const displayMilestones = milestones.length > 0
     ? milestones.map((ms, idx) => ({
+        id: ms.id,
         num: String(idx + 1).padStart(2, "0"),
         title: ms.title,
         desc: `Milestone ${idx + 1}`,
@@ -109,6 +226,7 @@ export function MilestoneFunds() {
         rawState: ms.state,
       }))
     : parsedProposal.timeline?.map((phase, idx) => ({
+        id: `dummy_${idx}`,
         num: String(idx + 1).padStart(2, "0"),
         title: phase.phase,
         desc: phase.tasks.join(", "),
@@ -158,6 +276,13 @@ export function MilestoneFunds() {
         </p>
       </div>
 
+      {error && (
+        <div style={{ display: "flex", gap: 10, background: "#fef2f2", border: "1px solid #fee2e2", color: "#991b1b", padding: "12px 16px", borderRadius: 8, fontSize: 14, marginBottom: 20 }}>
+          <span>⚠️</span>
+          <div>{error}</div>
+        </div>
+      )}
+
       <div className="panel-grid panel-grid--sidebar">
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="panel-card">
@@ -205,9 +330,21 @@ export function MilestoneFunds() {
                   <div style={{ fontSize: 11, color: "#94a3b8", marginLeft: 18 }}>{ms.fundingNote}</div>
                 </div>
                 <div>
-                  <span className={`panel-badge ${ms.status === "Released" ? "panel-badge--green" : ms.status === "Work in progress" || ms.status === "Active" ? "panel-badge--blue" : "panel-badge--gray"}`}>
-                    {ms.status}
-                  </span>
+                  {ms.rawState === "Draft" || ms.rawState === "Pending_Deposit" ? (
+                    <button
+                      type="button"
+                      className="panel-btn"
+                      style={{ padding: "4px 10px", minHeight: 0, fontSize: 12, borderRadius: 6, width: "100%" }}
+                      onClick={() => handleInitiateFund(ms)}
+                      disabled={fundingLoading}
+                    >
+                      Fund
+                    </button>
+                  ) : (
+                    <span className={`panel-badge ${ms.status === "Released" ? "panel-badge--green" : ms.status === "Work in progress" || ms.status === "Active" ? "panel-badge--blue" : "panel-badge--gray"}`}>
+                      {ms.status}
+                    </span>
+                  )}
                   <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{ms.statusTime}</div>
                 </div>
                 <div>
@@ -280,6 +417,83 @@ export function MilestoneFunds() {
           <button type="button" className="panel-link">Go to Delivery <ArrowRight size={14} /></button>
         </div>
       </div>
+
+      {/* Razorpay Escrow checkout Modal */}
+      {selectedMilestone && breakdown && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(8px)", display: "grid", placeItems: "center", zIndex: 100, padding: 16 }}>
+          <div className="panel-card" style={{ maxWidth: 450, width: "100%", padding: 24, borderRadius: 12, border: "1px solid rgba(255, 255, 255, 0.1)", background: "rgba(255, 255, 255, 0.95)", color: "#0f172a", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+              <Shield size={20} style={{ color: "#2563eb" }} /> Fund Milestone
+            </h2>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+              Secure funds in escrow for: <strong>{selectedMilestone.title}</strong>
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", padding: "16px 0", marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                <span style={{ color: "#475569" }}>Gross Amount</span>
+                <span style={{ fontWeight: 600 }}>${breakdown.grossAmount.toLocaleString()}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: "#64748b" }}>Client Processing Premium (1.5%)</span>
+                <span style={{ color: "#0f172a" }}>+ ${(breakdown.totalClientCheckout - breakdown.grossAmount).toLocaleString()}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, color: "#2563eb", borderTop: "1px dotted #e2e8f0", paddingTop: 8 }}>
+                <span>Total Checkout Amount</span>
+                <span>${breakdown.totalClientCheckout.toLocaleString()}</span>
+              </div>
+
+              <div style={{ marginTop: 8, padding: 12, background: "#eff6ff", borderRadius: 8, fontSize: 12, color: "#1e3a8a" }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>Freelancer Net Earnings Breakdown:</div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span>Platform Commission (10%)</span>
+                  <span>- ${breakdown.platformFee.toLocaleString()}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span>Razorpay Gateway Fee (2% + $3)</span>
+                  <span>- ${breakdown.paymentGatewayFee.toLocaleString()}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span>TDS Withholding (1%)</span>
+                  <span>- ${breakdown.withholdingTax.toLocaleString()}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid rgba(30, 58, 138, 0.1)", paddingTop: 4 }}>
+                  <span>Freelancer Net Earnings</span>
+                  <span>${breakdown.netFreelancerEarnings.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {paymentLoadingMessage && (
+              <p style={{ fontSize: 13, color: "#2563eb", textAlign: "center", margin: "0 0 16px", fontWeight: 600 }}>
+                {paymentLoadingMessage}
+              </p>
+            )}
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="panel-btn--ghost panel-btn"
+                disabled={Boolean(paymentLoadingMessage)}
+                onClick={() => {
+                  setSelectedMilestone(null);
+                  setBreakdown(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="panel-btn"
+                disabled={Boolean(paymentLoadingMessage)}
+                onClick={handleConfirmPayment}
+              >
+                Proceed to Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
