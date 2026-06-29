@@ -32,29 +32,9 @@ const proposalSteps = [
   { num: 5, label: "Review & finalize" },
 ];
 
-const summaryItems = [
-  { icon: Target, label: "Project type", value: "Platform development" },
-  { icon: BadgeCheck, label: "Primary goal", value: "Real-time billing migration with zero downtime" },
-  { icon: Clock, label: "Estimated duration", value: "10 – 12 weeks" },
-  { icon: DollarSign, label: "Estimated budget", value: "$32,000 – $48,000" },
-  { icon: Zap, label: "Complexity", value: "High", badgeColor: "orange" },
-  { icon: BadgeCheck, label: "Confidence", value: "High", badgeColor: "green" },
-];
-
-const intelligenceItems = [
-  { icon: AlertTriangle, label: "Risk level", value: "3 high, 4 medium, 2 low risks detected", badge: "High", color: "#ef4444" },
-  { icon: Users, label: "Competitor pressure", value: "5 active competitors in this space", badge: "Medium", color: "#f59e0b" },
-  { icon: TrendingUp, label: "Differentiation potential", value: "Strong opportunity for reliability and migration automation", badge: "High", color: "#16a34a" },
-  { icon: Code2, label: "Technical complexity", value: "Multiple integrations and data consistency required", badge: "High", color: "#ef4444" },
-];
-
-const scopeItems = [
-  { icon: Target, title: "Build migration service", desc: "Create service to move customers, subscriptions, and billing data.", badge: "Core" },
-  { icon: Zap, title: "Webhook engine", desc: "Process events from payment gateways and internal systems.", badge: "Core" },
-  { icon: Shield, title: "Reconciliation service", desc: "Ensure financial records match across legacy and new systems.", badge: "Core" },
-  { icon: RefreshCw, title: "Rollback and recovery", desc: "Enable safe rollback with data reversion and audit trail.", badge: "Important", badgeColor: "orange" },
-  { icon: Code2, title: "Admin dashboard", desc: "Provide visibility, controls, and operational monitoring.", badge: "Important", badgeColor: "orange" },
-];
+const summaryItems = [];
+const intelligenceItems = [];
+const scopeItems = [];
 
 const nextSteps = [
   { num: 1, title: "Review the structured scope", desc: "AI has generated the initial plan." },
@@ -78,6 +58,31 @@ export function ProposalGenerator() {
   const [ideaText, setIdeaText] = useState(rawBriefText || "");
   const [activeTab, setActiveTab] = useState("scope");
 
+  const displaySummary = parsedProposal
+    ? [
+        { icon: Target, label: "Project summary", value: parsedProposal.project_summary.slice(0, 60) + "..." },
+        { icon: Clock, label: "Phase duration", value: parsedProposal.timeline?.[0]?.duration || "2 weeks" },
+        { icon: DollarSign, label: "Features listed", value: `${parsedProposal.features?.length || 0} features` },
+        { icon: Zap, label: "Confidence", value: parsedProposal.features?.[0]?.confidence || "High" },
+      ]
+    : [];
+
+  const displayIntelligence = parsedProposal?.risks?.map((risk) => ({
+    icon: AlertTriangle,
+    label: risk.label,
+    value: risk.mitigation,
+    badge: risk.severity >= 70 ? "High" : risk.severity >= 40 ? "Medium" : "Low",
+    color: risk.severity >= 70 ? "#ef4444" : risk.severity >= 40 ? "#f59e0b" : "#16a34a",
+  })) || [];
+
+  const displayScope = parsedProposal?.features?.map((f) => ({
+    icon: Target,
+    title: f.title,
+    desc: f.description,
+    badge: f.complexity,
+    badgeColor: f.complexity === "High" ? "orange" : f.complexity === "Medium" ? "blue" : "green",
+  })) || [];
+
   const buildSections = () => {
     if (parsedProposal) {
       const featureLines = parsedProposal.features
@@ -97,13 +102,7 @@ export function ProposalGenerator() {
         `## 4. Risks & Mitigations\n${riskLines}`,
       ];
     }
-    return [
-      "# PROJECT PROPOSAL: Northstar Billing Migration\n\n",
-      "## 1. Project Summary\nSecure payment workflow to replace legacy Stripe pipeline with Razorpay, backed by Web3 escrow using USDC on Polygon.\n\n",
-      "## 2. Technical Architecture\n- **Backend**: Express + Redis deduplication webhooks.\n- **Web3**: Polygon ERC-20 Escrow contract.\n- **Database**: PostgreSQL via Prisma.\n\n",
-      "## 3. Milestones & Escrow\n- **M1 ($12,000)**: Migration plan and validation.\n- **M2 ($18,000)**: Webhook and reconciliation.\n- **M3 ($15,000)**: Production cutover.\n\n",
-      "## 4. Assumptions\n- Excludes legacy performance tuning.\n- Client provides sandbox credentials.",
-    ];
+    return [];
   };
 
   const handleGenerate = () => {
@@ -187,7 +186,8 @@ export function ProposalGenerator() {
             value={ideaText}
             onChange={(e) => setIdeaText(e.target.value)}
             rows={6}
-            placeholder="We want to build a real-time billing migration platform..."
+            placeholder="Please parse a brief first in the Brief Ingestion tab to load the proposal generator."
+            disabled={!parsedProposal}
             style={{
               width: "100%",
               padding: 12,
@@ -199,6 +199,7 @@ export function ProposalGenerator() {
               resize: "vertical",
               fontFamily: "inherit",
               marginBottom: 12,
+              background: !parsedProposal ? "#f8fafc" : "#fff",
             }}
           />
 
@@ -227,7 +228,7 @@ export function ProposalGenerator() {
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={generating}
+            disabled={generating || !parsedProposal}
             className="panel-btn"
             style={{ width: "100%" }}
           >
@@ -252,9 +253,9 @@ export function ProposalGenerator() {
             )}
           </div>
 
-          {isProposalGenerated || generating ? (
+          {displaySummary.length > 0 && (isProposalGenerated || generating) ? (
             <>
-              {summaryItems.map((item) => {
+              {displaySummary.map((item) => {
                 const Icon = item.icon;
                 return (
                   <div
@@ -271,15 +272,9 @@ export function ProposalGenerator() {
                     <span style={{ fontSize: 13, color: "#64748b", minWidth: 120 }}>
                       {item.label}
                     </span>
-                    {item.badgeColor ? (
-                      <span className={`panel-badge panel-badge--${item.badgeColor}`}>
-                        {item.value}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
-                        {item.value}
-                      </span>
-                    )}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
+                      {item.value}
+                    </span>
                   </div>
                 );
               })}
@@ -319,57 +314,63 @@ export function ProposalGenerator() {
             <h2 className="panel-card-title">Intelligence at a glance</h2>
           </div>
 
-          {intelligenceItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.label}
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  padding: "14px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span
+          {displayIntelligence.length > 0 ? (
+            displayIntelligence.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: item.color + "15",
-                    display: "grid",
-                    placeItems: "center",
-                    color: item.color,
-                    flexShrink: 0,
+                    display: "flex",
+                    gap: 12,
+                    padding: "14px 0",
+                    borderBottom: "1px solid #f1f5f9",
                   }}
                 >
-                  <Icon size={15} />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                      {item.label}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: "2px 8px",
-                        borderRadius: 12,
-                        background: item.color + "15",
-                        color: item.color,
-                      }}
-                    >
-                      {item.badge}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                    {item.value}
+                  <span
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      background: item.color + "15",
+                      display: "grid",
+                      placeItems: "center",
+                      color: item.color,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon size={15} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifycontent: "space-between", gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                        {item.label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 12,
+                          background: item.color + "15",
+                          color: item.color,
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {item.value}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <p style={{ fontSize: 13, color: "#64748b", padding: "10px 0", textAlign: "center" }}>
+              No risk insights. Generate a proposal to populate risks.
+            </p>
+          )}
 
           <button type="button" className="panel-link" style={{ marginTop: 8 }}>
             View full intelligence report <ArrowRight size={14} />
@@ -416,46 +417,52 @@ export function ProposalGenerator() {
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>
               Proposed scope
             </h3>
-            {scopeItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "12px 0",
-                    borderBottom: "1px solid #f1f5f9",
-                  }}
-                >
-                  <span
+            {displayScope.length > 0 ? (
+              displayScope.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.title}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      background: "#eff6ff",
-                      display: "grid",
-                      placeItems: "center",
-                      color: "#2563eb",
-                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "12px 0",
+                      borderBottom: "1px solid #f1f5f9",
                     }}
                   >
-                    <Icon size={14} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
+                    <span
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: "#eff6ff",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#2563eb",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon size={14} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
+                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
+                    </div>
+                    <span
+                      className={`panel-badge panel-badge--${item.badgeColor || "blue"}`}
+                      style={{ flexShrink: 0 }}
+                    >
+                      {item.badge}
+                    </span>
                   </div>
-                  <span
-                    className={`panel-badge panel-badge--${item.badgeColor || "blue"}`}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {item.badge}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <p style={{ fontSize: 13, color: "#64748b" }}>
+                Generate a proposal to see the scope outline.
+              </p>
+            )}
             <button type="button" className="panel-link" style={{ marginTop: 12 }}>
               <Plus size={14} /> Add custom item
             </button>
@@ -471,28 +478,28 @@ export function ProposalGenerator() {
                 View all
               </button>
             </div>
-            {[
-              "All active subscriptions migrated successfully",
-              "Webhook failures retried and logged",
-              "Reconciliation difference is zero",
-              "Rollback tested and documented",
-              "Admin dashboard is production-ready",
-            ].map((item) => (
-              <div
-                key={item}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 0",
-                  fontSize: 13,
-                  color: "#334155",
-                }}
-              >
-                <Check size={16} style={{ color: "#16a34a" }} />
-                {item}
-              </div>
-            ))}
+            {parsedProposal?.timeline?.[0]?.tasks ? (
+              parsedProposal.timeline[0].tasks.map((item) => (
+                <div
+                  key={item}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 0",
+                    fontSize: 13,
+                    color: "#334155",
+                  }}
+                >
+                  <Check size={16} style={{ color: "#16a34a" }} />
+                  {item}
+                </div>
+              ))
+            ) : (
+              <p style={{ fontSize: 13, color: "#64748b" }}>
+                No criteria defined.
+              </p>
+            )}
 
             <hr className="panel-divider" />
 
@@ -500,11 +507,15 @@ export function ProposalGenerator() {
               Deliverables
             </h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["Migration runbook.pdf", "Data mapping.xlsx", "Architecture diagram.v1.0"].map((d) => (
-                <span key={d} className="panel-badge panel-badge--outline">
-                  <FileText size={12} /> {d}
-                </span>
-              ))}
+              {parsedProposal?.delivery_plan?.roadmap?.length > 0 ? (
+                parsedProposal.delivery_plan.roadmap.slice(0, 3).map((d) => (
+                  <span key={d.id} className="panel-badge panel-badge--outline">
+                    <FileText size={12} /> {d.title}
+                  </span>
+                ))
+              ) : (
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>No deliverables defined yet</span>
+              )}
             </div>
           </div>
 
@@ -555,11 +566,9 @@ export function ProposalGenerator() {
                 className="panel-btn"
                 style={{ width: "100%" }}
                 onClick={() => setDashboardTab("agreement-composer")}
+                disabled={!isProposalGenerated}
               >
                 Continue to structured scope <ArrowRight size={14} />
-              </button>
-              <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
-                <Bookmark size={14} /> Save draft and exit
               </button>
             </div>
           </div>
