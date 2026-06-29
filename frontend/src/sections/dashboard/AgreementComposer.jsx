@@ -16,33 +16,47 @@ import {
   Users,
   Building2,
 } from "lucide-react";
-
-const agreementChecks = [
-  { icon: Check, label: "Requirements covered", value: "5 of 5", color: "green" },
-  { icon: ListChecks, label: "Acceptance criteria", value: "3 defined", color: "blue" },
-  { icon: AlertTriangle, label: "Unresolved assumptions", value: "1", color: "red" },
-  { icon: RefreshCw, label: "Change process", value: "Included", color: "green" },
-  { icon: Shield, label: "Funding state", value: "Starts after approval", color: "gray" },
-];
-
-const activityItems = [
-  {
-    avatar: "MC",
-    name: "Maya Chen",
-    action: "Draft v2.0 created",
-    time: "May 8, 11:32 AM",
-    color: "#16a34a",
-  },
-  {
-    avatar: "MC",
-    name: "Maya Chen",
-    action: "Changes from v1.4 reviewed",
-    time: "May 8, 11:35 AM",
-    color: "#2563eb",
-  },
-];
+import { useLandingStore } from "../../store/useLandingStore";
 
 export function AgreementComposer() {
+  const { user, parsedProposal } = useLandingStore();
+
+  if (!parsedProposal) {
+    return (
+      <div>
+        <div className="panel-page-header">
+          <h1 className="panel-page-title">Working agreement</h1>
+          <p className="panel-page-subtitle">
+            Scope, acceptance, ownership, and protected funds in one review.
+          </p>
+        </div>
+        <div className="panel-card" style={{ textAlign: "center", padding: 48 }}>
+          <FileText size={32} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
+            No working agreement drafted yet
+          </h2>
+          <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
+            Please parse a project brief first to generate the working agreement.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const orgName = user?.email ? user.email.split("@")[1].split(".")[0].toUpperCase() : "CLIENT";
+
+  const agreementChecks = [
+    { icon: Check, label: "Requirements covered", value: `${parsedProposal.features?.length || 0} features`, color: "green" },
+    { icon: ListChecks, label: "Acceptance criteria", value: `${parsedProposal.timeline?.length || 0} phases`, color: "blue" },
+    { icon: AlertTriangle, label: "Unresolved risks", value: `${parsedProposal.risks?.length || 0}`, color: "orange" },
+    { icon: RefreshCw, label: "Change process", value: "Standard", color: "green" },
+    { icon: Shield, label: "Funding state", value: "Starts after approval", color: "gray" },
+  ];
+
+  const firstPhase = parsedProposal.timeline?.[0];
+  const firstPhaseTitle = firstPhase ? firstPhase.phase : "Migration Phase";
+  const firstPhaseTasks = firstPhase ? firstPhase.tasks : [];
+
   return (
     <div>
       {/* Page header */}
@@ -63,12 +77,12 @@ export function AgreementComposer() {
           flexWrap: "wrap",
         }}
       >
-        <span className="panel-badge panel-badge--blue">Draft v2.0</span>
+        <span className="panel-badge panel-badge--blue">Draft v1.0</span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
-          <Building2 size={14} /> Client: Atlas Commerce
+          <Building2 size={14} /> Client: {orgName}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
-          <Users size={14} /> Delivery team: Northline Studio
+          <Users size={14} /> Delivery team: {user?.name || "Independent Talent"}
         </span>
       </div>
 
@@ -115,7 +129,7 @@ export function AgreementComposer() {
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}>Objective</h3>
               <p style={{ fontSize: 14, color: "#475569", margin: 0, lineHeight: 1.6 }}>
-                Move the billing service without interrupting active subscriptions.
+                {parsedProposal.project_summary}
               </p>
             </div>
           </div>
@@ -141,10 +155,10 @@ export function AgreementComposer() {
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
-                  Milestone 01 — Migration plan and rollback design
+                  Milestone 01 — {firstPhaseTitle} ({firstPhase?.duration || "2 weeks"})
                 </h3>
-                <span className="panel-badge panel-badge--green">
-                  <Check size={11} /> Ready for approval
+                <span className="panel-badge panel-badge--blue">
+                  Pending Approval
                 </span>
               </div>
             </div>
@@ -152,77 +166,53 @@ export function AgreementComposer() {
 
           {/* Acceptance criteria */}
           <div style={{ marginLeft: 48 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
-              Acceptance criteria
-            </h4>
-            {["Dependency map is complete", "Rollback owner is named", "Reconciliation test cases are approved"].map(
-              (item) => (
-                <div
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 0",
-                    fontSize: 14,
-                    color: "#334155",
-                  }}
-                >
-                  <Check size={16} style={{ color: "#16a34a" }} />
-                  {item}
-                </div>
-              )
+            {firstPhaseTasks.length > 0 && (
+              <>
+                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+                  Acceptance criteria
+                </h4>
+                {firstPhaseTasks.map((item) => (
+                  <div
+                    key={item}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 0",
+                      fontSize: 14,
+                      color: "#334155",
+                    }}
+                  >
+                    <Check size={16} style={{ color: "#16a34a" }} />
+                    {item}
+                  </div>
+                ))}
+                <hr className="panel-divider" />
+              </>
             )}
 
-            <hr className="panel-divider" />
-
-            {/* Assumptions */}
+            {/* Risks / Assumptions */}
             <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
-              Assumptions
+              Risks & Mitigations
             </h4>
-            {["Client provides current billing event samples", "Target runtime is confirmed before implementation"].map(
-              (item) => (
-                <div
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 0",
-                    fontSize: 14,
-                    color: "#475569",
-                  }}
-                >
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#94a3b8", flexShrink: 0 }} />
-                  {item}
+            {parsedProposal.risks?.map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  padding: "6px 0",
+                  fontSize: 14,
+                  color: "#475569",
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#94a3b8", flexShrink: 0, marginTop: 8 }} />
+                <div>
+                  <strong>{item.label}</strong>: {item.mitigation}
                 </div>
-              )
-            )}
-
-            <hr className="panel-divider" />
-
-            {/* Out of scope */}
-            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
-              Out of scope
-            </h4>
-            {["Pricing model redesign", "Historical invoice correction"].map(
-              (item) => (
-                <div
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "6px 0",
-                    fontSize: 14,
-                    color: "#94a3b8",
-                  }}
-                >
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#cbd5e1", flexShrink: 0 }} />
-                  {item}
-                </div>
-              )
-            )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -256,8 +246,8 @@ export function AgreementComposer() {
                             ? "#16a34a"
                             : item.color === "blue"
                             ? "#2563eb"
-                            : item.color === "red"
-                            ? "#dc2626"
+                            : item.color === "orange"
+                            ? "#ea580c"
                             : "#64748b",
                       }}
                     />
@@ -276,68 +266,14 @@ export function AgreementComposer() {
             })}
           </div>
 
-          {/* Revision note */}
-          <div className="panel-card">
-            <div className="panel-card-header">
-              <h2 className="panel-card-title">Revision note</h2>
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: "#eff6ff",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "#2563eb",
-                  flexShrink: 0,
-                }}
-              >
-                EP
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
-                  Client requested explicit rollback ownership
-                </div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-                  Elena Park · May 8, 10:07 AM
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Activity */}
           <div className="panel-card">
             <div className="panel-card-header">
               <h2 className="panel-card-title">Activity</h2>
-              <button type="button" className="panel-link" style={{ fontSize: 12 }}>
-                View full activity
-              </button>
             </div>
-
-            {activityItems.map((item) => (
-              <div className="panel-timeline-item" key={item.action}>
-                <span
-                  className={`panel-timeline-icon panel-timeline-icon--${item.color === "#16a34a" ? "green" : "blue"}`}
-                >
-                  {item.color === "#16a34a" ? (
-                    <Check size={14} strokeWidth={2.5} />
-                  ) : (
-                    <FileText size={14} />
-                  )}
-                </span>
-                <div className="panel-timeline-body">
-                  <div className="panel-timeline-title">{item.action}</div>
-                  <div className="panel-timeline-meta">
-                    {item.name} · {item.time}
-                  </div>
-                </div>
-              </div>
-            ))}
+            <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "10px 0" }}>
+              No revisions or activity recorded yet.
+            </p>
           </div>
         </div>
       </div>
@@ -346,14 +282,11 @@ export function AgreementComposer() {
       <div className="panel-action-bar">
         <div className="panel-action-bar-left">
           <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
-            <FileText size={14} /> Agreement history
+            <FileText size={14} /> Agreement draft
           </span>
-          <span style={{ fontSize: 12, color: "#94a3b8" }}>v1.4 · Apr 30, 2:15 PM</span>
+          <span style={{ fontSize: 12, color: "#94a3b8" }}>v1.0</span>
         </div>
         <div className="panel-action-bar-right">
-          <button type="button" className="panel-btn--ghost panel-btn">
-            <GitCompare size={14} /> Compare with v1.4
-          </button>
           <button type="button" className="panel-btn">
             <Send size={14} /> Send for approval
           </button>
@@ -362,3 +295,4 @@ export function AgreementComposer() {
     </div>
   );
 }
+
