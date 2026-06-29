@@ -15,28 +15,16 @@ import {
 } from "lucide-react";
 
 /* Static attachments shown in the mockup */
-const attachments = [
-  { name: "billing-context.pdf", icon: "📄", color: "#ef4444" },
-  { name: "current-webhooks.csv", icon: "📊", color: "#16a34a" },
-];
+const attachments = [];
 
 /* Default parsed requirements when using mock data */
-const defaultRequirements = [
-  { text: "Preserve active subscription state", status: "Confirmed" },
-  { text: "Make webhook processing idempotent", status: "Confirmed" },
-  { text: "Provide a tested rollback plan", status: "In scope" },
-  { text: "Reconcile migrated billing records", status: "In scope" },
-  { text: "Complete within six weeks", status: "Constraint" },
-];
+const defaultRequirements = [];
 
-const defaultDecisions = [
-  "Who owns rollback approval?",
-  "Which reconciliation variance is acceptable?",
-  "Confirm target runtime version",
-];
+const defaultDecisions = [];
 
 export function BriefIntelligence() {
   const {
+    user,
     rawBriefText,
     isBriefParsed,
     setBriefText,
@@ -117,7 +105,9 @@ export function BriefIntelligence() {
       <div className="panel-page-header">
         <h1 className="panel-page-title">Brief intelligence</h1>
         <p className="panel-page-subtitle">
-          Northstar Billing Migration · Source brief v1.2
+          {parsedProposal?.project_summary
+            ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+            : "No active project brief"}
         </p>
       </div>
 
@@ -183,40 +173,44 @@ export function BriefIntelligence() {
               </p>
 
               {/* Attachments */}
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
-                Attachments
-              </h3>
-              {attachments.map((att) => (
-                <div
-                  key={att.name}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    fontSize: 13,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 6,
-                      background: att.color + "15",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 16,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {att.icon}
-                  </span>
-                  <span style={{ fontWeight: 500, color: "#334155" }}>{att.name}</span>
-                </div>
-              ))}
+              {attachments.length > 0 && (
+                <>
+                  <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+                    Attachments
+                  </h3>
+                  {attachments.map((att) => (
+                    <div
+                      key={att.name}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 12px",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        marginBottom: 8,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 6,
+                          background: att.color + "15",
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 16,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {att.icon}
+                      </span>
+                      <span style={{ fontWeight: 500, color: "#334155" }}>{att.name}</span>
+                    </div>
+                  ))}
+                </>
+              )}
 
               <hr className="panel-divider" />
 
@@ -238,9 +232,9 @@ export function BriefIntelligence() {
                     color: "#2563eb",
                   }}
                 >
-                  EP
+                  {user?.name ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase() : "U"}
                 </div>
-                <span style={{ fontSize: 13, color: "#64748b" }}>Provided by Elena Park</span>
+                <span style={{ fontSize: 13, color: "#64748b" }}>Provided by {user?.name || user?.email || "User"}</span>
               </div>
 
               {/* Reparse button */}
