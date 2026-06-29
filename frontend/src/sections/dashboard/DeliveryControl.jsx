@@ -17,58 +17,10 @@ import {
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
-/* Milestone tasks */
-const milestoneTasks = [
-  { label: "Idempotent webhook handler", desc: "All tasks complete", status: "Complete", done: true },
-  { label: "Reconciliation report", desc: "Under client review", status: "In review", progress: true },
-  { label: "Failure replay test", desc: "Evidence in progress", status: "In progress", progress: true },
-  { label: "Cutover runbook", desc: "Not started", status: "Not started", pending: true },
-];
-
-/* Delivery timeline events */
-const timelineEvents = [
-  {
-    icon: GitPullRequest,
-    color: "blue",
-    title: "Maya Chen linked pull request #184",
-    time: "Today, 10:21 AM",
-    badge: "PR #184",
-    badgeIcon: "github",
-  },
-  {
-    icon: FileText,
-    color: "blue",
-    title: "Reconciliation test report attached",
-    time: "Today, 10:45 AM",
-    badge: "recon-report.pdf",
-  },
-  {
-    icon: Users,
-    color: "orange",
-    title: "Elena Park requested a variance example",
-    time: "Today, 11:07 AM",
-    badgeType: "action",
-    badge: "Action needed",
-  },
-  {
-    icon: Upload,
-    color: "green",
-    title: "Failure replay evidence submitted",
-    time: "Today, 1:15 PM",
-    badge: "replay-evidence.zip",
-  },
-  {
-    icon: AlertTriangle,
-    color: "orange",
-    title: "Change request CR-03 opened",
-    time: "Today, 1:32 PM",
-    badgeType: "action",
-    badge: "Scope review",
-  },
-];
-
 export function DeliveryControl() {
   const {
+    user,
+    parsedProposal,
     contractExtensions,
     extensionsSource,
     setContractExtensions,
@@ -77,17 +29,50 @@ export function DeliveryControl() {
   const [suggesting, setSuggesting] = useState(false);
   const [extNotice, setExtNotice] = useState("");
 
+  if (!parsedProposal) {
+    return (
+      <div>
+        <div className="panel-page-header">
+          <h1 className="panel-page-title">Delivery control</h1>
+          <p className="panel-page-subtitle">
+            Track execution evidence, automated tests, and scope changes.
+          </p>
+        </div>
+        <div className="panel-card" style={{ textAlign: "center", padding: 48 }}>
+          <FileText size={32} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
+            No active project delivery
+          </h2>
+          <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
+            Please parse a project brief first to begin tracking delivery.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const projectTitle = parsedProposal.project_summary
+    ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+    : "Active Project";
+
+  const displayTasks = parsedProposal.features?.map((f, idx) => ({
+    label: f.title,
+    desc: f.description,
+    status: idx === 0 ? "In progress" : "Not started",
+    progress: idx === 0,
+    pending: idx > 0,
+    done: false,
+  })) || [];
+
   const suggestNextPhase = async () => {
     setExtNotice("");
     setSuggesting(true);
     try {
-      const completedDeliverables = milestoneTasks
-        .filter((t) => t.done)
-        .map((t) => t.label);
+      const completedDeliverables = ["Webhook migration"];
       const chatSummary =
         "Client mentioned wanting tax-region reconciliation and analytics next. Migration delivered on time with strong reliability.";
       const output = await api.contractExtensions(
-        completedDeliverables.length ? completedDeliverables : ["Webhook migration"],
+        completedDeliverables,
         chatSummary,
       );
       setContractExtensions(output);
@@ -98,7 +83,6 @@ export function DeliveryControl() {
           ? "AI not configured (missing GEMINI_API_KEY). Showing sample suggestions."
           : "Couldn't reach the extensions service. Showing sample suggestions.";
       setExtNotice(reason);
-      // The backend skill self-heals, so this is the local offline fallback.
       setContractExtensions({
         extensionReasoning:
           "The migration is delivered and stable. A support window plus the discussed analytics phase are the natural next steps.",
@@ -119,7 +103,7 @@ export function DeliveryControl() {
           },
         ],
         extensionOfferDraft:
-          "Hi Elena — now that the billing migration is live and stable, I'd suggest a short support window plus the tax-region analytics dashboard we discussed. Happy to add these as new milestones to the existing agreement. Want me to draft them?",
+          "Hi — now that the billing migration is live and stable, I'd suggest a short support window plus the tax-region analytics dashboard we discussed. Happy to add these as new milestones to the existing agreement. Want me to draft them?",
       });
       setExtensionsSource("mock");
     } finally {
@@ -134,11 +118,11 @@ export function DeliveryControl() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h1 className="panel-page-title">
-              Milestone 02 — Webhook and reconciliation implementation
+              Delivery control
             </h1>
             <p className="panel-page-subtitle">
-              <span className="panel-badge panel-badge--blue" style={{ marginRight: 8 }}>In progress</span>
-              Northstar Billing Migration
+              <span className="panel-badge panel-badge--blue" style={{ marginRight: 8 }}>In execution</span>
+              {projectTitle}
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -160,7 +144,7 @@ export function DeliveryControl() {
             <h2 className="panel-card-title">Milestone definition</h2>
           </div>
 
-          {milestoneTasks.map((task) => (
+          {displayTasks.map((task) => (
             <div className="panel-checklist-item" key={task.label}>
               <span
                 className={`panel-check ${
@@ -201,33 +185,14 @@ export function DeliveryControl() {
             <div style={{ display: "flex", alignItems: "flex-end", gap: 24 }}>
               <div>
                 <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1 }}>
-                  2 / 4
+                  0 / {displayTasks.length}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
                   criteria currently evidenced
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                  2 criteria met
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#94a3b8", display: "inline-block" }} />
-                  0 in review
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid #bcc7d5", display: "inline-block" }} />
-                  2 not started
-                </div>
-              </div>
             </div>
           </div>
-
-          <hr className="panel-divider" />
-          <button type="button" className="panel-link">
-            View acceptance criteria <ArrowRight size={14} />
-          </button>
         </div>
 
         {/* Center: Delivery timeline */}
@@ -236,37 +201,9 @@ export function DeliveryControl() {
             <h2 className="panel-card-title">Delivery timeline</h2>
           </div>
 
-          {timelineEvents.map((evt) => {
-            const Icon = evt.icon;
-            return (
-              <div className="panel-timeline-item" key={evt.title}>
-                <span className={`panel-timeline-icon panel-timeline-icon--${evt.color}`}>
-                  <Icon size={15} strokeWidth={1.8} />
-                </span>
-                <div className="panel-timeline-body">
-                  <div className="panel-timeline-title">{evt.title}</div>
-                  <div className="panel-timeline-meta">{evt.time}</div>
-                </div>
-                {evt.badge && (
-                  <span
-                    className={`panel-badge ${
-                      evt.badgeType === "action"
-                        ? "panel-badge--orange"
-                        : "panel-badge--outline"
-                    }`}
-                    style={{ alignSelf: "center", flexShrink: 0 }}
-                  >
-                    {evt.badge}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-
-          <hr className="panel-divider" />
-          <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
-            View full timeline
-          </button>
+          <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "40px 0" }}>
+            Timeline will populate dynamically with commits, pull requests, and status changes once execution begins.
+          </p>
         </div>
 
         {/* Right: Change control */}
@@ -274,62 +211,9 @@ export function DeliveryControl() {
           <div className="panel-card-header">
             <h2 className="panel-card-title">Change control</h2>
           </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span className="panel-badge panel-badge--red">CR-03</span>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>
-                Add regional tax reconciliation
-              </span>
-            </div>
-
-            <div className="panel-info-row">
-              <span className="panel-info-label">State</span>
-              <span className="panel-badge panel-badge--orange">Scope review</span>
-            </div>
-          </div>
-
-          <hr className="panel-divider" />
-
-          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Details</h3>
-
-          <div className="panel-info-row">
-            <span className="panel-info-label">Original</span>
-            <span className="panel-info-value">Reconcile billing records</span>
-          </div>
-          <div className="panel-info-row">
-            <span className="panel-info-label">Requested</span>
-            <span className="panel-info-value">Reconcile billing records by tax region</span>
-          </div>
-          <div className="panel-info-row">
-            <span className="panel-info-label">Timeline impact</span>
-            <span className="panel-info-value" style={{ color: "#ea580c" }}>+3 working days</span>
-          </div>
-          <div className="panel-info-row">
-            <span className="panel-info-label">Acceptance criteria</span>
-            <span className="panel-info-value">2 added</span>
-          </div>
-          <div className="panel-info-row">
-            <span className="panel-info-label">Current milestone</span>
-            <span className="panel-info-value" style={{ color: "#ea580c" }}>Requires approval</span>
-          </div>
-
-          <hr className="panel-divider" />
-
-          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Description</h3>
-          <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: "0 0 16px" }}>
-            Extend reconciliation to include tax region aggregation and variance reporting.
+          <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "40px 0" }}>
+            No active change requests. Submit new requests through the working agreement tab.
           </p>
-
-          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Actions</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <button type="button" className="panel-btn" style={{ width: "100%" }}>
-              Approve change
-            </button>
-            <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
-              Keep original scope
-            </button>
-          </div>
         </div>
       </div>
 
@@ -378,7 +262,7 @@ export function DeliveryControl() {
             </p>
 
             <div className="panel-grid panel-grid--2" style={{ gap: 12, marginBottom: 16 }}>
-              {contractExtensions.suggestedMilestones.map((m, i) => (
+              {contractExtensions.suggestedMilestones?.map((m, i) => (
                 <div
                   key={i}
                   style={{
@@ -451,24 +335,15 @@ export function DeliveryControl() {
       <div className="panel-action-bar">
         <div className="panel-action-bar-left">
           <span className="panel-badge panel-badge--outline">
-            <FileText size={12} /> Agreement v2.0
-          </span>
-          <span className="panel-step-arrow">→</span>
-          <span className="panel-badge panel-badge--orange">
-            <AlertTriangle size={12} /> Change CR-03
+            <FileText size={12} /> Active Agreement
           </span>
           <span className="panel-step-arrow">→</span>
           <span className="panel-badge panel-badge--outline">
-            <Users size={12} /> Client decision
+            <Clock size={12} /> Execution Phase
           </span>
-          <span style={{ fontSize: 12, color: "#ea580c", fontWeight: 600 }}>Required</span>
-        </div>
-        <div className="panel-action-bar-right">
-          <button type="button" className="panel-btn--ghost panel-btn">
-            Open change log
-          </button>
         </div>
       </div>
     </div>
   );
 }
+
