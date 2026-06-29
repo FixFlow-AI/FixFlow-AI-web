@@ -34,32 +34,9 @@ const onboardingSteps = [
   { num: 5, label: "Payment preferences" },
 ];
 
-const proofItems = [
-  {
-    name: "Northstar API migration",
-    desc: "Real-time billing migration platform",
-    badge: "Repository connected",
-    badgeColor: "green",
-  },
-  {
-    name: "Commerce platform redesign",
-    desc: "Scalable commerce architecture",
-    badge: "Outcome record added",
-    badgeColor: "green",
-  },
-  {
-    name: "Billing reliability program",
-    desc: "Webhook and reconciliation reliability",
-    badge: "Reference requested",
-    badgeColor: "orange",
-  },
-];
+const proofItems = [];
 
-const teamMembers = [
-  { name: "Maya Chen", role: "Delivery lead", expertise: "Migration systems", proof: 2 },
-  { name: "Noah Reed", role: "Backend engineer", expertise: "Webhook reliability", proof: 3 },
-  { name: "Iris Patel", role: "QA lead", expertise: "Reconciliation testing", proof: 2 },
-];
+const teamMembers = [];
 
 const whyMatters = [
   {
@@ -80,8 +57,17 @@ const whyMatters = [
 ];
 
 export function RoleOnboarding() {
-  const { userRole } = useLandingStore();
+  const { userRole, onboardingTeam, addOnboardingTeam } = useLandingStore();
   const [selectedRole, setSelectedRole] = useState(userRole || "agency");
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const handleInvite = (e) => {
+    e.preventDefault();
+    if (inviteEmail.trim()) {
+      addOnboardingTeam(inviteEmail.trim());
+      setInviteEmail("");
+    }
+  };
 
   return (
     <div>
@@ -227,50 +213,56 @@ export function RoleOnboarding() {
               Add verifiable work and outcomes that represent your team.
             </p>
 
-            {proofItems.map((item) => (
-              <div
-                key={item.name}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "14px 16px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  marginBottom: 8,
-                }}
-              >
-                <span
+            {proofItems.length > 0 ? (
+              proofItems.map((item) => (
+                <div
+                  key={item.name}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    background: "#f8fafc",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#475569",
-                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "14px 16px",
                     border: "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    marginBottom: 8,
                   }}
                 >
-                  <FolderGit2 size={16} />
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
-                    {item.name}
+                  <span
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: "#f8fafc",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "#475569",
+                      flexShrink: 0,
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <FolderGit2 size={16} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
                   </div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
+                  <span
+                    className={`panel-badge panel-badge--${item.badgeColor}`}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {item.badgeColor === "green" && <Check size={11} />}
+                    {item.badgeColor === "orange" && <AlertCircle size={11} />}
+                    {item.badge}
+                  </span>
                 </div>
-                <span
-                  className={`panel-badge panel-badge--${item.badgeColor}`}
-                  style={{ flexShrink: 0 }}
-                >
-                  {item.badgeColor === "green" && <Check size={11} />}
-                  {item.badgeColor === "orange" && <AlertCircle size={11} />}
-                  {item.badge}
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ fontSize: 13, color: "#64748b", padding: "10px 0" }}>
+                No team proof connected yet. Connect repositories once onboarding is completed.
+              </p>
+            )}
 
             <button
               type="button"
@@ -309,65 +301,83 @@ export function RoleOnboarding() {
               <span />
             </div>
 
-            {teamMembers.map((member) => (
-              <div
-                key={member.name}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.5fr 1fr 1.2fr 1fr auto",
-                  gap: 8,
-                  padding: "12px 20px",
-                  borderBottom: "1px solid #f1f5f9",
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "#e2e8f0",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "#475569",
-                    }}
-                  >
-                    {member.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
-                    {member.name}
-                  </span>
-                </div>
-                <span className="panel-badge panel-badge--blue">{member.role}</span>
-                <span style={{ fontSize: 13, color: "#475569" }}>{member.expertise}</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#16a34a" }}>
-                  <Check size={14} /> {member.proof} connected
-                </span>
-                <button
-                  type="button"
+            {onboardingTeam.length > 0 ? (
+              onboardingTeam.map((email) => (
+                <div
+                  key={email}
                   style={{
-                    border: "none",
-                    background: "transparent",
-                    color: "#94a3b8",
-                    cursor: "pointer",
-                    padding: 4,
+                    display: "grid",
+                    gridTemplateColumns: "1.5fr 1fr 1.2fr 1.2fr auto",
+                    gap: 8,
+                    padding: "12px 20px",
+                    borderBottom: "1px solid #f1f5f9",
+                    alignItems: "center",
                   }}
                 >
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-            ))}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#e2e8f0",
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#475569",
+                      }}
+                    >
+                      {email[0].toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", wordBreak: "break-all" }}>
+                      {email}
+                    </span>
+                  </div>
+                  <span className="panel-badge panel-badge--blue">Member</span>
+                  <span style={{ fontSize: 13, color: "#475569" }}>Invited</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#94a3b8" }}>
+                    Pending Setup
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#94a3b8",
+                      cursor: "pointer",
+                      padding: 4,
+                    }}
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p style={{ fontSize: 13, color: "#64748b", padding: "20px", textAlign: "center" }}>
+                No team members invited yet. Use the form below to add them.
+              </p>
+            )}
 
-            <div style={{ padding: "12px 20px" }}>
-              <button type="button" className="panel-link">
-                <Plus size={14} /> Invite team member
-              </button>
+            <div style={{ padding: "16px 20px" }}>
+              <form onSubmit={handleInvite} style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="collaborator@company.com"
+                  style={{
+                    flex: 1,
+                    padding: "8px 12px",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 6,
+                    fontSize: 13,
+                  }}
+                />
+                <button type="submit" className="panel-btn" style={{ minHeight: 0, padding: "8px 12px" }}>
+                  <Plus size={14} /> Invite
+                </button>
+              </form>
             </div>
           </div>
         </div>
