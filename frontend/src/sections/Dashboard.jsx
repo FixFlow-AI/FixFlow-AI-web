@@ -62,7 +62,7 @@ const tabMap = {
 };
 
 export function Dashboard() {
-  const { dashboardTab, setDashboardTab, logout, resetMockData } =
+  const { user, parsedProposal, dashboardTab, setDashboardTab, logout } =
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -120,15 +120,7 @@ export function Dashboard() {
 
         {/* Sidebar footer */}
         <div className="dash-sidebar-footer">
-          <button
-            type="button"
-            className="dash-nav-item dash-nav-item--subtle"
-            onClick={resetMockData}
-            title="Reset mock data"
-          >
-            <RefreshCw size={16} strokeWidth={1.8} />
-            {!collapsed && <span>Reset State</span>}
-          </button>
+
           <button
             type="button"
             className="dash-nav-item dash-nav-item--danger"
@@ -162,10 +154,14 @@ export function Dashboard() {
         {/* Top bar */}
         <header className="dash-topbar">
           <div className="dash-breadcrumb">
-            <span className="dash-breadcrumb-org">Atlas Commerce</span>
+            <span className="dash-breadcrumb-org">
+              {user?.email ? user.email.split("@")[1].split(".")[0].toUpperCase() : "WORKSPACE"}
+            </span>
             <span className="dash-breadcrumb-sep">/</span>
             <span className="dash-breadcrumb-project">
-              Northstar Billing Migration
+              {parsedProposal?.project_summary
+                ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+                : "No Active Project"}
               <ChevronDown size={14} />
             </span>
           </div>
@@ -178,7 +174,11 @@ export function Dashboard() {
               <CircleHelp size={18} strokeWidth={1.7} />
             </button>
             <button type="button" className="dash-topbar-avatar" aria-label="Account">
-              <span>AC</span>
+              <span>
+                {user?.name
+                  ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
+                  : "U"}
+              </span>
             </button>
           </div>
         </header>
