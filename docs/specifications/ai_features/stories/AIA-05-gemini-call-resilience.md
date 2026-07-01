@@ -1,6 +1,7 @@
 # AIA-05 — Resilience for All Gemini Calls (Retry / Timeout / Circuit-Breaker)
 
 > **Role**: AI Automation Engineer · **Priority**: 🔴 Critical · **Effort**: ~2 days
+> **Migration status**: 🟢 **The shared wrapper already exists** — all features call `generate_structured()` in `ai-service/app/llm/gemini.py` with a module-scope client. Remaining work: add retry/timeout/circuit-breaker + error classification to that single function.
 
 ---
 
@@ -10,30 +11,31 @@
 |:---|:---|
 | **Story ID** | `AIA-05` |
 | **Owner** | AI Automation Engineer |
-| **Backend files** | new `backend/src/services/geminiClient.ts`, all AI skills |
+| **Files** | `ai-service/app/llm/gemini.py` (shared wrapper), `ai-service/app/config.py` |
 | **Foundation for** | AIE-02, AIA-01, AIA-02, AIA-04 |
 
 ---
 
 ## 1. Current Problem
 
-Every skill calls Gemini directly with no timeout, no retry, and no breaker:
+The migration already centralized every Gemini call into one wrapper with a reused module-scope client:
 
-```ts
-const ai = new GoogleGenAI({ apiKey });
-const response = await ai.models.generateContent({ ... });
+```python
+# ai-service/app/llm/gemini.py — single call path (good), but no resilience yet
+response = await client.aio.models.generate_content(
+    model=..., contents=..., config=...,
+)   # no timeout, no retry, no breaker
 ```
 
-Consequences:
-- A transient `503`/network blip goes straight to the silent fallback — a recoverable error is treated as a hard failure.
+That solved client duplication, but resilience is still missing:
+- A transient `503`/network blip goes straight to each feature's silent fallback — a recoverable error is treated as a hard failure.
 - No request timeout means a hung call can block the handler until the platform kills it.
 - A Gemini outage causes every request to wait and fail individually (no breaker), wasting time and quota.
-- Each skill re-instantiates the client and duplicates error handling.
 
 ```mermaid
 flowchart TD
-    A[skill] --> B[new GoogleGenAI per call]
-    B --> C[generateContent — no timeout/retry]
+    A[feature] --> B["generate_structured()"]
+    B --> C[generate_content — no timeout/retry]
     C -->|transient 503| D[silent fallback ❌]
     C -->|hung| E[handler blocked ❌]
 ```
@@ -49,33 +51,33 @@ flowchart TD
 
 ## 3. Step-Wise Solution
 
-### Step 3.1 — Create one shared client wrapper
-`geminiClient.ts` exposes `generate(opts)` and owns a module-scope `GoogleGenAI` instance (keep-alive; matches the serverless plan's module-scope client guidance). All skills call this instead of `new GoogleGenAI(...)`.
+### Step 3.1 — One shared wrapper — ✅ done
+`generate_structured()` in `app/llm/gemini.py` already owns a module-scope `genai.Client` (keep-alive) and is the single path every feature uses. Build the rest of this story inside it.
 
 ### Step 3.2 — Classify errors
-Return/throw a typed error: `transient` (5xx, network, rate-limit `429`) vs `permanent` (invalid key, invalid model, 4xx schema). This is the classification AIE-02 maps to `degradedReason`.
+Return/raise a typed error: `transient` (5xx, network, rate-limit `429`) vs `permanent` (invalid key, invalid model, 4xx schema). This is the classification AIE-02 maps to `degradedReason`.
 
 ### Step 3.3 — Bounded retry with backoff + jitter
-Retry **only** transient errors, e.g. up to 3 attempts with exponential backoff + jitter. Permanent errors fail immediately — no pointless retries.
+Retry **only** transient errors, e.g. up to 3 attempts with exponential backoff + jitter (`asyncio.sleep`). Permanent errors raise immediately — no pointless retries. Read limits from `config.py`.
 
 ### Step 3.4 — Per-call timeout
-Wrap each attempt in a configurable timeout (`GEMINI_TIMEOUT_MS`, default ~25s to stay under serverless limits). A timed-out attempt is treated as transient and retried within the attempt budget.
+Wrap each attempt in `asyncio.wait_for(..., timeout=GEMINI_TIMEOUT_S)` (default ~25s to stay under serverless limits). A timed-out attempt is treated as transient and retried within the attempt budget.
 
 ### Step 3.5 — Circuit breaker
-Track recent failures; after N consecutive transient failures, **open** the breaker for a cooldown so calls fail fast (and route to fallback) instead of all hanging. Half-open probe to recover.
+Track recent failures in module scope; after N consecutive transient failures, **open** the breaker for a cooldown so calls fail fast (and features route to fallback) instead of all hanging. Half-open probe to recover.
 
 ### Step 3.6 — Emit telemetry
-For each call emit `ai.call{feature, model, outcome, attempts, latencyMs}` to AIA-06. Migrate all five AI skills onto the wrapper.
+For each call emit `ai.call{feature, model, outcome, attempts, latencyMs}` to AIA-06. (All five features already ride on the wrapper, so this lands everywhere at once.)
 
 ```mermaid
 flowchart TD
-    CALL[generate] --> CB{breaker open?}
-    CB -->|yes| FF[fail fast → fallback]
-    CB -->|no| TRY[attempt with timeout]
+    CALL[generate_structured] --> CB{breaker open?}
+    CB -->|yes| FF[fail fast → feature fallback]
+    CB -->|no| TRY[attempt with asyncio.wait_for]
     TRY --> OK{success?}
     OK -->|yes| RET[return + reset failures]
     OK -->|no| CLASS{transient?}
-    CLASS -->|no| PERM[throw permanent]
+    CLASS -->|no| PERM[raise permanent]
     CLASS -->|yes| BUDGET{attempts left?}
     BUDGET -->|yes| BACK[backoff + jitter] --> TRY
     BUDGET -->|no| OPEN[record failure / maybe open breaker] --> FF
@@ -85,12 +87,12 @@ flowchart TD
 
 ## 4. Done When
 
-- [ ] All five AI skills call a single `geminiClient.generate()` wrapper.
+- [x] All features call a single `generate_structured()` wrapper with a reused client.
 - [ ] Errors are classified `transient` vs `permanent`.
 - [ ] Transient errors retry with bounded backoff + jitter; permanent fail fast.
 - [ ] A configurable per-call timeout is enforced.
 - [ ] A circuit breaker opens on sustained failures and recovers via half-open probe.
-- [ ] `ai.call` telemetry is emitted; `npm run build` passes.
+- [ ] `ai.call` telemetry is emitted; `python -m compileall app` passes.
 
 ---
 

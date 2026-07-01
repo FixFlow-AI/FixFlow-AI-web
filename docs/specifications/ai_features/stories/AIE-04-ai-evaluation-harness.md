@@ -10,18 +10,18 @@
 |:---|:---|
 | **Story ID** | `AIE-04` |
 | **Owner** | AI Engineer |
-| **Backend files** | new `backend/src/eval/`, [test/testSkills.ts](../../../backend/src/test/testSkills.ts) |
+| **Files** | new `ai-service/eval/`, `ai-service/smoke_test.py` (existing offline test) |
 | **Consumes** | [AIA-06 telemetry](./AIA-06-ai-observability.md) |
 
 ---
 
 ## 1. Current Problem
 
-The only test asset is `src/test/testSkills.ts`, which exercises the skills but does not **score output quality** or guard against regressions. Today, when anyone edits a prompt, schema, temperature, or model in `briefParser.ts` / `confidenceGrid.ts` / `interviewGenerator.ts` / `contextExtensions.ts`, there is **no objective way** to tell whether the change improved or degraded results. Quality changes are judged by eyeballing a single output.
+The only test assets are `ai-service/smoke_test.py` (offline fallback/guard checks) and the TS `backend/src/test/testSkills.ts` (escrow/earnings/payments) — neither **scores LLM output quality** or guards against regressions. Today, when anyone edits a prompt, schema, temperature, or model in `ai-service/app/features/{brief_parser,confidence_grid,interview,extensions}.py`, there is **no objective way** to tell whether the change improved or degraded results. Quality changes are judged by eyeballing a single output.
 
 ```mermaid
 flowchart LR
-    A[change a prompt] --> B[run once by hand]
+    A[change a prompt in features/*.py] --> B[run once by hand]
     B --> C{looks fine?}
     C -->|subjective| D[ship]
     D --> E[silent regression in prod ❌]
@@ -39,7 +39,7 @@ flowchart LR
 ## 3. Step-Wise Solution
 
 ### Step 3.1 — Curate a golden set
-Create `backend/src/eval/datasets/` with 15–30 labeled briefs spanning: well-specified, vague one-liner, budget-only, tech-heavy, and adversarial/empty. Each entry stores the input and expected signals (must-have features, expected complexity band, rough confidence band).
+Create `ai-service/eval/datasets/` with 15–30 labeled briefs spanning: well-specified, vague one-liner, budget-only, tech-heavy, and adversarial/empty. Store each as JSON with the input and expected signals (must-have features, expected complexity band, rough confidence band).
 
 ### Step 3.2 — Define metrics per feature
 | Feature | Metric(s) |
@@ -50,18 +50,18 @@ Create `backend/src/eval/datasets/` with 15–30 labeled briefs spanning: well-s
 | AI-004 Extensions | milestone count in range, budget-pct sanity (sums plausible) |
 
 ### Step 3.3 — Build the runner
-`backend/src/eval/run.ts`: loads a dataset, calls each skill (using the real Gemini wrapper from AIA-05, or a recorded-response mode for cheap CI runs), computes metrics, and writes a JSON + Markdown report to `backend/src/eval/reports/`.
+`ai-service/eval/run.py`: loads a dataset, calls each feature function (using the real Gemini wrapper from `app/llm/gemini.py`, or a recorded-response mode for cheap CI runs), computes metrics with the Pydantic models, and writes a JSON + Markdown report to `ai-service/eval/reports/`.
 
 ### Step 3.4 — Add a regression gate
-Store a `baseline.json` of metric values. The runner fails (non-zero exit) if any metric drops beyond a configured tolerance, so it can run in CI on prompt/model changes.
+Store a `baseline.json` of metric values. The runner exits non-zero if any metric drops beyond a configured tolerance, so it can run in CI on prompt/model changes.
 
-### Step 3.5 — Wire an npm script
-Add `"eval": "node dist/eval/run.js"` and document usage in the harness README. Recorded-response mode keeps CI free of Gemini cost.
+### Step 3.5 — Wire a script
+Add a console entry (e.g. `python -m eval.run`) and document usage in an eval README. Recorded-response mode (monkeypatch the wrapper) keeps CI free of Gemini cost — reuse the mocking approach from `smoke_test.py`.
 
 ```mermaid
 flowchart TD
-    DS[golden set] --> RUN[eval/run.ts]
-    WRAP[Gemini wrapper / recorded mode] --> RUN
+    DS[golden set JSON] --> RUN[eval/run.py]
+    WRAP[app/llm/gemini.py / recorded mode] --> RUN
     RUN --> M[compute metrics per feature]
     M --> REP[report.md + report.json]
     M --> GATE{within tolerance of baseline?}
@@ -73,10 +73,10 @@ flowchart TD
 
 ## 4. Done When
 
-- [ ] A versioned golden set of ≥15 labeled briefs exists.
+- [ ] A versioned golden set of ≥15 labeled briefs exists under `ai-service/eval/datasets/`.
 - [ ] The runner computes the defined metrics for AI-001..AI-004 and writes a report.
-- [ ] A baseline + tolerance gate fails the run on regression.
-- [ ] `npm run eval` works in both live and recorded-response modes.
+- [ ] A baseline + tolerance gate exits non-zero on regression.
+- [ ] `python -m eval.run` works in both live and recorded-response modes.
 - [ ] Documented so any prompt change is expected to run the harness.
 
 ---

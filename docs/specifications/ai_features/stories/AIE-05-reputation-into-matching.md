@@ -1,6 +1,7 @@
 # AIE-05 — Wire Real Reputation into the Matching Engine
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
+> **Migration status**: ⚪ **Unaffected by the TS→Python migration.** `matchingEngine.ts` (AI-006) and `reputationCalculator.js` are deterministic and **stay in TypeScript**. This story is entirely TS-side.
 
 ---
 
@@ -58,7 +59,7 @@ In the freelancer repository (or a thin service used by `/api/leads/match`), for
 3. Set `profile.reputationScore` to the computed composite before passing the roster to `generateShortlist()`.
 
 ### Step 3.3 — Cache to control cost/latency
-Reputation changes slowly. Cache the computed composite per freelancer (TTL via [AIA-02](./AIA-02-gemini-result-cache.md) infra or a simple in-repo cache) so a match request doesn't recompute history for every candidate every time.
+Reputation changes slowly. Cache the computed composite per freelancer with a TTL in the TS layer (a simple in-repo Map/TTL cache — the AIA-02 Gemini cache lives in the Python service and is not reused here) so a match request doesn't recompute history for every candidate every time.
 
 ### Step 3.4 — Handle no-history gracefully
 New freelancers with no escrow history should get a documented neutral baseline (e.g., 60) and a `riskFlags` entry like `"new / limited track record"`, rather than 0 (which would unfairly bury them) or 100 (which would over-promote them).

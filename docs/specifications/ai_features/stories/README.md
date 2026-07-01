@@ -6,12 +6,23 @@
 
 ---
 
+## ⚠️ Migration note (TypeScript → Python)
+
+The four LLM features (AI-001..004) have been **moved out of the TypeScript backend into a dedicated Python FastAPI service** (`ai-service/`). See the [Python migration plan](../python_migration_plan.md). What this means for these stories:
+
+- The AI logic now lives in `ai-service/app/features/*.py` with Pydantic schemas (`ai-service/app/schemas/*.py`) — **not** in `backend/src/skills/*.ts` (those files were deleted).
+- The TypeScript backend stays the **gateway and system of record**: auth, escrow FSM, payments, sync, persistence, jobs. It proxies AI calls via `backend/src/services/aiClient.ts`.
+- Verification differs by side: **Python** stories verify with `python -m compileall app` / `pytest` / the `smoke_test.py`; **TypeScript** stories still verify with `npm run build`.
+- A few stories were **partially completed by the migration itself** — flagged inline (AIE-01 brand fix, AIE-03 env-config, AIA-05 shared wrapper).
+
+---
+
 ## Role Definitions
 
 | Role | Owns | Code surface |
 |:---|:---|:---|
-| **AI Engineer** | LLM intelligence quality — prompts, schemas, model selection, output reliability, evaluation, scoring design | `skills/briefParser.ts`, `skills/confidenceGrid.ts`, `skills/interviewGenerator.ts`, `skills/contextExtensions.ts`, `services/matchingEngine.ts` |
-| **AI Automation Engineer** | Everything around the AI — async jobs, queues/workers, scheduled discovery, GitHub scanning, retries/idempotency, caching, observability | new job/worker layer, connectors, cache layer, telemetry |
+| **AI Engineer** | LLM intelligence quality — prompts, schemas, model selection, output reliability, evaluation, scoring design | `ai-service/app/features/{brief_parser,confidence_grid,interview,extensions}.py`, `ai-service/app/schemas/*.py`, `backend/src/services/matchingEngine.ts` (stays TS) |
+| **AI Automation Engineer** | Everything around the AI — async jobs, queues/workers, scheduled discovery, GitHub scanning, retries/idempotency, caching, observability | `ai-service/app/llm/gemini.py` (shared wrapper), `ai-service/app/automation/*`, TS jobs/poll layer in `backend/src`, telemetry |
 
 ---
 
@@ -21,23 +32,23 @@
 
 | ID | Story | Priority | Touches |
 |:---|:---|:---:|:---|
-| `AIE-01` | [Fix brand + model-config drift in prompts](./AIE-01-prompt-brand-model-config.md) | 🔴 Critical | briefParser, confidenceGrid, index |
-| `AIE-02` | [Make Brief Parser fallback honest (not silent)](./AIE-02-brief-parser-honest-fallback.md) | 🔴 Critical | briefParser |
-| `AIE-03` | [Configurable + auditable Confidence Grid self-correction](./AIE-03-confidence-grid-self-correction.md) | 🟡 High | confidenceGrid |
-| `AIE-04` | [AI evaluation harness (golden set + regression)](./AIE-04-ai-evaluation-harness.md) | 🟡 High | all skills, test |
-| `AIE-05` | [Wire real reputation into the Matching Engine](./AIE-05-reputation-into-matching.md) | 🟡 High | matchingEngine, reputationCalculator |
-| `AIE-06` | [Design AI-005 Opportunity Intelligence scoring](./AIE-06-opportunity-intelligence-scoring.md) | 🟡 High | new ai-005 skill |
+| `AIE-01` | [Fix brand + model-config drift in prompts](./AIE-01-prompt-brand-model-config.md) | 🔴 Critical | brief_parser, confidence_grid, config (🟢 mostly done via migration) |
+| `AIE-02` | [Make Brief Parser fallback honest (not silent)](./AIE-02-brief-parser-honest-fallback.md) | 🔴 Critical | brief_parser, schemas, aiClient |
+| `AIE-03` | [Configurable + auditable Confidence Grid self-correction](./AIE-03-confidence-grid-self-correction.md) | 🟡 High | confidence_grid (🟢 env-config done via migration) |
+| `AIE-04` | [AI evaluation harness (golden set + regression)](./AIE-04-ai-evaluation-harness.md) | 🟡 High | ai-service/eval, pytest |
+| `AIE-05` | [Wire real reputation into the Matching Engine](./AIE-05-reputation-into-matching.md) | 🟡 High | matchingEngine.ts, reputationCalculator.js (stays TS) |
+| `AIE-06` | [Design AI-005 Opportunity Intelligence scoring](./AIE-06-opportunity-intelligence-scoring.md) | 🟡 High | new ai-service opportunity feature |
 
 ### AI Automation Engineer
 
 | ID | Story | Priority | Touches |
 |:---|:---|:---:|:---|
-| `AIA-01` | [Convert blocking AI-002 evaluation to async job + poll](./AIA-01-async-evaluation-jobs.md) | 🔴 Critical | confidenceGrid, jobs layer |
-| `AIA-02` | [Gemini result cache layer](./AIA-02-gemini-result-cache.md) | 🟡 High | all AI skills |
-| `AIA-03` | [Automate GitHub scan pipeline feeding AI-003](./AIA-03-github-scan-pipeline.md) | 🟡 High | interviewGenerator, new scanner |
-| `AIA-04` | [AI-005 discovery automation (connectors + cron)](./AIA-04-opportunity-discovery-automation.md) | 🟡 High | new connectors, scheduler |
-| `AIA-05` | [Resilience for all Gemini calls (retry/timeout/breaker)](./AIA-05-gemini-call-resilience.md) | 🔴 Critical | shared Gemini wrapper |
-| `AIA-06` | [AI observability — logs, metrics, alarms](./AIA-06-ai-observability.md) | 🟡 High | shared telemetry |
+| `AIA-01` | [Convert blocking AI-002 evaluation to async job + poll](./AIA-01-async-evaluation-jobs.md) | 🔴 Critical | TS jobs layer + Python evaluate endpoint |
+| `AIA-02` | [Gemini result cache layer](./AIA-02-gemini-result-cache.md) | 🟡 High | ai-service llm wrapper |
+| `AIA-03` | [Automate GitHub scan pipeline feeding AI-003](./AIA-03-github-scan-pipeline.md) | 🟡 High | ai-service automation + interview feature |
+| `AIA-04` | [AI-005 discovery automation (connectors + cron)](./AIA-04-opportunity-discovery-automation.md) | 🟡 High | ai-service automation connectors + scheduler |
+| `AIA-05` | [Resilience for all Gemini calls (retry/timeout/breaker)](./AIA-05-gemini-call-resilience.md) | 🔴 Critical | ai-service llm wrapper (🟢 wrapper exists via migration) |
+| `AIA-06` | [AI observability — logs, metrics, alarms](./AIA-06-ai-observability.md) | 🟡 High | ai-service telemetry |
 
 ---
 
@@ -91,6 +102,7 @@ flowchart LR
 
 | Document | Relevance |
 |:---|:---|
+| [Python Migration Plan](../python_migration_plan.md) | TS→Python split; where each feature now lives |
 | [AI Features Index](../README.md) | The six `AI-00x` subsystems |
 | [Implementation Playbook](../ai_features_implementation_playbook.md) | Current state of each route |
 | [Go-Live Roadmap](../../go_live_roadmap.md) | Phase 5 (optional AI) context |
