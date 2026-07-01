@@ -1,0 +1,7 @@
+# Minimum versions. Looser bounds so pip can pick wheels that match your Python
+# version (e.g. prebuilt cp314 wheels) instead of compiling from source.
+fastapi>=0.115.6
+uvicorn[standard]>=0.34.0
+google-genai>=1.9.0
+pydantic>=2.11.0
+python-dotenv>=1.0.1

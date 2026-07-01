@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { Proposal } from '../skills/briefParser.js';
+import type { Proposal } from '../types/ai.js';
 
 /**
  * Persistence for parsed proposals + their confidence-grid evaluations.

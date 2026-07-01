@@ -6,12 +6,9 @@ import {
   InvalidTransitionError,
   AuditTrailBlock
 } from '../skills/escrowStateMachine.js';
-import { sanitizeAndPatchBrief } from '../skills/briefParser.js';
 import { calculateEarningsBreakdown } from '../skills/earningsCalculator.js';
 import { calculateClientScore } from '../skills/clientScoring.js';
 import { calculateReputationMetrics, buildSBTMetadata } from '../skills/reputationCalculator.js';
-import { generateInterviewQuestions } from '../skills/interviewGenerator.js';
-import { generateContractExtensions } from '../skills/contextExtensions.js';
 import {
   createRazorpayOrder,
   verifyPaymentSignature,
@@ -25,25 +22,10 @@ async function runTests() {
 
   let passed = true;
 
-  // ----------------------------------------------------
-  // TEST 1: Zod Fallback Heuristics & Brief Sanitization
-  // ----------------------------------------------------
-  try {
-    console.log('[Test 1] Verifying Zod brief sanitization & defaults...');
-    const emptyPayload = {};
-    const sanitized = sanitizeAndPatchBrief(emptyPayload);
-
-    if (!sanitized.project_summary) throw new Error('Missing project_summary default');
-    if (sanitized.features.length === 0) throw new Error('Features array should not be empty');
-    if (sanitized.risks.length === 0) throw new Error('Risks array should not be empty');
-    if (sanitized.timeline.length === 0) throw new Error('Timeline array should not be empty');
-    if (sanitized.delivery_plan.weeks.length === 0) throw new Error('Weeks array should not be empty');
-    
-    console.log('  -> PASSED: Successfully coerced malformed inputs to structured Proposal Schema.');
-  } catch (error: any) {
-    console.error('  -> FAILED:', error.message);
-    passed = false;
-  }
+  // NOTE: Brief parsing (AI-001), interview generation (AI-003), and contract
+  // extensions (AI-004) now live in the Python AI service (`ai-service/`).
+  // Their tests moved there; this suite covers the TypeScript subsystems that
+  // remain the system of record (escrow FSM, earnings, reputation, payments).
 
   // ----------------------------------------------------
   // TEST 2: Escrow FSM Valid Transitions & OCC Checks
@@ -295,33 +277,6 @@ async function runTests() {
       throw new Error(`MFA stamp missing from metadata: ${newBlock.metadata}`);
     }
     console.log('  -> PASSED: Validated transition and blockchain audit block stamp on successful MFA.');
-  } catch (error: any) {
-    console.error('  -> FAILED:', error.message);
-    passed = false;
-  }
-
-  // ----------------------------------------------------
-  // TEST 8: AI-Generated Interview Questions and Extensions Fallbacks
-  // ----------------------------------------------------
-  try {
-    console.log('[Test 8] Verifying AI-driven screening and extension fallback interfaces...');
-    const mockApiKey = 'mock-key';
-    
-    // Test that interview generator fallback works without throwing if API fails
-    const questionsResult = await generateInterviewQuestions('Build an API', {}, ['Rust'], mockApiKey);
-    if (!questionsResult.questions || questionsResult.questions.length === 0) {
-      throw new Error('Interview generator fallback returned empty questions list');
-    }
-    if (questionsResult.questions[0].question.indexOf('Rust') === -1) {
-      throw new Error('Fallback questions did not customize based on missing skills');
-    }
-
-    // Test that context extensions fallback works without throwing if API fails
-    const extensionsResult = await generateContractExtensions('Deliverable 1 completed', 'We need phase 2 next', mockApiKey);
-    if (!extensionsResult.suggestedMilestones || extensionsResult.suggestedMilestones.length === 0) {
-      throw new Error('Extensions fallback returned empty suggestions list');
-    }
-    console.log('  -> PASSED: Interview generator and contract extension fallback engines are robust.');
   } catch (error: any) {
     console.error('  -> FAILED:', error.message);
     passed = false;

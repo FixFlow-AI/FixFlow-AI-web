@@ -3,10 +3,14 @@ import { createServer } from 'http';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 
-import { parseBrief } from './skills/briefParser.js';
-import { processConfidenceGrid } from './skills/confidenceGrid.js';
-import { generateInterviewQuestions } from './skills/interviewGenerator.js';
-import { generateContractExtensions } from './skills/contextExtensions.js';
+import {
+  parseBrief,
+  evaluateProposal,
+  generateInterviewQuestions,
+  generateContractExtensions,
+  isAiServiceConfigured,
+  AiServiceError,
+} from './services/aiClient.js';
 import { calculateEarningsBreakdown } from './skills/earningsCalculator.js';
 import {
   calculateReputationMetrics,
@@ -40,8 +44,6 @@ import {
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -62,12 +64,12 @@ const asyncRoute =
     handler(req, res).catch(next);
   };
 
-/** Guards AI endpoints that require a Gemini key. Returns true if the request can proceed. */
-function requireGeminiKey(res: Response): boolean {
-  if (!GEMINI_API_KEY.trim()) {
+/** Guards AI endpoints that require the Python AI service. Returns true if the request can proceed. */
+function requireAiService(res: Response): boolean {
+  if (!isAiServiceConfigured()) {
     res.status(503).json({
-      error: 'GEMINI_API_KEY is not configured on the server.',
-      hint: 'Copy backend/.env.example to backend/.env and set GEMINI_API_KEY.',
+      error: 'AI_SERVICE_URL is not configured on the server.',
+      hint: 'Set AI_SERVICE_URL in backend/.env to the Python AI service (e.g. http://localhost:8000).',
     });
     return false;
   }
@@ -81,11 +83,11 @@ function requireGeminiKey(res: Response): boolean {
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
-    aiEnabled: Boolean(GEMINI_API_KEY.trim()),
+    aiEnabled: isAiServiceConfigured(),
     authEnabled:
       Boolean((process.env.JWT_SECRET || '').trim()) &&
       Boolean((process.env.GOOGLE_OAUTH_CLIENT_ID || '').trim()),
-    model: GEMINI_MODEL,
+    aiServiceUrl: process.env.AI_SERVICE_URL || null,
     time: new Date().toISOString(),
   });
 });
@@ -98,13 +100,13 @@ app.post(
   '/api/proposals/parse',
   requireAuth,
   asyncRoute(async (req, res) => {
-    if (!requireGeminiKey(res)) return;
+    if (!requireAiService(res)) return;
     const { briefText } = req.body ?? {};
     if (typeof briefText !== 'string' || !briefText.trim()) {
       res.status(400).json({ error: 'briefText is required and must be a non-empty string.' });
       return;
     }
-    const proposal = await parseBrief(briefText, GEMINI_API_KEY, GEMINI_MODEL);
+    const proposal = await parseBrief(briefText);
     // Persist the parsed proposal under the authenticated user.
     const stored = await getProposalRepository().create({
       userId: req.auth!.sub,
@@ -146,7 +148,7 @@ app.post(
   '/api/proposals/evaluate',
   requireAuth,
   asyncRoute(async (req, res) => {
-    if (!requireGeminiKey(res)) return;
+    if (!requireAiService(res)) return;
     const { briefText, proposal, proposalId } = req.body ?? {};
     if (typeof briefText !== 'string' || !briefText.trim()) {
       res.status(400).json({ error: 'briefText is required and must be a non-empty string.' });
@@ -156,7 +158,7 @@ app.post(
       res.status(400).json({ error: 'proposal object is required.' });
       return;
     }
-    const result = await processConfidenceGrid(briefText, proposal, GEMINI_API_KEY, GEMINI_MODEL);
+    const result = await evaluateProposal(briefText, proposal);
     // Persist the evaluation against the proposal when an id is supplied.
     if (typeof proposalId === 'string' && proposalId) {
       await getProposalRepository().setEvaluation(proposalId, result);
@@ -173,7 +175,7 @@ app.post(
   '/api/interview-questions',
   requireAuth,
   asyncRoute(async (req, res) => {
-    if (!requireGeminiKey(res)) return;
+    if (!requireAiService(res)) return;
     const { briefText, githubScan = '', missingSkills = [] } = req.body ?? {};
     if (typeof briefText !== 'string' || !briefText.trim()) {
       res.status(400).json({ error: 'briefText is required and must be a non-empty string.' });
@@ -182,9 +184,7 @@ app.post(
     const output = await generateInterviewQuestions(
       briefText,
       githubScan,
-      Array.isArray(missingSkills) ? missingSkills : [],
-      GEMINI_API_KEY,
-      GEMINI_MODEL
+      Array.isArray(missingSkills) ? missingSkills : []
     );
     res.json(output);
   })
@@ -198,13 +198,11 @@ app.post(
   '/api/contract-extensions',
   requireAuth,
   asyncRoute(async (req, res) => {
-    if (!requireGeminiKey(res)) return;
+    if (!requireAiService(res)) return;
     const { completedDeliverables = '', chatSummary = '' } = req.body ?? {};
     const output = await generateContractExtensions(
       completedDeliverables,
-      String(chatSummary),
-      GEMINI_API_KEY,
-      GEMINI_MODEL
+      String(chatSummary)
     );
     res.json(output);
   })
@@ -572,6 +570,11 @@ app.get(
 // ==========================================
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AiServiceError) {
+    console.error('AI service error:', err.message);
+    res.status(err.status).json({ error: err.message });
+    return;
+  }
   console.error('Unhandled API error:', err);
   res.status(500).json({ error: err.message || 'Internal server error.' });
 });
@@ -584,7 +587,7 @@ server.listen(PORT, () => {
   console.log(`FixFlowAI backend listening on http://localhost:${PORT}`);
   console.log(`  REST API   : http://localhost:${PORT}/api`);
   console.log(`  Sync socket: ws://localhost:${PORT}/sync`);
-  console.log(`  AI features ${GEMINI_API_KEY.trim() ? 'ENABLED' : 'DISABLED (set GEMINI_API_KEY)'}`);
+  console.log(`  AI features ${isAiServiceConfigured() ? `ENABLED (proxy → ${process.env.AI_SERVICE_URL})` : 'DISABLED (set AI_SERVICE_URL)'}`);
 });
 
 export { app, server };
