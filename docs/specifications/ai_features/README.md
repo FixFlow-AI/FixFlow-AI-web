@@ -12,14 +12,14 @@
 
 | ID | Feature Name | Priority | Backend Status | Frontend Status | Doc |
 |:---|:---|:---:|:---:|:---:|:---|
-| `AI-001` | Semantic Brief Parsing & Proposal Generation | 🔴 Critical | ✅ Built + route | ⚠️ Wired (partial) | [ai_001_semantic_brief_parsing.md](./ai_001_semantic_brief_parsing.md) |
-| `AI-002` | Multi-Agent Confidence Grid & Self-Correction | 🔴 Critical | ✅ Built + route | ❌ Mock only | [ai_002_confidence_grid_self_correction.md](./ai_002_confidence_grid_self_correction.md) |
-| `AI-003` | AI Interview & Technical Vetting Generation | 🟡 High | ✅ Built + route | ❌ No UI | [ai_003_interview_vetting_generation.md](./ai_003_interview_vetting_generation.md) |
-| `AI-004` | Contextual Contract Extensions & Retention | 🟢 Medium-High | ✅ Built + route | ❌ No widget | [ai_004_contextual_contract_extensions.md](./ai_004_contextual_contract_extensions.md) |
+| `AI-001` | Semantic Brief Parsing & Proposal Generation | 🔴 Critical | ✅ Built (Python) | ✅ Wired | [ai_001_semantic_brief_parsing.md](./ai_001_semantic_brief_parsing.md) |
+| `AI-002` | Multi-Agent Confidence Grid & Self-Correction | 🔴 Critical | ✅ Built (Python) | ✅ Wired | [ai_002_confidence_grid_self_correction.md](./ai_002_confidence_grid_self_correction.md) |
+| `AI-003` | AI Interview & Technical Vetting Generation | 🟡 High | ✅ Built (Python) | ✅ Wired | [ai_003_interview_vetting_generation.md](./ai_003_interview_vetting_generation.md) |
+| `AI-004` | Contextual Contract Extensions & Retention | 🟢 Medium-High | ✅ Built (Python) | ✅ Wired | [ai_004_contextual_contract_extensions.md](./ai_004_contextual_contract_extensions.md) |
 | `AI-005` | Opportunity Intelligence & Smart Scoring | 🟡 High | ❌ Not built | ❌ No board | [ai_005_opportunity_intelligence_scoring.md](./ai_005_opportunity_intelligence_scoring.md) |
-| `AI-006` | Freelancer-Client Matching & Lead Scoring | 🔴 Critical | ⚠️ Partial | ❌ No UI | [ai_006_smart_matching_lead_scoring.md](./ai_006_smart_matching_lead_scoring.md) |
+| `AI-006` | Freelancer-Client Matching & Lead Scoring | 🔴 Critical | ✅ Built (TS engine) | ✅ Wired | [ai_006_smart_matching_lead_scoring.md](./ai_006_smart_matching_lead_scoring.md) |
 
-> **Note:** AI-001 through AI-004 now have live HTTP routes (`/api/proposals/parse`, `/api/proposals/evaluate`, `/api/interview-questions`, `/api/contract-extensions`). See the [Implementation Playbook](./ai_features_implementation_playbook.md) Section 1 for the exact current state.
+> **Note:** AI-001 through AI-004 have their core LLM generation implemented in the stateless Python service (`ai-service`) and proxied through the TS backend routes (`/api/proposals/parse`, `/api/proposals/evaluate`, `/api/interview-questions`, `/api/contract-extensions`). AI-006 is fully implemented in TypeScript. All five are integrated with the React dashboard UI. See the [Implementation Playbook](./ai_features_implementation_playbook.md) Section 1 for the exact current state.
 
 ---
 

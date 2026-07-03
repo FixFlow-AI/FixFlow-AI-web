@@ -10,9 +10,9 @@
 |:---|:---|
 | **Feature ID** | `AI-001` |
 | **Priority** | 🔴 Critical (Core pipeline — nothing works without this) |
-| **Backend Skill** | [briefParser.ts](../../backend/src/skills/briefParser.ts) |
-| **Gemini Model** | `gemini-2.5-pro` |
-| **Status** | ✅ Skill module built · ❌ No HTTP route · ❌ No frontend integration |
+| **Backend Skill** | [brief_parser.py](../../ai-service/app/features/brief_parser.py) |
+| **Gemini Model** | `gemini-2.5-pro` (via Python AI Service proxy) |
+| **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/proposals/parse` wired · ✅ Frontend `BriefIntelligence.jsx` UI integrated |
 
 ---
 

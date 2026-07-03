@@ -11,19 +11,17 @@
 ### ✅ Already done
 - **Backend API (Express)** with live routes: AI-001 parse, AI-002 evaluate, AI-003 interview, AI-004 extensions, earnings/reputation/client-score, escrow FSM, AI-006 matching, sync telemetry.
 - **Auth backend**: Google ID-token verification + JWT access/refresh + middleware + `/api/auth/*` routes.
-- **Swappable data layer (interfaces)**: `freelancerRepository`, `userRepository` (seed + HTTP providers).
-- **Frontend**: landing page + full dashboard UI (design system), with AI features wired (Brief, Evidence, Matches, Delivery extensions) — currently with sample fallbacks.
-- **Infra provisioned**: DynamoDB tables (in `us-east-1`), S3 upload bucket (in `ap-south-1`, private + CORS).
-- **Docs**: AI feature specs + playbook, opportunity-intelligence build guide, cost analysis, serverless migration plan.
+- **Swappable data layer (interfaces)**: `freelancerRepository`, `userRepository`, `proposalRepository`, `milestoneRepository` (fully implemented seed/file + DynamoDB providers).
+- **Real persistence**: DynamoDB repository implementations for Users, Proposals, and Milestones (FSM) are fully completed and integrated in `backend/src/services/`.
+- **Auth wired in the frontend**: Google Sign-in and Dev Login are fully wired in `GoogleSignInButton.jsx`, `Login.jsx`, `Signup.jsx`, tokens are stored, and routes are protected.
+- **Connected screens**: Overview, Agreement, Funds, Outcome, Delivery, and Role Onboarding are all connected and call the real backend API (`api.js`).
+- **Payments (Razorpay)**: Razorpay order creation, payment verification, and webhook signature processing are fully implemented and integrated.
+- **Stateless Python AI service**: The four LLM features (AI-001 brief parse, AI-002 confidence grid, AI-003 interview questions, AI-004 contract extensions) are migrated to a dedicated, stateless FastAPI Python service, proxying through the TS backend.
+- **Docs**: AI feature specs + playbook, opportunity-intelligence build guide, cost analysis, serverless migration plan, Python migration plan.
 
 ### ❌ Not done yet (the gap to "live")
-- **No real persistence** — escrow is an in-memory `Map`; proposals live only in the browser store; no DynamoDB repository implementations exist.
-- **Auth not wired in the frontend** — Login/Signup still call a mock `login()`; no real Google sign-in, no token storage, no protected routes.
-- **Mock/static screens** — Overview, Agreement, Funds, Outcome, Delivery (tasks/timeline), Role onboarding have no backend.
-- **No payments** — Razorpay escrow funding/payout not implemented.
 - **Not deployed** — runs locally on `:4000`; no Lambda/API Gateway, no frontend hosting.
-- **Config gaps** — invalid `GEMINI_MODEL`, unset `JWT_SECRET` / `GOOGLE_OAUTH_CLIENT_ID`, region split (DynamoDB `us-east-1` vs S3 `ap-south-1`).
-- **No security hardening, observability, tests, CI/CD, domain, or legal pages.**
+- **Security, testing, CI/CD, domain, and legal pages** — need to configure Rate Limiting, Observability, and CloudWatch log triggers.
 - **AI-005 (opportunity discovery)** not built (optional for v1).
 - **Web3 (Polygon SBT)** not built (optional/post-launch).
 
@@ -54,11 +52,11 @@ flowchart TD
 **Goal:** Remove the small blockers that make the current code fail at runtime.
 
 **Tasks**
-- [ ] Fix `GEMINI_MODEL` — replace the invalid `Gemini 3.5 Flash` with a real ID (e.g. `gemini-2.5-flash`).
-- [ ] Generate and set `JWT_SECRET` (32+ bytes).
-- [ ] Create a Google OAuth 2.0 **Web** Client ID; set `GOOGLE_OAUTH_CLIENT_ID`; add frontend origins as authorized JavaScript origins.
-- [ ] Decide region = **`ap-south-1`**; recreate the (empty) DynamoDB tables there; delete the `us-east-1` ones; set `AWS_REGION=ap-south-1`.
-- [ ] Confirm `GET /api/health` shows `aiEnabled:true` and `authEnabled:true`.
+- [x] Fix `GEMINI_MODEL` — replaced with Python service model configuration (e.g. `gemini-2.5-flash` or `gemini-2.5-pro`).
+- [x] Generate and set `JWT_SECRET` (32+ bytes).
+- [x] Create a Google OAuth 2.0 **Web** Client ID; set `GOOGLE_OAUTH_CLIENT_ID`; add frontend origins as authorized JavaScript origins.
+- [x] Decide region = **`ap-south-1`**; recreate the (empty) DynamoDB tables there; delete the `us-east-1` ones; set `AWS_REGION=ap-south-1`.
+- [x] Confirm `GET /api/health` shows `aiEnabled:true` and `authEnabled:true`.
 
 **Done when:** health endpoint is green, AI calls succeed, and all infra is in one region.
 
@@ -71,13 +69,13 @@ flowchart TD
 **Prerequisite:** Phase 0 (region + tables).
 
 **Tasks**
-- [ ] Add AWS SDK v3 (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) to the backend.
-- [ ] Add `config/aws.ts` (region, table prefix, optional local endpoint) + a DynamoDB document-client singleton (module scope, keep-alive).
-- [ ] Implement `DynamoDbUserRepository` against the existing `UserRepository` interface; select it via `USER_PROVIDER=dynamodb`.
-- [ ] Implement a **`ProposalRepository`** (interface + Dynamo impl) — persist parsed proposals + evaluations keyed by `proposalId` and `userId`.
-- [ ] Refactor `escrowService.ts` to a **`MilestoneRepository`** (interface + Dynamo impl) using the `milestones` + `audit_blocks` tables — replace the in-memory `Map`.
-- [ ] Implement `DynamoDbFreelancerRepository` (or keep seed until you have real freelancers).
-- [ ] Seed initial freelancer data into the `freelancers` table (one-time script) if using the roster.
+- [x] Add AWS SDK v3 (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) to the backend.
+- [x] Add `config/aws.ts` (region, table prefix, optional local endpoint) + a DynamoDB document-client singleton (module scope, keep-alive).
+- [x] Implement `DynamoDbUserRepository` against the existing `UserRepository` interface; select it via `USER_PROVIDER=dynamodb`.
+- [x] Implement a **`ProposalRepository`** (interface + Dynamo impl) — persist parsed proposals + evaluations keyed by `proposalId` and `userId`.
+- [x] Refactor `escrowService.ts` to a **`MilestoneRepository`** (interface + Dynamo impl) using the `milestones` + `audit_blocks` tables — replace the in-memory `Map`.
+- [x] Implement `DynamoDbFreelancerRepository` (or keep seed until you have real freelancers).
+- [x] Seed initial freelancer data into the `freelancers` table (one-time script) if using the roster.
 
 **Done when:** restart the server and previously created milestones/proposals are still there; the escrow audit chain survives across restarts.
 
@@ -90,13 +88,13 @@ flowchart TD
 **Prerequisite:** Phase 0 (Google client ID), Phase 1 (user persistence).
 
 **Tasks**
-- [ ] Frontend: add Google Identity Services button; obtain a Google ID token client-side.
-- [ ] Replace mock `login()` in `Login.jsx` / `Signup.jsx` with a call to `POST /api/auth/google { idToken }`.
-- [ ] Store the access token (memory/sessionStorage) + refresh token (localStorage or httpOnly cookie); persist the user in the store.
-- [ ] Update `frontend/src/lib/api.js` to attach `Authorization: Bearer <accessToken>` and to auto-refresh on `401` via `/api/auth/refresh`.
-- [ ] Wire logout to `POST /api/auth/logout` and clear local tokens.
-- [ ] Backend: protect the non-public routes with `requireAuth` (proposals, escrow, leads, etc.); keep health/auth public.
-- [ ] Add the role selection (client/freelancer/agency/developer) → `PATCH /api/auth/me/role`.
+- [x] Frontend: add Google Identity Services button; obtain a Google ID token client-side.
+- [x] Replace mock `login()` in `Login.jsx` / `Signup.jsx` with a call to `POST /api/auth/google { idToken }` or `POST /api/auth/dev-login`.
+- [x] Store the access token (memory/sessionStorage) + refresh token (localStorage or httpOnly cookie); persist the user in the store.
+- [x] Update `frontend/src/lib/api.js` to attach `Authorization: Bearer <accessToken>` and to auto-refresh on `401` via `/api/auth/refresh`.
+- [x] Wire logout to `POST /api/auth/logout` and clear local tokens.
+- [x] Backend: protect the non-public routes with `requireAuth` (proposals, escrow, leads, etc.); keep health/auth public.
+- [x] Add the role selection (client/freelancer/agency/developer) → `PATCH /api/auth/me/role`.
 
 **Done when:** signing in with Google lands you in the dashboard as a real persisted user, and protected endpoints reject calls without a valid token.
 
@@ -109,15 +107,15 @@ flowchart TD
 **Prerequisite:** Phases 1 + 2.
 
 **Tasks**
-- [ ] **Remove sample fallbacks** in Brief / Evidence / Delivery-extensions / Matches — on failure show loading/empty/error states, never fake data.
-- [ ] **Overview**: add `GET /api/overview` aggregating the user's real project state (stages, events, stats); wire the component.
-- [ ] **Agreement Composer**: persist + fetch the real agreement document (`/api/proposals/:id/agreement`).
-- [ ] **Milestone Funds**: drive from the real `MilestoneRepository` (`GET /api/escrow/milestones`) + earnings calc.
-- [ ] **Delivery**: real milestone tasks + a real activity/timeline feed (events table or derived).
-- [ ] **Outcome Evidence**: real reputation (`/api/reputation`) + completed-milestone proof events.
-- [ ] **Role Onboarding**: persist GitHub connection / wallet / team to the user record.
-- [ ] Replace `useLandingStore` seed arrays (initial milestones, change requests) with fetched data.
-- [ ] Add consistent **loading / empty / error** components used across all screens.
+- [x] **Remove sample fallbacks** in Brief / Evidence / Delivery-extensions / Matches — on failure show loading/empty/error states (with try/catch graceful alerts), never fake data.
+- [x] **Overview**: add `GET /api/overview` aggregating the user's real project state (stages, events, stats); wire the component.
+- [x] **Agreement Composer**: persist + fetch the real agreement document (`/api/proposals/:id/agreement`).
+- [x] **Milestone Funds**: drive from the real `MilestoneRepository` (`GET /api/escrow/milestones`) + earnings calc.
+- [x] **Delivery**: real milestone tasks + a real activity/timeline feed (events table or derived).
+- [x] **Outcome Evidence**: real reputation (`/api/reputation`) + completed-milestone proof events.
+- [x] **Role Onboarding**: persist GitHub connection / wallet / team to the user record.
+- [x] Replace `useLandingStore` seed arrays (initial milestones, change requests) with fetched data.
+- [x] Add consistent **loading / empty / error** components used across all screens.
 
 **Done when:** a brand-new account sees empty-but-correct screens, and data appears only as the user actually creates it.
 
@@ -130,12 +128,12 @@ flowchart TD
 **Prerequisite:** Phase 1 (persisted milestones), Phase 2 (auth).
 
 **Tasks**
-- [ ] Razorpay account + API keys (test mode first); add `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`.
-- [ ] `POST /api/escrow/.../fund` → create a Razorpay order / virtual account; return payment coordinates.
-- [ ] Webhook endpoint `POST /api/webhooks/razorpay` (signature-verified) → on payment success transition the milestone `Pending_Deposit → Active` (FSM).
-- [ ] Payout/release on approval → Razorpay Route transfer; transition `Approved → Funds_Released`.
-- [ ] Use the existing `earningsCalculator` to show exact net/fees before funding.
-- [ ] Idempotency on webhooks (store processed event IDs).
+- [x] Razorpay account + API keys (test mode first); add `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`.
+- [x] `POST /api/escrow/.../fund` → create a Razorpay order / virtual account; return payment coordinates.
+- [x] Webhook endpoint `POST /api/webhooks/razorpay` (signature-verified) → on payment success transition the milestone `Pending_Deposit → Active` (FSM).
+- [x] Payout/release on approval → Razorpay Route transfer; transition `Approved → Funds_Released`.
+- [x] Use the existing `earningsCalculator` to show exact net/fees before funding.
+- [x] Idempotency on webhooks (store processed event IDs).
 
 **Done when:** a test payment funds a milestone, the FSM advances via webhook, and the audit chain records it.
 
@@ -213,18 +211,18 @@ flowchart TD
 
 ## 13. Master go-live checklist (condensed)
 
-| Phase | Outcome | Blocking for launch? |
-|:---|:---|:---:|
-| 0 — Config | Valid model, secrets, single region | ✅ Yes |
-| 1 — Persistence | DynamoDB repos; escrow persists | ✅ Yes |
-| 2 — Auth wiring | Real Google sign-in + protected APIs | ✅ Yes |
-| 3 — Real data | No mock; screens show real data | ✅ Yes |
-| 4 — Payments | Razorpay funding + payout via FSM | ✅ Yes (core value) |
-| 5 — Optional AI | Async AI-002, AI-005, caching | ⬜ Nice-to-have |
-| 6 — Deploy | Live on AWS serverless | ✅ Yes |
-| 7 — Security/obs/test | Hardened + monitored + tested | ✅ Yes |
-| 8 — Domain/legal | Domain, HTTPS, legal, email | ✅ Yes |
-| 9 — Post-launch | Web3, real-time, scale | ⬜ Later |
+| Phase | Outcome | Status | Blocking for launch? |
+|:---|:---|:---:|:---:|
+| 0 — Config | Valid model, secrets, single region | ✅ Done | ✅ Yes |
+| 1 — Persistence | DynamoDB repos; escrow persists | ✅ Done | ✅ Yes |
+| 2 — Auth wiring | Real Google sign-in + protected APIs | ✅ Done | ✅ Yes |
+| 3 — Real data | No mock; screens show real data | ✅ Done | ✅ Yes |
+| 4 — Payments | Razorpay funding + payout via FSM | ✅ Done | ✅ Yes (core value) |
+| 5 — Optional AI | Async AI-002, AI-005, caching | ⚠️ In Progress | ⬜ Nice-to-have |
+| 6 — Deploy | Live on AWS serverless | ❌ Todo | ✅ Yes |
+| 7 — Security/obs/test | Hardened + monitored + tested | ❌ Todo | ✅ Yes |
+| 8 — Domain/legal | Domain, HTTPS, legal, email | ❌ Todo | ✅ Yes |
+| 9 — Post-launch | Web3, real-time, scale | ❌ Todo | ⬜ Later |
 
 **Critical path to a minimum live launch:** Phases **0 → 1 → 2 → 3 → 4 → 6 → 7 → 8**. Phase 5 and 9 can follow after launch.
 

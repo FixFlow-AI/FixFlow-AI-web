@@ -27,35 +27,32 @@
 
 | Layer | Status | Details |
 |:---|:---:|:---|
-| **Frontend UI** | ✅ Built | 9 dashboard tabs, landing page, login/signup flows — all rendering with **mock data** |
-| **Zustand Store** | ✅ Built | Single `useLandingStore.js` managing page routing, mock milestones, brief text, and proposal state |
-| **Backend Skills** | ✅ Built | 9 standalone modules (`briefParser`, `confidenceGrid`, `escrowStateMachine`, `syncServer`, etc.) — all **exported functions**, not HTTP endpoints |
-| **API Contracts** | ✅ Designed | Full REST contract spec in `erd_and_api_contracts.md` covering Auth, Leads, Proposals, Portals, Escrows |
-| **Database Schema** | ✅ Designed | ERD with 10+ entities (User, Proposal, Escrow, Lead, etc.) — **not yet migrated** into Prisma |
-| **WebSocket Sync** | ✅ Built | `SyncServer` (backend) and `OptimisticSyncCoordinator` (frontend) — connected via `ws://` but **not integrated** into dashboard UI |
-| **HTTP Server** | ⚠️ Scaffolded | `package.json` includes Express + cors — but **no `src/index.ts` entry point or route files exist** |
-| **Database (Prisma)** | ❌ Missing | No `prisma/schema.prisma`, no migrations, no connection pooling |
-| **Redis / BullMQ** | ❌ Missing | Documented in system design, but zero implementation |
-| **Auth System** | ❌ Missing | JWT/session infrastructure completely absent |
+| **Frontend UI** | ✅ Built & Wired | 9 dashboard tabs, landing page, login/signup flows — fully wired with **real API data** (retaining try/catch graceful alerts) |
+| **Zustand Store** | ✅ Built & Integrated | Single `useLandingStore.js` managing page routing, active user, tokens, and active proposal state |
+| **Backend Skills** | ✅ Built (Python) | Core AI skills migrated to Python `ai-service`, while FSM, matching, and telemetry stay in TS |
+| **API Contracts** | ✅ Fully Implemented | All REST endpoints in `erd_and_api_contracts.md` are active and handled in `index.ts` |
+| **Database Schema** | ✅ Implemented (DynamoDB) | Replaced PostgreSQL/Prisma with high-performance DynamoDB repository pattern (`PERSISTENCE_PROVIDER=dynamodb`) |
+| **WebSocket Sync** | ✅ Built & Integrated | Connected to client editor pages in the frontend for live coordination |
+| **HTTP Server** | ✅ Fully Operational | Express server in `backend/src/index.ts` with all REST routes |
+| **Database Repos** | ✅ Complete | Users, Proposals, and Milestones persist in DynamoDB repositories |
+| **Redis / BullMQ** | ❌ Missing | Not yet implemented; reserved for AI-005 background crawling |
+| **Auth System** | ✅ Complete | Google ID token verification and dev login are fully operational |
 
-### The Core Problem
+### The Core Integration
 
 ```
-┌──────────────┐        ❌ NO BRIDGE EXISTS        ┌──────────────────┐
-│              │                                    │                  │
-│   Frontend   │ ◄────── Mock Data Only ──────────► │   Backend Skills │
-│  (React/Vite)│                                    │   (TypeScript)   │
-│              │                                    │                  │
-└──────────────┘                                    └──────────────────┘
-       │                                                    │
-       │  Uses Zustand with hardcoded                       │  Functions exist but
-       │  initial values & setTimeout                       │  have no HTTP routes,
-       │  simulations instead of                            │  no database writes,
-       │  real API calls                                    │  no auth context
-       │                                                    │
-       ▼                                                    ▼
-   UI renders correctly,                             Logic is tested,
-   but nothing persists                              but unreachable
+┌──────────────┐         API CALLS (Bearer Token)         ┌──────────────────┐
+│              │ ───────────────────────────────────────► │   TS Backend     │
+│   Frontend   │                                          │  (REST/Gateway)  │
+│  (React/Vite)│ ◄─────────────────────────────────────── │                  │
+└──────────────┘         Real Persistent JSON             └──────────────────┘
+                                                                │      ▲
+                                                  internal HTTP │      │ validated JSON
+                                                                ▼      │
+                                                          ┌──────────────────┐
+                                                          │ Python AI Service│
+                                                          │   (Stateless)    │
+                                                          └──────────────────┘
 ```
 
 ---
@@ -71,50 +68,49 @@ graph LR
     classDef partial fill:#eab308,stroke:#ca8a04,stroke-width:2px,color:#000
 
     subgraph Frontend Components
-        Login["Login.jsx"]
-        Signup["Signup.jsx"]
-        Brief["BriefIntelligence.jsx"]
-        Proposal["ProposalGenerator.jsx"]
-        Confidence["EvidenceConfidence.jsx"]
-        Agreement["AgreementComposer.jsx"]
-        Milestone["MilestoneFunds.jsx"]
-        Delivery["DeliveryControl.jsx"]
-        Outcome["OutcomeEvidence.jsx"]
-        Overview["Overview.jsx"]
-        Onboard["RoleOnboarding.jsx"]
+        Login["Login.jsx"]:::ready
+        Signup["Signup.jsx"]:::ready
+        Brief["BriefIntelligence.jsx"]:::ready
+        Proposal["ProposalGenerator.jsx"]:::ready
+        Confidence["EvidenceConfidence.jsx"]:::ready
+        Agreement["AgreementComposer.jsx"]:::ready
+        Milestone["MilestoneFunds.jsx"]:::ready
+        Delivery["DeliveryControl.jsx"]:::ready
+        Outcome["OutcomeEvidence.jsx"]:::ready
+        Overview["Overview.jsx"]:::ready
+        Onboard["RoleOnboarding.jsx"]:::ready
     end
 
-    subgraph Missing Infrastructure
-        AuthAPI["Auth API Routes"]:::missing
-        PrismaDB["Prisma + PostgreSQL"]:::missing
-        RedisLayer["Redis + BullMQ"]:::missing
-        S3Store["S3 File Storage"]:::missing
-        SSE["SSE Streaming"]:::missing
+    subgraph Infrastructure
+        AuthAPI["Auth API Routes"]:::ready
+        DynamoDB["DynamoDB Persistence"]:::ready
+        RedisLayer["Redis + BullMQ (AI-005)"]:::missing
+        S3Store["S3 File Storage"]:::ready
     end
 
-    subgraph Ready Backend Skills
-        BriefParser["briefParser.ts"]:::ready
-        ConfGrid["confidenceGrid.ts"]:::ready
-        EscrowFSM["escrowStateMachine.ts"]:::ready
-        SyncSrv["syncServer.ts"]:::ready
-        EarnCalc["earningsCalculator.js"]:::ready
-        RepCalc["reputationCalculator.js"]:::ready
-        ClientScore["clientScoring.js"]:::ready
-        Interview["interviewGenerator.ts"]:::ready
-        CtxExt["contextExtensions.ts"]:::ready
+    subgraph Backend Skills & Services
+        BriefParser["brief_parser.py (Python)"]:::ready
+        ConfGrid["confidence_grid.py (Python)"]:::ready
+        EscrowFSM["escrowStateMachine.ts (TS)"]:::ready
+        SyncSrv["syncServer.ts (TS)"]:::ready
+        EarnCalc["earningsCalculator.js (TS)"]:::ready
+        RepCalc["reputationCalculator.js (TS)"]:::ready
+        ClientScore["clientScoring.js (TS)"]:::ready
+        Interview["interview.py (Python)"]:::ready
+        CtxExt["extensions.py (Python)"]:::ready
     end
 
-    Login -->|"POST /api/auth/login"| AuthAPI
-    Signup -->|"POST /api/auth/register"| AuthAPI
-    Brief -->|"POST /api/proposals (brief)"| BriefParser
-    Proposal -->|"GET /api/proposals/:id/stream"| SSE
+    Login -->|"POST /api/auth/google"| AuthAPI
+    Signup -->|"POST /api/auth/dev-login"| AuthAPI
+    Brief -->|"POST /api/proposals/parse"| BriefParser
+    Proposal -->|"GET /api/proposals/:id"| DynamoDB
     Confidence -->|"Auditor + Feasibility agents"| ConfGrid
-    Agreement -->|"POST /api/escrows"| EscrowFSM
-    Milestone -->|"POST /api/escrows/:id/milestones/:id/approve"| EscrowFSM
+    Agreement -->|"POST /api/escrow/milestones"| EscrowFSM
+    Milestone -->|"POST /api/escrow/milestones/:id/transition"| EscrowFSM
     Milestone -->|"Fee calculation"| EarnCalc
     Delivery -->|"WebSocket /sync"| SyncSrv
     Outcome -->|"Reputation metrics"| RepCalc
-    Onboard -->|"POST /api/freelancer/github-scan"| RedisLayer
+    Onboard -->|"GitHub connector"| DynamoDB
     Overview -->|"Client scores"| ClientScore
 ```
 

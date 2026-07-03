@@ -10,10 +10,10 @@
 |:---|:---|
 | **Feature ID** | `AI-003` |
 | **Priority** | 🟡 High (Solves "hiring takes too long" — Client Pain Point #3) |
-| **Backend Skill** | [interviewGenerator.ts](../../backend/src/skills/interviewGenerator.ts) |
-| **Gemini Model** | `gemini-2.5-pro` |
+| **Backend Skill** | [interview.py](../../ai-service/app/features/interview.py) |
+| **Gemini Model** | `gemini-2.5-pro` (via Python AI Service proxy) |
 | **Depends On** | [AI-002: Confidence Grid](./ai_002_confidence_grid_self_correction.md) (for skill gap detection) |
-| **Status** | ✅ Skill module built · ❌ No HTTP route · ❌ No frontend UI |
+| **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/interview-questions` wired · ✅ Frontend `EvidenceConfidence.jsx` UI integrated |
 
 ---
 

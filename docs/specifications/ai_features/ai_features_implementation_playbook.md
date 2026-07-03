@@ -8,18 +8,18 @@
 
 ## 1. Current State Snapshot (read this first)
 
-This reflects what is **actually wired today**, not the original spec assumptions. The earlier specs say "❌ No HTTP route" — that is now out of date for AI-001 through AI-004.
+This reflects what is **actually wired today**, including the stateless Python AI service migration, where AI-001, AI-002, AI-003, and AI-004 core generation logic lives in `ai-service/app/features/` and is proxied through the TS backend.
 
 | Feature | Skill module | HTTP route | Frontend UI | What's left to do |
 |:---|:---:|:---:|:---:|:---|
-| **AI-001** Brief Parsing | ✅ `briefParser.ts` | ✅ `POST /api/proposals/parse` | ⚠️ Wired in `BriefIntelligence.jsx` | Render full proposal everywhere; optional SSE streaming |
-| **AI-002** Confidence Grid | ✅ `confidenceGrid.ts` | ✅ `POST /api/proposals/evaluate` | ❌ Mock in `EvidenceConfidence.jsx` | Wire the evaluate call + score gauges |
-| **AI-003** Interview Gen | ✅ `interviewGenerator.ts` | ✅ `POST /api/interview-questions` | ❌ None | Build an Interview panel UI |
-| **AI-004** Contract Extensions | ✅ `contextExtensions.ts` | ✅ `POST /api/contract-extensions` | ❌ None | Add a "Suggest next phase" widget |
+| **AI-001** Brief Parsing | ✅ `brief_parser.py` (Python) | ✅ `POST /api/proposals/parse` | ✅ Wired in `BriefIntelligence.jsx` | None |
+| **AI-002** Confidence Grid | ✅ `confidence_grid.py` (Python) | ✅ `POST /api/proposals/evaluate` | ✅ Wired in `EvidenceConfidence.jsx` | None |
+| **AI-003** Interview Gen | ✅ `interview.py` (Python) | ✅ `POST /api/interview-questions` | ✅ Wired in `EvidenceConfidence.jsx` | None |
+| **AI-004** Contract Extensions | ✅ `extensions.py` (Python) | ✅ `POST /api/contract-extensions` | ✅ Wired in `DeliveryControl.jsx` | None |
 | **AI-005** Opportunity Intelligence | ❌ Not built | ❌ None | ❌ None | Build connectors → scoring → board (largest effort) |
-| **AI-006** Matching Engine | ⚠️ Reuses calculators | ❌ None | ❌ None | Build `matchingEngine.ts` + `/api/leads/match` + shortlist UI |
+| **AI-006** Matching Engine | ✅ `matchingEngine.ts` (TS) | ✅ `POST /api/leads/match` | ✅ Wired in `MatchResults.jsx` | None |
 
-Supporting endpoints already live: `/api/earnings`, `/api/reputation`, `/api/client-score`, the full `/api/escrow/*` state machine, and the `ws://…/sync` collaboration socket. The frontend API client (`frontend/src/lib/api.js`) already has typed methods for every endpoint above.
+Supporting endpoints already live: `/api/earnings`, `/api/reputation`, `/api/client-score`, the full `/api/escrow/*` state machine, and the `ws://…/sync` collaboration socket. The frontend API client (`frontend/src/lib/api.js`) has fully integrated typed methods for all active endpoints.
 
 ```mermaid
 graph LR
@@ -27,12 +27,12 @@ graph LR
     classDef partial fill:#eab308,stroke:#ca8a04,color:#000
     classDef todo fill:#ef4444,stroke:#dc2626,color:#fff
 
-    A1["AI-001<br/>route ✓ / UI ⚠️"]:::partial
-    A2["AI-002<br/>route ✓ / UI ✗"]:::partial
-    A3["AI-003<br/>route ✓ / UI ✗"]:::partial
-    A4["AI-004<br/>route ✓ / UI ✗"]:::partial
+    A1["AI-001<br/>route ✓ / UI ✓"]:::done
+    A2["AI-002<br/>route ✓ / UI ✓"]:::done
+    A3["AI-003<br/>route ✓ / UI ✓"]:::done
+    A4["AI-004<br/>route ✓ / UI ✓"]:::done
     A5["AI-005<br/>nothing yet"]:::todo
-    A6["AI-006<br/>nothing yet"]:::todo
+    A6["AI-006<br/>route ✓ / UI ✓"]:::done
 
     A1 --> A2 --> A3
     A1 --> A6 --> A3

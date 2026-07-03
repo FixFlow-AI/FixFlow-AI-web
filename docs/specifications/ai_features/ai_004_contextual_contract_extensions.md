@@ -10,10 +10,10 @@
 |:---|:---|
 | **Feature ID** | `AI-004` |
 | **Priority** | 🟢 Medium-High (Retention multiplier — solves "constant income hustle") |
-| **Backend Skill** | [contextExtensions.ts](../../backend/src/skills/contextExtensions.ts) |
-| **Gemini Model** | `gemini-2.5-pro` |
+| **Backend Skill** | [extensions.py](../../ai-service/app/features/extensions.py) |
+| **Gemini Model** | `gemini-2.5-pro` (via Python AI Service proxy) |
 | **Depends On** | Completed milestones (Escrow FSM) + workspace history |
-| **Status** | ✅ Skill module built · ❌ No HTTP route · ❌ No frontend widget |
+| **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/contract-extensions` wired · ✅ Frontend `DeliveryControl.jsx` UI integrated |
 
 ---
 

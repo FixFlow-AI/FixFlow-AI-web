@@ -8,16 +8,16 @@ It acts as an architectural blueprint and implementation guide for developers an
 
 ## 🗺️ 1. Problem Resolution & Code Gap Analysis
 
-The table below maps the strategic value propositions (UVPs) against what is **currently implemented** in the codebase and highlights the **extra technical modules** needed to bridge the remaining gaps.
+The table below maps the strategic value propositions (UVPs) against the implemented codebase.
 
-| Paradigm | Pain Point | Core UVP | Current Code State | Extra Module Needed (Gaps) |
+| Paradigm | Pain Point | Core UVP | Current Code State | Implementation Details |
 | :--- | :--- | :--- | :--- | :--- |
-| **Freelancer** | **Fees Eat Earnings** | Transparent Earnings Engine | Schema records total amount. No fee separation. | **Extra Module 1**: `earningsCalculator.js` to calculate tiered platform, payment, and tax cuts. |
-| **Freelancer / Client** | **Opaque Algorithms / Trust** | Verifiable Reputation & DID | Credential records minting state; no metrics. | **Extra Module 2**: `reputationCalculator.js` to compute verified metrics for Soulbound Token metadata. |
-| **Freelancer** | **Unreliable Clients** | Client Quality Scoring | Lead records static `company` JSON. | **Extra Module 3**: `clientScoring.js` to compute Scope Stability, Payment Speed, and Risk Labels. |
-| **Client** | **Hiring Takes Too Long** | Fast Hire & Vetting | Matches leads based on skills score. | **Extra Module 4**: `interviewGenerator.ts` to auto-generate technical vetting questions per candidate. |
-| **Freelancer** | **Constant Income Hustle** | Workspace Retention | Persistent workspaces exist. | **Extra Module 5**: `contextExtensions.ts` to vectorize historical context and suggest follow-up milestones. |
-| **Security** | **Payment Hijacking Risks** | Secure MFA Payout Release | FSM transitions are audited. | **Extra Module 6**: Integrates MFA OTP directly inside `escrowStateMachine.ts` with crypto signatures. |
+| **Freelancer** | **Fees Eat Earnings** | Transparent Earnings Engine | ✅ Fully Implemented | `earningsCalculator.js` calculates tiered platform, Razorpay gateway, and tax cuts. |
+| **Freelancer / Client** | **Opaque Algorithms / Trust** | Verifiable Reputation & DID | ✅ Fully Implemented | `reputationCalculator.js` computes verified metrics for Soulbound Token metadata. |
+| **Freelancer** | **Unreliable Clients** | Client Quality Scoring | ✅ Fully Implemented | `clientScoring.js` computes Scope Stability, Payment Speed, and Risk Labels. |
+| **Client** | **Hiring Takes Too Long** | Fast Hire & Vetting | ✅ Fully Implemented | `interview.py` (Python AI Service) auto-generates technical vetting questions per candidate. |
+| **Freelancer** | **Constant Income Hustle** | Workspace Retention | ✅ Fully Implemented | `extensions.py` (Python AI Service) suggests follow-up milestones from finished work. |
+| **Security** | **Payment Hijacking Risks** | Secure MFA Payout Release | ✅ Fully Implemented | Integrates MFA verification directly inside `escrowService.ts` and FSM transitions. |
 
 ---
 
@@ -261,9 +261,10 @@ Here is the recommended execution path to implement these extra components:
 ---
 
 ## 📂 5. Target File Index
-Create and link these files directly in the codebase:
+The implemented files in the codebase are:
 1. `backend/src/skills/earningsCalculator.js` $\rightarrow$ Calculates fees.
-2. `backend/src/skills/reputationCalculator.js` $\rightarrow$ Evaluates Trust.
-3. `backend/src/skills/clientScoring.js` $\rightarrow$ Rates clients.
-4. `backend/src/skills/interviewGenerator.ts` $\rightarrow$ Formulates vetting Qs.
-5. `backend/src/skills/contextExtensions.ts` $\rightarrow$ Drives contract retention.
+2. `backend/src/skills/reputationCalculator.js` $\rightarrow$ Evaluates Trust and exports SBT metadata.
+3. `backend/src/skills/clientScoring.js` $\rightarrow$ Rates client behavior.
+4. `ai-service/app/features/interview.py` $\rightarrow$ Formulates custom technical vetting questions in Python.
+5. `ai-service/app/features/extensions.py` $\rightarrow$ Suggests contract extensions in Python.
+6. `backend/src/skills/escrowStateMachine.ts` $\rightarrow$ Manages milestone FSM transitions and MFA gates.
