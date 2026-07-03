@@ -1,4 +1,31 @@
 {
-  "_comment": "Sample/seed user store used only when USER_PROVIDER=seed. Real users are created automatically on first Google sign-in. Replace by setting USER_PROVIDER=http (USER_API_URL) or by implementing a database-backed UserRepository (e.g. DynamoDB).",
-  "users": []
+  "users": [
+    {
+      "id": "1c813e5f-e04a-48cf-bebe-a89d4c528037",
+      "email": "developer@company.com",
+      "emailVerified": true,
+      "name": "Jane Developer",
+      "picture": "https://lh3.googleusercontent.com/a/default-user",
+      "googleSub": "dev-sub-123456",
+      "role": "client",
+      "createdAt": "2026-07-02T07:01:56.797Z",
+      "updatedAt": "2026-07-02T07:03:42.465Z",
+      "refreshTokenHashes": []
+    },
+    {
+      "id": "23eee7b9-75b4-4820-b6c6-5eab02a96410",
+      "email": "suvampersonal555@gmail.com",
+      "emailVerified": true,
+      "name": "Suvam Paul",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJUMcri-tQtvtIDdC5sPUbQMs5oQ8y6AotvS9IbS2YRGc74UUQ=s96-c",
+      "googleSub": "106512630249992472944",
+      "role": "client",
+      "createdAt": "2026-07-02T07:03:51.349Z",
+      "updatedAt": "2026-07-03T08:33:39.272Z",
+      "refreshTokenHashes": [
+        "854176339118618476b0fafa5234ff230103c9d9bb1d3727fb5b68735739efa5",
+        "6991cc9fe890e1c370e75fdea59e2b55e1627dfe094a8f1399d52658ea015037"
+      ]
+    }
+  ]
 }

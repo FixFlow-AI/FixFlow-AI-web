@@ -9,9 +9,13 @@ import {
   RefreshCw,
   Paperclip,
   ChevronRight,
+  ChevronDown,
   HelpCircle,
   Minus,
   ArrowRight,
+  Shield,
+  MessageSquare,
+  Bookmark,
 } from "lucide-react";
 
 /* Static attachments shown in the mockup */
@@ -40,6 +44,11 @@ export function BriefIntelligence() {
   const [text, setText] = useState(rawBriefText);
   const [parsing, setParsing] = useState(false);
   const [parsingStep, setParsingStep] = useState(0);
+
+  /* ── Decision interaction state ── */
+  const [expandedDecision, setExpandedDecision] = useState(null); // index or null
+  const [decisionStatuses, setDecisionStatuses] = useState({}); // { [index]: "clarification_requested" | "assumed" }
+  const [noSelectionPrompt, setNoSelectionPrompt] = useState(false);
 
   const handleParse = async (e) => {
     e.preventDefault();
@@ -88,9 +97,19 @@ export function BriefIntelligence() {
         }))
       : defaultRequirements;
 
+  /* Preserve full Risk objects so we can show severity / category / mitigation */
   const decisions =
     parsedProposal && parsedProposal.risks
-      ? parsedProposal.risks.map((r) => r.label || r.description || r)
+      ? parsedProposal.risks.map((r) =>
+          typeof r === "string"
+            ? { label: r, severity: 5, mitigation: "", category: "General" }
+            : {
+                label: r.label || r.description || "Unresolved risk",
+                severity: r.severity ?? 5,
+                mitigation: r.mitigation || "",
+                category: r.category || "General",
+              }
+        )
       : defaultDecisions;
 
   const reqCounts = {
@@ -378,45 +397,223 @@ export function BriefIntelligence() {
 
           {isBriefParsed ? (
             <>
-              {decisions.map((q) => (
+              {decisions.map((q, idx) => {
+                const isExpanded = expandedDecision === idx;
+                const status = decisionStatuses[idx]; // undefined | "clarification_requested" | "assumed"
+                const severityColor =
+                  q.severity <= 3 ? "#16a34a" : q.severity <= 6 ? "#d97706" : "#dc2626";
+                const severityBg =
+                  q.severity <= 3 ? "#f0fdf4" : q.severity <= 6 ? "#fffbeb" : "#fef2f2";
+                const isSelected = expandedDecision === idx;
+
+                return (
+                  <div key={q.label + idx}>
+                    {/* Clickable row */}
+                    <div
+                      onClick={() => {
+                        setExpandedDecision(isExpanded ? null : idx);
+                        setNoSelectionPrompt(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "14px 0",
+                        borderBottom: isExpanded ? "none" : "1px solid #f1f5f9",
+                        cursor: "pointer",
+                        background: isSelected ? "#f8fafc" : "transparent",
+                        borderRadius: isSelected ? 8 : 0,
+                        paddingLeft: isSelected ? 8 : 0,
+                        paddingRight: isSelected ? 8 : 0,
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: status === "clarification_requested" ? "#eff6ff" : status === "assumed" ? "#fffbeb" : "#fff7ed",
+                          border: `1px solid ${status === "clarification_requested" ? "#93c5fd" : status === "assumed" ? "#fcd34d" : "#fed7aa"}`,
+                          display: "grid",
+                          placeItems: "center",
+                          flexShrink: 0,
+                          color: status === "clarification_requested" ? "#2563eb" : status === "assumed" ? "#d97706" : "#ea580c",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        {status === "clarification_requested" ? (
+                          <MessageSquare size={13} />
+                        ) : status === "assumed" ? (
+                          <Bookmark size={13} />
+                        ) : (
+                          <HelpCircle size={14} />
+                        )}
+                      </span>
+                      <span style={{ fontSize: 13, color: "#334155", flex: 1, fontWeight: 500 }}>
+                        {q.label}
+                      </span>
+                      {/* Status badge (if resolved) */}
+                      {status && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: 12,
+                            background: status === "clarification_requested" ? "#eff6ff" : "#fffbeb",
+                            color: status === "clarification_requested" ? "#2563eb" : "#d97706",
+                            border: `1px solid ${status === "clarification_requested" ? "#bfdbfe" : "#fde68a"}`,
+                            whiteSpace: "nowrap",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          {status === "clarification_requested" ? "Clarification sent" : "Assumed"}
+                        </span>
+                      )}
+                      {/* Animated chevron */}
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          transition: "transform 0.25s ease",
+                          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ChevronRight size={16} style={{ color: "#94a3b8" }} />
+                      </span>
+                    </div>
+
+                    {/* Expanded detail card */}
+                    <div
+                      style={{
+                        maxHeight: isExpanded ? 300 : 0,
+                        overflow: "hidden",
+                        transition: "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease",
+                        opacity: isExpanded ? 1 : 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "12px 14px",
+                          margin: "0 0 12px",
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 10,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 10,
+                        }}
+                      >
+                        {/* Category + Severity row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: "3px 10px",
+                              borderRadius: 12,
+                              background: "#f1f5f9",
+                              color: "#475569",
+                              border: "1px solid #e2e8f0",
+                            }}
+                          >
+                            {q.category}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: "3px 10px",
+                              borderRadius: 12,
+                              background: severityBg,
+                              color: severityColor,
+                              border: `1px solid ${severityColor}30`,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Shield size={11} />
+                            Severity {q.severity}/10
+                          </span>
+                        </div>
+
+                        {/* Mitigation */}
+                        {q.mitigation && (
+                          <div>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                              Mitigation
+                            </span>
+                            <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
+                              {q.mitigation}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* No-selection prompt */}
+              {noSelectionPrompt && expandedDecision === null && (
                 <div
-                  key={typeof q === "string" ? q : q.label || JSON.stringify(q)}
                   style={{
+                    padding: "8px 12px",
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    color: "#92400e",
                     display: "flex",
                     alignItems: "center",
-                    gap: 10,
-                    padding: "14px 0",
-                    borderBottom: "1px solid #f1f5f9",
-                    cursor: "pointer",
+                    gap: 6,
+                    marginTop: 8,
+                    animation: "fadeIn 0.3s ease",
                   }}
                 >
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "#fff7ed",
-                      border: "1px solid #fed7aa",
-                      display: "grid",
-                      placeItems: "center",
-                      flexShrink: 0,
-                      color: "#ea580c",
-                    }}
-                  >
-                    <HelpCircle size={14} />
-                  </span>
-                  <span style={{ fontSize: 13, color: "#334155", flex: 1, fontWeight: 500 }}>
-                    {typeof q === "string" ? q : q.label || q.description || "Unresolved risk"}
-                  </span>
-                  <ChevronRight size={16} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                  <AlertTriangle size={13} />
+                  Click a decision item above first, then choose an action.
                 </div>
-              ))}
+              )}
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 20 }}>
-                <button type="button" className="panel-btn" style={{ width: "100%" }}>
+                <button
+                  type="button"
+                  className="panel-btn"
+                  style={{ width: "100%" }}
+                  onClick={() => {
+                    if (expandedDecision === null) {
+                      setNoSelectionPrompt(true);
+                      return;
+                    }
+                    setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "clarification_requested" }));
+                    setNoSelectionPrompt(false);
+                    // Auto-collapse after marking
+                    setTimeout(() => setExpandedDecision(null), 600);
+                  }}
+                >
+                  <MessageSquare size={14} />
                   Request clarification
                 </button>
-                <button type="button" className="panel-btn--ghost panel-btn" style={{ width: "100%" }}>
+                <button
+                  type="button"
+                  className="panel-btn--ghost panel-btn"
+                  style={{ width: "100%" }}
+                  onClick={() => {
+                    if (expandedDecision === null) {
+                      setNoSelectionPrompt(true);
+                      return;
+                    }
+                    setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "assumed" }));
+                    setNoSelectionPrompt(false);
+                    // Auto-collapse after marking
+                    setTimeout(() => setExpandedDecision(null), 600);
+                  }}
+                >
+                  <Bookmark size={14} />
                   Mark as assumption
                 </button>
               </div>
