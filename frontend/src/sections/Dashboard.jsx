@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Overview } from "./dashboard/Overview";
 import { BriefIntelligence } from "./dashboard/BriefIntelligence";
@@ -62,9 +62,25 @@ const tabMap = {
 };
 
 export function Dashboard() {
-  const { user, parsedProposal, dashboardTab, setDashboardTab, logout } =
+  const { user, parsedProposal, dashboardTab, setDashboardTab, logout, hydrateLatestProposal } =
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    // If we don't have the proposal in-memory but are logged in, try loading the user's latest proposal from the database.
+    if (!parsedProposal) {
+      api.listProposals()
+        .then((res) => {
+          if (res?.proposals && res.proposals.length > 0) {
+            // Rehydrate the store with the latest proposal (which is sorted by descending createdAt)
+            hydrateLatestProposal(res.proposals[0]);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to automatically rehydrate proposal:", err);
+        });
+    }
+  }, [parsedProposal, hydrateLatestProposal]);
 
   const ActivePanel = tabMap[dashboardTab] || Overview;
 

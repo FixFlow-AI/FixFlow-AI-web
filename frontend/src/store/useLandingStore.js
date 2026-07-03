@@ -174,6 +174,45 @@ export const useLandingStore = create((set) => ({
       }
       return { changeRequests: updatedReqs };
     }),
+  hydrateLatestProposal: (storedProposal) =>
+    set((state) => {
+      if (!storedProposal) return {};
+
+      // Auto-reconstruct generatedProposal if we have parsedProposal
+      let generatedMarkdown = "";
+      const p = storedProposal.proposal;
+      if (p) {
+        const featureLines = (p.features || [])
+          .map((f) => `- **${f.title}** (${f.area || ""}, ${f.complexity || ""} complexity): ${f.description || ""}`)
+          .join("\n");
+        const milestoneLines = (p.timeline || [])
+          .map((phase, idx) => `- **Phase ${idx + 1}: ${phase.phase}** (${phase.duration}) — ${(phase.tasks || []).join(", ")}`)
+          .join("\n");
+        const riskLines = (p.risks || [])
+          .map((r) => `- **${r.label || r.description}** (severity ${r.severity}): ${r.mitigation || ""}`)
+          .join("\n");
+
+        generatedMarkdown = [
+          "# PROJECT PROPOSAL\n\n",
+          `## 1. Project Summary\n${p.project_summary || ""}\n\n`,
+          `## 2. Scope & Features\n${featureLines}\n\n`,
+          `## 3. Timeline & Milestones\n${milestoneLines}\n\n`,
+          `## 4. Risks & Mitigations\n${riskLines}`,
+        ].join("");
+      }
+
+      return {
+        rawBriefText: storedProposal.briefText || "",
+        isBriefParsed: Boolean(storedProposal.proposal),
+        parsedProposal: storedProposal.proposal || null,
+        parsedProposalId: storedProposal.proposalId || null,
+        briefSource: storedProposal.proposal ? "api" : null,
+        isProposalGenerated: Boolean(storedProposal.proposal),
+        generatedProposal: generatedMarkdown,
+        confidenceResult: storedProposal.evaluation || null,
+        confidenceSource: storedProposal.evaluation ? "api" : null,
+      };
+    }),
   resetMockData: () =>
     set({
       isAgreementSigned: { client: false, freelancer: false },
