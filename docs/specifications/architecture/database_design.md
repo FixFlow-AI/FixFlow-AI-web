@@ -364,3 +364,25 @@ The newly implemented calculation and AI generation modules map directly to the 
 ### E. Contextual Contract Extensions (`contextExtensions.ts`)
 *   **Prisma Mapping**: Vectorizes and analyzes completed deliverables in `Escrow` and history logs to draft follow-up scopes.
 *   **Attributes Generated**: Generates `suggestedMilestones` and draft proposal content used to initialize a new `Proposal` in the corresponding `Workspace`.
+
+---
+
+## 🧱 5. Extended Schema — Role-Based Platform (Client / Freelancer / Developer)
+
+The three-role platform adds new entities on top of the base schema above. These are **non-breaking additions** (new models + new nullable fields); the existing Client flow is unchanged.
+
+**Authoritative definitions:** [`../roles/04_schema_and_api_changes.md`](../roles/04_schema_and_api_changes.md)
+
+New/changed models introduced there:
+
+| Model / change | Purpose | Spec |
+|---|---|---|
+| `User.authProvider`, `githubUsername`, `githubUserId` | Support GitHub-only freelancer login | [roles/00](../roles/00_role_architecture_overview.md) |
+| `GithubScanJob` | Track multi-segment deep GitHub scan progress | [roles/01](../roles/01_freelancer_github_onboarding.md) |
+| `FreelancerSkill` (`editable=false`) | Tamper-proof, code-verified skills | [roles/01](../roles/01_freelancer_github_onboarding.md) |
+| `FreelancerProject` | Verified top projects / work experience | [roles/01](../roles/01_freelancer_github_onboarding.md) |
+| `ProfileConfidence` | Profile confidence score + band | [roles/02](../roles/02_freelancer_confidence_growth_plan.md) |
+| `GrowthPlan` + `GrowthItem` | AI growth plan with timelines | [roles/02](../roles/02_freelancer_confidence_growth_plan.md) |
+| `DevProject` + `DevProjectMember` + `DevTask` | Developer multi-project workspace | [roles/03](../roles/03_developer_workspace_and_projects.md) |
+
+> Implementation note: the live code uses the repository pattern (DynamoDB/seed/in-memory), not live Prisma. Each new entity needs both a Prisma model (target) and a `*Repository.ts` mirroring `proposalRepository.ts`.

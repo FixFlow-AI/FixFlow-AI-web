@@ -489,3 +489,28 @@ All API requests must communicate over HTTPS. Non-public endpoints require verif
 * **Error Responses**:
   - `400 Bad Request` (Invalid code).
   - `403 Forbidden` (`MFARequiredError` thrown by FSM if MFA verifier hook is missing/fails).
+
+---
+
+## 🧩 3. Extended API Contracts — Role-Based Platform
+
+The Client / Freelancer / Developer role system adds the endpoints below. **Authoritative contracts + request/response shapes:** [`../roles/04_schema_and_api_changes.md`](../roles/04_schema_and_api_changes.md).
+
+### New auth
+- `POST /api/auth/github` — GitHub OAuth code exchange (freelancer-only login; also optional for developers). `POST /api/auth/google` now rejects a freelancer intent.
+
+### Freelancer (GitHub scan, confidence, growth)
+- `POST /api/freelancer/scan`, `GET /api/freelancer/scan/:jobId`, `GET /api/freelancer/scan/:jobId/stream` (SSE segment reveal)
+- `GET /api/freelancer/profile` (skills are read-only — no edit endpoint by design)
+- `POST /api/freelancer/rescan`
+- `GET /api/freelancer/confidence`, `GET /api/freelancer/growth-plan`, `PATCH /api/freelancer/growth-plan/items/:id`, `POST /api/freelancer/growth-plan/regenerate`
+
+### Developer (projects, tasks, teams)
+- `POST/GET /api/dev/projects`, `GET/PATCH /api/dev/projects/:id`, `POST /api/dev/projects/:id/regenerate-plan`
+- `GET/POST /api/dev/projects/:id/tasks`, `PATCH /api/dev/projects/:id/tasks/:taskId`
+- `POST /api/dev/projects/:id/members`
+
+### AI service (new)
+- `POST /ai/github/summarize`, `POST /ai/growth/plan`
+
+All new protected routes are gated by a new `requireRole(...)` middleware layered on `requireAuth`. See the [role permission matrix](../roles/00_role_architecture_overview.md#4-permission-matrix).
