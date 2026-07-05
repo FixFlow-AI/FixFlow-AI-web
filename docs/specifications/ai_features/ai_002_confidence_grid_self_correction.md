@@ -11,7 +11,7 @@
 | **Feature ID** | `AI-002` |
 | **Priority** | 🔴 Critical (Quality gate — prevents bad proposals from reaching clients) |
 | **Backend Skill** | [confidence_grid.py](../../ai-service/app/features/confidence_grid.py) |
-| **Gemini Model** | `gemini-2.5-pro` (both agents + optimizer via Python service proxy) |
+| **Gemini Model** | `gemini-3.5-flash` (both agents; optimizer may use `gemini-3.1-pro` for hard cases) · fallback `gemini-3.1-flash-lite` — via Python service proxy |
 | **Depends On** | [AI-001: Semantic Brief Parsing](./ai_001_semantic_brief_parsing.md) |
 | **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/proposals/evaluate` wired · ✅ Frontend `EvidenceConfidence.jsx` UI integrated |
 
