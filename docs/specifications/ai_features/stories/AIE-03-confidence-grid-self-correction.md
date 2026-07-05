@@ -2,6 +2,7 @@
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
 > **Migration status**: 🟢 **Threshold + cycles are already env-configurable** (`CONFIDENCE_THRESHOLD`, `MAX_CORRECTION_CYCLES` in `ai-service/app/config.py`). Remaining work: explicit optimizer-failure handling, regression guard, and the per-cycle audit trail.
+> **✅ Verified status (2026-07-05): 🟡 ~30% done.** Confirmed in code: `confidence_grid.py` reads both env values; but `optimize_proposal` returns the original on error while the loop still sets `optimized=True`, and there is no `CycleRecord` audit or regression guard. **Priority: 🟡 P2** (after async eval AIA-01). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
