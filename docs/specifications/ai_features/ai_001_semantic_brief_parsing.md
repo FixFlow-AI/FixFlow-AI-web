@@ -11,7 +11,7 @@
 | **Feature ID** | `AI-001` |
 | **Priority** | 🔴 Critical (Core pipeline — nothing works without this) |
 | **Backend Skill** | [brief_parser.py](../../ai-service/app/features/brief_parser.py) |
-| **Gemini Model** | `gemini-2.5-pro` (via Python AI Service proxy) |
+| **Gemini Model** | `gemini-3.5-flash` (default) · fallback `gemini-3.1-flash-lite` — via Python AI Service proxy |
 | **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/proposals/parse` wired · ✅ Frontend `BriefIntelligence.jsx` UI integrated |
 
 ---
@@ -33,7 +33,7 @@ This AI feature takes that messy text and produces a **fully structured project 
 
 ```mermaid
 graph LR
-    A["Raw Brief Text<br/>(chaotic, unstructured)"] --> B["Gemini 2.5 Pro<br/>(with system prompt<br/>+ response schema)"]
+    A["Raw Brief Text<br/>(chaotic, unstructured)"] --> B["Gemini 3.5 Flash<br/>(with system prompt<br/>+ response schema)"]
     B --> C{"Zod Schema<br/>Validation"}
     C -->|"Valid ✓"| D["Structured Proposal<br/>(ProposalSchema)"]
     C -->|"Invalid ✗"| E["sanitizeAndPatchBrief()<br/>(fallback heuristics)"]
