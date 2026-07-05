@@ -1,6 +1,7 @@
 # AIE-04 — AI Evaluation Harness (Golden Set + Regression Gate)
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~3 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `ai-service/eval/` directory; only `smoke_test.py` exists. **Priority: 🟡 P2** (quality gate once features stabilize). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
