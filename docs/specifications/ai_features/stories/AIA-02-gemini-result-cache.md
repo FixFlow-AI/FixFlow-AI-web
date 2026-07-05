@@ -1,6 +1,7 @@
 # AIA-02 — Gemini Result Cache Layer
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `app/cache.py`; `generate_structured()` calls Gemini fresh every time. **Priority: 🟡 P1** (cost/latency win; build after AIA-05). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
