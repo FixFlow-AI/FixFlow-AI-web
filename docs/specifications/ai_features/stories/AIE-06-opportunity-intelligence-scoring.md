@@ -1,6 +1,7 @@
 # AIE-06 — Design AI-005 Opportunity Intelligence Scoring
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~3–4 days (model/scoring design)
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `app/features/opportunity.py` or `app/schemas/opportunity.py`. This is the design half of net-new AI-005. **Priority: 🟡 P3** (pairs with AIA-04). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
