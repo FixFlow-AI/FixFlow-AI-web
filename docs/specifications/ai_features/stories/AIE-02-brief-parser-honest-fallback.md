@@ -1,6 +1,7 @@
 # AIE-02 — Make the Brief Parser Fallback Honest (Stop Silent Fakes)
 
 > **Role**: AI Engineer · **Priority**: 🔴 Critical · **Effort**: ~1–1.5 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: `main.py` `ParseBriefResponse` is `{ proposal }` only; `brief_parser.py` returns a bare `Proposal` with no `source` marker. **Priority: 🔴 P1** (after AIA-05 supplies error classification). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
