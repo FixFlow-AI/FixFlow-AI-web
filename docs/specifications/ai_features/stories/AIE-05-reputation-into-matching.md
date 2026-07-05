@@ -2,6 +2,7 @@
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
 > **Migration status**: ⚪ **Unaffected by the TS→Python migration.** `matchingEngine.ts` (AI-006) and `reputationCalculator.js` are deterministic and **stay in TypeScript**. This story is entirely TS-side.
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: `matchingEngine.ts` still reads `f.reputationScore` straight off the profile; `reputationCalculator.js` is never called in the match path. **Priority: 🟡 P2** (independent, pure TS — can run in parallel). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
