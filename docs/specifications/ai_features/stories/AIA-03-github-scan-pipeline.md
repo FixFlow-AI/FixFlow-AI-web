@@ -1,6 +1,7 @@
 # AIA-03 — Automate the GitHub Scan Pipeline Feeding AI-003
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~3 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `app/automation/github_scan.py`; the interview route forwards client-supplied `githubScan`/`missingSkills` (defaults `''`/`[]`). **Now also the engine behind the freelancer GitHub onboarding** — see [roles doc 01](../../roles/01_freelancer_github_onboarding.md); extend the output to the segmented `skills/projects/experience` shape and add SSE segment events. **Priority: 🟡 P2.** See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
