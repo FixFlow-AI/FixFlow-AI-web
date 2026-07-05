@@ -52,7 +52,7 @@ flowchart TD
 **Goal:** Remove the small blockers that make the current code fail at runtime.
 
 **Tasks**
-- [x] Fix `GEMINI_MODEL` — replaced with Python service model configuration (e.g. `gemini-2.5-flash` or `gemini-2.5-pro`).
+- [x] Fix `GEMINI_MODEL` — replaced with Python service model configuration (default `gemini-3.5-flash`, fallback `gemini-3.1-flash-lite`).
 - [x] Generate and set `JWT_SECRET` (32+ bytes).
 - [x] Create a Google OAuth 2.0 **Web** Client ID; set `GOOGLE_OAUTH_CLIENT_ID`; add frontend origins as authorized JavaScript origins.
 - [x] Decide region = **`ap-south-1`**; recreate the (empty) DynamoDB tables there; delete the `us-east-1` ones; set `AWS_REGION=ap-south-1`.
