@@ -1,6 +1,7 @@
 # AIA-01 — Convert Blocking AI-002 Evaluation to Async Job + Poll
 
 > **Role**: AI Automation Engineer · **Priority**: 🔴 Critical · **Effort**: ~3 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: `main.py` `/ai/confidence/evaluate` is synchronous and the TS gateway `await`s it; no `jobsRepository` or `/api/jobs/:id`. **Priority: 🔴 P1** (needed for serverless; depends on AIA-05). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
@@ -17,7 +18,7 @@
 
 ## 1. Current Problem
 
-`POST /api/proposals/evaluate` calls `aiClient.evaluateProposal()` **synchronously inside the request**, which does a blocking HTTP call to the Python service's `POST /ai/confidence/evaluate`. That Python endpoint runs two parallel Gemini requests (Auditor + Feasibility) and, when the score is low, an additional `optimize_proposal()` call. On `gemini-2.5-pro` this can take tens of seconds — and **both** hops (browser→TS and TS→Python) are held open the whole time.
+`POST /api/proposals/evaluate` calls `aiClient.evaluateProposal()` **synchronously inside the request**, which does a blocking HTTP call to the Python service's `POST /ai/confidence/evaluate`. That Python endpoint runs two parallel Gemini requests (Auditor + Feasibility) and, when the score is low, an additional `optimize_proposal()` call. Even on `gemini-3.5-flash` (and more so when the optimizer escalates to `gemini-3.1-pro`) this can take tens of seconds — and **both** hops (browser→TS and TS→Python) are held open the whole time.
 
 ```ts
 // backend/src/index.ts (gateway) — blocks until Python finishes
