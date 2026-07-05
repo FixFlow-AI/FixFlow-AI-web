@@ -95,7 +95,7 @@ To bridge the gap between strategic UVPs and actual code, five additional module
 *   **Purpose**: Minimizes client screening fatigue and shortens vetting cycles.
 *   **Design**:
     *   Custom Prompts: Combines the project brief, candidate's GitHub scan summary, and missing skills gap list.
-    *   Gemini Integration: Uses `gemini-2.5-pro` with structured JSON schema output to produce 3-5 technical questions, rationales, and expected keywords.
+    *   Gemini Integration: Uses `gemini-3.5-flash` (fallback `gemini-3.1-flash-lite`) with structured JSON schema output to produce 3-5 technical questions, rationales, and expected keywords.
     *   Self-Healing Fallbacks: Automatically outputs tailored fallback questions if the API key is invalid or requests fail.
 *   **Location**: [interview.py](file:///c:/Users/suvam/Desktop/VS%20code/Projects/FixFlowAI/ai-service/app/features/interview.py)
 
