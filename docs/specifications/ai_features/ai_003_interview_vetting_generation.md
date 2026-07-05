@@ -11,7 +11,7 @@
 | **Feature ID** | `AI-003` |
 | **Priority** | 🟡 High (Solves "hiring takes too long" — Client Pain Point #3) |
 | **Backend Skill** | [interview.py](../../ai-service/app/features/interview.py) |
-| **Gemini Model** | `gemini-2.5-pro` (via Python AI Service proxy) |
+| **Gemini Model** | `gemini-3.5-flash` (default) · fallback `gemini-3.1-flash-lite` — via Python AI Service proxy |
 | **Depends On** | [AI-002: Confidence Grid](./ai_002_confidence_grid_self_correction.md) (for skill gap detection) |
 | **Status** | ✅ Built (Python AI service) · ✅ TS route `/api/interview-questions` wired · ✅ Frontend `EvidenceConfidence.jsx` UI integrated |
 
@@ -32,7 +32,7 @@ graph LR
     end
 
     subgraph "AI Engine"
-        D["Gemini 2.5 Pro<br/><i>Elite Technical<br/>Recruiter persona</i>"]
+        D["Gemini 3.5 Flash<br/><i>Elite Technical<br/>Recruiter persona</i>"]
     end
 
     subgraph "Output"
