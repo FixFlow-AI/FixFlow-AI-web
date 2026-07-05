@@ -2,6 +2,8 @@
 
 > Master reference for all AI-powered features in FixFlowAI. Each feature has its own dedicated implementation guide linked below.
 
+> 📊 **Want the current build status + what to do next?** See the **[AI Implementation Status & Priority Board](./IMPLEMENTATION_STATUS.md)** — verified against code (2026-07-05), with a re-prioritized order for every incomplete story.
+>
 > 🛠️ **Building these features?** Start with the **[AI Features Implementation Playbook](./ai_features_implementation_playbook.md)** — a sequenced, step-by-step "how to actually make it work" guide (setup → per-feature steps → end-to-end test → checklist) that reflects the current state of the codebase.
 >
 > 🔍 **Building AI-005 (Opportunity Intelligence / client-data discovery)?** Use the focused **[Opportunity Intelligence Build Guide](./opportunity_intelligence_build_guide.md)** — covers legal foundations, free-vs-paid sources, the 7-stage build order, env contract, scheduling, and troubleshooting.
@@ -18,6 +20,7 @@
 | `AI-004` | Contextual Contract Extensions & Retention | 🟢 Medium-High | ✅ Built (Python) | ✅ Wired | [ai_004_contextual_contract_extensions.md](./ai_004_contextual_contract_extensions.md) |
 | `AI-005` | Opportunity Intelligence & Smart Scoring | 🟡 High | ❌ Not built | ❌ No board | [ai_005_opportunity_intelligence_scoring.md](./ai_005_opportunity_intelligence_scoring.md) |
 | `AI-006` | Freelancer-Client Matching & Lead Scoring | 🔴 Critical | ✅ Built (TS engine) | ✅ Wired | [ai_006_smart_matching_lead_scoring.md](./ai_006_smart_matching_lead_scoring.md) |
+| `AI-007` | Freelancer Growth Plan *(new — from roles)* | 🟡 High | ❌ Not built | ❌ No UI | [ai_007_freelancer_growth_plan.md](./ai_007_freelancer_growth_plan.md) |
 
 > **Note:** AI-001 through AI-004 have their core LLM generation implemented in the stateless Python service (`ai-service`) and proxied through the TS backend routes (`/api/proposals/parse`, `/api/proposals/evaluate`, `/api/interview-questions`, `/api/contract-extensions`). AI-006 is fully implemented in TypeScript. All five are integrated with the React dashboard UI. See the [Implementation Playbook](./ai_features_implementation_playbook.md) Section 1 for the exact current state.
 
@@ -79,7 +82,7 @@ All six features share these common resources:
 
 | Resource | Used By | Notes |
 |:---|:---|:---|
-| Google Gemini API (`gemini-2.5-pro`) | AI-001, AI-002, AI-003, AI-004, AI-005 | Single API key, shared rate limits |
+| Google Gemini API (default `gemini-3.5-flash`, fallback `gemini-3.1-flash-lite`) | AI-001, AI-002, AI-003, AI-004, AI-005, AI-007 | Single API key, shared rate limits |
 | Zod Schema Validation | AI-001, AI-002, AI-005 | Type-safe output enforcement |
 | `sanitizeAndPatchBrief()` fallback | AI-001 | Graceful degradation on schema failures |
 | BullMQ job queues | AI-005 | Background processing for discovery |
