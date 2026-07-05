@@ -1,6 +1,7 @@
 # AIA-04 — AI-005 Discovery Automation (Connectors + Cron)
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~4–5 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `app/automation/opportunity/`; no connectors/scheduler. Design contract comes from AIE-06. **Also see the dedicated microservice design** in [`../../core_subsystems/opportunity_ingestion_microservice.md`](../../core_subsystems/opportunity_ingestion_microservice.md). **Priority: 🟡 P3.** See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
