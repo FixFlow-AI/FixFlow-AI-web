@@ -48,7 +48,7 @@ graph LR
 These steps make the AI calls actually reach Gemini. Without them, every AI endpoint returns a clean `503` and the UI falls back to sample data.
 
 1. **Get a Gemini API key** from Google AI Studio.
-2. **Create the backend env file.** Copy `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY`. Leave `GEMINI_MODEL=gemini-2.5-pro` and `PORT=4000`.
+2. **Create the backend env file.** Copy `backend/.env.example` to `backend/.env` and set `GEMINI_API_KEY`. Set `GEMINI_MODEL=gemini-3.5-flash` (default) and, optionally, `GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite`; keep `PORT=4000`.
 3. **Start the backend:** in `backend/`, run `npm install` once, then `npm run dev`. You should see `AI features ENABLED` in the log.
 4. **Start the frontend:** in `frontend/`, run `npm install` once, then `npm run dev`. Vite proxies `/api` → `http://localhost:4000` automatically.
 5. **Confirm the link:** open `http://localhost:4000/api/health` — it should report `"aiEnabled": true`.
