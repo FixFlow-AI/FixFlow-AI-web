@@ -382,7 +382,7 @@ graph TD
     end
 
     subgraph External
-        H["Google Gemini API<br/>gemini-2.5-pro"]
+        H["Google Gemini API<br/>gemini-3.5-flash"]
     end
 
     subgraph Storage
