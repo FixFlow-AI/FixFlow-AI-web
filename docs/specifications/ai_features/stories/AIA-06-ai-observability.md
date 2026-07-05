@@ -1,6 +1,7 @@
 # AIA-06 — AI Observability: Structured Logs, Metrics, Alarms
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
+> **✅ Verified status (2026-07-05): 🔴 Not started.** Confirmed in code: no `app/telemetry.py`; failures are only `logger.error` lines; no metrics/alarms. **Priority: 🟡 P1** (pairs with AIE-02 — makes fallback rate visible). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
