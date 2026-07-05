@@ -28,27 +28,31 @@ The four LLM features (AI-001..004) have been **moved out of the TypeScript back
 
 ## Story Registry
 
+> 📊 **Live status + re-prioritized build order:** see the **[AI Implementation Status & Priority Board](../IMPLEMENTATION_STATUS.md)** (verified against code on 2026-07-05). The `Status` column below is a summary of it. Legend: 🟢 Done · 🟡 Partial · 🔴 Not started.
+
 ### AI Engineer
 
-| ID | Story | Priority | Touches |
-|:---|:---|:---:|:---|
-| `AIE-01` | [Fix brand + model-config drift in prompts](./AIE-01-prompt-brand-model-config.md) | 🔴 Critical | brief_parser, confidence_grid, config (🟢 mostly done via migration) |
-| `AIE-02` | [Make Brief Parser fallback honest (not silent)](./AIE-02-brief-parser-honest-fallback.md) | 🔴 Critical | brief_parser, schemas, aiClient |
-| `AIE-03` | [Configurable + auditable Confidence Grid self-correction](./AIE-03-confidence-grid-self-correction.md) | 🟡 High | confidence_grid (🟢 env-config done via migration) |
-| `AIE-04` | [AI evaluation harness (golden set + regression)](./AIE-04-ai-evaluation-harness.md) | 🟡 High | ai-service/eval, pytest |
-| `AIE-05` | [Wire real reputation into the Matching Engine](./AIE-05-reputation-into-matching.md) | 🟡 High | matchingEngine.ts, reputationCalculator.js (stays TS) |
-| `AIE-06` | [Design AI-005 Opportunity Intelligence scoring](./AIE-06-opportunity-intelligence-scoring.md) | 🟡 High | new ai-service opportunity feature |
+| ID | Story | Priority | Status | Touches |
+|:---|:---|:---:|:---:|:---|
+| `AIE-01` | [Fix brand + model-config drift in prompts](./AIE-01-prompt-brand-model-config.md) | 🔴 Critical | 🟡 ~70% | brief_parser, confidence_grid, config — brand+model done; allow-list/fail-fast left |
+| `AIE-02` | [Make Brief Parser fallback honest (not silent)](./AIE-02-brief-parser-honest-fallback.md) | 🔴 Critical | 🔴 0% | brief_parser, schemas, aiClient |
+| `AIE-03` | [Configurable + auditable Confidence Grid self-correction](./AIE-03-confidence-grid-self-correction.md) | 🟡 High | 🟡 ~30% | confidence_grid — env-config done; audit/regression left |
+| `AIE-04` | [AI evaluation harness (golden set + regression)](./AIE-04-ai-evaluation-harness.md) | 🟡 High | 🔴 0% | ai-service/eval, pytest |
+| `AIE-05` | [Wire real reputation into the Matching Engine](./AIE-05-reputation-into-matching.md) | 🟡 High | 🔴 0% | matchingEngine.ts, reputationCalculator.js (stays TS) |
+| `AIE-06` | [Design AI-005 Opportunity Intelligence scoring](./AIE-06-opportunity-intelligence-scoring.md) | 🟡 High | 🔴 0% | new ai-service opportunity feature |
 
 ### AI Automation Engineer
 
-| ID | Story | Priority | Touches |
-|:---|:---|:---:|:---|
-| `AIA-01` | [Convert blocking AI-002 evaluation to async job + poll](./AIA-01-async-evaluation-jobs.md) | 🔴 Critical | TS jobs layer + Python evaluate endpoint |
-| `AIA-02` | [Gemini result cache layer](./AIA-02-gemini-result-cache.md) | 🟡 High | ai-service llm wrapper |
-| `AIA-03` | [Automate GitHub scan pipeline feeding AI-003](./AIA-03-github-scan-pipeline.md) | 🟡 High | ai-service automation + interview feature |
-| `AIA-04` | [AI-005 discovery automation (connectors + cron)](./AIA-04-opportunity-discovery-automation.md) | 🟡 High | ai-service automation connectors + scheduler |
-| `AIA-05` | [Resilience for all Gemini calls (retry/timeout/breaker)](./AIA-05-gemini-call-resilience.md) | 🔴 Critical | ai-service llm wrapper (🟢 wrapper exists via migration) |
-| `AIA-06` | [AI observability — logs, metrics, alarms](./AIA-06-ai-observability.md) | 🟡 High | ai-service telemetry |
+| ID | Story | Priority | Status | Touches |
+|:---|:---|:---:|:---:|:---|
+| `AIA-01` | [Convert blocking AI-002 evaluation to async job + poll](./AIA-01-async-evaluation-jobs.md) | 🔴 Critical | 🔴 0% | TS jobs layer + Python evaluate endpoint |
+| `AIA-02` | [Gemini result cache layer](./AIA-02-gemini-result-cache.md) | 🟡 High | 🔴 0% | ai-service llm wrapper |
+| `AIA-03` | [Automate GitHub scan pipeline feeding AI-003](./AIA-03-github-scan-pipeline.md) | 🟡 High | 🔴 0% | ai-service automation + interview feature (also powers freelancer onboarding — roles doc 01) |
+| `AIA-04` | [AI-005 discovery automation (connectors + cron)](./AIA-04-opportunity-discovery-automation.md) | 🟡 High | 🔴 0% | ai-service automation connectors + scheduler |
+| `AIA-05` | [Resilience for all Gemini calls (retry/timeout/breaker)](./AIA-05-gemini-call-resilience.md) | 🔴 Critical | 🟡 ~20% | ai-service llm wrapper — wrapper exists; resilience left |
+| `AIA-06` | [AI observability — logs, metrics, alarms](./AIA-06-ai-observability.md) | 🟡 High | 🔴 0% | ai-service telemetry |
+
+> **New feature (from roles):** `AI-007` Freelancer Growth Plan — [ai_007_freelancer_growth_plan.md](../ai_007_freelancer_growth_plan.md). Reuses the AIA-03 scan output. Tracked on the status board at P3.
 
 ---
 
@@ -87,14 +91,16 @@ flowchart LR
 
 ## Suggested Execution Order
 
-1. **AIE-01** (config correctness) — unblocks everything; small.
-2. **AIA-05** (resilience wrapper) — every later AI call rides on it.
+> Reflects the **verified** state (partials counted). Full rationale + Mermaid in the [Priority Board §3](../IMPLEMENTATION_STATUS.md#3-re-prioritized-build-order-remaining-work-only).
+
+1. **AIE-01** finish (model allow-list + fail-fast) — small; correctness baseline. *(🟡 partial)*
+2. **AIA-05** finish (retry/timeout/breaker) — every later AI call rides on it. *(🟡 partial)*
 3. **AIE-02** + **AIA-06** (honest failures + observability) — stop hiding errors.
 4. **AIA-02** (caching) + **AIA-01** (async eval) — cost & latency.
-5. **AIE-03** (self-correction) on top of async eval.
-6. **AIE-05** + **AIA-03** (matching quality + GitHub scan).
+5. **AIE-03** (self-correction audit) on top of async eval. *(🟡 partial)*
+6. **AIE-05** + **AIA-03** (matching quality + GitHub scan; scan also powers freelancer onboarding).
 7. **AIE-04** (eval harness) — ongoing quality gate.
-8. **AIE-06** + **AIA-04** (AI-005 net-new).
+8. **AIE-06** + **AIA-04** (AI-005 net-new) + **AI-007** growth plan (reuses AIA-03 scan).
 
 ---
 
