@@ -135,13 +135,13 @@ This is where model choice matters most. The same workload on **Gemini Flash** v
 
 | Model | Input price | Output price | Monthly AI cost (≈11M in / 9M out) | Verdict |
 |:---|:---|:---|---:|:---|
-| **Gemini Flash** (e.g. 2.5/2.0 Flash) | ~$0.10–0.15 / 1M | ~$0.40–0.60 / 1M | **~$5–10** | ✅ Use for everything by default |
-| **Gemini Pro** (e.g. 2.5 Pro) | ~$1.25 / 1M | ~$5–10 / 1M | **~$60–100** | ⚠️ Reserve for hardest tasks only |
+| **Gemini Flash** (e.g. `gemini-3.5-flash` / `gemini-3.1-flash-lite`) | ~$0.10–0.15 / 1M | ~$0.40–0.60 / 1M | **~$5–10** | ✅ Use for everything by default |
+| **Gemini Pro** (e.g. `gemini-3.1-pro`) | ~$1.25 / 1M | ~$5–10 / 1M | **~$60–100** | ⚠️ Reserve for hardest tasks only |
 | **Hybrid** (Flash everywhere, Pro only for AI-002 grid) | mixed | mixed | **~$15–25** | ✅ Best quality/cost balance |
 
 **Recommendation: default to Flash, use the Hybrid only if evaluation quality demands it.** Flash is fast and more than adequate for schema-constrained JSON extraction (which is what most of these tasks are).
 
-> ⚠️ **Config note:** your `.env` currently has `GEMINI_MODEL=Gemini 3.5 Flash`. That is **not a valid model ID** and AI calls will fail. Set a real ID such as `gemini-2.5-flash` (or the current Flash ID for your account).
+> ⚠️ **Config note:** set `GEMINI_MODEL` to a real **API id**, not a display name. `Gemini 3.5 Flash` (with spaces) is the display name and will fail; the valid id is **`gemini-3.5-flash`** (current default), with **`gemini-3.1-flash-lite`** as the cheaper fallback. Older accounts can fall back to `gemini-2.5-flash`.
 
 **Subtotal AI (Flash default): ~$5–10/month**
 
