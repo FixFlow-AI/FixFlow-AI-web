@@ -2,6 +2,7 @@
 
 > **Role**: AI Automation Engineer · **Priority**: 🔴 Critical · **Effort**: ~2 days
 > **Migration status**: 🟢 **The shared wrapper already exists** — all features call `generate_structured()` in `ai-service/app/llm/gemini.py` with a module-scope client. Remaining work: add retry/timeout/circuit-breaker + error classification to that single function.
+> **✅ Verified status (2026-07-05): 🟡 ~20% done.** Confirmed in code: `gemini.py` has the reused module-scope client but no timeout, retry, breaker, or error classification. **Priority: 🔴 P0** (foundation for AIE-02, AIA-01, AIA-02, AIA-04 — do right after AIE-01). See [status board](../IMPLEMENTATION_STATUS.md).
 
 ---
 
