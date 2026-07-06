@@ -26,19 +26,26 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="FixFlowAI AI Service", version="1.0.0")
 
+settings = get_settings()
+
+if not settings.model_valid:
+    raise RuntimeError(f"Invalid GEMINI_MODEL: {settings.gemini_model}")
+
+if not settings.fallback_model_valid:
+    raise RuntimeError(f"Invalid GEMINI_FALLBACK_MODEL: {settings.gemini_fallback_model}")
+
 
 # --------------------------------------------------------------------------
 # Auth (optional shared secret) + AI-key guard
 # --------------------------------------------------------------------------
 
 async def verify_token(x_ai_service_token: Optional[str] = Header(default=None)) -> None:
-    settings = get_settings()
     if settings.ai_service_token and x_ai_service_token != settings.ai_service_token:
         raise HTTPException(status_code=401, detail="Invalid or missing x-ai-service-token.")
 
 
 def require_ai() -> None:
-    if not get_settings().ai_enabled:
+    if not settings.ai_enabled:
         raise HTTPException(
             status_code=503,
             detail="GEMINI_API_KEY is not configured on the AI service.",
@@ -79,11 +86,13 @@ class ExtensionsRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict:
-    settings = get_settings()
     return {
         "status": "ok",
         "aiEnabled": settings.ai_enabled,
         "model": settings.gemini_model,
+        "modelValid": settings.model_valid,
+        "fallbackModel": settings.gemini_fallback_model,
+        "fallbackModelValid": settings.fallback_model_valid,
     }
 
 

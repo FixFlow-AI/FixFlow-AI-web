@@ -11,6 +11,7 @@ from typing import Type, TypeVar
 
 from google import genai
 from google.genai import types
+from google.genai.errors import APIError
 from pydantic import BaseModel
 
 from ..config import get_settings
@@ -46,17 +47,33 @@ async def generate_structured(
     """
     settings = get_settings()
     client = get_client()
+    primary_model = model or settings.gemini_model
+    config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=temperature,
+                response_mime_type="application/json",
+                response_schema=response_schema,
+            )
 
-    response = await client.aio.models.generate_content(
-        model=model or settings.gemini_model,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system_instruction,
-            temperature=temperature,
-            response_mime_type="application/json",
-            response_schema=response_schema,
-        ),
-    )
+    try:
+        response = await client.aio.models.generate_content(
+            model=primary_model,
+            contents=contents,
+            config=config,
+        )
+    except APIError as e:
+        if (
+            e.code in (429, 500, 502, 503, 504)
+            and model is None
+            and primary_model != settings.gemini_fallback_model
+        ):
+            response = await client.aio.models.generate_content(
+                model=settings.gemini_fallback_model,
+                contents=contents,
+                config=config,
+            )
+        else:
+            raise
 
     parsed = getattr(response, "parsed", None)
     if isinstance(parsed, response_schema):
