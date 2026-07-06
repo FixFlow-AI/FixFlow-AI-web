@@ -41,18 +41,25 @@ if ($Endpoint -ne "") { $endpointArg = @("--endpoint-url", $Endpoint) }
 
 # Each entry: suffix + the create-table JSON (TableName is overridden at call time).
 $tables = @{
-  # 1) Users — login identities. Query by id (PK) and by Google subject (GSI).
+  # 1) Users — login identities. Query by id (PK), by Google subject (GSI),
+  #    and by GitHub user id (GSI) for GitHub-only freelancer login.
   "users" = @'
 {
   "AttributeDefinitions": [
     { "AttributeName": "userId", "AttributeType": "S" },
-    { "AttributeName": "googleSub", "AttributeType": "S" }
+    { "AttributeName": "googleSub", "AttributeType": "S" },
+    { "AttributeName": "githubUserId", "AttributeType": "S" }
   ],
   "KeySchema": [ { "AttributeName": "userId", "KeyType": "HASH" } ],
   "GlobalSecondaryIndexes": [
     {
       "IndexName": "GoogleSubIndex",
       "KeySchema": [ { "AttributeName": "googleSub", "KeyType": "HASH" } ],
+      "Projection": { "ProjectionType": "ALL" }
+    },
+    {
+      "IndexName": "GithubUserIndex",
+      "KeySchema": [ { "AttributeName": "githubUserId", "KeyType": "HASH" } ],
       "Projection": { "ProjectionType": "ALL" }
     }
   ],
@@ -158,10 +165,161 @@ $tables = @{
   "BillingMode": "PAY_PER_REQUEST"
 }
 '@
+
+  # ────────────────────────────────────────────────────────────────────────
+  # ROLE-BASED PLATFORM (docs/specifications/roles) — freelancer + developer
+  # ────────────────────────────────────────────────────────────────────────
+
+  # 8) GitHub scan jobs — tracks a freelancer's deep-scan run + per-segment state.
+  #    Query by jobId (PK); list a freelancer's scans via GSI.
+  "github_scan_jobs" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "jobId", "AttributeType": "S" },
+    { "AttributeName": "freelancerId", "AttributeType": "S" },
+    { "AttributeName": "createdAt", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "jobId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "FreelancerScansIndex",
+      "KeySchema": [
+        { "AttributeName": "freelancerId", "KeyType": "HASH" },
+        { "AttributeName": "createdAt", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 9) Freelancer skills — AI-verified, read-only. Composite key returns all a
+  #    freelancer's skills in one Query. `editable` is always false.
+  "freelancer_skills" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "freelancerId", "AttributeType": "S" },
+    { "AttributeName": "skillName", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "freelancerId", "KeyType": "HASH" },
+    { "AttributeName": "skillName", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 10) Freelancer projects — verified top repos / work experience.
+  "freelancer_projects" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "freelancerId", "AttributeType": "S" },
+    { "AttributeName": "projectId", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "freelancerId", "KeyType": "HASH" },
+    { "AttributeName": "projectId", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 11) Profile confidence — latest score + band per freelancer.
+  "profile_confidence" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "freelancerId", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "freelancerId", "KeyType": "HASH" } ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 12) Growth plans — AI improvement plan (items embedded as a JSON list).
+  #     Query by planId; list a freelancer's plans via GSI.
+  "growth_plans" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "planId", "AttributeType": "S" },
+    { "AttributeName": "freelancerId", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "planId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "FreelancerPlansIndex",
+      "KeySchema": [ { "AttributeName": "freelancerId", "KeyType": "HASH" } ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 13) Developer projects — a developer's own projects. Query by projectId;
+  #     list an owner's projects via GSI.
+  "dev_projects" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "projectId", "AttributeType": "S" },
+    { "AttributeName": "ownerId", "AttributeType": "S" },
+    { "AttributeName": "createdAt", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "projectId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "OwnerProjectsIndex",
+      "KeySchema": [
+        { "AttributeName": "ownerId", "KeyType": "HASH" },
+        { "AttributeName": "createdAt", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 14) Developer tasks — task board per project. Composite key returns a
+  #     project's tasks in one Query.
+  "dev_tasks" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "projectId", "AttributeType": "S" },
+    { "AttributeName": "taskId", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "projectId", "KeyType": "HASH" },
+    { "AttributeName": "taskId", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 15) Developer project members — team membership per project.
+  "dev_project_members" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "projectId", "AttributeType": "S" },
+    { "AttributeName": "userId", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "projectId", "KeyType": "HASH" },
+    { "AttributeName": "userId", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
 }
 
 # Deterministic order so dependent reads are predictable in logs.
-$order = @("users", "freelancers", "proposals", "milestones", "audit_blocks", "opportunities", "raw_posts")
+$order = @(
+  "users", "freelancers", "proposals", "milestones", "audit_blocks",
+  "opportunities", "raw_posts",
+  "github_scan_jobs", "freelancer_skills", "freelancer_projects",
+  "profile_confidence", "growth_plans",
+  "dev_projects", "dev_tasks", "dev_project_members"
+)
 
 Write-Host "Region : $Region"
 Write-Host "Prefix : $Prefix"
