@@ -15,6 +15,7 @@ import { dirname, resolve } from 'path';
  */
 
 export type UserRole = 'client' | 'freelancer' | 'agency' | 'developer';
+export type AuthProvider = 'google' | 'github';
 
 export interface User {
   id: string;
@@ -22,7 +23,10 @@ export interface User {
   emailVerified: boolean;
   name: string;
   picture?: string;
-  googleSub: string; // Stable Google subject identifier (from ID token "sub").
+  googleSub?: string; // Stable Google subject identifier (from ID token "sub").
+  authProvider: AuthProvider; // which provider the account signed up with
+  githubUserId?: string; // stable numeric GitHub id (as string)
+  githubUsername?: string; // GitHub login/handle
   role: UserRole;
   createdAt: string;
   updatedAt: string;
@@ -41,10 +45,21 @@ export interface UpsertGoogleProfileInput {
   picture?: string;
 }
 
+export interface UpsertGithubProfileInput {
+  githubUserId: string;
+  githubUsername: string;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  picture?: string;
+}
+
 export interface UserRepository {
   findByGoogleSub(googleSub: string): Promise<User | null>;
+  findByGithubUserId(githubUserId: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User>;
+  upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User>;
   addRefreshTokenHash(userId: string, hash: string): Promise<void>;
   removeRefreshTokenHash(userId: string, hash: string): Promise<void>;
   clearRefreshTokens(userId: string): Promise<void>;
@@ -85,6 +100,11 @@ class SeedFileUserRepository implements UserRepository {
     return users.find((u) => u.googleSub === googleSub) ?? null;
   }
 
+  async findByGithubUserId(githubUserId: string): Promise<User | null> {
+    const users = await this.load();
+    return users.find((u) => u.githubUserId === githubUserId) ?? null;
+  }
+
   async findById(id: string): Promise<User | null> {
     const users = await this.load();
     return users.find((u) => u.id === id) ?? null;
@@ -110,7 +130,41 @@ class SeedFileUserRepository implements UserRepository {
       name: input.name,
       picture: input.picture,
       googleSub: input.googleSub,
+      authProvider: 'google',
       role: 'client',
+      createdAt: now,
+      updatedAt: now,
+      refreshTokenHashes: [],
+    };
+    users.push(created);
+    await this.persist();
+    return created;
+  }
+
+  async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
+    const users = await this.load();
+    const existing = users.find((u) => u.githubUserId === input.githubUserId);
+    const now = new Date().toISOString();
+    if (existing) {
+      existing.email = input.email;
+      existing.emailVerified = input.emailVerified;
+      existing.name = input.name;
+      existing.picture = input.picture;
+      existing.githubUsername = input.githubUsername;
+      existing.updatedAt = now;
+      await this.persist();
+      return existing;
+    }
+    const created: User = {
+      id: randomUUID(),
+      email: input.email,
+      emailVerified: input.emailVerified,
+      name: input.name,
+      picture: input.picture,
+      authProvider: 'github',
+      githubUserId: input.githubUserId,
+      githubUsername: input.githubUsername,
+      role: 'freelancer', // GitHub sign-ups default to freelancer; route may override
       createdAt: now,
       updatedAt: now,
       refreshTokenHashes: [],
@@ -177,11 +231,22 @@ class HttpUserRepository implements UserRepository {
   findByGoogleSub(googleSub: string) {
     return this.req<User>(`/by-google/${encodeURIComponent(googleSub)}`);
   }
+  findByGithubUserId(githubUserId: string) {
+    return this.req<User>(`/by-github/${encodeURIComponent(githubUserId)}`);
+  }
   findById(id: string) {
     return this.req<User>(`/${encodeURIComponent(id)}`);
   }
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput) {
     const out = await this.req<User>('/upsert-google', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    if (!out) throw new Error('User API upsert returned no user.');
+    return out;
+  }
+  async upsertFromGithubProfile(input: UpsertGithubProfileInput) {
+    const out = await this.req<User>('/upsert-github', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -242,6 +307,21 @@ class DynamoDbUserRepository implements UserRepository {
     return (res.Items?.[0] as User) ?? null;
   }
 
+  async findByGithubUserId(githubUserId: string): Promise<User | null> {
+    const { ddb, table } = await import('../config/aws.js');
+    const { QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+    const res = await ddb.send(
+      new QueryCommand({
+        TableName: table('users'),
+        IndexName: 'GithubUserIndex',
+        KeyConditionExpression: 'githubUserId = :g',
+        ExpressionAttributeValues: { ':g': githubUserId },
+        Limit: 1,
+      }),
+    );
+    return (res.Items?.[0] as User) ?? null;
+  }
+
   async findById(id: string): Promise<User | null> {
     const { ddb, table } = await import('../config/aws.js');
     const { GetCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -277,7 +357,46 @@ class DynamoDbUserRepository implements UserRepository {
       name: input.name,
       picture: input.picture,
       googleSub: input.googleSub,
+      authProvider: 'google',
       role: 'client',
+      createdAt: now,
+      updatedAt: now,
+      refreshTokenHashes: [],
+    };
+    await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(created) }));
+    return created;
+  }
+
+  async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
+    const existing = await this.findByGithubUserId(input.githubUserId);
+    const now = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    if (existing) {
+      const updated: User = {
+        ...existing,
+        email: input.email,
+        emailVerified: input.emailVerified,
+        name: input.name,
+        picture: input.picture,
+        githubUsername: input.githubUsername,
+        updatedAt: now,
+      };
+      await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(updated) }));
+      return updated;
+    }
+
+    const created: User = {
+      id: randomUUID(),
+      email: input.email,
+      emailVerified: input.emailVerified,
+      name: input.name,
+      picture: input.picture,
+      authProvider: 'github',
+      githubUserId: input.githubUserId,
+      githubUsername: input.githubUsername,
+      role: 'freelancer',
       createdAt: now,
       updatedAt: now,
       refreshTokenHashes: [],
