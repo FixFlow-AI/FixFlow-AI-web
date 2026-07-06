@@ -1,15 +1,29 @@
 import { useState } from "react";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Github } from "lucide-react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Brand } from "../components/Brand";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { GithubSignInButton } from "../components/GithubSignInButton";
 import { audiences } from "../data/landing";
+
+// The three primary sign-up roles (agency stays available via role settings).
+const SIGNUP_ROLE_IDS = ["client", "freelancer", "developer"];
+
+const ROLE_HELP = {
+  client: "Post a structured brief and get an explainable, evidence-backed shortlist.",
+  freelancer:
+    "Sign in with GitHub — we build your verified skill profile from your real code, so you get matched on proof, not profile polish.",
+  developer:
+    "Plan and run your own software projects: auto-generate timelines, proposals, and a team workspace.",
+};
 
 export function Signup() {
   const { setPage } = useLandingStore();
   const [selectedRole, setSelectedRole] = useState("client");
 
-  const activeAudience = audiences.find((a) => a.id === selectedRole);
+  const signupRoles = SIGNUP_ROLE_IDS
+    .map((id) => audiences.find((a) => a.id === id))
+    .filter(Boolean);
 
   return (
     <div
@@ -78,14 +92,14 @@ export function Signup() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns: "repeat(3, 1fr)",
                 gap: 0,
                 border: "1px solid #e2e8f0",
                 borderRadius: 8,
                 overflow: "hidden",
               }}
             >
-              {audiences.map((aud) => {
+              {signupRoles.map((aud) => {
                 const Icon = aud.icon;
                 return (
                   <button
@@ -114,18 +128,40 @@ export function Signup() {
                 );
               })}
             </div>
-            {activeAudience && (
-              <p style={{ fontSize: 12, color: "#64748b", margin: "8px 0 0", lineHeight: 1.5 }}>
-                {activeAudience.problems[0]}
-              </p>
-            )}
+            <p style={{ fontSize: 12, color: "#64748b", margin: "8px 0 0", lineHeight: 1.5 }}>
+              {ROLE_HELP[selectedRole]}
+            </p>
           </div>
 
-          {/* Real Google sign-up — creates the account, then applies the chosen role */}
-          <GoogleSignInButton
-            nextHash="#/dashboard/role-onboarding"
-            roleToSet={selectedRole}
-          />
+          {/* Auth control depends on the chosen role.
+              Freelancers must use GitHub (their profile is built from their code);
+              clients and developers use Google. */}
+          {selectedRole === "freelancer" ? (
+            <>
+              <GithubSignInButton
+                intendedRole="freelancer"
+                nextHash="#/dashboard/role-onboarding"
+                label="Sign up with GitHub"
+              />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: "#64748b",
+                }}
+              >
+                <Github size={13} /> We analyze your public repositories to verify your skills.
+              </div>
+            </>
+          ) : (
+            <GoogleSignInButton
+              nextHash="#/dashboard/role-onboarding"
+              roleToSet={selectedRole}
+            />
+          )}
         </form>
 
         <div
