@@ -79,8 +79,13 @@ export const api = {
   health: () => request("/health"),
 
   // Auth
-  googleLogin: (idToken) =>
-    request("/auth/google", { method: "POST", body: { idToken } }),
+  googleLogin: (idToken, intendedRole) =>
+    request("/auth/google", { method: "POST", body: { idToken, intendedRole } }),
+  githubLogin: (code, intendedRole, redirectUri) =>
+    request("/auth/github", {
+      method: "POST",
+      body: { code, intendedRole, redirectUri },
+    }),
   devLogin: (email, name) =>
     request("/auth/dev-login", { method: "POST", body: { email, name } }),
   me: () => request("/auth/me"),
