@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ShieldCheck, Terminal } from "lucide-react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Brand } from "../components/Brand";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { GithubSignInButton } from "../components/GithubSignInButton";
 import { api } from "../lib/api";
 import { setSession } from "../lib/auth";
 
@@ -12,6 +13,15 @@ export function Login() {
   const [devName, setDevName] = useState("Jane Developer");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Surface any GitHub OAuth error passed back from the redirect handler.
+  useEffect(() => {
+    const ghError = window.sessionStorage.getItem("ff_github_error");
+    if (ghError) {
+      setError(ghError);
+      window.sessionStorage.removeItem("ff_github_error");
+    }
+  }, []);
 
   const handleDevLogin = async (e) => {
     e.preventDefault();
@@ -87,6 +97,19 @@ export function Login() {
         </p>
 
         <GoogleSignInButton nextHash="#/dashboard/overview" />
+
+        <div style={{ margin: "16px 0", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+          <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>OR</span>
+          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+        </div>
+
+        {/* Freelancers sign in with GitHub. */}
+        <GithubSignInButton
+          intendedRole="freelancer"
+          nextHash="#/dashboard/overview"
+          label="Sign in with GitHub"
+        />
 
         <div style={{ margin: "24px 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
