@@ -49,11 +49,16 @@ create() {
 create users '{
   "AttributeDefinitions":[
     {"AttributeName":"userId","AttributeType":"S"},
-    {"AttributeName":"googleSub","AttributeType":"S"}],
+    {"AttributeName":"googleSub","AttributeType":"S"},
+    {"AttributeName":"githubUserId","AttributeType":"S"}],
   "KeySchema":[{"AttributeName":"userId","KeyType":"HASH"}],
-  "GlobalSecondaryIndexes":[{"IndexName":"GoogleSubIndex",
-    "KeySchema":[{"AttributeName":"googleSub","KeyType":"HASH"}],
-    "Projection":{"ProjectionType":"ALL"}}],
+  "GlobalSecondaryIndexes":[
+    {"IndexName":"GoogleSubIndex",
+      "KeySchema":[{"AttributeName":"googleSub","KeyType":"HASH"}],
+      "Projection":{"ProjectionType":"ALL"}},
+    {"IndexName":"GithubUserIndex",
+      "KeySchema":[{"AttributeName":"githubUserId","KeyType":"HASH"}],
+      "Projection":{"ProjectionType":"ALL"}}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
 create freelancers '{
@@ -106,6 +111,85 @@ create opportunities '{
 create raw_posts '{
   "AttributeDefinitions":[{"AttributeName":"urlHash","AttributeType":"S"}],
   "KeySchema":[{"AttributeName":"urlHash","KeyType":"HASH"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# ── Role-based platform (docs/specifications/roles) ──────────────────────────
+
+create github_scan_jobs '{
+  "AttributeDefinitions":[
+    {"AttributeName":"jobId","AttributeType":"S"},
+    {"AttributeName":"freelancerId","AttributeType":"S"},
+    {"AttributeName":"createdAt","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"jobId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{"IndexName":"FreelancerScansIndex",
+    "KeySchema":[
+      {"AttributeName":"freelancerId","KeyType":"HASH"},
+      {"AttributeName":"createdAt","KeyType":"RANGE"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create freelancer_skills '{
+  "AttributeDefinitions":[
+    {"AttributeName":"freelancerId","AttributeType":"S"},
+    {"AttributeName":"skillName","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"freelancerId","KeyType":"HASH"},
+    {"AttributeName":"skillName","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create freelancer_projects '{
+  "AttributeDefinitions":[
+    {"AttributeName":"freelancerId","AttributeType":"S"},
+    {"AttributeName":"projectId","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"freelancerId","KeyType":"HASH"},
+    {"AttributeName":"projectId","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create profile_confidence '{
+  "AttributeDefinitions":[{"AttributeName":"freelancerId","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"freelancerId","KeyType":"HASH"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create growth_plans '{
+  "AttributeDefinitions":[
+    {"AttributeName":"planId","AttributeType":"S"},
+    {"AttributeName":"freelancerId","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"planId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{"IndexName":"FreelancerPlansIndex",
+    "KeySchema":[{"AttributeName":"freelancerId","KeyType":"HASH"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create dev_projects '{
+  "AttributeDefinitions":[
+    {"AttributeName":"projectId","AttributeType":"S"},
+    {"AttributeName":"ownerId","AttributeType":"S"},
+    {"AttributeName":"createdAt","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"projectId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{"IndexName":"OwnerProjectsIndex",
+    "KeySchema":[
+      {"AttributeName":"ownerId","KeyType":"HASH"},
+      {"AttributeName":"createdAt","KeyType":"RANGE"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create dev_tasks '{
+  "AttributeDefinitions":[
+    {"AttributeName":"projectId","AttributeType":"S"},
+    {"AttributeName":"taskId","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"projectId","KeyType":"HASH"},
+    {"AttributeName":"taskId","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create dev_project_members '{
+  "AttributeDefinitions":[
+    {"AttributeName":"projectId","AttributeType":"S"},
+    {"AttributeName":"userId","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"projectId","KeyType":"HASH"},
+    {"AttributeName":"userId","KeyType":"RANGE"}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
 echo
