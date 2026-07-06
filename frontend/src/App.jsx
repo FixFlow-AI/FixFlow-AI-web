@@ -28,17 +28,39 @@ import { Workflow } from "./sections/Workflow";
 import { Login } from "./sections/Login";
 import { Signup } from "./sections/Signup";
 import { Dashboard } from "./sections/Dashboard";
-import { getUser, isAuthenticated } from "./lib/auth";
+import { getUser, isAuthenticated, setSession } from "./lib/auth";
+import { api } from "./lib/api";
+import { handleGithubRedirect } from "./components/GithubSignInButton";
 
 export function App() {
   useSmoothScroll();
-  const { page, setPage, setDashboardTab, hydrateAuth } = useLandingStore();
+  const { page, setPage, setDashboardTab, hydrateAuth, login } = useLandingStore();
 
   // Rehydrate the session from localStorage on first load so a refresh keeps
   // the user logged in.
   useEffect(() => {
     hydrateAuth(getUser());
   }, [hydrateAuth]);
+
+  // Handle a GitHub OAuth return (?code=&state=) once on load: exchange the
+  // code via the backend, store the session, and navigate into the app.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await handleGithubRedirect({ api, setSession, login });
+      if (!result || cancelled) return;
+      if (result.nextHash) {
+        window.location.hash = result.nextHash;
+      } else if (result.error) {
+        // Surface the error on the login screen.
+        window.location.hash = "#/login";
+        window.sessionStorage.setItem("ff_github_error", result.error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [login]);
 
   useEffect(() => {
     const handleHashChange = () => {
