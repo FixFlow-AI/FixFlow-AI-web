@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { verifyGoogleIdToken } from '../auth/googleOauth.js';
+import { verifyGithubCode } from '../auth/githubOauth.js';
 import {
   signAccessToken,
   generateRefreshToken,
@@ -10,6 +11,8 @@ import {
   getUserRepository,
   hashRefreshToken,
   type UserRole,
+  type User,
+  type UserRepository,
 } from '../services/userRepository.js';
 
 /**
@@ -32,15 +35,57 @@ const asyncRoute =
     h(req, res).catch(next);
 
 const VALID_ROLES: UserRole[] = ['client', 'freelancer', 'agency', 'developer'];
+// Roles allowed to sign in with each provider (permission matrix, doc 00).
+const GOOGLE_ROLES: UserRole[] = ['client', 'developer', 'agency'];
+const GITHUB_ROLES: UserRole[] = ['freelancer', 'developer'];
 
 export const authRouter = Router();
+
+/**
+ * Issues our tokens for a freshly upserted user and, when the caller supplied a
+ * valid `intendedRole` for a brand-new account, applies it. Returns the auth payload.
+ */
+async function issueSession(
+  repo: UserRepository,
+  user: User,
+  intendedRole: unknown,
+  allowedRoles: UserRole[],
+) {
+  let finalUser = user;
+  if (
+    typeof intendedRole === 'string' &&
+    VALID_ROLES.includes(intendedRole as UserRole) &&
+    allowedRoles.includes(intendedRole as UserRole) &&
+    intendedRole !== user.role
+  ) {
+    finalUser = (await repo.updateRole(user.id, intendedRole as UserRole)) ?? user;
+  }
+  const accessToken = signAccessToken(finalUser);
+  const refreshToken = generateRefreshToken();
+  await repo.addRefreshTokenHash(finalUser.id, hashRefreshToken(refreshToken));
+  return {
+    user: publicUser(finalUser),
+    accessToken,
+    refreshToken,
+    refreshTokenExpiresInMs: refreshTtlMs(),
+  };
+}
 
 authRouter.post(
   '/google',
   asyncRoute(async (req, res) => {
-    const { idToken } = req.body ?? {};
+    const { idToken, intendedRole } = req.body ?? {};
     if (typeof idToken !== 'string' || !idToken.trim()) {
       res.status(400).json({ error: 'idToken is required.' });
+      return;
+    }
+
+    // Freelancers must use GitHub — their profile is derived from their code.
+    if (intendedRole === 'freelancer') {
+      res.status(400).json({
+        error: 'Freelancers must sign in with GitHub.',
+        code: 'role_requires_github',
+      });
       return;
     }
 
@@ -62,17 +107,46 @@ authRouter.post(
 
     const repo = getUserRepository();
     const user = await repo.upsertFromGoogleProfile(profile);
+    res.json(await issueSession(repo, user, intendedRole, GOOGLE_ROLES));
+  }),
+);
 
-    const accessToken = signAccessToken(user);
-    const refreshToken = generateRefreshToken();
-    await repo.addRefreshTokenHash(user.id, hashRefreshToken(refreshToken));
+authRouter.post(
+  '/github',
+  asyncRoute(async (req, res) => {
+    const { code, intendedRole, redirectUri } = req.body ?? {};
+    if (typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ error: 'GitHub authorization code is required.' });
+      return;
+    }
 
-    res.json({
-      user: publicUser(user),
-      accessToken,
-      refreshToken,
-      refreshTokenExpiresInMs: refreshTtlMs(),
+    let profile;
+    try {
+      profile = await verifyGithubCode(code, typeof redirectUri === 'string' ? redirectUri : undefined);
+    } catch (err) {
+      res.status(401).json({
+        error: 'GitHub sign-in failed.',
+        detail: (err as Error).message,
+        code: 'github_exchange_failed',
+      });
+      return;
+    }
+
+    const repo = getUserRepository();
+    // Note: profile.accessToken is available here for enqueuing a repo scan
+    // (see roles/01). It is intentionally NOT returned to the browser.
+    const user = await repo.upsertFromGithubProfile({
+      githubUserId: profile.githubUserId,
+      githubUsername: profile.githubUsername,
+      email: profile.email,
+      emailVerified: profile.emailVerified,
+      name: profile.name,
+      picture: profile.picture,
     });
+
+    const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES);
+    // scanJobId placeholder — wire to the GitHub scan pipeline (roles/01, AIA-03).
+    res.json({ ...session, githubUsername: profile.githubUsername });
   }),
 );
 
@@ -194,16 +268,7 @@ authRouter.post(
 );
 
 /** Strip private fields (refresh-token hashes) from outgoing user payloads. */
-function publicUser(u: {
-  id: string;
-  email: string;
-  emailVerified: boolean;
-  name: string;
-  picture?: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
-}) {
+function publicUser(u: User) {
   return {
     id: u.id,
     email: u.email,
@@ -211,6 +276,8 @@ function publicUser(u: {
     name: u.name,
     picture: u.picture,
     role: u.role,
+    authProvider: u.authProvider,
+    githubUsername: u.githubUsername,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };
