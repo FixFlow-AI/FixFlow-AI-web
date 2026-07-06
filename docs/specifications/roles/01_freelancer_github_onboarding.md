@@ -41,7 +41,7 @@ sequenceDiagram
     BE-->>FE: { accessToken, refreshToken, scanJobId }
 
     FE->>BE: GET /api/freelancer/scan/:jobId/stream (SSE)
-    Note over FE,BE: connection stays open; events pushed per segment
+    Note over FE,BE: connection stays open, events pushed per segment
 
     Q->>W: dispatch repo fan-out (bounded concurrency)
     par Per-repo analysis (parallel)
@@ -63,7 +63,7 @@ sequenceDiagram
     W->>DB: persist experience metrics (segment EXPERIENCE = done)
     BE-->>FE: SSE event: segment "EXPERIENCE" ready
 
-    W->>DB: mark scan job complete; compute profile confidence (doc 02)
+    W->>DB: mark scan job complete, compute profile confidence (doc 02)
     BE-->>FE: SSE event: "complete" (+ confidence + growth plan trigger)
 ```
 

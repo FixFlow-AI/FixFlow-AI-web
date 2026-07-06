@@ -99,7 +99,7 @@ Enforced by a new `requireRole(...roles)` middleware layered on top of the exist
 | Escrow as payer | ✅ | ❌ | ❌ |
 | Escrow as payee | ❌ | ✅ | ❌ |
 | Create/manage own projects (`/api/dev/projects/*`) | ❌ | ❌ | ✅ |
-| Generate project timeline/proposal/team | ❌ | ❌ | ✅ |
+| Generate project timeline/proposal/team | ✅ | ✅ | ✅ |
 | Team collaboration workspace | ✅ (project) | limited | ✅ |
 
 > **Hard rule:** Developers have **no path** to client or lead data. The middleware blocks it; the frontend never renders those routes for the `developer` role.
