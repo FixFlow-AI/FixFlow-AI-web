@@ -12,6 +12,7 @@ from typing import Any, List
 
 from ..llm.gemini import generate_structured
 from ..schemas.proposal import Proposal
+from ..main import ParseBriefResponse
 
 logger = logging.getLogger(__name__)
 
@@ -333,7 +334,7 @@ def sanitize_and_patch_brief(raw: Any) -> Proposal:
 # Semantic ingest
 # ---------------------------------------------------------------------------
 
-async def parse_brief(brief_text: str) -> Proposal:
+async def parse_brief(brief_text: str) -> ParseBriefResponse:
     if not brief_text or not brief_text.strip():
         raise ValueError("Brief parsing failed: The incoming brief content is empty.")
 
@@ -344,13 +345,15 @@ async def parse_brief(brief_text: str) -> Proposal:
     )
 
     try:
-        return await generate_structured(
+        proposal = await generate_structured(
             system_instruction=SYSTEM_PROMPT,
             contents=contents,
             response_schema=Proposal,
             temperature=0.2,
         )
+        return ParseBriefResponse(proposal=proposal, source="llm", degradedReason=None)
     except Exception as error:  # noqa: BLE001 - deliberate broad fallback
         logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", error)
         logger.info("Initiating fallback brief patch heuristics...")
-        return sanitize_and_patch_brief({})
+        fallback = sanitize_and_patch_brief({})
+        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="gemini_error")

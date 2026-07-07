@@ -7,7 +7,7 @@ TypeScript backend remains the gateway and system of record.
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -62,6 +62,8 @@ class ParseBriefRequest(BaseModel):
 
 class ParseBriefResponse(BaseModel):
     proposal: Proposal
+    source: Literal["llm", "fallback"]
+    degradedReason: str | None = None
 
 
 class EvaluateRequest(BaseModel):
@@ -99,8 +101,7 @@ async def health() -> dict:
 @app.post("/ai/brief/parse", response_model=ParseBriefResponse, dependencies=[Depends(verify_token)])
 async def brief_parse(body: ParseBriefRequest) -> ParseBriefResponse:
     require_ai()
-    proposal = await parse_brief(body.briefText)
-    return ParseBriefResponse(proposal=proposal)
+    return await parse_brief(body.briefText)
 
 
 @app.post(
