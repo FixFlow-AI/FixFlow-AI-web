@@ -144,7 +144,7 @@ export async function handleGithubRedirect({ api, setSession, login }) {
 
   console.log('[GitHubOAuth:FE]   Calling backend POST /api/auth/github...');
   try {
-    const { user, accessToken, refreshToken } = await api.githubLogin(
+    const { user, accessToken, refreshToken, scanJobId } = await api.githubLogin(
       code,
       intendedRole,
       redirectUri,
@@ -152,6 +152,8 @@ export async function handleGithubRedirect({ api, setSession, login }) {
     console.log('[GitHubOAuth:FE] ✅ GitHub login successful. userId:', user?.id, '| email:', user?.email, '| role:', user?.role);
     setSession({ user, accessToken, refreshToken });
     login(user);
+    // Stash the scan job so the onboarding view can stream its segments live.
+    if (scanJobId) sessionStorage.setItem("ff_scan_job_id", scanJobId);
     return { nextHash };
   } catch (err) {
     console.error(
