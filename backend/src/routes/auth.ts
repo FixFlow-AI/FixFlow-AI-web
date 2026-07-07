@@ -58,11 +58,13 @@ async function issueSession(
     allowedRoles.includes(intendedRole as UserRole) &&
     intendedRole !== user.role
   ) {
+    console.log('[AuthRoute] Role change requested during session issuance:', user.role, '->', intendedRole);
     finalUser = (await repo.updateRole(user.id, intendedRole as UserRole)) ?? user;
   }
   const accessToken = signAccessToken(finalUser);
   const refreshToken = generateRefreshToken();
   await repo.addRefreshTokenHash(finalUser.id, hashRefreshToken(refreshToken));
+  console.log('[AuthRoute] ✅ Session issued for user:', finalUser.id, '| role:', finalUser.role, '| email:', finalUser.email);
   return {
     user: publicUser(finalUser),
     accessToken,
@@ -74,14 +76,18 @@ async function issueSession(
 authRouter.post(
   '/google',
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/google — Google login attempt');
     const { idToken, intendedRole } = req.body ?? {};
     if (typeof idToken !== 'string' || !idToken.trim()) {
+      console.error('[AuthRoute] ❌ Google login: idToken missing or empty. Body keys:', Object.keys(req.body ?? {}));
       res.status(400).json({ error: 'idToken is required.' });
       return;
     }
+    console.log('[AuthRoute]   idToken length:', idToken.length, '| intendedRole:', intendedRole ?? '(not provided)');
 
     // Freelancers must use GitHub — their profile is derived from their code.
     if (intendedRole === 'freelancer') {
+      console.error('[AuthRoute] ❌ Google login rejected: freelancer role requires GitHub sign-in, not Google.');
       res.status(400).json({
         error: 'Freelancers must sign in with GitHub.',
         code: 'role_requires_github',
@@ -92,7 +98,9 @@ authRouter.post(
     let profile;
     try {
       profile = await verifyGoogleIdToken(idToken);
+      console.log('[AuthRoute]   ✅ Google ID token verified. email:', profile.email, '| sub:', profile.googleSub);
     } catch (err) {
+      console.error('[AuthRoute] ❌ Google ID token verification failed:', (err as Error).message);
       res.status(401).json({
         error: 'Google ID token verification failed.',
         detail: (err as Error).message,
@@ -101,12 +109,14 @@ authRouter.post(
     }
 
     if (!profile.emailVerified) {
+      console.error('[AuthRoute] ❌ Google account email is not verified. email:', profile.email);
       res.status(403).json({ error: 'Google account email is not verified.' });
       return;
     }
 
     const repo = getUserRepository();
     const user = await repo.upsertFromGoogleProfile(profile);
+    console.log('[AuthRoute]   ✅ User upserted from Google. userId:', user.id, '| role:', user.role);
     res.json(await issueSession(repo, user, intendedRole, GOOGLE_ROLES));
   }),
 );
@@ -114,8 +124,15 @@ authRouter.post(
 authRouter.post(
   '/github',
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/github — GitHub login attempt');
     const { code, intendedRole, redirectUri } = req.body ?? {};
+    console.log('[AuthRoute]   code:', code ? `${code.slice(0, 8)}... (len ${code.length})` : 'MISSING',
+      '| intendedRole:', intendedRole ?? '(not provided)',
+      '| redirectUri:', redirectUri ?? '(not provided)',
+    );
+
     if (typeof code !== 'string' || !code.trim()) {
+      console.error('[AuthRoute] ❌ GitHub login: authorization code missing or empty. Body keys:', Object.keys(req.body ?? {}));
       res.status(400).json({ error: 'GitHub authorization code is required.' });
       return;
     }
@@ -123,7 +140,9 @@ authRouter.post(
     let profile;
     try {
       profile = await verifyGithubCode(code, typeof redirectUri === 'string' ? redirectUri : undefined);
+      console.log('[AuthRoute]   ✅ GitHub code verified. username:', profile.githubUsername, '| userId:', profile.githubUserId);
     } catch (err) {
+      console.error('[AuthRoute] ❌ GitHub code→token exchange failed:', (err as Error).message);
       res.status(401).json({
         error: 'GitHub sign-in failed.',
         detail: (err as Error).message,
@@ -133,6 +152,7 @@ authRouter.post(
     }
 
     const repo = getUserRepository();
+    console.log('[AuthRoute]   Upserting user from GitHub profile...');
     // Note: profile.accessToken is available here for enqueuing a repo scan
     // (see roles/01). It is intentionally NOT returned to the browser.
     const user = await repo.upsertFromGithubProfile({
@@ -143,6 +163,7 @@ authRouter.post(
       name: profile.name,
       picture: profile.picture,
     });
+    console.log('[AuthRoute]   ✅ User upserted from GitHub. userId:', user.id, '| role:', user.role);
 
     const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES);
     // scanJobId placeholder — wire to the GitHub scan pipeline (roles/01, AIA-03).
@@ -153,19 +174,24 @@ authRouter.post(
 authRouter.post(
   '/refresh',
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/refresh — Token refresh attempt');
     const { refreshToken, userId } = req.body ?? {};
     if (typeof refreshToken !== 'string' || typeof userId !== 'string') {
+      console.error('[AuthRoute] ❌ Refresh: missing refreshToken or userId. Got types:', typeof refreshToken, typeof userId);
       res.status(400).json({ error: 'refreshToken and userId are required.' });
       return;
     }
+    console.log('[AuthRoute]   userId:', userId, '| refreshToken length:', refreshToken.length);
     const repo = getUserRepository();
     const user = await repo.findById(userId);
     if (!user) {
+      console.error('[AuthRoute] ❌ Refresh: user not found in repository. userId:', userId);
       res.status(401).json({ error: 'Unknown user.' });
       return;
     }
     const hash = hashRefreshToken(refreshToken);
     if (!user.refreshTokenHashes.includes(hash)) {
+      console.error('[AuthRoute] ❌ Refresh: token hash not found in user record. userId:', userId, '| stored hashes count:', user.refreshTokenHashes.length);
       res.status(401).json({ error: 'Refresh token not recognised.' });
       return;
     }
@@ -175,6 +201,7 @@ authRouter.post(
     const newRefresh = generateRefreshToken();
     await repo.addRefreshTokenHash(user.id, hashRefreshToken(newRefresh));
     const accessToken = signAccessToken(user);
+    console.log('[AuthRoute]   ✅ Token refresh successful. userId:', userId);
     res.json({
       accessToken,
       refreshToken: newRefresh,
@@ -186,8 +213,10 @@ authRouter.post(
 authRouter.post(
   '/logout',
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/logout — Single-device logout');
     const { refreshToken, userId } = req.body ?? {};
     if (typeof refreshToken !== 'string' || typeof userId !== 'string') {
+      console.error('[AuthRoute] ❌ Logout: missing refreshToken or userId.');
       res.status(400).json({ error: 'refreshToken and userId are required.' });
       return;
     }
@@ -195,6 +224,7 @@ authRouter.post(
       userId,
       hashRefreshToken(refreshToken),
     );
+    console.log('[AuthRoute]   ✅ Logout successful. userId:', userId);
     res.json({ ok: true });
   }),
 );
@@ -203,7 +233,9 @@ authRouter.post(
   '/logout-all',
   requireAuth,
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/logout-all — All-device logout for userId:', req.auth!.sub);
     await getUserRepository().clearRefreshTokens(req.auth!.sub);
+    console.log('[AuthRoute]   ✅ All refresh tokens cleared for userId:', req.auth!.sub);
     res.json({ ok: true });
   }),
 );
@@ -212,11 +244,14 @@ authRouter.get(
   '/me',
   requireAuth,
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] GET /api/auth/me — userId:', req.auth!.sub);
     const user = await getUserRepository().findById(req.auth!.sub);
     if (!user) {
+      console.error('[AuthRoute] ❌ /me: authenticated user not found in repository. userId:', req.auth!.sub);
       res.status(404).json({ error: 'User not found.' });
       return;
     }
+    console.log('[AuthRoute]   ✅ /me: returning profile for', user.email, '| role:', user.role);
     res.json({ user: publicUser(user) });
   }),
 );
@@ -226,15 +261,19 @@ authRouter.patch(
   requireAuth,
   asyncRoute(async (req, res) => {
     const { role } = req.body ?? {};
+    console.log('[AuthRoute] PATCH /api/auth/me/role — userId:', req.auth!.sub, '| requested role:', role);
     if (!VALID_ROLES.includes(role)) {
+      console.error('[AuthRoute] ❌ Role change: invalid role:', role, '| valid:', VALID_ROLES.join(', '));
       res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
       return;
     }
     const updated = await getUserRepository().updateRole(req.auth!.sub, role);
     if (!updated) {
+      console.error('[AuthRoute] ❌ Role change: user not found. userId:', req.auth!.sub);
       res.status(404).json({ error: 'User not found.' });
       return;
     }
+    console.log('[AuthRoute]   ✅ Role changed to:', updated.role, 'for userId:', updated.id);
     res.json({ user: publicUser(updated) });
   }),
 );
@@ -242,8 +281,10 @@ authRouter.patch(
 authRouter.post(
   '/dev-login',
   asyncRoute(async (req, res) => {
+    console.log('[AuthRoute] POST /api/auth/dev-login — Development bypass login');
     const email = req.body?.email || 'dev-tester@fixflow.ai';
     const name = req.body?.name || 'Dev Tester';
+    console.log('[AuthRoute]   email:', email, '| name:', name);
     const profile = {
       googleSub: 'dev-sub-123456',
       email,
@@ -257,6 +298,7 @@ authRouter.post(
     const accessToken = signAccessToken(user);
     const refreshToken = generateRefreshToken();
     await repo.addRefreshTokenHash(user.id, hashRefreshToken(refreshToken));
+    console.log('[AuthRoute]   ✅ Dev-login session issued. userId:', user.id, '| role:', user.role);
 
     res.json({
       user: publicUser(user),
