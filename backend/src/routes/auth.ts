@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { verifyGoogleIdToken } from '../auth/googleOauth.js';
 import { verifyGithubCode } from '../auth/githubOauth.js';
+import { isAiServiceConfigured } from '../services/aiClient.js';
+import { enqueueGithubScan } from '../services/githubScanService.js';
 import {
   signAccessToken,
   generateRefreshToken,
@@ -166,8 +168,25 @@ authRouter.post(
     console.log('[AuthRoute]   ✅ User upserted from GitHub. userId:', user.id, '| role:', user.role);
 
     const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES);
-    // scanJobId placeholder — wire to the GitHub scan pipeline (roles/01, AIA-03).
-    res.json({ ...session, githubUsername: profile.githubUsername });
+
+    // Token hand-off: freelancers get a deep GitHub scan enqueued here. The
+    // access token is used only server-side (never returned to the browser)
+    // and discarded when the scan finishes. Failure never blocks login.
+    let scanJobId: string | undefined;
+    if (session.user.role === 'freelancer' && isAiServiceConfigured()) {
+      try {
+        scanJobId = await enqueueGithubScan(
+          session.user.id,
+          profile.githubUsername,
+          profile.accessToken,
+        );
+        console.log('[AuthRoute]   ✅ GitHub scan enqueued. jobId:', scanJobId);
+      } catch (err) {
+        console.error('[AuthRoute]   ⚠️ failed to enqueue GitHub scan:', err);
+      }
+    }
+
+    res.json({ ...session, githubUsername: profile.githubUsername, scanJobId });
   }),
 );
 
