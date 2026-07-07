@@ -9,7 +9,9 @@ from __future__ import annotations
 import logging
 import uuid
 from typing import Any, List
+from pydantic import ValidationError
 
+from google.genai.errors import APIError
 from ..llm.gemini import generate_structured
 from ..schemas.proposal import Proposal
 from ..main import ParseBriefResponse
@@ -352,6 +354,24 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
             temperature=0.2,
         )
         return ParseBriefResponse(proposal=proposal, source="llm", degradedReason=None)
+    except ValueError as value_error:
+        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", value_error)
+        logger.info("Initiating fallback brief patch heuristics...")
+        fallback = sanitize_and_patch_brief({})
+        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="empty_response")
+    except ValidationError as validation_error:
+        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", validation_error)
+        logger.info("Initiating fallback brief patch heuristics...")
+        fallback = sanitize_and_patch_brief({})
+        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="validation")
+    except APIError as api_error:
+        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", api_error)
+        logger.info("Initiating fallback brief patch heuristics...")
+        fallback = sanitize_and_patch_brief({})
+        if api_error.code in (401, 403):
+            return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="invalid_key")
+        else:
+            return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="gemini_error")
     except Exception as error:  # noqa: BLE001 - deliberate broad fallback
         logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", error)
         logger.info("Initiating fallback brief patch heuristics...")
