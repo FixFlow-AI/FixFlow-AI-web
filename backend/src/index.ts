@@ -21,6 +21,7 @@ import { generateShortlist } from './services/matchingEngine.js';
 import { getFreelancerRepository } from './services/freelancerRepository.js';
 import { getProposalRepository } from './services/proposalRepository.js';
 import { authRouter } from './routes/auth.js';
+import { freelancerRouter } from './routes/freelancer.js';
 import { requireAuth } from './auth/middleware.js';
 import { SyncServer } from './skills/syncServer.js';
 import {
@@ -53,6 +54,9 @@ app.use(express.json({ limit: '2mb' }));
 // the API. Other routes can opt in to protection with the `requireAuth`
 // middleware from ./auth/middleware.
 app.use('/api/auth', authRouter);
+
+// Freelancer routes (roles/01): verified profile + GitHub scan status/stream.
+app.use('/api/freelancer', freelancerRouter);
 
 /**
  * Small wrapper so async route handlers forward errors to the error middleware
