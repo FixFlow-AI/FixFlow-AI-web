@@ -108,6 +108,15 @@ export const api = {
     request("/auth/dev-login", { method: "POST", body: { email, name } }),
   me: () => request("/auth/me"),
   setRole: (role) => request("/auth/me/role", { method: "PATCH", body: { role } }),
+
+  // Freelancer GitHub onboarding (roles/01)
+  freelancerProfile: () => request("/freelancer/profile"),
+  scanStatus: (jobId) => request(`/freelancer/scan/${encodeURIComponent(jobId)}`),
+  // EventSource can't set headers, so the access token rides as a query param.
+  scanStreamUrl: (jobId) =>
+    `${BASE_URL}/api/freelancer/scan/${encodeURIComponent(jobId)}/stream?token=${encodeURIComponent(
+      getAccessToken() || "",
+    )}`,
   logout: (refreshToken, userId) =>
     request("/auth/logout", { method: "POST", body: { refreshToken, userId } }),
   overview: () => request("/overview"),
