@@ -42,6 +42,22 @@
         "74aa8d8ff7bdb9f08c8c3e9a7a7f13025bc745a36c4cda45f08a012133c5c7ff",
         "b25808e6b9caabe2eb30420c763c08e78c7084a581cad7f66ae4a932ba26bbca"
       ]
+    },
+    {
+      "id": "d51a5022-c779-49b9-85fe-786c5291f33c",
+      "email": "suvampersonal555@gmail.com",
+      "emailVerified": true,
+      "name": "Suvam Paul",
+      "picture": "https://avatars.githubusercontent.com/u/178690510?v=4",
+      "authProvider": "github",
+      "githubUserId": "178690510",
+      "githubUsername": "Suvam-paul145",
+      "role": "freelancer",
+      "createdAt": "2026-07-07T07:48:51.920Z",
+      "updatedAt": "2026-07-07T14:17:23.580Z",
+      "refreshTokenHashes": [
+        "1eec22bf7f0ffea67677fa5056b71b78025e9e910cdadf4d0159fb4d211e7875"
+      ]
     }
   ]
 }
