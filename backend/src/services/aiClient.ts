@@ -15,6 +15,7 @@ import type {
   InterviewOutput,
   Proposal,
 } from '../types/ai.js';
+import type { GithubScanResult } from '../types/github.js';
 
 const AI_SERVICE_URL = (process.env.AI_SERVICE_URL || '').replace(/\/+$/, '');
 const AI_SERVICE_TOKEN = process.env.AI_SERVICE_TOKEN || '';
@@ -108,4 +109,46 @@ export async function generateContractExtensions(
     completedDeliverables,
     chatSummary,
   });
+}
+
+export interface GithubScanRequestBody {
+  githubUsername: string;
+  accessToken?: string;
+  topN?: number;
+}
+
+/** Roles/01 — full GitHub onboarding scan (blocking; returns the whole result). */
+export async function scanGithub(body: GithubScanRequestBody): Promise<GithubScanResult> {
+  return postJson<GithubScanResult>('/ai/github/scan', body);
+}
+
+/**
+ * Roles/01 — open the streaming scan (Server-Sent Events). Returns the raw
+ * `Response` so the caller can read the SSE body and persist/forward each
+ * segment as it arrives. The GitHub access token is used only here.
+ */
+export async function openGithubScanStream(body: GithubScanRequestBody): Promise<Response> {
+  if (!AI_SERVICE_URL) {
+    throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
+  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (AI_SERVICE_TOKEN) headers['x-ai-service-token'] = AI_SERVICE_TOKEN;
+
+  let res: Response;
+  try {
+    res = await fetch(`${AI_SERVICE_URL}/ai/github/scan/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new AiServiceError(
+      502,
+      `AI service is unreachable at ${AI_SERVICE_URL}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  if (!res.ok || !res.body) {
+    throw new AiServiceError(res.status || 502, `AI scan stream failed (${res.status}).`);
+  }
+  return res;
 }
