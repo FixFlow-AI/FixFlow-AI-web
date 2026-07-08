@@ -167,3 +167,9 @@ export interface ContractExtensionsOutput {
   suggestedMilestones: ExtensionMilestone[];
   extensionOfferDraft: string;
 }
+
+export interface ParseBriefResponse {
+  proposal: Proposal;
+  source: "llm" | "fallback";
+  degradedReason?: string | null;
+}
