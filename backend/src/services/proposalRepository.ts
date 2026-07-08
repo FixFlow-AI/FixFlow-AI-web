@@ -17,13 +17,14 @@ export interface StoredProposal {
   title: string;
   briefText: string;
   proposal: Proposal;
+  degraded: boolean;
   evaluation?: unknown; // ConfidenceGridResult, stored opaque to avoid a hard dep
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ProposalRepository {
-  create(input: { userId: string; briefText: string; proposal: Proposal }): Promise<StoredProposal>;
+  create(input: { userId: string; briefText: string; proposal: Proposal; degraded: boolean }): Promise<StoredProposal>;
   get(proposalId: string): Promise<StoredProposal | null>;
   listByUser(userId: string): Promise<StoredProposal[]>;
   setEvaluation(proposalId: string, evaluation: unknown): Promise<StoredProposal | null>;
@@ -38,7 +39,17 @@ function deriveTitle(p: Proposal): string {
 class InMemoryProposalRepository implements ProposalRepository {
   private store = new Map<string, StoredProposal>();
 
-  async create({ userId, briefText, proposal }: { userId: string; briefText: string; proposal: Proposal }) {
+  async create({
+    userId,
+    briefText,
+    proposal,
+    degraded,
+  }: {
+    userId: string;
+    briefText: string;
+    proposal: Proposal;
+    degraded: boolean;
+  }) {
     const now = new Date().toISOString();
     const sp: StoredProposal = {
       proposalId: randomUUID(),
@@ -46,6 +57,7 @@ class InMemoryProposalRepository implements ProposalRepository {
       title: deriveTitle(proposal),
       briefText,
       proposal,
+      degraded,
       createdAt: now,
       updatedAt: now,
     };
@@ -72,7 +84,7 @@ class InMemoryProposalRepository implements ProposalRepository {
 // ---------- DynamoDB ----------
 
 class DynamoDbProposalRepository implements ProposalRepository {
-  async create({ userId, briefText, proposal }: { userId: string; briefText: string; proposal: Proposal }) {
+  async create({ userId, briefText, proposal, degraded }: { userId: string; briefText: string; proposal: Proposal; degraded:boolean }) {
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
     const now = new Date().toISOString();
@@ -82,6 +94,7 @@ class DynamoDbProposalRepository implements ProposalRepository {
       title: deriveTitle(proposal),
       briefText,
       proposal,
+      degraded,
       createdAt: now,
       updatedAt: now,
     };
