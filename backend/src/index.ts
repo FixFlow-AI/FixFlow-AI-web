@@ -106,14 +106,31 @@ app.post(
       res.status(400).json({ error: 'briefText is required and must be a non-empty string.' });
       return;
     }
-    const proposal = await parseBrief(briefText);
+    const result = await parseBrief(briefText);
+
+    if (
+      result.source === 'fallback' &&
+      result.degradedReason === 'invalid_key'
+    ) {
+      res.status(503).json({
+        error: 'AI temporarily unavailable',
+        code: result.degradedReason,
+      });
+      return;
+    }
+
     // Persist the parsed proposal under the authenticated user.
     const stored = await getProposalRepository().create({
       userId: req.auth!.sub,
       briefText,
-      proposal,
+      proposal: result.proposal,
+      degraded: result.source === "fallback",
     });
-    res.json({ proposal, proposalId: stored.proposalId });
+    res.json({
+      proposal: result.proposal,
+      proposalId: stored.proposalId,
+      source: result.source,
+      degradedReason: result.degradedReason });
   })
 );
 
