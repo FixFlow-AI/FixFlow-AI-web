@@ -16,7 +16,7 @@
     "@react-three/drei": "^9.106.0",
     "@react-three/fiber": "^8.16.8",
     "@tanstack/react-query": "^5.99.0",
-    "axios": "^1.15.0",
+    "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",
     "jsondiffpatch": "^0.7.3",
