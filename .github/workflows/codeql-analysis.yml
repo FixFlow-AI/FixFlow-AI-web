@@ -1,0 +1,48 @@
+name: CodeQL Analysis
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: CodeQL Scan
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript-typescript' ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'frontend/**'
+              - 'backend/**'
+              - 'package-lock.json'
+              - '.github/workflows/codeql-analysis.yml'
+
+      - name: Initialize CodeQL
+        if: steps.filter.outputs.code == 'true'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        if: steps.filter.outputs.code == 'true'
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        if: steps.filter.outputs.code == 'true'
+        uses: github/codeql-action/analyze@v3

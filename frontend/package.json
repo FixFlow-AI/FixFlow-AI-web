@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "echo 'Skipping lint - not configured'",
+    "typecheck": "tsc -p jsconfig.json --noEmit"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
