@@ -1,10 +1,6 @@
 name: FixFlowAI CD Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - testing
   workflow_dispatch:
     inputs:
       target_environment:
