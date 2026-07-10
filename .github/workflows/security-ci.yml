@@ -28,7 +28,7 @@ jobs:
         if: steps.filter.outputs.code == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Audit Frontend Dependencies
         if: steps.filter.outputs.code == 'true'
