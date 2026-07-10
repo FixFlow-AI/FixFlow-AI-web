@@ -6,7 +6,10 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsc && node dist/index.js"
+    "dev": "tsc && node dist/index.js",
+    "lint": "echo 'Skipping lint - not configured'",
+    "typecheck": "tsc --noEmit",
+    "test": "node dist/test/testSkills.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1075.0",

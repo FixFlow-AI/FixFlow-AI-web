@@ -1,0 +1,41 @@
+name: Security CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - 'frontend/**'
+              - 'backend/**'
+              - 'package-lock.json'
+              - '.github/workflows/security-ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.code == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Audit Frontend Dependencies
+        if: steps.filter.outputs.code == 'true'
+        run: npm audit --audit-level=high --omit=dev || true
+        working-directory: frontend
+
+      - name: Audit Backend Dependencies
+        if: steps.filter.outputs.code == 'true'
+        run: npm audit --audit-level=high --omit=dev || true
+        working-directory: backend

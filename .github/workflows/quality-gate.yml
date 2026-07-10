@@ -1,0 +1,103 @@
+name: FixFlowAI CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - testing
+      - production
+      - waitlist
+  push:
+    branches:
+      - main
+      - testing
+      - production
+      - waitlist
+  workflow_dispatch:
+
+concurrency:
+  group: ci-pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  branch-policy-check:
+    name: Branch Policy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Branch Naming
+        run: |
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "Current Branch: $BRANCH_NAME"
+
+          if [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "testing" ]] || [[ "$BRANCH_NAME" == "production" ]] || [[ "$BRANCH_NAME" == "waitlist" ]] || [[ "$BRANCH_NAME" == "master" ]]; then
+            echo "✅ Target branch detected: $BRANCH_NAME"
+          elif [[ "$BRANCH_NAME" =~ ^feature\/.*$ ]]; then
+            echo "✅ Valid feature branch: $BRANCH_NAME"
+          elif [[ "$BRANCH_NAME" =~ ^bugfix\/.*$ ]]; then
+            echo "✅ Valid bugfix branch: $BRANCH_NAME"
+          elif [[ "$BRANCH_NAME" =~ ^hotfix\/.*$ ]]; then
+            echo "✅ Valid hotfix branch: $BRANCH_NAME"
+          elif [[ "$BRANCH_NAME" =~ ^aie-.*$ ]] || [[ "$BRANCH_NAME" =~ ^010-.*$ ]]; then
+            echo "✅ Valid story branch: $BRANCH_NAME"
+          else
+            echo "❌ Error: Branch name '$BRANCH_NAME' does not follow naming conventions."
+            echo "Branches must be main, testing, production, waitlist, or prefixed with feature/, bugfix/, hotfix/, or story codes."
+            exit 1
+          fi
+
+  frontend:
+    name: Frontend
+    uses: ./.github/workflows/frontend-ci.yml
+
+  backend:
+    name: Backend
+    uses: ./.github/workflows/backend-ci.yml
+
+  security:
+    name: Security
+    uses: ./.github/workflows/security-ci.yml
+
+  codeql:
+    name: CodeQL
+    uses: ./.github/workflows/codeql-analysis.yml
+
+  quality-gate:
+    name: Build and Test
+    needs: [branch-policy-check, frontend, backend, security, codeql]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Verify All Orchestrated Jobs Passed
+        run: |
+          branch_policy_status="${{ needs.branch-policy-check.result }}"
+          frontend_status="${{ needs.frontend.result }}"
+          backend_status="${{ needs.backend.result }}"
+          security_status="${{ needs.security.result }}"
+          codeql_status="${{ needs.codeql.result }}"
+
+          echo "=========================================="
+          echo "         CI QUALITY GATE SUMMARY          "
+          echo "=========================================="
+          echo "Branch Policy Status: $branch_policy_status"
+          echo "Frontend CI Status  : $frontend_status"
+          echo "Backend CI Status   : $backend_status"
+          echo "Security CI Status  : $security_status"
+          echo "CodeQL Scan Status  : $codeql_status"
+          echo "=========================================="
+
+          # Check if any workflow failed or was cancelled
+          if [ "$branch_policy_status" = "failure" ] || [ "$branch_policy_status" = "cancelled" ] || \
+             [ "$frontend_status" = "failure" ] || [ "$frontend_status" = "cancelled" ] || \
+             [ "$backend_status" = "failure" ] || [ "$backend_status" = "cancelled" ] || \
+             [ "$security_status" = "failure" ] || [ "$security_status" = "cancelled" ] || \
+             [ "$codeql_status" = "failure" ] || [ "$codeql_status" = "cancelled" ]; then
+            echo "❌ Quality Gate Failed: One or more checks failed or were cancelled."
+            exit 1
+          fi
+
+          echo "✅ Quality Gate Passed: All checks completed successfully or were skipped."

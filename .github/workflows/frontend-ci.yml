@@ -1,0 +1,52 @@
+name: Frontend CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Frontend Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - 'package-lock.json'
+              - '.github/workflows/frontend-ci.yml'
+
+      - name: Set up Node.js
+        if: steps.filter.outputs.frontend == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm install --no-audit --no-fund
+        working-directory: frontend
+
+      - name: Run Linter
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Run Typecheck
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm run typecheck
+        working-directory: frontend
+
+      - name: Build Frontend
+        if: steps.filter.outputs.frontend == 'true'
+        run: npm run build
+        working-directory: frontend
