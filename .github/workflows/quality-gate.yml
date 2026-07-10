@@ -19,6 +19,11 @@ concurrency:
   group: ci-pipeline-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
 jobs:
   branch-policy-check:
     name: Branch Policy Validation
