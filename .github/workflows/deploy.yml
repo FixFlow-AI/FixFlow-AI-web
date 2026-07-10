@@ -58,7 +58,7 @@ jobs:
           npm config set fetch-retry-maxtimeout 120000
           
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
         working-directory: frontend
 
       - name: Build frontend
