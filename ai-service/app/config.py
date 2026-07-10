@@ -41,6 +41,19 @@ class Settings:
         self.max_correction_cycles: int = int(os.getenv("MAX_CORRECTION_CYCLES", "1"))
         self.ai_service_token: str = os.getenv("AI_SERVICE_TOKEN", "").strip()
 
+        # ── GitHub onboarding (roles/01, 01a) ──────────────────────────────
+        # Optional server token used when a request doesn't carry the
+        # freelancer's OAuth access token (GraphQL requires *some* token).
+        self.github_token: str = os.getenv("GITHUB_TOKEN", "").strip()
+        # Deterministic fan-out concurrency over repos.
+        self.github_scan_concurrency: int = int(os.getenv("GITHUB_SCAN_CONCURRENCY", "6"))
+        # Cap deep analysis to the top-N repos by recency + stars + ownership.
+        self.scan_top_n_repos: int = int(os.getenv("SCAN_TOP_N_REPOS", "50"))
+        # Profile confidence match-ready threshold (mirrors CONFIDENCE_THRESHOLD).
+        self.profile_confidence_threshold: int = int(
+            os.getenv("PROFILE_CONFIDENCE_THRESHOLD", "75")
+        )
+
     @property
     def ai_enabled(self) -> bool:
         return bool(self.gemini_api_key)

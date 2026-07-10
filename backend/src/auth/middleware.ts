@@ -31,13 +31,25 @@ function extractBearer(req: Request): string | null {
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const token = extractBearer(req);
   if (!token) {
+    console.error(
+      '[AuthMiddleware] ❌ Missing Authorization header.',
+      'Method:', req.method, '| Path:', req.originalUrl,
+      '| Headers present:', Object.keys(req.headers).join(', '),
+    );
     res.status(401).json({ error: 'Missing Authorization: Bearer <token>.' });
     return;
   }
   try {
     req.auth = verifyAccessToken(token);
+    console.log('[AuthMiddleware] ✅ Token verified. userId:', req.auth.sub, '| role:', req.auth.role, '| path:', req.originalUrl);
     next();
   } catch (err) {
+    console.error(
+      '[AuthMiddleware] ❌ Token verification failed.',
+      'Path:', req.originalUrl,
+      '| Error:', (err as Error).message,
+      '| Token length:', token.length,
+    );
     res.status(401).json({
       error: 'Invalid or expired access token.',
       detail: (err as Error).message,

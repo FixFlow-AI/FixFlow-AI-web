@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
+import { FreelancerScanOnboarding } from "./FreelancerScanOnboarding";
 import {
   Building2,
   Users,
@@ -60,6 +61,12 @@ export function RoleOnboarding() {
   const { userRole, onboardingTeam, addOnboardingTeam } = useLandingStore();
   const [selectedRole, setSelectedRole] = useState(userRole || "agency");
   const [inviteEmail, setInviteEmail] = useState("");
+
+  // Freelancers get the live GitHub-scan onboarding (roles/01) instead of the
+  // generic team/proof setup.
+  if (userRole === "freelancer") {
+    return <FreelancerScanOnboarding />;
+  }
 
   const handleInvite = (e) => {
     e.preventDefault();

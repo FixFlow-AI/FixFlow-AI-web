@@ -6,19 +6,23 @@ TypeScript backend remains the gateway and system of record.
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, List, Optional, Union, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .config import get_settings
 from .features.brief_parser import parse_brief
 from .features.confidence_grid import process_confidence_grid
 from .features.extensions import generate_contract_extensions
+from .features.github_scan import run_github_scan, stream_github_scan
 from .features.interview import generate_interview_questions
 from .schemas.confidence import ConfidenceGridResult
 from .schemas.extensions import ContractExtensionsOutput
+from .schemas.github import GithubScanRequest, GithubScanResult
 from .schemas.interview import InterviewOutput
 from .schemas.proposal import Proposal
 
@@ -134,3 +138,41 @@ async def interview_generate(body: InterviewRequest) -> InterviewOutput:
 async def extensions_generate(body: ExtensionsRequest) -> ContractExtensionsOutput:
     require_ai()
     return await generate_contract_extensions(body.completedDeliverables, body.chatSummary)
+
+
+# --------------------------------------------------------------------------
+# GitHub onboarding (roles/01, 01a) — deterministic core + parallel agents.
+# NOTE: no require_ai() guard: this works WITHOUT a Gemini key (facts-only
+# results at lower confidence). The LLM is a last-mile enhancement.
+# --------------------------------------------------------------------------
+
+@app.post(
+    "/ai/github/scan",
+    response_model=GithubScanResult,
+    dependencies=[Depends(verify_token)],
+)
+async def github_scan(body: GithubScanRequest) -> GithubScanResult:
+    try:
+        return await run_github_scan(body.githubUsername, body.accessToken, body.topN)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/ai/github/scan/stream", dependencies=[Depends(verify_token)])
+async def github_scan_stream(body: GithubScanRequest) -> StreamingResponse:
+    """Server-Sent Events: emits each segment as it completes (progressive reveal).
+
+    The TS gateway proxies these events to the browser's EventSource so the
+    freelancer dashboard reveals Skills / Projects / Experience one by one.
+    """
+    async def event_source():
+        async for event, payload in stream_github_scan(
+            body.githubUsername, body.accessToken, body.topN
+        ):
+            yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

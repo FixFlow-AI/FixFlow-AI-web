@@ -21,6 +21,11 @@ const AUDIENCE = process.env.JWT_AUDIENCE || 'fixflowai-clients';
 function getSecret(): string {
   const s = process.env.JWT_SECRET;
   if (!s || s.length < 32) {
+    console.error(
+      '[JWT] ❌ JWT_SECRET is missing or too short (got length:', s?.length ?? 0, ').',
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"',
+      'Then set it in backend/.env',
+    );
     throw new Error(
       'JWT_SECRET is missing or shorter than 32 characters. Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"',
     );

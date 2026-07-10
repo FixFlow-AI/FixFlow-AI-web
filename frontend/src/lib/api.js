@@ -35,20 +35,29 @@ async function doFetch(path, { method, body, signal, token }) {
 }
 
 async function request(path, { method = "GET", body, signal } = {}) {
+  console.log(`[API] ${method} /api${path}`, body ? '| body keys: ' + Object.keys(body).join(', ') : '');
   let response;
   try {
     response = await doFetch(path, { method, body, signal, token: getAccessToken() });
 
     // Access token expired → try one silent refresh, then retry once.
     if (response.status === 401 && getAccessToken()) {
+      console.log(`[API]   ⚠️ 401 on ${path} — attempting silent token refresh...`);
       const newToken = await refreshAccessToken();
       if (newToken) {
+        console.log('[API]   ✅ Token refreshed. Retrying request...');
         response = await doFetch(path, { method, body, signal, token: newToken });
       } else {
+        console.error('[API]   ❌ Token refresh failed. Clearing session (user will be logged out).');
         clearSession();
       }
     }
   } catch (networkError) {
+    console.error(
+      `[API] ❌ Network error on ${method} /api${path}.`,
+      'Error:', networkError?.message || networkError,
+      '| Is the backend running? Check http://localhost:4000/api/health',
+    );
     throw new ApiError(
       "Could not reach the backend. Is the API server running?",
       0,
@@ -61,15 +70,24 @@ async function request(path, { method = "GET", body, signal } = {}) {
     try {
       payload = JSON.parse(text);
     } catch {
+      console.error(`[API] ❌ Response from ${path} is not valid JSON. Raw text:`, text.slice(0, 200));
       payload = { error: text };
     }
   }
 
   if (!response.ok) {
     const message = payload?.error || `Request failed (${response.status}).`;
+    console.error(
+      `[API] ❌ ${method} /api${path} failed.`,
+      'Status:', response.status,
+      '| Error:', message,
+      payload?.detail ? '| Detail: ' + payload.detail : '',
+      payload?.code ? '| Code: ' + payload.code : '',
+    );
     throw new ApiError(message, response.status);
   }
 
+  console.log(`[API] ✅ ${method} /api${path} — ${response.status}`);
   return payload;
 }
 
@@ -90,6 +108,15 @@ export const api = {
     request("/auth/dev-login", { method: "POST", body: { email, name } }),
   me: () => request("/auth/me"),
   setRole: (role) => request("/auth/me/role", { method: "PATCH", body: { role } }),
+
+  // Freelancer GitHub onboarding (roles/01)
+  freelancerProfile: () => request("/freelancer/profile"),
+  scanStatus: (jobId) => request(`/freelancer/scan/${encodeURIComponent(jobId)}`),
+  // EventSource can't set headers, so the access token rides as a query param.
+  scanStreamUrl: (jobId) =>
+    `${BASE_URL}/api/freelancer/scan/${encodeURIComponent(jobId)}/stream?token=${encodeURIComponent(
+      getAccessToken() || "",
+    )}`,
   logout: (refreshToken, userId) =>
     request("/auth/logout", { method: "POST", body: { refreshToken, userId } }),
   overview: () => request("/overview"),
