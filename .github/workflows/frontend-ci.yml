@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Dependencies
         if: steps.filter.outputs.frontend == 'true'
-        run: npm ci || npm install --no-audit --no-fund
+        run: npm install --no-audit --no-fund
         working-directory: frontend
 
       - name: Run Linter
