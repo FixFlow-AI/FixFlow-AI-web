@@ -46,6 +46,11 @@ jobs:
         run: npm run typecheck
         working-directory: backend
 
+      - name: Build Backend
+        if: steps.filter.outputs.backend == 'true'
+        run: npm run build
+        working-directory: backend
+
       - name: Run Tests
         if: steps.filter.outputs.backend == 'true'
         run: npm test
