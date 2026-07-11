@@ -111,6 +111,9 @@ export const api = {
 
   // Freelancer GitHub onboarding (roles/01)
   freelancerProfile: () => request("/freelancer/profile"),
+  // On-demand re-analysis — the ONLY caller that re-invokes the GitHub API for
+  // a returning freelancer. Returns { scanJobId } to stream live segments.
+  rescanGithub: () => request("/freelancer/scan/rescan", { method: "POST" }),
   scanStatus: (jobId) => request(`/freelancer/scan/${encodeURIComponent(jobId)}`),
   // EventSource can't set headers, so the access token rides as a query param.
   scanStreamUrl: (jobId) =>
