@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from google.genai.errors import APIError
 from ..llm.gemini import generate_structured
 from ..schemas.proposal import Proposal, ParseBriefResponse
+from ..features.fallback_logger import logger as ai_fallback_error
 
 logger = logging.getLogger(__name__)
 
@@ -336,6 +337,7 @@ def sanitize_and_patch_brief(raw: Any) -> Proposal:
 # ---------------------------------------------------------------------------
 
 async def parse_brief(brief_text: str) -> ParseBriefResponse:
+    feature_name = "brief_parse"
     if not brief_text or not brief_text.strip():
         raise ValueError("Brief parsing failed: The incoming brief content is empty.")
 
@@ -352,27 +354,57 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
             response_schema=Proposal,
             temperature=0.2,
         )
-        return ParseBriefResponse(proposal=proposal, source="llm", degradedReason=None)
-    except ValueError as value_error:
-        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", value_error)
-        logger.info("Initiating fallback brief patch heuristics...")
-        fallback = sanitize_and_patch_brief({})
-        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="empty_response")
+        return ParseBriefResponse(proposal=proposal,
+                                  source="llm",
+                                  degradedReason=None)
     except ValidationError as validation_error:
-        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", validation_error)
+        ai_fallback_error.error("ai.fallback",
+                     extra={
+                         "feature": feature_name,
+                         "reason": "validation",
+                         "error": str(validation_error)
+                     })
         logger.info("Initiating fallback brief patch heuristics...")
         fallback = sanitize_and_patch_brief({})
-        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="validation")
+        return ParseBriefResponse(proposal=fallback,
+                                  source="fallback",
+                                  degradedReason="validation")
+    except ValueError as value_error:
+        ai_fallback_error.error("ai.fallback",
+                     extra={
+                         "feature": feature_name,
+                         "reason": "empty_response",
+                         "error": str(value_error)
+                     })
+        logger.info("Initiating fallback brief patch heuristics...")
+        fallback = sanitize_and_patch_brief({})
+        return ParseBriefResponse(proposal=fallback,
+                                  source="fallback",
+                                  degradedReason="empty_response")
     except APIError as api_error:
-        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", api_error)
-        logger.info("Initiating fallback brief patch heuristics...")
-        fallback = sanitize_and_patch_brief({})
+        reason = "gemini_error"
         if api_error.code in (401, 403):
-            return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="invalid_key")
-        else:
-            return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="gemini_error")
-    except Exception as error:  # noqa: BLE001 - deliberate broad fallback
-        logger.error("CRITICAL: Semantic Brief Parsing Exception: %s", error)
+            reason = "invalid_key"
+        ai_fallback_error.error("ai.fallback",
+                    extra={
+                        "feature": feature_name,
+                        "reason": reason,
+                        "error": str(api_error)
+                    })
         logger.info("Initiating fallback brief patch heuristics...")
         fallback = sanitize_and_patch_brief({})
-        return ParseBriefResponse(proposal=fallback, source="fallback", degradedReason="gemini_error")
+        return ParseBriefResponse(proposal=fallback,
+                                    source="fallback",
+                                    degradedReason=reason)
+    except Exception as error:  # noqa: BLE001 - deliberate broad fallback
+        ai_fallback_error.error("ai.fallback",
+                     extra={
+                         "feature": feature_name,
+                         "reason": "gemini_error",
+                         "error": str(error)
+                     })
+        logger.info("Initiating fallback brief patch heuristics...")
+        fallback = sanitize_and_patch_brief({})
+        return ParseBriefResponse(proposal=fallback,
+                                  source="fallback",
+                                  degradedReason="gemini_error")
