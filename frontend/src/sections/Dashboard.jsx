@@ -10,6 +10,7 @@ import { MilestoneFunds } from "./dashboard/MilestoneFunds";
 import { OutcomeEvidence } from "./dashboard/OutcomeEvidence";
 import { RoleOnboarding } from "./dashboard/RoleOnboarding";
 import { MatchResults } from "./dashboard/MatchResults";
+import { FreelancerAnalytics } from "./dashboard/FreelancerAnalytics";
 
 import {
   Home,
@@ -19,6 +20,7 @@ import {
   PackageCheck,
   Wallet,
   BarChart3,
+  LineChart,
   ChevronLeft,
   ChevronDown,
   Bell,
@@ -38,6 +40,8 @@ import { getRefreshToken, getUser, clearSession } from "../lib/auth";
    —————————————————————————————————————————— */
 const menuItems = [
   { id: "overview", label: "Overview", icon: Home },
+  // Analytics is freelancer-only (their profile is derived from their code).
+  { id: "analytics", label: "Analytics", icon: LineChart, roles: ["freelancer"] },
   { id: "brief-intelligence", label: "Brief", icon: FileText },
   { id: "evidence-confidence", label: "Evidence", icon: BadgeCheck },
   { id: "matching", label: "Matches", icon: Users },
@@ -50,6 +54,7 @@ const menuItems = [
 
 const tabMap = {
   overview: Overview,
+  analytics: FreelancerAnalytics,
   "brief-intelligence": BriefIntelligence,
   "evidence-confidence": EvidenceConfidence,
   matching: MatchResults,
@@ -116,7 +121,9 @@ export function Dashboard() {
 
         {/* Nav */}
         <nav className="dash-sidebar-nav" aria-label="Dashboard navigation">
-          {menuItems.map((item) => {
+          {menuItems
+            .filter((item) => !item.roles || item.roles.includes(user?.role))
+            .map((item) => {
             const Icon = item.icon;
             const isActive = dashboardTab === item.id;
             return (
