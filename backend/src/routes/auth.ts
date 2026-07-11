@@ -155,8 +155,15 @@ authRouter.post(
 
     const repo = getUserRepository();
     console.log('[AuthRoute]   Upserting user from GitHub profile...');
-    // Note: profile.accessToken is available here for enqueuing a repo scan
-    // (see roles/01). It is intentionally NOT returned to the browser.
+
+    // Is this a brand-new account? We only auto-scan on first sign-up; returning
+    // freelancers must trigger a re-analysis manually (Analytics tab) so we don't
+    // burn GitHub API quota on every login.
+    const priorUser = await repo.findByGithubUserId(profile.githubUserId);
+    const isNewUser = !priorUser;
+
+    // Note: profile.accessToken is stored server-side ONLY (stripped by
+    // publicUser) so a returning freelancer can re-analyze without re-auth.
     const user = await repo.upsertFromGithubProfile({
       githubUserId: profile.githubUserId,
       githubUsername: profile.githubUsername,
@@ -164,26 +171,32 @@ authRouter.post(
       emailVerified: profile.emailVerified,
       name: profile.name,
       picture: profile.picture,
+      githubAccessToken: profile.accessToken,
     });
-    console.log('[AuthRoute]   ✅ User upserted from GitHub. userId:', user.id, '| role:', user.role);
+    console.log(
+      '[AuthRoute]   ✅ User upserted from GitHub. userId:', user.id,
+      '| role:', user.role, '| newUser:', isNewUser,
+    );
 
     const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES);
 
-    // Token hand-off: freelancers get a deep GitHub scan enqueued here. The
-    // access token is used only server-side (never returned to the browser)
-    // and discarded when the scan finishes. Failure never blocks login.
+    // Token hand-off: a deep GitHub scan is enqueued ONLY for a brand-new
+    // freelancer account. The access token is used only server-side and is never
+    // returned to the browser. Failure never blocks login.
     let scanJobId: string | undefined;
-    if (session.user.role === 'freelancer' && isAiServiceConfigured()) {
+    if (session.user.role === 'freelancer' && isNewUser && isAiServiceConfigured()) {
       try {
         scanJobId = await enqueueGithubScan(
           session.user.id,
           profile.githubUsername,
           profile.accessToken,
         );
-        console.log('[AuthRoute]   ✅ GitHub scan enqueued. jobId:', scanJobId);
+        console.log('[AuthRoute]   ✅ First-time GitHub scan enqueued. jobId:', scanJobId);
       } catch (err) {
         console.error('[AuthRoute]   ⚠️ failed to enqueue GitHub scan:', err);
       }
+    } else if (session.user.role === 'freelancer') {
+      console.log('[AuthRoute]   ↩️ Returning freelancer — skipping auto-scan (use Analytics → Re-analyze).');
     }
 
     res.json({ ...session, githubUsername: profile.githubUsername, scanJobId });
