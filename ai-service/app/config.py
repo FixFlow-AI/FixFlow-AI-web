@@ -39,6 +39,7 @@ class Settings:
         self.port: int = int(os.getenv("PORT", "8000"))
         self.confidence_threshold: int = int(os.getenv("CONFIDENCE_THRESHOLD", "75"))
         self.max_correction_cycles: int = int(os.getenv("MAX_CORRECTION_CYCLES", "1"))
+        self.confidence_min_improvement: int = int(os.getenv("CONFIDENCE_MIN_IMPROVEMENT", "0"))
         self.ai_service_token: str = os.getenv("AI_SERVICE_TOKEN", "").strip()
 
         # ── GitHub onboarding (roles/01, 01a) ──────────────────────────────
