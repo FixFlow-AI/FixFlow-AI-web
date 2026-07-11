@@ -49,6 +49,10 @@ class Settings:
         self.github_scan_concurrency: int = int(os.getenv("GITHUB_SCAN_CONCURRENCY", "6"))
         # Cap deep analysis to the top-N repos by recency + stars + ownership.
         self.scan_top_n_repos: int = int(os.getenv("SCAN_TOP_N_REPOS", "50"))
+        # How many top repos get the (costlier) precise lines-authored ownership
+        # pass via the REST stats/contributors endpoint. The rest use the
+        # reliable GraphQL commit-authorship ratio.
+        self.github_stats_top_n: int = int(os.getenv("GITHUB_STATS_TOP_N", "20"))
         # Profile confidence match-ready threshold (mirrors CONFIDENCE_THRESHOLD).
         self.profile_confidence_threshold: int = int(
             os.getenv("PROFILE_CONFIDENCE_THRESHOLD", "75")
