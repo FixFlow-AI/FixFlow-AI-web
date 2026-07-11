@@ -27,9 +27,34 @@ _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 _MAX_RETRIES = 4
 _BASE_BACKOFF_SEC = 1.5
 
-# One query pulls everything we need per repo. `pushedAt DESC` puts active work first.
+# Identity + lifetime activity signals for the freelancer. We need the node id
+# to filter commit history to *their* authored commits (real ownership), and
+# createdAt for account tenure. contributionsCollection (trailing year) adds
+# real PR / review / issue activity — signals of collaboration seniority.
+_USER_QUERY = """
+query($login: String!) {
+  user(login: $login) {
+    id
+    login
+    name
+    createdAt
+    followers { totalCount }
+    contributionsCollection {
+      totalCommitContributions
+      totalPullRequestContributions
+      totalPullRequestReviewContributions
+      totalIssueContributions
+      restrictedContributionsCount
+    }
+  }
+}
+"""
+
+# One query pulls everything we need per repo. `pushedAt DESC` puts active work
+# first. Crucially we fetch BOTH the total commit history and the history
+# authored by THIS user (via $authorId) so ownership is measured, not assumed.
 _REPOS_QUERY = """
-query($login: String!, $first: Int!, $after: String) {
+query($login: String!, $first: Int!, $after: String, $authorId: ID!) {
   user(login: $login) {
     repositories(
       first: $first,
@@ -48,13 +73,22 @@ query($login: String!, $first: Int!, $after: String) {
         forkCount
         pushedAt
         createdAt
+        diskUsage
         primaryLanguage { name }
         owner { login }
-        languages(first: 12, orderBy: { field: SIZE, direction: DESC }) {
+        languages(first: 15, orderBy: { field: SIZE, direction: DESC }) {
+          totalSize
           edges { size node { name } }
         }
-        repositoryTopics(first: 12) { nodes { topic { name } } }
-        defaultBranchRef { target { ... on Commit { history { totalCount } } } }
+        repositoryTopics(first: 15) { nodes { topic { name } } }
+        defaultBranchRef {
+          target {
+            ... on Commit {
+              total: history { totalCount }
+              authored: history(author: { id: $authorId }) { totalCount }
+            }
+          }
+        }
       }
     }
   }
@@ -71,7 +105,9 @@ def _resolve_token(access_token: Optional[str]) -> str:
     return token
 
 
-async def _graphql(client: httpx.AsyncClient, token: str, variables: Dict[str, Any]) -> Dict[str, Any]:
+async def _graphql(
+    client: httpx.AsyncClient, token: str, query: str, variables: Dict[str, Any]
+) -> Dict[str, Any]:
     """POST a GraphQL query, retrying transient gateway errors with backoff.
 
     GitHub returns 502/503/504 for expensive queries under load. We retry those
@@ -86,7 +122,7 @@ async def _graphql(client: httpx.AsyncClient, token: str, variables: Dict[str, A
             resp = await client.post(
                 GITHUB_GRAPHQL,
                 headers={"Authorization": f"Bearer {token}", "User-Agent": "FixFlowAI"},
-                json={"query": _REPOS_QUERY, "variables": variables},
+                json={"query": query, "variables": variables},
             )
         except httpx.HTTPError as exc:  # network/timeout — retry
             last_error = exc
@@ -197,6 +233,94 @@ async def _enrich_manifests(
     await asyncio.gather(*(one(r) for r in repos), return_exceptions=True)
 
 
+async def _fetch_contributor_stats(
+    client: httpx.AsyncClient, token: str, owner: str, repo: str, login: str
+) -> Optional[Dict[str, int]]:
+    """Real per-author lines-of-code via the REST stats/contributors endpoint.
+
+    Returns the user's additions/deletions/commits plus the repo totals, so we
+    can compute an authorship ratio grounded in code actually written — not an
+    assumption. GitHub returns 202 while it computes the stats cache; we retry a
+    few times, then give up (best-effort — never blocks a scan).
+    """
+    url = f"{GITHUB_REST}/repos/{owner}/{repo}/stats/contributors"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "FixFlowAI",
+    }
+    for _ in range(3):
+        try:
+            resp = await client.get(url, headers=headers)
+        except httpx.HTTPError:
+            return None
+        if resp.status_code == 202:  # stats still being computed
+            await asyncio.sleep(1.5)
+            continue
+        if resp.status_code != 200:
+            return None
+        try:
+            data = resp.json()
+        except Exception:  # noqa: BLE001
+            return None
+        if not isinstance(data, list) or not data:
+            return None
+
+        total_add = 0
+        total_commits = 0
+        user_add = user_del = user_commits = 0
+        for contrib in data:
+            weeks = contrib.get("weeks") or []
+            add = sum(int(w.get("a") or 0) for w in weeks)
+            total_add += add
+            total_commits += int(contrib.get("total") or 0)
+            author_login = ((contrib.get("author") or {}).get("login") or "").lower()
+            if author_login == login.lower():
+                user_add = add
+                user_del = sum(int(w.get("d") or 0) for w in weeks)
+                user_commits = int(contrib.get("total") or 0)
+        return {
+            "userAdditions": user_add,
+            "userDeletions": user_del,
+            "userCommitsStats": user_commits,
+            "totalAdditions": total_add,
+            "totalCommitsStats": total_commits,
+        }
+    return None
+
+
+async def _enrich_contributor_stats(
+    client: httpx.AsyncClient, token: str, repos: List[Dict[str, Any]], login: str, limit: int
+) -> None:
+    """Best-effort precise ownership (lines authored) for the top `limit` repos.
+
+    We only do this for the highest-signal repos (cost control): the ones that
+    surface as projects and dominate the skill scoring. Everything else falls
+    back to the reliable GraphQL commit-authorship ratio.
+    """
+    ranked = sorted(
+        repos,
+        key=lambda r: (r.get("stars", 0), r.get("userCommits", 0), r.get("pushedAt") or ""),
+        reverse=True,
+    )[: max(0, limit)]
+
+    async def one(repo: Dict[str, Any]) -> None:
+        stats = await _fetch_contributor_stats(
+            client, token, repo["owner"], repo["name"], login
+        )
+        if not stats:
+            return
+        repo.update(stats)
+        # Prefer lines-of-code authorship when we have it — it's the strongest
+        # ownership signal. Fall back to the commit ratio otherwise.
+        total_add = stats["totalAdditions"]
+        if total_add > 0:
+            repo["ownershipShare"] = round(stats["userAdditions"] / total_add, 4)
+            repo["ownershipBasis"] = "lines"
+
+    await asyncio.gather(*(one(r) for r in ranked), return_exceptions=True)
+
+
 def _node_to_repo(node: Dict[str, Any], login: str) -> Dict[str, Any]:
     languages: Dict[str, int] = {}
     for edge in ((node.get("languages") or {}).get("edges") or []):
@@ -208,28 +332,66 @@ def _node_to_repo(node: Dict[str, Any], login: str) -> Dict[str, Any]:
         for t in ((node.get("repositoryTopics") or {}).get("nodes") or [])
     ]
     topics = [t for t in topics if t]
-    commit_total = 0
+
     ref = node.get("defaultBranchRef") or {}
     target = ref.get("target") or {}
-    history = target.get("history") or {}
-    commit_total = int(history.get("totalCount") or 0)
+    commit_total = int(((target.get("total") or {}).get("totalCount")) or 0)
+    commit_authored = int(((target.get("authored") or {}).get("totalCount")) or 0)
+
     owner_login = ((node.get("owner") or {}).get("login") or "")
+    is_owner = owner_login.lower() == login.lower()
+    is_fork = bool(node.get("isFork"))
+
+    # Real ownership from measured commit authorship. Only fall back to a
+    # structural heuristic when GitHub gives us no commit history at all
+    # (e.g. an empty default branch), and even then we stay conservative.
+    if commit_total > 0:
+        ownership_share = round(min(1.0, commit_authored / commit_total), 4)
+        ownership_basis = "commits"
+    elif is_owner and not is_fork:
+        ownership_share = 1.0
+        ownership_basis = "sole_owner"
+    else:
+        ownership_share = 0.0
+        ownership_basis = "unknown"
+
     return {
         "name": node.get("name") or "",
         "description": node.get("description") or "",
-        "isFork": bool(node.get("isFork")),
+        "isFork": is_fork,
         "isArchived": bool(node.get("isArchived")),
         "stars": int(node.get("stargazerCount") or 0),
         "forks": int(node.get("forkCount") or 0),
         "pushedAt": node.get("pushedAt"),
         "createdAt": node.get("createdAt"),
+        "diskUsage": int(node.get("diskUsage") or 0),
         "primaryLanguage": ((node.get("primaryLanguage") or {}).get("name") or ""),
         "languages": languages,
+        "languagesTotalSize": int(((node.get("languages") or {}).get("totalSize")) or 0),
         "topics": topics,
-        "totalCommits": commit_total,
+        "totalCommits": commit_total,        # commits by everyone on the branch
+        "userCommits": commit_authored,      # commits authored by THIS user
+        "ownershipShare": ownership_share,   # 0..1, measured — never assumed
+        "ownershipBasis": ownership_basis,   # "lines" | "commits" | "sole_owner" | "unknown"
         "owner": owner_login,
-        "isOwner": owner_login.lower() == login.lower(),
+        "isOwner": is_owner,
         "manifestDeps": [],
+    }
+
+
+def _parse_user_meta(user: Dict[str, Any]) -> Dict[str, Any]:
+    contrib = user.get("contributionsCollection") or {}
+    return {
+        "id": user.get("id"),
+        "login": user.get("login") or "",
+        "name": user.get("name") or "",
+        "createdAt": user.get("createdAt"),
+        "followers": int(((user.get("followers") or {}).get("totalCount")) or 0),
+        # Trailing-year contribution signals (real).
+        "commitContributionsYear": int(contrib.get("totalCommitContributions") or 0),
+        "pullRequests": int(contrib.get("totalPullRequestContributions") or 0),
+        "reviews": int(contrib.get("totalPullRequestReviewContributions") or 0),
+        "issues": int(contrib.get("totalIssueContributions") or 0),
     }
 
 
@@ -237,11 +399,14 @@ async def fetch_profile_repos(
     username: str,
     access_token: Optional[str],
     top_n: int,
-) -> tuple[int, List[Dict[str, Any]]]:
-    """Return (reposDiscovered, analyzedRepos[]).
+) -> tuple[int, List[Dict[str, Any]], Dict[str, Any]]:
+    """Return (reposDiscovered, analyzedRepos[], userMeta).
 
-    Pulls repos via GraphQL (paginated), filters forks/empty/archived, caps to
-    top_n by a recency+stars pre-sort, then best-effort enriches manifests.
+    1. Resolve the user's node id + activity signals (identity query).
+    2. Page repos via GraphQL, capturing per-repo *authored* commit counts.
+    3. Filter noise, rank, cap to top_n.
+    4. Best-effort enrich: dependency manifests (frameworks) + contributor
+       stats (real lines authored → precise ownership) for the top repos.
     """
     settings = get_settings()
     token = _resolve_token(access_token)
@@ -255,10 +420,21 @@ async def fetch_profile_repos(
     # time it out into a 502. We page more times to compensate.
     page_size = 50
     async with httpx.AsyncClient(timeout=45.0) as client:
-        # Page through repositories (cap pages so a huge account can't run away).
+        # ── Identity first: we need the node id to attribute commit authorship.
+        user_data = await _graphql(client, token, _USER_QUERY, {"login": username})
+        user_node = user_data.get("user")
+        if not user_node or not user_node.get("id"):
+            raise ValueError(f"GitHub user '{username}' not found.")
+        user_meta = _parse_user_meta(user_node)
+        author_id = user_meta["id"]
+
+        # ── Page through repositories (cap pages so a huge account can't run away).
         for _ in range(6):  # up to 300 repos
             data = await _graphql(
-                client, token, {"login": username, "first": page_size, "after": after}
+                client,
+                token,
+                _REPOS_QUERY,
+                {"login": username, "first": page_size, "after": after, "authorId": author_id},
             )
             user = data.get("user")
             if not user:
@@ -273,22 +449,32 @@ async def fetch_profile_repos(
                 break
 
         repos = [_node_to_repo(n, username) for n in raw_nodes if n]
-        # Filter out noise: forks with no stars, archived-only, empty repos.
+        # Filter out noise: archived repos, forks with no stars, empty repos, and
+        # repos the user never actually contributed a commit to (unless they own
+        # it and it carries real code) — keep the profile about *their* work.
         repos = [
             r
             for r in repos
             if not r["isArchived"]
             and not (r["isFork"] and r["stars"] == 0)
             and (r["languages"] or r["totalCommits"] > 0 or r["stars"] > 0)
+            and (r["userCommits"] > 0 or r["isOwner"] or r["stars"] > 0)
         ]
-        # Pre-rank cheaply (recency proxy via pushedAt string + stars) and cap.
-        repos.sort(key=lambda r: (r["stars"], r.get("pushedAt") or ""), reverse=True)
+        # Pre-rank by impact (stars) + real involvement (authored commits) and cap.
+        repos.sort(
+            key=lambda r: (r["stars"], r.get("userCommits", 0), r.get("pushedAt") or ""),
+            reverse=True,
+        )
         repos = repos[: max(1, top_n)]
 
         await _enrich_manifests(client, token, repos, concurrency)
+        # Precise lines-authored ownership for the most significant repos.
+        await _enrich_contributor_stats(
+            client, token, repos, username, settings.github_stats_top_n
+        )
 
     logger.info(
-        "GitHub scan fetched: discovered=%d analyzed=%d user=%s",
-        discovered, len(repos), username,
+        "GitHub scan fetched: discovered=%d analyzed=%d user=%s authoredCommits=%d",
+        discovered, len(repos), username, sum(r.get("userCommits", 0) for r in repos),
     )
-    return discovered, repos
+    return discovered, repos, user_meta
