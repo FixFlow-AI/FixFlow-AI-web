@@ -24,7 +24,7 @@ from .schemas.confidence import ConfidenceGridResult
 from .schemas.extensions import ContractExtensionsOutput
 from .schemas.github import GithubScanRequest, GithubScanResult
 from .schemas.interview import InterviewOutput
-from .schemas.proposal import Proposal
+from .schemas.proposal import Proposal, ParseBriefResponse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -62,12 +62,6 @@ def require_ai() -> None:
 
 class ParseBriefRequest(BaseModel):
     briefText: str = Field(min_length=1)
-
-
-class ParseBriefResponse(BaseModel):
-    proposal: Proposal
-    source: Literal["llm", "fallback"]
-    degradedReason: str | None = None
 
 
 class EvaluateRequest(BaseModel):

@@ -13,8 +13,7 @@ from pydantic import ValidationError
 
 from google.genai.errors import APIError
 from ..llm.gemini import generate_structured
-from ..schemas.proposal import Proposal
-from ..main import ParseBriefResponse
+from ..schemas.proposal import Proposal, ParseBriefResponse
 
 logger = logging.getLogger(__name__)
 
