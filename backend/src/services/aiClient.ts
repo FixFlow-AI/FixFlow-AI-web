@@ -14,6 +14,7 @@ import type {
   ContractExtensionsOutput,
   InterviewOutput,
   Proposal,
+  ParseBriefResponse,
 } from '../types/ai.js';
 import type { GithubScanResult } from '../types/github.js';
 
@@ -74,9 +75,10 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 /** AI-001 — parse an unstructured brief into a structured proposal. */
-export async function parseBrief(briefText: string): Promise<Proposal> {
-  const data = await postJson<{ proposal: Proposal }>('/ai/brief/parse', { briefText });
-  return data.proposal;
+export async function parseBrief(
+  briefText: string,
+): Promise<ParseBriefResponse> {
+  return postJson<ParseBriefResponse>('/ai/brief/parse', { briefText });
 }
 
 /** AI-002 — multi-agent evaluation + self-correction. */

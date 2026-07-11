@@ -128,3 +128,9 @@ class Proposal(BaseModel):
     effort: List[Effort] = Field(min_length=1)
     market: List[MarketItem]
     impact: List[ImpactItem]
+
+
+class ParseBriefResponse(BaseModel):
+    proposal: Proposal
+    source: Literal["llm", "fallback"]
+    degradedReason: str | None = None

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -24,7 +24,7 @@ from .schemas.confidence import ConfidenceGridResult
 from .schemas.extensions import ContractExtensionsOutput
 from .schemas.github import GithubScanRequest, GithubScanResult
 from .schemas.interview import InterviewOutput
-from .schemas.proposal import Proposal
+from .schemas.proposal import Proposal, ParseBriefResponse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -64,10 +64,6 @@ class ParseBriefRequest(BaseModel):
     briefText: str = Field(min_length=1)
 
 
-class ParseBriefResponse(BaseModel):
-    proposal: Proposal
-
-
 class EvaluateRequest(BaseModel):
     briefText: str = Field(min_length=1)
     proposal: Proposal
@@ -103,8 +99,7 @@ async def health() -> dict:
 @app.post("/ai/brief/parse", response_model=ParseBriefResponse, dependencies=[Depends(verify_token)])
 async def brief_parse(body: ParseBriefRequest) -> ParseBriefResponse:
     require_ai()
-    proposal = await parse_brief(body.briefText)
-    return ParseBriefResponse(proposal=proposal)
+    return await parse_brief(body.briefText)
 
 
 @app.post(
