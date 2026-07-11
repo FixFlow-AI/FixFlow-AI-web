@@ -31,12 +31,16 @@ export interface FreelancerProject {
 }
 
 export interface ExperienceSignals {
-  totalCommits: number;
+  totalCommits: number;          // commits AUTHORED by the user (measured, not all authors)
   reposAnalyzed: number;
   activeYears: number;
   avgStars: number;
-  collaborationRepos: number;
+  collaborationRepos: number;    // others' repos where the user authored commits
   documentationQuality: number;
+  linesAuthored?: number;        // net lines the user wrote (top repos, best-effort)
+  pullRequests?: number;         // PRs opened in the trailing year
+  accountAgeYears?: number;      // GitHub account tenure
+  followers?: number;
 }
 
 export interface ConfidenceFactorBreakdown {
