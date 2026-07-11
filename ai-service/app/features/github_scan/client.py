@@ -451,17 +451,23 @@ async def fetch_profile_repos(
                 break
 
         repos = [_node_to_repo(n, username) for n in raw_nodes if n]
-        # Filter out noise: archived repos, forks with no stars, empty repos, and
-        # repos the user never actually contributed a commit to (unless they own
-        # it and it carries real code) — keep the profile about *their* work.
-        repos = [
-            r
-            for r in repos
-            if not r["isArchived"]
-            and not (r["isFork"] and r["stars"] == 0)
-            and (r["languages"] or r["totalCommits"] > 0 or r["stars"] > 0)
-            and (r["userCommits"] > 0 or r["isOwner"] or r["stars"] > 0)
-        ]
+        # Keep the profile strictly about the user's OWN work:
+        #   • drop archived repos and star-less forks (noise),
+        #   • for repos they DON'T own (collaborator/org), require real authored
+        #     commits — otherwise a popular repo they merely have access to would
+        #     masquerade as their achievement,
+        #   • for their OWN repos, require some actual code/commits/stars.
+        def _keep(r: Dict[str, Any]) -> bool:
+            if r["isArchived"]:
+                return False
+            if r["isFork"] and r["stars"] == 0:
+                return False
+            if r["isOwner"]:
+                return bool(r["languages"]) or r["totalCommits"] > 0 or r["stars"] > 0
+            # Not the owner → must have personally authored commits.
+            return r["userCommits"] > 0
+
+        repos = [r for r in repos if _keep(r)]
         # Pre-rank by impact (stars) + real involvement (authored commits) and cap.
         repos.sort(
             key=lambda r: (r["stars"], r.get("userCommits", 0), r.get("pushedAt") or ""),
