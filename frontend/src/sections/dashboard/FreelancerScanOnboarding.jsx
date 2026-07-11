@@ -207,7 +207,7 @@ export function FreelancerScanOnboarding() {
         <SegmentCard title="Work Experience" icon={Activity} state={seg.experience}>
           {experience && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Metric label="Total commits" value={experience.totalCommits} />
+              <Metric label="Commits authored" value={experience.totalCommits} />
               <Metric label="Repos analyzed" value={experience.reposAnalyzed} />
               <Metric label="Active years" value={experience.activeYears} />
               <Metric label="Avg stars" value={experience.avgStars} />
