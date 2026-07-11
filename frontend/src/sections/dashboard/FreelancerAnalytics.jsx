@@ -260,11 +260,30 @@ export function FreelancerAnalytics() {
                   gap: 16,
                 }}
               >
-                <Metric icon={GitCommitHorizontal} label="Total commits" value={experience.totalCommits} />
+                <Metric
+                  icon={GitCommitHorizontal}
+                  label="Commits authored"
+                  value={experience.totalCommits}
+                  hint="Commits you personally authored across analyzed repos"
+                />
+                {experience.linesAuthored > 0 && (
+                  <Metric
+                    icon={Code2}
+                    label="Lines authored"
+                    value={compact(experience.linesAuthored)}
+                    hint="Net lines you wrote in your top repositories"
+                  />
+                )}
                 <Metric icon={FolderGit2} label="Repos analyzed" value={experience.reposAnalyzed} />
+                {experience.pullRequests != null && (
+                  <Metric icon={Activity} label="Pull requests" value={experience.pullRequests} hint="PRs opened in the last year" />
+                )}
                 <Metric icon={Activity} label="Active years" value={experience.activeYears} />
+                {experience.accountAgeYears > 0 && (
+                  <Metric icon={Gauge} label="Account age" value={`${experience.accountAgeYears}y`} />
+                )}
                 <Metric icon={Star} label="Avg stars" value={experience.avgStars} />
-                <Metric icon={Code2} label="Collaborations" value={experience.collaborationRepos} />
+                <Metric icon={Code2} label="Team repos" value={experience.collaborationRepos} hint="Others' repos you committed to" />
                 <Metric icon={Gauge} label="Docs quality" value={`${experience.documentationQuality}%`} />
               </div>
             </div>
@@ -580,7 +599,15 @@ function ProjectsCard({ projects }) {
               </div>
               {typeof p.commitShare === "number" && (
                 <div style={{ marginTop: 2 }}>
-                  <BarRow label="Ownership" value={p.commitShare} max={100} suffix="%" color="#4f46e5" compact />
+                  <BarRow
+                    label="Your authorship"
+                    value={p.commitShare}
+                    max={100}
+                    suffix="%"
+                    color="#4f46e5"
+                    compact
+                    title="Share of this repo's commits/code you authored"
+                  />
                 </div>
               )}
             </div>
@@ -619,9 +646,9 @@ function BarRow({ label, value, max = 100, suffix = "", color = "#2563eb", title
   );
 }
 
-function Metric({ icon: Icon, label, value }) {
+function Metric({ icon: Icon, label, value, hint }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }} title={hint}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#94a3b8" }}>
         {Icon && <Icon size={14} />}
         <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
@@ -629,6 +656,13 @@ function Metric({ icon: Icon, label, value }) {
       <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>{value ?? 0}</div>
     </div>
   );
+}
+
+function compact(n) {
+  const num = Number(n) || 0;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}k`;
+  return String(num);
 }
 
 function noteStyle(bg, border, color) {
