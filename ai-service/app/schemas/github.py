@@ -57,12 +57,16 @@ class FreelancerProject(BaseModel):
 
 
 class ExperienceSignals(BaseModel):
-    totalCommits: int = 0
+    totalCommits: int = 0              # commits AUTHORED by the user (measured)
     reposAnalyzed: int = 0
     activeYears: float = 0.0
     avgStars: float = 0.0
-    collaborationRepos: int = 0        # repos not solely owned by the user
+    collaborationRepos: int = 0        # others' repos where the user authored commits
     documentationQuality: int = Field(default=0, ge=0, le=100)
+    linesAuthored: int = 0             # net lines the user wrote (top repos, best-effort)
+    pullRequests: int = 0              # PRs opened in the trailing year
+    accountAgeYears: float = 0.0       # GitHub account tenure
+    followers: int = 0
 
 
 class ConfidenceFactorBreakdown(BaseModel):
