@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 GITHUB_GRAPHQL = "https://api.github.com/graphql"
 GITHUB_REST = "https://api.github.com"
 
+# GitHub's GraphQL endpoint intermittently returns 502/503/504 (transient
+# gateway errors) — especially for expensive queries over many repos. These are
+# almost always resolved by a retry with a short backoff.
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 4
+_BASE_BACKOFF_SEC = 1.5
+
 # One query pulls everything we need per repo. `pushedAt DESC` puts active work first.
 _REPOS_QUERY = """
 query($login: String!, $first: Int!, $after: String) {
@@ -65,16 +72,59 @@ def _resolve_token(access_token: Optional[str]) -> str:
 
 
 async def _graphql(client: httpx.AsyncClient, token: str, variables: Dict[str, Any]) -> Dict[str, Any]:
-    resp = await client.post(
-        GITHUB_GRAPHQL,
-        headers={"Authorization": f"Bearer {token}", "User-Agent": "FixFlowAI"},
-        json={"query": _REPOS_QUERY, "variables": variables},
+    """POST a GraphQL query, retrying transient gateway errors with backoff.
+
+    GitHub returns 502/503/504 for expensive queries under load. We retry those
+    (and 429 rate-limit) up to `_MAX_RETRIES` times. On GraphQL-level errors we
+    tolerate partial data (e.g. a single unreadable repo) as long as the `user`
+    node came back; we only raise when there's nothing usable.
+    """
+    last_error: Optional[Exception] = None
+
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = await client.post(
+                GITHUB_GRAPHQL,
+                headers={"Authorization": f"Bearer {token}", "User-Agent": "FixFlowAI"},
+                json={"query": _REPOS_QUERY, "variables": variables},
+            )
+        except httpx.HTTPError as exc:  # network/timeout — retry
+            last_error = exc
+            logger.warning(
+                "GitHub GraphQL network error (attempt %d/%d): %s",
+                attempt + 1, _MAX_RETRIES, exc,
+            )
+            await asyncio.sleep(_BASE_BACKOFF_SEC * (2 ** attempt))
+            continue
+
+        if resp.status_code in _RETRYABLE_STATUS and attempt < _MAX_RETRIES - 1:
+            logger.warning(
+                "GitHub GraphQL transient %d (attempt %d/%d) — retrying.",
+                resp.status_code, attempt + 1, _MAX_RETRIES,
+            )
+            await asyncio.sleep(_BASE_BACKOFF_SEC * (2 ** attempt))
+            continue
+
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Tolerate partial results: if we got a usable `user` payload, proceed
+        # even when GitHub reports per-field errors (common for one bad repo).
+        payload = data.get("data")
+        if data.get("errors"):
+            if payload and payload.get("user"):
+                logger.warning(
+                    "GitHub GraphQL returned partial data with errors: %s",
+                    data["errors"],
+                )
+                return payload
+            raise RuntimeError(f"GitHub GraphQL error: {data['errors']}")
+        return payload
+
+    # Exhausted retries without a usable response.
+    raise RuntimeError(
+        f"GitHub GraphQL failed after {_MAX_RETRIES} attempts: {last_error or 'transient gateway errors'}"
     )
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("errors"):
-        raise RuntimeError(f"GitHub GraphQL error: {data['errors']}")
-    return data["data"]
 
 
 async def _fetch_manifest(
@@ -201,11 +251,14 @@ async def fetch_profile_repos(
     raw_nodes: List[Dict[str, Any]] = []
     after: Optional[str] = None
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # Smaller pages keep each GraphQL query cheap enough that GitHub doesn't
+    # time it out into a 502. We page more times to compensate.
+    page_size = 50
+    async with httpx.AsyncClient(timeout=45.0) as client:
         # Page through repositories (cap pages so a huge account can't run away).
-        for _ in range(3):  # up to 300 repos
+        for _ in range(6):  # up to 300 repos
             data = await _graphql(
-                client, token, {"login": username, "first": 100, "after": after}
+                client, token, {"login": username, "first": page_size, "after": after}
             )
             user = data.get("user")
             if not user:
