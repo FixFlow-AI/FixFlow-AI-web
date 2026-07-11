@@ -97,7 +97,9 @@ query($login: String!, $first: Int!, $after: String, $authorId: ID!) {
 
 
 def _resolve_token(access_token: Optional[str]) -> str:
-    token = (access_token or "").strip() or get_settings().github_token
+    token = (access_token or "").strip()
+    if not token or token.startswith("mock_"):
+        token = get_settings().github_token
     if not token:
         raise ValueError(
             "A GitHub token is required (pass accessToken, or set GITHUB_TOKEN)."
