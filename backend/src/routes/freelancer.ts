@@ -3,14 +3,17 @@ import { requireAuth } from '../auth/middleware.js';
 import { requireRole } from '../auth/roles.js';
 import { verifyAccessToken } from '../auth/tokens.js';
 import { getGithubScanRepository } from '../services/githubScanRepository.js';
-import { subscribeToScan } from '../services/githubScanService.js';
+import { enqueueGithubScan, subscribeToScan } from '../services/githubScanService.js';
+import { isAiServiceConfigured } from '../services/aiClient.js';
+import { getUserRepository } from '../services/userRepository.js';
 import type { SegmentStatus } from '../types/github.js';
 
 /**
  * Freelancer routes (roles/01).
- *   GET /api/freelancer/profile               — verified skills/projects/confidence (read-only)
- *   GET /api/freelancer/scan/:jobId           — scan job status (polling fallback)
- *   GET /api/freelancer/scan/:jobId/stream    — live SSE of segment reveals
+ *   GET  /api/freelancer/profile               — verified skills/projects/confidence (read-only)
+ *   POST /api/freelancer/scan/rescan           — trigger a fresh on-demand GitHub re-analysis
+ *   GET  /api/freelancer/scan/:jobId           — scan job status (polling fallback)
+ *   GET  /api/freelancer/scan/:jobId/stream    — live SSE of segment reveals
  *
  * Skills are AI-derived and tamper-proof: there is intentionally NO write
  * endpoint for them. They change only via a re-scan.
@@ -30,6 +33,50 @@ freelancerRouter.get(
   asyncRoute(async (req, res) => {
     const profile = await getGithubScanRepository().getProfile(req.auth!.sub);
     res.json(profile);
+  }),
+);
+
+/**
+ * Trigger an on-demand re-analysis of the freelancer's GitHub profile.
+ *
+ * This is the ONLY place (besides first-time sign-up) where the GitHub API is
+ * called — returning users are never auto-scanned on login. We reuse the
+ * server-side stored OAuth token so the freelancer doesn't have to re-auth.
+ */
+freelancerRouter.post(
+  '/scan/rescan',
+  requireAuth,
+  requireRole('freelancer'),
+  asyncRoute(async (req, res) => {
+    if (!isAiServiceConfigured()) {
+      res.status(503).json({ error: 'AI service is not configured; cannot run a scan.' });
+      return;
+    }
+
+    const user = await getUserRepository().findById(req.auth!.sub);
+    if (!user || !user.githubUsername) {
+      res.status(400).json({
+        error: 'No GitHub account is linked to this profile.',
+        code: 'github_not_linked',
+      });
+      return;
+    }
+    if (!user.githubAccessToken) {
+      // Token predates this feature (or was cleared). A fresh GitHub sign-in
+      // will re-store it. Fail clearly instead of silently 500-ing downstream.
+      res.status(409).json({
+        error: 'Please sign in with GitHub again to enable re-analysis.',
+        code: 'github_token_missing',
+      });
+      return;
+    }
+
+    const jobId = await enqueueGithubScan(
+      user.id,
+      user.githubUsername,
+      user.githubAccessToken,
+    );
+    res.json({ scanJobId: jobId, githubUsername: user.githubUsername });
   }),
 );
 
