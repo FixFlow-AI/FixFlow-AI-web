@@ -34,8 +34,8 @@ def _now() -> str:
 async def _prepare(username: str, access_token: Optional[str], top_n: Optional[int]) -> Tuple[int, dict]:
     settings = get_settings()
     n = top_n or settings.scan_top_n_repos
-    discovered, repos = await fetch_profile_repos(username, access_token, n)
-    agg = aggregate_repos(repos)
+    discovered, repos, user_meta = await fetch_profile_repos(username, access_token, n)
+    agg = aggregate_repos(repos, user_meta)
     return discovered, agg
 
 
