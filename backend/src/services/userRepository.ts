@@ -27,6 +27,13 @@ export interface User {
   authProvider: AuthProvider; // which provider the account signed up with
   githubUserId?: string; // stable numeric GitHub id (as string)
   githubUsername?: string; // GitHub login/handle
+  /**
+   * GitHub OAuth access token, stored server-side ONLY so the freelancer can
+   * trigger an on-demand re-analysis of their profile from the Analytics tab
+   * without re-authenticating. It is never returned to the browser (stripped by
+   * publicUser) and is refreshed on every GitHub sign-in.
+   */
+  githubAccessToken?: string;
   role: UserRole;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +59,7 @@ export interface UpsertGithubProfileInput {
   emailVerified: boolean;
   name: string;
   picture?: string;
+  githubAccessToken?: string;
 }
 
 export interface UserRepository {
@@ -151,6 +159,7 @@ class SeedFileUserRepository implements UserRepository {
       existing.name = input.name;
       existing.picture = input.picture;
       existing.githubUsername = input.githubUsername;
+      if (input.githubAccessToken) existing.githubAccessToken = input.githubAccessToken;
       existing.updatedAt = now;
       await this.persist();
       return existing;
@@ -164,6 +173,7 @@ class SeedFileUserRepository implements UserRepository {
       authProvider: 'github',
       githubUserId: input.githubUserId,
       githubUsername: input.githubUsername,
+      githubAccessToken: input.githubAccessToken,
       role: 'freelancer', // GitHub sign-ups default to freelancer; route may override
       createdAt: now,
       updatedAt: now,
@@ -381,6 +391,7 @@ class DynamoDbUserRepository implements UserRepository {
         name: input.name,
         picture: input.picture,
         githubUsername: input.githubUsername,
+        githubAccessToken: input.githubAccessToken ?? existing.githubAccessToken,
         updatedAt: now,
       };
       await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(updated) }));
@@ -396,6 +407,7 @@ class DynamoDbUserRepository implements UserRepository {
       authProvider: 'github',
       githubUserId: input.githubUserId,
       githubUsername: input.githubUsername,
+      githubAccessToken: input.githubAccessToken,
       role: 'freelancer',
       createdAt: now,
       updatedAt: now,
