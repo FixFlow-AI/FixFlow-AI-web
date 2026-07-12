@@ -58,6 +58,7 @@ export async function fetchProfileSnapshot(
     return {
       githubUsername: username,
       name: p?.name ?? undefined,
+      avatarUrl: p?.avatar_url ?? undefined,
       bio: p?.bio ?? undefined,
       company: p?.company ?? undefined,
       location: p?.location ?? undefined,
