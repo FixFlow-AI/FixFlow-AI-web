@@ -335,6 +335,28 @@ def _rank_repos(agg: Dict[str, Any], top_k: int = 8) -> List[Dict[str, Any]]:
     return [r for _, r in scored[:top_k]]
 
 
+def _project_complexity(repo: Dict[str, Any], stack: List[str]) -> str:
+    """Derive a Low/Medium/High complexity index from REAL repo structure —
+    language spread, stack breadth, commit history depth, and codebase size.
+    Deterministic and explainable (no hallucination)."""
+    langs = len(repo.get("languages") or {})
+    commits = int(repo.get("totalCommits") or 0)
+    disk_kb = int(repo.get("diskUsage") or 0)   # GitHub reports KB
+    stack_n = len(stack)
+
+    score = 0
+    score += min(langs, 6)
+    score += min(stack_n, 6)
+    score += 3 if commits >= 100 else 2 if commits >= 30 else 1 if commits >= 8 else 0
+    score += 3 if disk_kb >= 20000 else 2 if disk_kb >= 5000 else 1 if disk_kb >= 800 else 0
+
+    if score >= 11:
+        return "High"
+    if score >= 6:
+        return "Medium"
+    return "Low"
+
+
 async def projects_agent(agg: Dict[str, Any]) -> Tuple[List[FreelancerProject], SegmentState]:
     top = _rank_repos(agg)
     settings = get_settings()
@@ -343,6 +365,7 @@ async def projects_agent(agg: Dict[str, Any]) -> Tuple[List[FreelancerProject], 
     base: List[FreelancerProject] = []
     for r in top:
         stack = _repo_stack(r, agg)
+        owner = r.get("owner") or ""
         base.append(
             FreelancerProject(
                 repoName=r["name"],
@@ -353,6 +376,13 @@ async def projects_agent(agg: Dict[str, Any]) -> Tuple[List[FreelancerProject], 
                 commitShare=_commit_share(r),
                 lastActiveAt=r.get("pushedAt"),
                 rankScore=r.get("stars", 0) * 3 + _commit_share(r) + _recency_score(r.get("pushedAt")),
+                url=f"https://github.com/{owner}/{r['name']}" if owner else None,
+                primaryLanguage=r.get("primaryLanguage") or None,
+                languageCount=len(r.get("languages") or {}),
+                complexity=_project_complexity(r, stack),
+                commits=int(r.get("userCommits") or 0),
+                commitActivity=[int(x) for x in (r.get("commitActivity") or [])],
+                updatedAt=r.get("pushedAt"),
             )
         )
 
@@ -418,6 +448,9 @@ def experience_agent(agg: Dict[str, Any]) -> Tuple[ExperienceSignals, SegmentSta
             pullRequests=agg.get("pullRequests", 0),
             accountAgeYears=agg.get("accountAgeYears", 0.0),
             followers=agg.get("followers", 0),
+            totalStars=agg.get("totalStars", 0),
+            contributionsPerWeek=agg.get("contributionsPerWeek", 0.0),
+            collaborationScore=agg.get("collaborationScore", 0),
         ),
         "done",
     )
