@@ -225,6 +225,19 @@ def aggregate_repos(
 
     documentation_quality = round(documented * 100 / repos_n)
 
+    # Contributions per week (trailing year commit contributions / 52 weeks).
+    contributions_year = int(user_meta.get("commitContributionsYear") or 0)
+    contributions_per_week = round(contributions_year / 52.0, 1)
+
+    # Collaboration score (0-100) from REAL team-work signals: repos where the
+    # user committed to someone else's project, PRs, and code reviews.
+    pull_requests = int(user_meta.get("pullRequests") or 0)
+    reviews = int(user_meta.get("reviews") or 0)
+    collaboration_score = min(
+        100,
+        collaboration_repos * 12 + min(pull_requests, 30) * 2 + min(reviews, 20) * 2,
+    )
+
     # Domain hints for the Projects Agent (non-framework topics).
     domain_topics: List[str] = []
     for r in repos:
@@ -255,6 +268,8 @@ def aggregate_repos(
         "activeYears": active_years,
         "accountAgeYears": account_age_years,
         "collaborationRepos": collaboration_repos,
+        "collaborationScore": collaboration_score,
+        "contributionsPerWeek": contributions_per_week,
         "documentationQuality": documentation_quality,
         "followers": int(user_meta.get("followers") or 0),
         "pullRequests": int(user_meta.get("pullRequests") or 0),
