@@ -3,6 +3,8 @@ import { verifyGoogleIdToken } from '../auth/googleOauth.js';
 import { verifyGithubCode } from '../auth/githubOauth.js';
 import { isAiServiceConfigured } from '../services/aiClient.js';
 import { enqueueGithubScan } from '../services/githubScanService.js';
+import { captureProfileSnapshot } from '../services/githubProfileService.js';
+import { getGithubScanRepository } from '../services/githubScanRepository.js';
 import {
   signAccessToken,
   generateRefreshToken,
@@ -197,6 +199,28 @@ authRouter.post(
       }
     } else if (session.user.role === 'freelancer') {
       console.log('[AuthRoute]   ↩️ Returning freelancer — skipping auto-scan (use Analytics → Re-analyze).');
+    }
+
+    // Capture a lightweight profile snapshot + README in the BACKGROUND. Done
+    // once at first sign-up, and backfilled once for returning users who don't
+    // have one yet. It grounds the AI analysis and gives an instant profile view.
+    if (session.user.role === 'freelancer') {
+      const freelancerId = session.user.id;
+      const { githubUsername, accessToken } = profile;
+      void (async () => {
+        try {
+          if (isNewUser) {
+            await captureProfileSnapshot(freelancerId, githubUsername, accessToken);
+            return;
+          }
+          const existing = await getGithubScanRepository().getProfileSnapshot(freelancerId);
+          if (!existing) {
+            await captureProfileSnapshot(freelancerId, githubUsername, accessToken);
+          }
+        } catch (err) {
+          console.error('[AuthRoute]   ⚠️ profile snapshot capture failed:', err);
+        }
+      })();
     }
 
     res.json({ ...session, githubUsername: profile.githubUsername, scanJobId });
