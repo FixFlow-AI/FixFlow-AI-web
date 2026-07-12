@@ -147,7 +147,13 @@ async def extensions_generate(body: ExtensionsRequest) -> ContractExtensionsOutp
 )
 async def github_scan(body: GithubScanRequest) -> GithubScanResult:
     try:
-        return await run_github_scan(body.githubUsername, body.accessToken, body.topN)
+        return await run_github_scan(
+            body.githubUsername,
+            body.accessToken,
+            body.topN,
+            profile_readme=body.profileReadme,
+            profile_bio=body.profileBio,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -161,7 +167,11 @@ async def github_scan_stream(body: GithubScanRequest) -> StreamingResponse:
     """
     async def event_source():
         async for event, payload in stream_github_scan(
-            body.githubUsername, body.accessToken, body.topN
+            body.githubUsername,
+            body.accessToken,
+            body.topN,
+            profile_readme=body.profileReadme,
+            profile_bio=body.profileBio,
         ):
             yield f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
