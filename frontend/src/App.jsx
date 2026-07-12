@@ -28,13 +28,18 @@ import { Workflow } from "./sections/Workflow";
 import { Login } from "./sections/Login";
 import { Signup } from "./sections/Signup";
 import { Dashboard } from "./sections/Dashboard";
-import { getUser, isAuthenticated, setSession } from "./lib/auth";
+import { getUser, isAuthenticated, setSession, startProactiveRefreshTimer } from "./lib/auth";
 import { api } from "./lib/api";
 import { handleGithubRedirect } from "./components/GithubSignInButton";
 
 export function App() {
   useSmoothScroll();
   const { page, setPage, setDashboardTab, hydrateAuth, login } = useLandingStore();
+
+  // Initialize the proactive background refresh timer on app load.
+  useEffect(() => {
+    startProactiveRefreshTimer();
+  }, []);
 
   // Rehydrate the session from localStorage on first load so a refresh keeps
   // the user logged in.
