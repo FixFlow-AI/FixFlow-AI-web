@@ -18,6 +18,7 @@ from ..schemas.confidence import (
     AuditorEvaluation,
     ConfidenceGridResult,
     FeasibilityEvaluation,
+    CycleRecord,
 )
 from ..schemas.proposal import Proposal
 
@@ -95,7 +96,7 @@ async def run_feasibility_agent(brief_text: str, proposal: Proposal) -> Feasibil
 
 async def optimize_proposal(
     brief_text: str, proposal: Proposal, issues: List[str]
-) -> Proposal:
+) -> tuple[Proposal, bool]:
     logger.info(
         "Initiating self-correction optimization. Correcting %d flagged issues.", len(issues)
     )
@@ -110,10 +111,32 @@ async def optimize_proposal(
             contents=contents,
             response_schema=Proposal,
             temperature=0.2,
-        )
+        ), True
     except Exception as error:  # noqa: BLE001
         logger.error("Failed to autonomously optimize proposal: %s", error)
-        return proposal
+        return proposal, False
+
+
+async def evaluate_proposal(
+    brief_text: str,
+    proposal: Proposal,
+) -> tuple[AuditorEvaluation, FeasibilityEvaluation, int]:
+    auditor_eval, feasibility_eval = await asyncio.gather(
+        run_auditor_agent(brief_text, proposal),
+        run_feasibility_agent(brief_text, proposal),
+    )
+
+    confidence_index = round(
+        (
+            auditor_eval.budget_alignment_score
+            + auditor_eval.deliverable_coverage_score
+            + feasibility_eval.technical_feasibility_score
+            + feasibility_eval.timeline_realism_score
+        )
+        / 4
+    )
+
+    return auditor_eval, feasibility_eval, confidence_index
 
 
 async def process_confidence_grid(brief_text: str, proposal: Proposal) -> ConfidenceGridResult:
@@ -123,53 +146,104 @@ async def process_confidence_grid(brief_text: str, proposal: Proposal) -> Confid
     settings = get_settings()
     threshold = settings.confidence_threshold
     max_cycles = settings.max_correction_cycles
+    min_improvement = settings.confidence_min_improvement
 
     current = proposal
+    cycle_records: list[CycleRecord] = []
+    best_cycle = 0
+    best_proposal = proposal
+    best_confidence_index = -1
     cycle = 0
-    optimized = False
-    auditor_eval: AuditorEvaluation
-    feasibility_eval: FeasibilityEvaluation
-    confidence_index = 0
 
-    while cycle <= max_cycles:
-        auditor_eval, feasibility_eval = await asyncio.gather(
-            run_auditor_agent(brief_text, current),
-            run_feasibility_agent(brief_text, current),
+    auditor_eval, feasibility_eval, confidence_index = await evaluate_proposal(
+        brief_text,
+        current,
         )
-
-        confidence_index = round(
-            (
-                auditor_eval.budget_alignment_score
-                + auditor_eval.deliverable_coverage_score
-                + feasibility_eval.technical_feasibility_score
-                + feasibility_eval.timeline_realism_score
-            )
-            / 4
-        )
-
+    while True:
+        prev_score = cycle_records[-1].confidenceIndex if cycle_records else None
         logger.info(
             "Confidence Grid Cycle %d completed. Consensual Confidence Index: %d",
             cycle,
             confidence_index,
         )
 
-        if confidence_index >= threshold or cycle == max_cycles:
-            break
+        if confidence_index > best_confidence_index:
+            best_confidence_index = confidence_index
+            best_proposal = current
+            best_cycle = cycle
 
         combined_issues = [*auditor_eval.issues, *feasibility_eval.issues]
         if not combined_issues:
             combined_issues.append(
                 "Scores indicate overall misalignment across deliverables and timelines."
             )
+        
+        improved_over_previous = None if prev_score is None else (confidence_index > prev_score)
+        if confidence_index >= threshold or cycle >= max_cycles:
+            cycle_records.append(
+                CycleRecord(
+                    cycle=cycle,
+                    auditor=auditor_eval,
+                    feasibility=feasibility_eval,
+                    confidenceIndex=confidence_index,
+                    issuesFed=combined_issues,
+                    optimizationApplied=False,
+                    improvedOverPrevious=improved_over_previous,
+                )
+            )
+            break
 
-        current = await optimize_proposal(brief_text, current, combined_issues)
-        optimized = True
+
+        optimized_proposal, optimizer_succeeded = await optimize_proposal(
+            brief_text,
+            current,
+            combined_issues,
+        )
+
+        if not optimizer_succeeded:
+            cycle_records.append(
+                CycleRecord(
+                    cycle=cycle,
+                    auditor=auditor_eval,
+                    feasibility=feasibility_eval,
+                    confidenceIndex=confidence_index,
+                    issuesFed=combined_issues,
+                    optimizationApplied=False,
+                    improvedOverPrevious=improved_over_previous,
+                    )
+            )
+            break
+
+        new_auditor, new_feasibility, new_confidence = await evaluate_proposal(
+            brief_text,
+            optimized_proposal,
+        )
+
+        improved = new_confidence >= best_confidence_index + min_improvement
+        cycle_records.append(
+            CycleRecord(
+                cycle=cycle,
+                auditor=auditor_eval,
+                feasibility=feasibility_eval,
+                confidenceIndex=confidence_index,
+                issuesFed=combined_issues,
+                optimizationApplied=improved,
+                improvedOverPrevious=improved_over_previous,
+            )
+        )
+
+        if not improved:
+            break
+
+        current = optimized_proposal
+        auditor_eval, feasibility_eval, confidence_index = new_auditor, new_feasibility, new_confidence
         cycle += 1
-
     return ConfidenceGridResult(
-        auditor=auditor_eval,
-        feasibility=feasibility_eval,
-        confidenceIndex=confidence_index,
-        optimized=optimized,
-        finalProposal=current,
+        auditor=cycle_records[best_cycle].auditor,
+        feasibility=cycle_records[best_cycle].feasibility,
+        confidenceIndex=best_confidence_index,
+        optimized=any(r.optimizationApplied for r in cycle_records),
+        finalProposal=best_proposal,
+        cycles=cycle_records,
+        bestCycle=best_cycle,
     )
