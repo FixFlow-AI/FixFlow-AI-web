@@ -56,13 +56,14 @@
       "githubUsername": "Suvam-paul145",
       "role": "freelancer",
       "createdAt": "2026-07-07T07:48:51.920Z",
-      "updatedAt": "2026-07-11T16:20:31.194Z",
+      "updatedAt": "2026-07-12T13:58:23.892Z",
       "refreshTokenHashes": [
         "1eec22bf7f0ffea67677fa5056b71b78025e9e910cdadf4d0159fb4d211e7875",
         "5cf22c19ebcf73717b1568a3afffd016db42e851cc3cb02125a7ecd3f96c9037",
-        "15b655d224b2a872ecea36371c8a05b65528cfa9c65b990c6ece9c7ab4346c74"
+        "71bd0aada950dc0874ceffdf4f9068dd0ae04fc12a45558f18bb570416499f27",
+        "4862f19e8d95b20b1fa7b7c0e47ce1a8df5b7b4e02cf49a75674a79f5173c556"
       ],
-      "githubAccessToken": "mock_github_access_token_for_seeding_purposes"
+      "githubAccessToken": "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"
     }
   ]
 }
