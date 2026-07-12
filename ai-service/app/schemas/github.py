@@ -56,9 +56,16 @@ class FreelancerProject(BaseModel):
     domain: Optional[str] = None
     stack: List[str] = Field(default_factory=list)
     stars: int = 0
-    commitShare: int = 0               # 0-100 (ownership/authorship proxy)
+    commitShare: int = 0               # 0-100 (measured authorship share)
     lastActiveAt: Optional[str] = None
     rankScore: int = 0
+    url: Optional[str] = None          # https://github.com/{owner}/{repo}
+    primaryLanguage: Optional[str] = None
+    languageCount: int = 0
+    complexity: Literal["Low", "Medium", "High"] = "Medium"  # from real repo signals
+    commits: int = 0                   # commits the user authored in this repo
+    commitActivity: List[int] = Field(default_factory=list)  # weekly commit counts (sparkline)
+    updatedAt: Optional[str] = None    # last push (relative "updated N ago")
 
 
 class ExperienceSignals(BaseModel):
@@ -72,6 +79,9 @@ class ExperienceSignals(BaseModel):
     pullRequests: int = 0              # PRs opened in the trailing year
     accountAgeYears: float = 0.0       # GitHub account tenure
     followers: int = 0
+    totalStars: int = 0                # ownership-weighted stars across analyzed repos
+    contributionsPerWeek: float = 0.0  # trailing-year commit contributions / 52
+    collaborationScore: int = Field(default=0, ge=0, le=100)  # derived team-work index
 
 
 class ConfidenceFactorBreakdown(BaseModel):
