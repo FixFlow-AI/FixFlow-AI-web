@@ -237,7 +237,7 @@ async def _enrich_manifests(
 
 async def _fetch_contributor_stats(
     client: httpx.AsyncClient, token: str, owner: str, repo: str, login: str
-) -> Optional[Dict[str, int]]:
+) -> Optional[Dict[str, Any]]:
     """Real per-author lines-of-code via the REST stats/contributors endpoint.
 
     Returns the user's additions/deletions/commits plus the repo totals, so we
@@ -271,6 +271,7 @@ async def _fetch_contributor_stats(
         total_add = 0
         total_commits = 0
         user_add = user_del = user_commits = 0
+        commit_activity: List[int] = []
         for contrib in data:
             weeks = contrib.get("weeks") or []
             add = sum(int(w.get("a") or 0) for w in weeks)
@@ -281,12 +282,15 @@ async def _fetch_contributor_stats(
                 user_add = add
                 user_del = sum(int(w.get("d") or 0) for w in weeks)
                 user_commits = int(contrib.get("total") or 0)
+                # Real weekly commit counts (last ~12 weeks) → sparkline data.
+                commit_activity = [int(w.get("c") or 0) for w in weeks][-12:]
         return {
             "userAdditions": user_add,
             "userDeletions": user_del,
             "userCommitsStats": user_commits,
             "totalAdditions": total_add,
             "totalCommitsStats": total_commits,
+            "commitActivity": commit_activity,
         }
     return None
 
