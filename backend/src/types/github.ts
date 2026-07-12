@@ -104,3 +104,25 @@ export interface ScanStreamEvent {
   event: 'scan_started' | 'segment_ready' | 'scan_complete' | 'scan_error';
   data: any;
 }
+
+/**
+ * Lightweight GitHub profile snapshot captured ONCE at first sign-up (roles/01a).
+ * It gives the AI grounding context (bio + profile README describe what the
+ * developer actually does) and is shown on the analytics page. Persisted so it
+ * survives restarts and is reused on every later analysis.
+ */
+export interface GithubProfileSnapshot {
+  githubUsername: string;
+  name?: string;
+  bio?: string;
+  company?: string;
+  location?: string;
+  blog?: string;
+  publicRepos?: number;
+  followers?: number;
+  following?: number;
+  accountCreatedAt?: string;
+  /** Raw markdown of the profile README (the special `user/user` repo). */
+  readme?: string;
+  fetchedAt: string;
+}
