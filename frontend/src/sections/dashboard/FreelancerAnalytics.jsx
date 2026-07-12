@@ -13,6 +13,10 @@ import {
   Star,
   GitCommitHorizontal,
   Sparkles,
+  MapPin,
+  Building2,
+  Users,
+  Github,
 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 
@@ -174,6 +178,7 @@ export function FreelancerAnalytics() {
   const experience = profile?.latestJob?.experience || null;
   const languages = profile?.latestJob?.languages || {};
   const job = profile?.latestJob || null;
+  const snapshot = profile?.snapshot || null;
   const hasData = skills.length > 0 || projects.length > 0 || !!experience || !!confidence;
 
   const scannedAt = job?.finishedAt || job?.updatedAt || null;
@@ -221,6 +226,8 @@ export function FreelancerAnalytics() {
       )}
 
       {!hasData ? (
+        <>
+        {snapshot && <ProfileSnapshotCard snapshot={snapshot} username={job?.githubUsername} />}
         <div className="panel-card" style={{ textAlign: "center", padding: 40 }}>
           <BarChart3 size={32} style={{ color: "#94a3b8" }} />
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>No analytics yet</h2>
@@ -232,8 +239,12 @@ export function FreelancerAnalytics() {
             {scanning ? "Analyzing…" : "Analyze my GitHub"}
           </button>
         </div>
+        </>
       ) : (
         <>
+          {/* GitHub profile snapshot (captured at sign-up) */}
+          {snapshot && <ProfileSnapshotCard snapshot={snapshot} username={job?.githubUsername} />}
+
           {/* Top row: confidence + languages */}
           <div className="panel-grid panel-grid--2" style={{ marginBottom: 20 }}>
             <ConfidenceCard confidence={confidence} />
@@ -296,6 +307,77 @@ export function FreelancerAnalytics() {
           <ProjectsCard projects={projects} />
         </>
       )}
+    </div>
+  );
+}
+
+/* ─────────────────────────── Profile snapshot ─────────────────────────── */
+
+function ProfileSnapshotCard({ snapshot, username }) {
+  const handle = snapshot.githubUsername || username;
+  const chips = [
+    snapshot.company && { icon: Building2, text: snapshot.company },
+    snapshot.location && { icon: MapPin, text: snapshot.location },
+    typeof snapshot.followers === "number" && { icon: Users, text: `${snapshot.followers} followers` },
+    typeof snapshot.publicRepos === "number" && { icon: FolderGit2, text: `${snapshot.publicRepos} public repos` },
+  ].filter(Boolean);
+
+  return (
+    <div className="panel-card" style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: "#0f172a",
+            display: "grid",
+            placeItems: "center",
+            color: "#fff",
+            flexShrink: 0,
+          }}
+        >
+          <Github size={20} />
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+              {snapshot.name || handle}
+            </span>
+            {handle && (
+              <a
+                href={`https://github.com/${handle}`}
+                target="_blank"
+                rel="noreferrer"
+                className="panel-badge panel-badge--gray"
+                style={{ fontSize: 11, textDecoration: "none" }}
+              >
+                @{handle}
+              </a>
+            )}
+          </div>
+          {snapshot.bio && (
+            <p style={{ fontSize: 13, color: "#475569", margin: "4px 0 0", lineHeight: 1.5 }}>
+              {snapshot.bio}
+            </p>
+          )}
+          {chips.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 8 }}>
+              {chips.map((c, i) => {
+                const Icon = c.icon;
+                return (
+                  <span
+                    key={i}
+                    style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#64748b" }}
+                  >
+                    <Icon size={13} /> {c.text}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
