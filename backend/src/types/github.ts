@@ -28,6 +28,13 @@ export interface FreelancerProject {
   commitShare: number;
   lastActiveAt?: string | null;
   rankScore: number;
+  url?: string | null;
+  primaryLanguage?: string | null;
+  languageCount?: number;
+  complexity?: 'Low' | 'Medium' | 'High';
+  commits?: number;
+  commitActivity?: number[];
+  updatedAt?: string | null;
 }
 
 export interface ExperienceSignals {
@@ -41,6 +48,9 @@ export interface ExperienceSignals {
   pullRequests?: number;         // PRs opened in the trailing year
   accountAgeYears?: number;      // GitHub account tenure
   followers?: number;
+  totalStars?: number;
+  contributionsPerWeek?: number;
+  collaborationScore?: number;
 }
 
 export interface ConfidenceFactorBreakdown {
@@ -55,6 +65,8 @@ export interface ProfileConfidence {
   score: number;
   band: 'emerging' | 'developing' | 'match_ready';
   factorBreakdown: ConfidenceFactorBreakdown;
+  /** Score from the prior scan, so the UI can show "+N% vs last scan". */
+  previousScore?: number | null;
 }
 
 export type SegmentState = 'pending' | 'running' | 'done' | 'fallback' | 'error';
@@ -114,6 +126,7 @@ export interface ScanStreamEvent {
 export interface GithubProfileSnapshot {
   githubUsername: string;
   name?: string;
+  avatarUrl?: string;
   bio?: string;
   company?: string;
   location?: string;
