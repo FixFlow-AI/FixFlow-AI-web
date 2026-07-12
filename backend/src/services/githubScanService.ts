@@ -144,7 +144,16 @@ async function runScan(
   try {
     await repo.updateJob(jobId, { status: 'running' });
 
-    const res = await openGithubScanStream({ githubUsername, accessToken });
+    // Feed the previously stored profile README/bio as grounding context so the
+    // AI has real knowledge of what the developer does before it analyzes repos.
+    const snapshot = await repo.getProfileSnapshot(freelancerId);
+
+    const res = await openGithubScanStream({
+      githubUsername,
+      accessToken,
+      profileReadme: snapshot?.readme,
+      profileBio: snapshot?.bio,
+    });
 
     await consumeSSE(res, async (event, data) => {
       if (event === 'scan_started') {
