@@ -117,6 +117,9 @@ export interface GithubScanRequestBody {
   githubUsername: string;
   accessToken?: string;
   topN?: number;
+  /** Grounding context from the stored profile snapshot (roles/01a). */
+  profileReadme?: string;
+  profileBio?: string;
 }
 
 /** Roles/01 — full GitHub onboarding scan (blocking; returns the whole result). */
