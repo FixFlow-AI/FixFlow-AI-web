@@ -368,10 +368,23 @@ async def projects_agent(agg: Dict[str, Any]) -> Tuple[List[FreelancerProject], 
         }
         for p in base
     ]
+
+    # Grounding context (profile bio + README) helps the LLM infer accurate
+    # domains/summaries. It is background only — the rules forbid inventing
+    # anything not evidenced by each repo's own facts.
+    context_parts: List[str] = []
+    bio = (agg.get("profileBio") or "").strip()
+    readme = (agg.get("profileReadme") or "").strip()
+    if bio:
+        context_parts.append(f"Developer bio: {bio}")
+    if readme:
+        context_parts.append(f"Developer profile README (context only):\n{readme[:2000]}")
+    context_block = ("\n\n".join(context_parts) + "\n\n") if context_parts else ""
+
     try:
         out: ProjectSummariesOutput = await generate_structured(
             system_instruction=_PROJECT_SUMMARY_PROMPT,
-            contents=f"Projects: {json.dumps(payload)}",
+            contents=f"{context_block}Projects: {json.dumps(payload)}",
             response_schema=ProjectSummariesOutput,
             temperature=0.2,
             model=_lite_model(),
