@@ -31,11 +31,20 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def _prepare(username: str, access_token: Optional[str], top_n: Optional[int]) -> Tuple[int, dict]:
+async def _prepare(
+    username: str,
+    access_token: Optional[str],
+    top_n: Optional[int],
+    profile_readme: Optional[str] = None,
+    profile_bio: Optional[str] = None,
+) -> Tuple[int, dict]:
     settings = get_settings()
     n = top_n or settings.scan_top_n_repos
     discovered, repos, user_meta = await fetch_profile_repos(username, access_token, n)
     agg = aggregate_repos(repos, user_meta)
+    # Grounding context for the LLM last-mile (project summaries / domains).
+    agg["profileReadme"] = (profile_readme or "").strip()[:4000]
+    agg["profileBio"] = (profile_bio or "").strip()[:500]
     return discovered, agg
 
 
@@ -51,8 +60,10 @@ async def run_github_scan(
     username: str,
     access_token: Optional[str] = None,
     top_n: Optional[int] = None,
+    profile_readme: Optional[str] = None,
+    profile_bio: Optional[str] = None,
 ) -> GithubScanResult:
-    discovered, agg = await _prepare(username, access_token, top_n)
+    discovered, agg = await _prepare(username, access_token, top_n, profile_readme, profile_bio)
 
     # Skills + Projects (LLM last-mile) run in parallel; Experience is pure math.
     (skills, skills_state), (projects, projects_state) = await asyncio.gather(
@@ -82,10 +93,14 @@ async def stream_github_scan(
     username: str,
     access_token: Optional[str] = None,
     top_n: Optional[int] = None,
+    profile_readme: Optional[str] = None,
+    profile_bio: Optional[str] = None,
 ) -> AsyncIterator[Tuple[str, dict]]:
     """Yields (event, payload) tuples. Segments are emitted as they complete."""
     try:
-        discovered, agg = await _prepare(username, access_token, top_n)
+        discovered, agg = await _prepare(
+            username, access_token, top_n, profile_readme, profile_bio
+        )
     except Exception as error:  # noqa: BLE001
         yield ("scan_error", {"error": str(error)})
         return
