@@ -4177,3 +4177,23 @@ section {
     display: none;
   }
 }
+
+/* ───────── GitHub Skill Dashboard (FreelancerAnalytics) ───────── */
+@keyframes ffaReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ffa-reveal { animation: ffaReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes ffaShimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.ffa-shimmer {
+  background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 37%, #eef2f7 63%);
+  background-size: 800px 100%;
+  animation: ffaShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ffaGrow { from { width: 0; } }
+.ffa-bar-fill { animation: ffaGrow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
