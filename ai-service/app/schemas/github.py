@@ -26,6 +26,11 @@ class GithubScanRequest(BaseModel):
     # token; if omitted, the service falls back to the server GITHUB_TOKEN.
     accessToken: Optional[str] = None
     topN: Optional[int] = Field(default=None, ge=1, le=200)
+    # Grounding context captured at sign-up (roles/01a): the profile README +
+    # bio. Used ONLY to help the LLM write accurate project summaries / domains —
+    # never to fabricate skills or numbers (those stay measured).
+    profileReadme: Optional[str] = None
+    profileBio: Optional[str] = None
 
 
 # ───────────────────────── Segment outputs ─────────────────────────
