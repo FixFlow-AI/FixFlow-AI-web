@@ -185,7 +185,13 @@ async function runScan(
 
       if (event === 'scan_complete') {
         const confidence = data.confidence as ProfileConfidence;
-        if (confidence) await repo.saveConfidence(freelancerId, confidence);
+        if (confidence) {
+          // Preserve the prior score so the UI can show a "vs last scan" delta.
+          const prior = await repo.getProfile(freelancerId);
+          const priorScore = prior.confidence?.score;
+          if (typeof priorScore === 'number') confidence.previousScore = priorScore;
+          await repo.saveConfidence(freelancerId, confidence);
+        }
         await repo.updateJob(jobId, {
           status: 'complete',
           segmentStatus: data.segmentStatus ?? segmentStatus,
