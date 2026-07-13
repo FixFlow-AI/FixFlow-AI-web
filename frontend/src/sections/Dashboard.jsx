@@ -70,6 +70,18 @@ export function Dashboard() {
   const { user, parsedProposal, dashboardTab, setDashboardTab, logout, hydrateLatestProposal } =
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!profileDropdownOpen) return;
+    const handleClose = (e) => {
+      if (!e.target.closest(".dash-topbar-avatar-container")) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClose);
+    return () => document.removeEventListener("click", handleClose);
+  }, [profileDropdownOpen]);
 
   useEffect(() => {
     // If we don't have the proposal in-memory but are logged in, try loading the user's latest proposal from the database.
@@ -196,13 +208,48 @@ export function Dashboard() {
             <button type="button" className="dash-topbar-icon" aria-label="Help">
               <CircleHelp size={18} strokeWidth={1.7} />
             </button>
-            <button type="button" className="dash-topbar-avatar" aria-label="Account">
-              <span>
-                {user?.name
-                  ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
-                  : "U"}
-              </span>
-            </button>
+            <div className="dash-topbar-avatar-container">
+              <button
+                type="button"
+                className="dash-topbar-avatar"
+                aria-label="Account"
+                onClick={() => setProfileDropdownOpen((prev) => !prev)}
+              >
+                <span>
+                  {user?.name
+                    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
+                    : "U"}
+                </span>
+              </button>
+
+              {profileDropdownOpen && (
+                <div className="profile-dropdown">
+                  <div className="profile-dropdown-header">
+                    <div className="profile-dropdown-name">{user?.name || "User"}</div>
+                    <div className="profile-dropdown-email">{user?.email}</div>
+                  </div>
+                  <div className="profile-dropdown-divider" />
+                  <div className="profile-dropdown-section">
+                    <span className="profile-dropdown-label">Role</span>
+                    <span className={`profile-dropdown-badge role-${user?.role || "client"}`}>
+                      {(user?.role || "client").toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="profile-dropdown-divider" />
+                  <button
+                    type="button"
+                    className="profile-dropdown-item profile-dropdown-item--danger"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      handleLogout();
+                    }}
+                  >
+                    <LogOut size={14} strokeWidth={1.8} />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

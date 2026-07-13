@@ -1,0 +1,1344 @@
+{
+  "jobs": {
+    "ghscan_d57ea0b6-1bd9-4b55-85a9-9cf11e9f3913": {
+      "jobId": "ghscan_d57ea0b6-1bd9-4b55-85a9-9cf11e9f3913",
+      "freelancerId": "d51a5022-c779-49b9-85fe-786c5291f33c",
+      "githubUsername": "Suvam-paul145",
+      "status": "complete",
+      "segmentStatus": {
+        "skills": "done",
+        "projects": "done",
+        "experience": "done"
+      },
+      "reposDiscovered": 85,
+      "reposAnalyzed": 46,
+      "createdAt": "2026-07-12T18:36:54.601Z",
+      "updatedAt": "2026-07-12T18:37:24.463Z",
+      "experience": {
+        "totalCommits": 918,
+        "reposAnalyzed": 46,
+        "activeYears": 1.9,
+        "avgStars": 1,
+        "collaborationRepos": 6,
+        "documentationQuality": 30,
+        "linesAuthored": 4141835,
+        "pullRequests": 113,
+        "accountAgeYears": 1.9,
+        "followers": 24
+      },
+      "languages": {
+        "Python": 36,
+        "JavaScript": 11,
+        "TypeScript": 14,
+        "CSS": 4,
+        "Dockerfile": 0,
+        "HTML": 22,
+        "Shell": 0,
+        "Makefile": 0,
+        "PowerShell": 0,
+        "Batchfile": 0,
+        "Procfile": 0,
+        "HCL": 0,
+        "Roff": 0,
+        "SCSS": 2,
+        "Jupyter Notebook": 10,
+        "Move": 0,
+        "Solidity": 0,
+        "PHP": 0,
+        "Java": 0,
+        "PLpgSQL": 0,
+        "C": 0,
+        "C++": 0
+      },
+      "confidence": {
+        "score": 88,
+        "band": "match_ready",
+        "factorBreakdown": {
+          "skillBreadthDepth": 86,
+          "projectStrength": 98,
+          "recency": 100,
+          "contributionVolume": 100,
+          "documentation": 30
+        }
+      },
+      "finishedAt": "2026-07-12T18:37:24.463Z"
+    },
+    "ghscan_dae38e8d-4eeb-4927-8e2b-98f064d24b45": {
+      "jobId": "ghscan_dae38e8d-4eeb-4927-8e2b-98f064d24b45",
+      "freelancerId": "d51a5022-c779-49b9-85fe-786c5291f33c",
+      "githubUsername": "Suvam-paul145",
+      "status": "complete",
+      "segmentStatus": {
+        "skills": "done",
+        "projects": "done",
+        "experience": "done"
+      },
+      "reposDiscovered": 85,
+      "reposAnalyzed": 46,
+      "createdAt": "2026-07-12T20:16:31.000Z",
+      "updatedAt": "2026-07-12T20:17:08.668Z",
+      "experience": {
+        "totalCommits": 918,
+        "reposAnalyzed": 46,
+        "activeYears": 1.9,
+        "avgStars": 1,
+        "collaborationRepos": 6,
+        "documentationQuality": 30,
+        "linesAuthored": 4141835,
+        "pullRequests": 113,
+        "accountAgeYears": 1.9,
+        "followers": 24,
+        "totalStars": 74,
+        "contributionsPerWeek": 33,
+        "collaborationScore": 100
+      },
+      "languages": {
+        "Python": 36,
+        "JavaScript": 11,
+        "TypeScript": 14,
+        "CSS": 4,
+        "Dockerfile": 0,
+        "HTML": 22,
+        "Shell": 0,
+        "Makefile": 0,
+        "PowerShell": 0,
+        "Batchfile": 0,
+        "Procfile": 0,
+        "HCL": 0,
+        "Roff": 0,
+        "SCSS": 2,
+        "Jupyter Notebook": 10,
+        "Move": 0,
+        "Solidity": 0,
+        "PHP": 0,
+        "Java": 0,
+        "PLpgSQL": 0,
+        "C": 0,
+        "C++": 0
+      },
+      "confidence": {
+        "score": 88,
+        "band": "match_ready",
+        "factorBreakdown": {
+          "skillBreadthDepth": 86,
+          "projectStrength": 98,
+          "recency": 100,
+          "contributionVolume": 100,
+          "documentation": 30
+        }
+      },
+      "finishedAt": "2026-07-12T20:17:08.668Z"
+    }
+  },
+  "skills": {
+    "d51a5022-c779-49b9-85fe-786c5291f33c": [
+      {
+        "name": "HTML",
+        "category": "language",
+        "confidence": 94,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "22% of your authored code · ~3403 KB written"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "language",
+            "detail": "22% of your authored code · ~3403 KB written"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "language",
+            "detail": "22% of your authored code · ~3403 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "22% of your authored code · ~3403 KB written"
+          },
+          {
+            "repo": "VEDA",
+            "signal": "language",
+            "detail": "22% of your authored code · ~3403 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "CSS",
+        "category": "language",
+        "confidence": 94,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "4% of your authored code · ~577 KB written"
+          },
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "4% of your authored code · ~577 KB written"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "language",
+            "detail": "4% of your authored code · ~577 KB written"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "language",
+            "detail": "4% of your authored code · ~577 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "4% of your authored code · ~577 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "JavaScript",
+        "category": "language",
+        "confidence": 93,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "11% of your authored code · ~1736 KB written"
+          },
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "11% of your authored code · ~1736 KB written"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "language",
+            "detail": "11% of your authored code · ~1736 KB written"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "language",
+            "detail": "11% of your authored code · ~1736 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "11% of your authored code · ~1736 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Python",
+        "category": "language",
+        "confidence": 92,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "36% of your authored code · ~5742 KB written"
+          },
+          {
+            "repo": "dify-plugin-siray",
+            "signal": "language",
+            "detail": "36% of your authored code · ~5742 KB written"
+          },
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "36% of your authored code · ~5742 KB written"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "language",
+            "detail": "36% of your authored code · ~5742 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "36% of your authored code · ~5742 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "React",
+        "category": "framework",
+        "confidence": 91,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "dependency",
+            "detail": "uses react"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "topic",
+            "detail": "uses react"
+          },
+          {
+            "repo": "AI-trading-Bot",
+            "signal": "dependency",
+            "detail": "uses react"
+          },
+          {
+            "repo": "Gemini-Clone",
+            "signal": "dependency",
+            "detail": "uses react"
+          },
+          {
+            "repo": "patent-review-webapp",
+            "signal": "dependency",
+            "detail": "uses react"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "TypeScript",
+        "category": "language",
+        "confidence": 90,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "14% of your authored code · ~2262 KB written"
+          },
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "14% of your authored code · ~2262 KB written"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "language",
+            "detail": "14% of your authored code · ~2262 KB written"
+          },
+          {
+            "repo": "Retro-revival",
+            "signal": "language",
+            "detail": "14% of your authored code · ~2262 KB written"
+          },
+          {
+            "repo": "AI-trading-Bot",
+            "signal": "language",
+            "detail": "14% of your authored code · ~2262 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "SCSS",
+        "category": "language",
+        "confidence": 90,
+        "evidence": [
+          {
+            "repo": "Python-With-Django",
+            "signal": "language",
+            "detail": "2% of your authored code · ~343 KB written"
+          },
+          {
+            "repo": "E-commerce-Django",
+            "signal": "language",
+            "detail": "2% of your authored code · ~343 KB written"
+          },
+          {
+            "repo": "Mental-health-consultant",
+            "signal": "language",
+            "detail": "2% of your authored code · ~343 KB written"
+          },
+          {
+            "repo": "Innovocon-hosting",
+            "signal": "language",
+            "detail": "2% of your authored code · ~343 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Tailwind CSS",
+        "category": "tool",
+        "confidence": 88,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "topic",
+            "detail": "uses tailwindcss"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "dependency",
+            "detail": "uses tailwindcss"
+          },
+          {
+            "repo": "AI-trading-Bot",
+            "signal": "dependency",
+            "detail": "uses tailwindcss"
+          },
+          {
+            "repo": "patent-review-webapp",
+            "signal": "dependency",
+            "detail": "uses tailwindcss"
+          },
+          {
+            "repo": "AskMe-AI",
+            "signal": "dependency",
+            "detail": "uses tailwindcss"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Batchfile",
+        "category": "language",
+        "confidence": 83,
+        "evidence": [
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "0% of your authored code · ~12 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "0% of your authored code · ~12 KB written"
+          },
+          {
+            "repo": "VEDA",
+            "signal": "language",
+            "detail": "0% of your authored code · ~12 KB written"
+          },
+          {
+            "repo": "Hack4Bengal-4.0",
+            "signal": "language",
+            "detail": "0% of your authored code · ~12 KB written"
+          },
+          {
+            "repo": "End-to-end-hate-speech-detection",
+            "signal": "language",
+            "detail": "0% of your authored code · ~12 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Express",
+        "category": "framework",
+        "confidence": 80,
+        "evidence": [
+          {
+            "repo": "take-you-forward-app",
+            "signal": "dependency",
+            "detail": "uses express"
+          },
+          {
+            "repo": "portfolio",
+            "signal": "dependency",
+            "detail": "uses express"
+          },
+          {
+            "repo": "Google-auth-andMongoDB-database",
+            "signal": "dependency",
+            "detail": "uses express"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Zod",
+        "category": "tool",
+        "confidence": 79,
+        "evidence": [
+          {
+            "repo": "AI-trading-Bot",
+            "signal": "dependency",
+            "detail": "uses zod"
+          },
+          {
+            "repo": "patent-review-webapp",
+            "signal": "dependency",
+            "detail": "uses zod"
+          },
+          {
+            "repo": "suvam-portfolio-main",
+            "signal": "dependency",
+            "detail": "uses zod"
+          },
+          {
+            "repo": "techmen-punch-pros",
+            "signal": "dependency",
+            "detail": "uses zod"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Shell",
+        "category": "language",
+        "confidence": 75,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "0% of your authored code · ~32 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "0% of your authored code · ~32 KB written"
+          },
+          {
+            "repo": "CannerAI",
+            "signal": "language",
+            "detail": "0% of your authored code · ~32 KB written"
+          },
+          {
+            "repo": "Crop-prediction-model",
+            "signal": "language",
+            "detail": "0% of your authored code · ~32 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Jupyter Notebook",
+        "category": "language",
+        "confidence": 74,
+        "evidence": [
+          {
+            "repo": "Data-Analysis",
+            "signal": "language",
+            "detail": "10% of your authored code · ~1515 KB written"
+          },
+          {
+            "repo": "Macine-learning",
+            "signal": "language",
+            "detail": "10% of your authored code · ~1515 KB written"
+          },
+          {
+            "repo": "End-to-end-hate-speech-detection",
+            "signal": "language",
+            "detail": "10% of your authored code · ~1515 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "PostgreSQL",
+        "category": "tool",
+        "confidence": 74,
+        "evidence": [
+          {
+            "repo": "portfolio",
+            "signal": "dependency",
+            "detail": "uses pg"
+          },
+          {
+            "repo": "suvam-portfolio-main",
+            "signal": "dependency",
+            "detail": "uses pg"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Dockerfile",
+        "category": "language",
+        "confidence": 72,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "language",
+            "detail": "0% of your authored code · ~2 KB written"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "language",
+            "detail": "0% of your authored code · ~2 KB written"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "0% of your authored code · ~2 KB written"
+          },
+          {
+            "repo": "student-doubt-classifer-agent",
+            "signal": "language",
+            "detail": "0% of your authored code · ~2 KB written"
+          },
+          {
+            "repo": "CannerAI",
+            "signal": "language",
+            "detail": "0% of your authored code · ~2 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "PowerShell",
+        "category": "language",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "language",
+            "detail": "0% of your authored code · ~16 KB written"
+          },
+          {
+            "repo": "Hack4Bengal-4.0",
+            "signal": "language",
+            "detail": "0% of your authored code · ~16 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "C",
+        "category": "language",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "Data-encryption-algo",
+            "signal": "language",
+            "detail": "0% of your authored code · ~13 KB written"
+          },
+          {
+            "repo": "DIY-motion-detection-project",
+            "signal": "language",
+            "detail": "0% of your authored code · ~13 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Node.js",
+        "category": "framework",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "topic",
+            "detail": "declared topic: nodejs"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "topic",
+            "detail": "declared topic: nodejs"
+          },
+          {
+            "repo": "portfolio",
+            "signal": "topic",
+            "detail": "declared topic: nodejs"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Gemini API",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "topic",
+            "detail": "declared topic: gemini-api"
+          },
+          {
+            "repo": "VEDA",
+            "signal": "topic",
+            "detail": "declared topic: gemini-api"
+          },
+          {
+            "repo": "Medical-Doccument-Extraction",
+            "signal": "topic",
+            "detail": "declared topic: gemini-api"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Vercel",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "topic",
+            "detail": "declared topic: vercel"
+          },
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "declared topic: vercel"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "topic",
+            "detail": "declared topic: vercel"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "topic",
+            "detail": "declared topic: vercel"
+          },
+          {
+            "repo": "Retro-revival",
+            "signal": "topic",
+            "detail": "declared topic: vercel"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "AWS Lambda",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "declared topic: aws-lambda"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "topic",
+            "detail": "declared topic: aws-lambda"
+          },
+          {
+            "repo": "VEDA",
+            "signal": "topic",
+            "detail": "declared topic: aws-lambda"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "AWS S3",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "declared topic: aws-s3"
+          },
+          {
+            "repo": "KaryaSetu",
+            "signal": "topic",
+            "detail": "declared topic: aws-s3"
+          },
+          {
+            "repo": "VEDA",
+            "signal": "topic",
+            "detail": "declared topic: aws-s3"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Supabase",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "declared topic: supabase"
+          },
+          {
+            "repo": "portfolio",
+            "signal": "topic",
+            "detail": "declared topic: supabase"
+          },
+          {
+            "repo": "AskMe-AI",
+            "signal": "topic",
+            "detail": "declared topic: supabase"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Roff",
+        "category": "language",
+        "confidence": 68,
+        "evidence": [
+          {
+            "repo": "Python-With-Django",
+            "signal": "language",
+            "detail": "0% of your authored code · ~14 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "C++",
+        "category": "language",
+        "confidence": 67,
+        "evidence": [
+          {
+            "repo": "DIY-motion-detection-project",
+            "signal": "language",
+            "detail": "0% of your authored code · ~14 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Move",
+        "category": "language",
+        "confidence": 65,
+        "evidence": [
+          {
+            "repo": "iHACK_IITB",
+            "signal": "language",
+            "detail": "0% of your authored code · ~69 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "PLpgSQL",
+        "category": "language",
+        "confidence": 64,
+        "evidence": [
+          {
+            "repo": "AskMe-AI",
+            "signal": "language",
+            "detail": "0% of your authored code · ~8 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Docker",
+        "category": "tool",
+        "confidence": 64,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "uses docker"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "topic",
+            "detail": "uses docker"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "FastAPI",
+        "category": "framework",
+        "confidence": 64,
+        "evidence": [
+          {
+            "repo": "student-doubt-classifer-agent",
+            "signal": "dependency",
+            "detail": "uses fastapi"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Next.js",
+        "category": "framework",
+        "confidence": 64,
+        "evidence": [
+          {
+            "repo": "AskMe-AI",
+            "signal": "dependency",
+            "detail": "uses next"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "HCL",
+        "category": "language",
+        "confidence": 63,
+        "evidence": [
+          {
+            "repo": "Narralytics",
+            "signal": "language",
+            "detail": "0% of your authored code · ~3 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Solidity",
+        "category": "language",
+        "confidence": 63,
+        "evidence": [
+          {
+            "repo": "iHACK_IITB",
+            "signal": "language",
+            "detail": "0% of your authored code · ~32 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Java",
+        "category": "language",
+        "confidence": 62,
+        "evidence": [
+          {
+            "repo": "College-Database-Management-System-project",
+            "signal": "language",
+            "detail": "0% of your authored code · ~11 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Vitest",
+        "category": "tool",
+        "confidence": 59,
+        "evidence": [
+          {
+            "repo": "Retro-revival",
+            "signal": "dependency",
+            "detail": "uses vitest"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "MongoDB",
+        "category": "tool",
+        "confidence": 59,
+        "evidence": [
+          {
+            "repo": "Google-auth-andMongoDB-database",
+            "signal": "dependency",
+            "detail": "uses mongoose"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Django",
+        "category": "framework",
+        "confidence": 58,
+        "evidence": [
+          {
+            "repo": "Crop-prediction-model",
+            "signal": "dependency",
+            "detail": "uses django"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "NumPy",
+        "category": "tool",
+        "confidence": 58,
+        "evidence": [
+          {
+            "repo": "Crop-prediction-model",
+            "signal": "dependency",
+            "detail": "uses numpy"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Lucide React",
+        "category": "framework",
+        "confidence": 58,
+        "evidence": [
+          {
+            "repo": "SwasthaLink",
+            "signal": "topic",
+            "detail": "declared topic: lucide-react"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Chart.js",
+        "category": "framework",
+        "confidence": 58,
+        "evidence": [
+          {
+            "repo": "Narralytics",
+            "signal": "topic",
+            "detail": "declared topic: chartjs"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "Prisma",
+        "category": "tool",
+        "confidence": 53,
+        "evidence": [
+          {
+            "repo": "take-you-forward-app",
+            "signal": "dependency",
+            "detail": "uses @prisma/client"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "PHP",
+        "category": "language",
+        "confidence": 52,
+        "evidence": [
+          {
+            "repo": "Mental-health-consultant",
+            "signal": "language",
+            "detail": "0% of your authored code · ~1 KB written"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
+        "name": "MediaPipe",
+        "category": "framework",
+        "confidence": 41,
+        "evidence": [
+          {
+            "repo": "smart-attendance",
+            "signal": "topic",
+            "detail": "declared topic: mediapipe"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      }
+    ]
+  },
+  "projects": {
+    "d51a5022-c779-49b9-85fe-786c5291f33c": [
+      {
+        "repoName": "Dev-AI-OS-assistant",
+        "summary": "An AI-powered assistant utilizing a microservices architecture to automate complex operating system workflows.",
+        "domain": "ai",
+        "stack": [
+          "TypeScript"
+        ],
+        "stars": 4,
+        "commitShare": 100,
+        "lastActiveAt": "2026-05-05T17:42:07Z",
+        "rankScore": 212,
+        "url": "https://github.com/Suvam-paul145/Dev-AI-OS-assistant",
+        "primaryLanguage": "TypeScript",
+        "languageCount": 6,
+        "complexity": "High",
+        "commits": 32,
+        "commitActivity": [
+          0,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-05-05T17:42:07Z"
+      },
+      {
+        "repoName": "KaryaSetu",
+        "summary": "A full-stack productivity platform that uses AI-driven suggestions and smart reminders to automate task management.",
+        "domain": "software",
+        "stack": [
+          "TypeScript"
+        ],
+        "stars": 3,
+        "commitShare": 98,
+        "lastActiveAt": "2026-05-05T14:25:56Z",
+        "rankScore": 207,
+        "url": "https://github.com/Suvam-paul145/KaryaSetu",
+        "primaryLanguage": "TypeScript",
+        "languageCount": 4,
+        "complexity": "Medium",
+        "commits": 25,
+        "commitActivity": [
+          0,
+          0,
+          17,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-05-05T14:25:56Z"
+      },
+      {
+        "repoName": "Suvam-paul145",
+        "summary": "A repository containing configuration files for a GitHub profile.",
+        "domain": "software",
+        "stack": [],
+        "stars": 2,
+        "commitShare": 100,
+        "lastActiveAt": "2026-07-12T19:05:06Z",
+        "rankScore": 206,
+        "url": "https://github.com/Suvam-paul145/Suvam-paul145",
+        "primaryLanguage": null,
+        "languageCount": 0,
+        "complexity": "Low",
+        "commits": 49,
+        "commitActivity": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          15,
+          4,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-07-12T19:05:06Z"
+      },
+      {
+        "repoName": "Python-With-Django",
+        "summary": "A collection of training materials and code samples for Django development.",
+        "domain": "software",
+        "stack": [
+          "HTML"
+        ],
+        "stars": 1,
+        "commitShare": 100,
+        "lastActiveAt": "2026-06-13T16:19:04Z",
+        "rankScore": 203,
+        "url": "https://github.com/Suvam-paul145/Python-With-Django",
+        "primaryLanguage": "HTML",
+        "languageCount": 6,
+        "complexity": "High",
+        "commits": 69,
+        "commitActivity": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          6,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-06-13T16:19:04Z"
+      },
+      {
+        "repoName": "SwasthaLink",
+        "summary": "A healthcare tool that translates clinical jargon into plain language with bilingual support and automated delivery.",
+        "domain": "healthcare",
+        "stack": [
+          "JavaScript",
+          "Tailwind CSS",
+          "React",
+          "Docker"
+        ],
+        "stars": 3,
+        "commitShare": 93,
+        "lastActiveAt": "2026-05-21T17:31:57Z",
+        "rankScore": 202,
+        "url": "https://github.com/Suvam-paul145/SwasthaLink",
+        "primaryLanguage": "JavaScript",
+        "languageCount": 6,
+        "complexity": "High",
+        "commits": 79,
+        "commitActivity": [
+          0,
+          0,
+          0,
+          0,
+          8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-05-21T17:31:57Z"
+      },
+      {
+        "repoName": "Narralytics",
+        "summary": "A data analytics platform designed to bridge the gap between raw business data and actionable decision-making.",
+        "domain": "analytics",
+        "stack": [
+          "Python",
+          "React",
+          "Docker"
+        ],
+        "stars": 2,
+        "commitShare": 96,
+        "lastActiveAt": "2026-06-16T20:58:33Z",
+        "rankScore": 202,
+        "url": "https://github.com/Suvam-paul145/Narralytics",
+        "primaryLanguage": "Python",
+        "languageCount": 8,
+        "complexity": "High",
+        "commits": 66,
+        "commitActivity": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-06-16T20:58:33Z"
+      },
+      {
+        "repoName": "portfolio",
+        "summary": "A professional portfolio website built with Express, PostgreSQL, and JavaScript.",
+        "domain": "web",
+        "stack": [
+          "JavaScript",
+          "Express",
+          "PostgreSQL"
+        ],
+        "stars": 1,
+        "commitShare": 99,
+        "lastActiveAt": "2026-05-05T23:49:09Z",
+        "rankScore": 202,
+        "url": "https://github.com/Suvam-paul145/portfolio",
+        "primaryLanguage": "JavaScript",
+        "languageCount": 3,
+        "complexity": "Medium",
+        "commits": 14,
+        "commitActivity": [
+          0,
+          4,
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "updatedAt": "2026-05-05T23:49:09Z"
+      },
+      {
+        "repoName": "AskMe-AI",
+        "summary": "An educational platform that generates AI summaries, adaptive quizzes, and personalized revision plans from uploaded notes.",
+        "domain": "edtech",
+        "stack": [
+          "TypeScript",
+          "Tailwind CSS",
+          "React",
+          "Next.js"
+        ],
+        "stars": 0,
+        "commitShare": 95,
+        "lastActiveAt": "2026-05-31T17:44:22Z",
+        "rankScore": 195,
+        "url": "https://github.com/Suvam-paul145/AskMe-AI",
+        "primaryLanguage": "TypeScript",
+        "languageCount": 4,
+        "complexity": "High",
+        "commits": 93,
+        "commitActivity": [],
+        "updatedAt": "2026-05-31T17:44:22Z"
+      }
+    ]
+  },
+  "confidence": {
+    "d51a5022-c779-49b9-85fe-786c5291f33c": {
+      "score": 88,
+      "band": "match_ready",
+      "factorBreakdown": {
+        "skillBreadthDepth": 86,
+        "projectStrength": 98,
+        "recency": 100,
+        "contributionVolume": 100,
+        "documentation": 30
+      }
+    }
+  },
+  "snapshots": {
+    "d51a5022-c779-49b9-85fe-786c5291f33c": {
+      "githubUsername": "Suvam-paul145",
+      "name": "Suvam Paul",
+      "bio": "Building @FixFlowAI | Lead Project Advisor @bunchhh.com | Backend Developer | AWS | Open Source contributor\r\n",
+      "company": "@FixFlow-AI ",
+      "location": "Kolkata, West Bengal",
+      "blog": "https://www.suvam.codes",
+      "publicRepos": 77,
+      "followers": 24,
+      "following": 16,
+      "accountCreatedAt": "2024-08-18T03:49:26Z",
+      "readme": "# Hey, I'm Suvam Paul  \n\n<div align=\"center\">\n  <img src=\"https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=34&pause=1000&color=00F7FF&center=true&vCenter=true&width=750&lines=AI+Backend+Engineer+in+Progress;MERN+Stack+Developer;Cloud+%2B+AI+Integration+Builder;Turning+Ideas+into+Scalable+Systems\" />\n</div>\n\n<div align=\"center\">\n  <img src=\"https://komarev.com/ghpvc/?username=Suvam-paul145&color=00F7FF&style=for-the-badge&label=PROFILE+VIEWS\" />\n</div>\n\n---\n\n## Who Am I?\n\n<img align=\"right\" src=\"https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif\" width=\"300\"/>\n\nI'm not just a web developer — I'm building myself into an **AI-powered Backend Full Stack Engineer**.\n\nI love building **systems**, not just pages.  \nMy focus is on **backend architecture, authentication systems, AI integration, and scalable cloud deployment**.  \nCurrently crafting intelligent applications that bridge **AI automation** with real-world workflows.\n\n> *\"Frontend shows it. Backend runs it. AI makes it intelligent.\"*\n\n<br clear=\"right\"/>\n\n---\n\n### GitHub Stats\n\n<div align=\"center\">\n  <img alt=\"Suvam Paul's GitHub stats\" src=\"./profile/stats.svg\" width=\"49%\" />\n  <img alt=\"Suvam Paul's top languages\" src=\"./profile/top-langs.svg\" width=\"49%\" />\n</div>\n\n---\n## My Favorite Tools\n\n<details open>\n<summary><h3>Core Languages</h3></summary>\n\n<p align=\"center\">\n  <img src=\"https://skillicons.dev/icons?i=js,ts,c,python,cpp,java,html,css&theme=dark\" />\n</p>\n\n<p align=\"center\">\n  <a href=\"https://github.com/search?q=user%3ASuvam-paul145+language%3Ajavascript\"><img alt=\"JavaScript\" src=\"https://img.shields.io/badge/JavaScript-F7DF1E.svg?style=for-the-badge&logo=javascript&logoColor=black\"></a>\n  <a href=\"https://github.com/search?q=user%3ASuvam-paul145+language%3Atypescript\"><img alt=\"TypeScript\" src=\"https://img.shields.io/badge/TypeScript-007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white\"></a>\n  <a href=\"https://github.com/search?q=user%3ASuvam-paul145+language%3Apython\"><img alt=\"Python\" src=\"https://img.shields.io/badge/Python-3776AB.svg?style=for-the-badge&logo=python&logoColor=white\"></a>\n</p>\n</details>\n\n<details open>\n<summary><h3>Frameworks & Libraries</h3></summary>\n\n<p align=\"center\">\n  <img src=\"https://skillicons.dev/icons?i=react,nextjs,nodejs,express,tailwind,fastapi,flask&theme=dark\" />\n</p>\n\n</details>\n\n<details open>\n<summary><h3>Databases & Cloud</h3></summary>\n\n<p align=\"center\">\n  <img src=\"https://skillicons.dev/icons?i=aws,gcp,firebase,mongodb,docker,vercel,github&theme=dark\" />\n</p>\n\n</details>\n\n<details open>\n<summary><h3>Currently Leveling Up</h3></summary>\n\n<p align=\"center\">\n  <img src=\"https://skillicons.dev/icons?i=aws,kubernetes,redis,graphql&theme=dark\" />\n</p>\n</details>\n\n- **AWS** - EC2, Lambda, S3\n- **Docker & Kubernetes** - Container Orchestration\n- **Redis** - Caching & Session Management\n- **GraphQL** - API Design\n\n</details>\n\n---\n\n## Current Goals\n\n🔹 Mastering **MERN Stack + Next.js + TypeScript**  \n🔹 Building **secure authentication systems (JWT, OAuth, Roles)**  \n🔹 Integrating **AI/ML models into web apps**  \n🔹 Learning **Cloud (AWS), S3, Lambda, Api Gateway, Cloudwatch**  \n🔹 Creating **production-level full stack systems**\n\n---\n\n---\n\n## Featured Projects\n\n<table>\n<tr>\n<td width=\"50%\">\n\n### [Portfolio](https://github.com/Suvam-paul145/portfolio)\n**Personal Developer Portfolio Website**\n\nModern developer portfolio showcasing projects, skills, and achievements with a clean UI and responsive design.\n\n`React` `TypeScript` `Tailwind CSS` `Vite`\n\n</td>\n<td width=\"50%\">\n\n### [SwasthaLink: AI Enabled Smart Hospital](https://github.com/Suvam-paul145/SwasthaLink)\n**Digital Healthcare Connectivity Platform**\n\nA healthcare platform enabling seamless interaction between patients and providers with a focus on accessibility and digital health records.\n\n`Next.js` `TypeScript` `Node.js` `MongoDB` `REST API`\n\n</td>\n</tr>\n\n<tr>\n<td width=\"50%\">\n\n### [FixFlowAI: Build for Freelancer and Agencies](https://github.com/Suvam-paul145/FixFlowAI)   \n****\n\nAI-powered client brief → structured proposal generator · Streaming JSON · Confidence Grid · Built for agencies and freelancers. Task job scheduler and Email Automations.\n`javascript` `dockerfile` `html5` `mongodb` `reactjs` `aws-s3` `node-js` `express-js` `aws-cloudfront` `aws-amplify` `tailwind-css` `aws-ecs-fargate`\n\n</td>\n<td width=\"50%\">\n\n### [Retro-Revival](https://github.com/Suvam-paul145/Retro-revival)\n**Classic Gaming Experience Reimagined**\n\nA nostalgic web-based gaming project reviving retro-style gameplay with modern web technologies and smooth UI interactions.\n\n`JavaScript` `HTML` `CSS` `Canvas API`\n\n</td>\n</tr>\n</table>\n\n---\n\n### Contribution Streak\n\n<div align=\"center\">\n  <img alt=\"Suvam Paul's GitHub contribution streak\" src=\"./profile/streak.svg\" width=\"98%\" />\n</div>\n\n---\n\n## Activity Graph\n\n<a href=\"https://github.com/Suvam-paul145\">\n  <img src=\"https://github-readme-activity-graph.vercel.app/graph?username=Suvam-paul145&theme=tokyo-night&hide_border=true&bg_color=0D1117\" width=\"100%\">\n</a>\n\n---\n\n## Contribution        \n\n<div align=\"center\">\n\n![Contribution Graph](https://ssr-contributions-svg.vercel.app/_/Suvam-paul145?chart=3dbar&gap=0.6&scale=2&gradient=true&flatten=0&animation=mess&animation_duration=6&animation_loop=true&format=svg&weeks=50&theme=purple&widget_size=large&colors=FF6F61,FF9671,FFC15E,72F2EB,1282A2,FCE2DB,FAD4D8,DBDFFD&dark=true)\n</div>\n\n--- \n\n## Let's Connect\n\n<div align=\"center\">\n  \n[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/suvam-paul-03222005az/)\n[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://x.com/SUVAMPAUL687076)\n[![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:suvampaul145@gmail.com)\n[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Suvam-paul145)\n\n</div>\n\n---\n\n<div align=\"center\">\n  \n### 💡 *\"Building intelligent systems that make a difference\"*\n\n<img src=\"https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer\" width=\"100%\"/>\n\n</div>\n",
+      "fetchedAt": "2026-07-12T18:55:05.620Z"
+    }
+  }
+}
