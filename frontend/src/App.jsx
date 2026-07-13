@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLandingStore } from "./store/useLandingStore";
 import { CursorField } from "./components/CursorField";
 import { ScrollProgress } from "./components/ScrollProgress";
@@ -31,10 +31,19 @@ import { Dashboard } from "./sections/Dashboard";
 import { getUser, isAuthenticated, setSession, startProactiveRefreshTimer } from "./lib/auth";
 import { api } from "./lib/api";
 import { handleGithubRedirect } from "./components/GithubSignInButton";
+import { AuthLoader } from "./components/AuthLoader";
 
 export function App() {
   useSmoothScroll();
-  const { page, setPage, setDashboardTab, hydrateAuth, login } = useLandingStore();
+  const {
+    page,
+    setPage,
+    setDashboardTab,
+    hydrateAuth,
+    login,
+    isAuthenticating,
+    setIsAuthenticating,
+  } = useLandingStore();
 
   // Initialize the proactive background refresh timer on app load.
   useEffect(() => {
@@ -53,11 +62,20 @@ export function App() {
     let cancelled = false;
     (async () => {
       const result = await handleGithubRedirect({ api, setSession, login });
-      if (!result || cancelled) return;
+      
+      // If result is null, it means handleGithubRedirect did not run the OAuth exchange
+      // (e.g. because there was no code/state in the URL, or it was already cleared by a double-mount).
+      // In that case, we should not clear the isAuthenticating state because a real exchange 
+      // is already running in the background from the other mount.
+      if (!result) return;
+
+      setIsAuthenticating(false);
+
       if (result.nextHash) {
         window.location.hash = result.nextHash;
       } else if (result.error) {
         // Surface the error on the login screen.
+        setPage("login"); // Synchronously set page to login to avoid landing page flash
         window.location.hash = "#/login";
         window.sessionStorage.setItem("ff_github_error", result.error);
       }
@@ -65,7 +83,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [login]);
+  }, [login, setIsAuthenticating, setPage]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -98,6 +116,10 @@ export function App() {
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, [setPage, setDashboardTab]);
+
+  if (isAuthenticating) {
+    return <AuthLoader />;
+  }
 
   if (page === "login") {
     return (

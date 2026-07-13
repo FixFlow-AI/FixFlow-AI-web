@@ -16,12 +16,70 @@ export const useLandingStore = create((set) => ({
   setDemoRunning: (demoRunning) => set({ demoRunning }),
 
   // Routing & Auth
-  page: "landing",
-  dashboardTab: "overview",
-  isLoggedIn: false,
-  userEmail: "",
-  userRole: "client",
-  user: null,
+  page: (() => {
+    if (typeof window === "undefined") return "landing";
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("code") && params.get("state")) {
+      return "landing"; // Handled by AuthLoader in App.jsx
+    }
+    if (hash === "#/login") return "login";
+    if (hash === "#/signup") return "signup";
+    if (hash.startsWith("#/dashboard")) {
+      const token = localStorage.getItem("ff_access_token");
+      const userRaw = localStorage.getItem("ff_user");
+      if (token && userRaw) return "dashboard";
+      return "login";
+    }
+    return "landing";
+  })(),
+  dashboardTab: (() => {
+    if (typeof window === "undefined") return "overview";
+    const hash = window.location.hash;
+    if (hash.startsWith("#/dashboard")) {
+      const parts = hash.split("/");
+      return parts[2] || "overview";
+    }
+    return "overview";
+  })(),
+  isLoggedIn: (() => {
+    if (typeof window === "undefined") return false;
+    const token = localStorage.getItem("ff_access_token");
+    const userRaw = localStorage.getItem("ff_user");
+    return Boolean(token && userRaw);
+  })(),
+  userEmail: (() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const user = JSON.parse(localStorage.getItem("ff_user") || "null");
+      return user?.email || "";
+    } catch {
+      return "";
+    }
+  })(),
+  userRole: (() => {
+    if (typeof window === "undefined") return "client";
+    try {
+      const user = JSON.parse(localStorage.getItem("ff_user") || "null");
+      return user?.role || "client";
+    } catch {
+      return "client";
+    }
+  })(),
+  user: (() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return JSON.parse(localStorage.getItem("ff_user") || "null");
+    } catch {
+      return null;
+    }
+  })(),
+  isAuthenticating: (() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    return Boolean(params.get("code") && params.get("state"));
+  })(),
+  setIsAuthenticating: (isAuthenticating) => set({ isAuthenticating }),
   setPage: (page) => set({ page }),
   setDashboardTab: (dashboardTab) => set({ dashboardTab }),
   // Called after a successful Google sign-in (real user object from the backend).

@@ -39,11 +39,12 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-13T16:00:32.110Z",
+      "updatedAt": "2026-07-13T19:34:35.957Z",
       "refreshTokenHashes": [
         "74aa8d8ff7bdb9f08c8c3e9a7a7f13025bc745a36c4cda45f08a012133c5c7ff",
         "b25808e6b9caabe2eb30420c763c08e78c7084a581cad7f66ae4a932ba26bbca",
-        "50f20db3e0dfaa99f0f9929e2e15435884722a44bb5d3b6a5bd5ac2b5da4f8a1"
+        "482202c73f6c654d33e51d1b67e428847c17a100aefa0154b503cfe5db74a691",
+        "ae4320f66e7cfd63292e05d6ff24d0592ba4154492f3f171e43cb345432db424"
       ]
     },
     {
@@ -57,15 +58,32 @@
       "githubUsername": "Suvam-paul145",
       "role": "freelancer",
       "createdAt": "2026-07-07T07:48:51.920Z",
-      "updatedAt": "2026-07-13T16:17:08.798Z",
+      "updatedAt": "2026-07-13T19:58:37.630Z",
       "refreshTokenHashes": [
         "5cf22c19ebcf73717b1568a3afffd016db42e851cc3cb02125a7ecd3f96c9037",
         "71bd0aada950dc0874ceffdf4f9068dd0ae04fc12a45558f18bb570416499f27",
         "cb9971991442ae40565a62ced947acc9b95b465654580925bcace859c2143a38",
         "042ef41c45cf8c4bd54650fa7c62cce5de57cbd3abb2be5e4fb3343aa07658aa",
-        "48ec72823583af31b49ff95c3fc43779e02fe2d6470e93743e95e0102aec05d6"
+        "ebb62589a73d9908b290c27ffac9213888f6b53d23a8b70ab2e8cea2500da857",
+        "ac8a5b1ad7f9f198dadac19b7fd35917d90e2c15bccb9b361143b27010e78101",
+        "00ddfd3e40c425c58eb6e0bc61910b452f2cc0e80bd218f6e9a427bd18f3c8ca",
+        "cbb9190033dfb3acc75e58edc0b58fb0bed2aac863960ae21526c5eef41912be",
+        "5bff13e4d342d4ff51a0fbcb0de69be7460d50a902be7271094ee0910800fc63"
       ],
-      "githubAccessToken": "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"
+      "githubAccessToken": "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"
+    },
+    {
+      "id": "88cfe3f4-993e-4c06-b5a5-10a33db0b9bd",
+      "email": "suvamvlogs8@gmail.com",
+      "emailVerified": true,
+      "name": "Suvam Vlogs",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJk28vT-HdrSZ-iUyZDPJqvcurz8FWPPF-HWuUUHVtZcXaE8g=s96-c",
+      "googleSub": "110650039735920204330",
+      "authProvider": "google",
+      "role": "client",
+      "createdAt": "2026-07-13T18:12:27.033Z",
+      "updatedAt": "2026-07-13T18:12:48.816Z",
+      "refreshTokenHashes": []
     }
   ]
 }
