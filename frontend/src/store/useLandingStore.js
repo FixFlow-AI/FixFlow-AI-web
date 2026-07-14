@@ -118,6 +118,10 @@ export const useLandingStore = create((set) => ({
     set({ onboardingWalletAddress }),
   addTeamMember: (email) =>
     set((state) => ({ onboardingTeam: [...state.onboardingTeam, email] })),
+  removeTeamMember: (email) =>
+    set((state) => ({
+      onboardingTeam: state.onboardingTeam.filter((m) => m !== email),
+    })),
 
   // Brief Ingestion
   rawBriefText: "",
