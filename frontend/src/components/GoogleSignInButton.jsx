@@ -49,22 +49,27 @@ export function GoogleSignInButton({ nextHash = "#/dashboard/overview", roleToSe
       setBusy(true);
       setError("");
       try {
-        const { user, accessToken, refreshToken } = await api.googleLogin(
+        const { user, accessToken, refreshToken, isNewUser } = await api.googleLogin(
           response.credential,
         );
         setSession({ user, accessToken, refreshToken });
         login(user);
-        // On signup, apply the chosen role to the freshly created account.
-        if (roleToSet && roleToSet !== user.role) {
-          try {
-            const { user: updated } = await api.setRole(roleToSet);
-            setSession({ user: updated });
-            login(updated);
-          } catch {
-            /* non-fatal: role can be changed later in settings */
+        
+        if (isNewUser) {
+          // On signup, apply the chosen role to the freshly created account.
+          if (roleToSet && roleToSet !== user.role) {
+            try {
+              const { user: updated } = await api.setRole(roleToSet);
+              setSession({ user: updated });
+              login(updated);
+            } catch {
+              /* non-fatal: role can be changed later in settings */
+            }
           }
+          window.location.hash = nextHash;
+        } else {
+          window.location.hash = "#/dashboard/overview";
         }
-        window.location.hash = nextHash;
       } catch (err) {
         setError(
           err instanceof ApiError

@@ -54,9 +54,11 @@ async function issueSession(
   user: User,
   intendedRole: unknown,
   allowedRoles: UserRole[],
+  isNewUser: boolean,
 ) {
   let finalUser = user;
   if (
+    isNewUser &&
     typeof intendedRole === 'string' &&
     VALID_ROLES.includes(intendedRole as UserRole) &&
     allowedRoles.includes(intendedRole as UserRole) &&
@@ -74,6 +76,7 @@ async function issueSession(
     accessToken,
     refreshToken,
     refreshTokenExpiresInMs: refreshTtlMs(),
+    isNewUser,
   };
 }
 
@@ -119,9 +122,11 @@ authRouter.post(
     }
 
     const repo = getUserRepository();
+    const existing = await repo.findByGoogleSub(profile.googleSub);
+    const isNewUser = !existing;
     const user = await repo.upsertFromGoogleProfile(profile);
     console.log('[AuthRoute]   ✅ User upserted from Google. userId:', user.id, '| role:', user.role);
-    res.json(await issueSession(repo, user, intendedRole, GOOGLE_ROLES));
+    res.json(await issueSession(repo, user, intendedRole, GOOGLE_ROLES, isNewUser));
   }),
 );
 
@@ -180,7 +185,7 @@ authRouter.post(
       '| role:', user.role, '| newUser:', isNewUser,
     );
 
-    const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES);
+    const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES, isNewUser);
 
     // Token hand-off: a deep GitHub scan is enqueued ONLY for a brand-new
     // freelancer account. The access token is used only server-side and is never

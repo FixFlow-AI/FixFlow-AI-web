@@ -39,12 +39,17 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-13T19:34:35.957Z",
+      "updatedAt": "2026-07-14T10:14:10.667Z",
       "refreshTokenHashes": [
         "74aa8d8ff7bdb9f08c8c3e9a7a7f13025bc745a36c4cda45f08a012133c5c7ff",
         "b25808e6b9caabe2eb30420c763c08e78c7084a581cad7f66ae4a932ba26bbca",
         "482202c73f6c654d33e51d1b67e428847c17a100aefa0154b503cfe5db74a691",
-        "ae4320f66e7cfd63292e05d6ff24d0592ba4154492f3f171e43cb345432db424"
+        "2ec9d8f0976fa611e40aa80534e3aa6d7798e404b438b0d073bc972158ceea6d",
+        "d813e44624602f437002f35e2fbf2ce65bc33f7705b69fb6e1dbfc438688583f",
+        "0ab6f77e98a8a8aca747e39aa46fe634e4d78e136a3babf4b822186e063d7239",
+        "c64a7199fe0e566452b364f2f791f91cceaf49bd8e63e592647f03372ee99f53",
+        "b6a624fd433cb36113eba5426b014ffbf0bddd108134ce3dbe159a2c2e72f81d",
+        "dbc7d55696822f9c7efedefb1b2d11c9e18b0278d41120116f61da33311ff3a7"
       ]
     },
     {
@@ -84,6 +89,38 @@
       "createdAt": "2026-07-13T18:12:27.033Z",
       "updatedAt": "2026-07-13T18:12:48.816Z",
       "refreshTokenHashes": []
+    },
+    {
+      "id": "1da49cce-774f-4eeb-a01c-19fde7261784",
+      "email": "gautampaul572@gmail.com",
+      "emailVerified": true,
+      "name": "Gautam Kumar Paul",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocJZif3g6MosB8supeFm63iQNd7WJO2Noxecx4RXmj5wTmYB3T_A=s96-c",
+      "googleSub": "102560072527374342862",
+      "authProvider": "google",
+      "role": "client",
+      "createdAt": "2026-07-14T09:15:32.840Z",
+      "updatedAt": "2026-07-14T09:17:05.685Z",
+      "refreshTokenHashes": [
+        "1273c7a2e3bae5e7449b7b75a01ef4d5c42b6c5e25f891976b47eba2a5012156",
+        "32f00d02a45dde97dd7fa01adb54d9aaa2fb5aa78309db5cea22ea9a7eda3d65"
+      ]
+    },
+    {
+      "id": "3600a70b-3c69-4adf-8d9f-6b34a5fb7a74",
+      "email": "code.genesis.official24@gmail.com",
+      "emailVerified": true,
+      "name": "Code Genesis",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocKFpZ0W4hac3gAwSxxpBbNtXXftWIlB5sR0cFb8FhvgWPA1IY4=s96-c",
+      "googleSub": "103308739081321425410",
+      "authProvider": "google",
+      "role": "developer",
+      "createdAt": "2026-07-14T09:17:39.722Z",
+      "updatedAt": "2026-07-14T09:22:09.249Z",
+      "refreshTokenHashes": [
+        "f83bad84251183b700c339f8660017144b261ecf6f18c1d6cb0bcb2dd7547fd8",
+        "15223f0f3af83ae25dd5db73f8cb6a2df2a64e76d99afca25744e71e76ab037d"
+      ]
     }
   ]
 }
