@@ -71,12 +71,17 @@ async function issueSession(
   const refreshToken = generateRefreshToken();
   await repo.addRefreshTokenHash(finalUser.id, hashRefreshToken(refreshToken));
   console.log('[AuthRoute] ✅ Session issued for user:', finalUser.id, '| role:', finalUser.role, '| email:', finalUser.email);
+  const roleMismatch = (!isNewUser && typeof intendedRole === 'string' && intendedRole !== finalUser.role)
+    ? { requested: intendedRole, existing: finalUser.role }
+    : undefined;
+
   return {
     user: publicUser(finalUser),
     accessToken,
     refreshToken,
     refreshTokenExpiresInMs: refreshTtlMs(),
     isNewUser,
+    roleMismatch,
   };
 }
 

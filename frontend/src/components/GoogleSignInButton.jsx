@@ -49,8 +49,9 @@ export function GoogleSignInButton({ nextHash = "#/dashboard/overview", roleToSe
       setBusy(true);
       setError("");
       try {
-        const { user, accessToken, refreshToken, isNewUser } = await api.googleLogin(
+        const { user, accessToken, refreshToken, isNewUser, roleMismatch } = await api.googleLogin(
           response.credential,
+          roleToSet
         );
         setSession({ user, accessToken, refreshToken });
         login(user);
@@ -66,8 +67,32 @@ export function GoogleSignInButton({ nextHash = "#/dashboard/overview", roleToSe
               /* non-fatal: role can be changed later in settings */
             }
           }
+          sessionStorage.setItem(
+            "ff_auth_notification",
+            JSON.stringify({
+              type: "success",
+              message: "Workspace created successfully! Let's complete your role setup.",
+            })
+          );
           window.location.hash = nextHash;
         } else {
+          if (roleMismatch) {
+            sessionStorage.setItem(
+              "ff_auth_notification",
+              JSON.stringify({
+                type: "warning",
+                message: `Welcome back! You already have an active ${roleMismatch.existing.toUpperCase()} workspace. Logging you into your existing workspace.`,
+              })
+            );
+          } else {
+            sessionStorage.setItem(
+              "ff_auth_notification",
+              JSON.stringify({
+                type: "success",
+                message: `Welcome back, ${user.name || "User"}!`,
+              })
+            );
+          }
           window.location.hash = "#/dashboard/overview";
         }
       } catch (err) {

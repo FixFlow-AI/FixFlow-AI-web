@@ -71,6 +71,19 @@ export function Dashboard() {
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem("ff_auth_notification");
+    if (stored) {
+      try {
+        setNotification(JSON.parse(stored));
+        sessionStorage.removeItem("ff_auth_notification");
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!profileDropdownOpen) return;
@@ -255,6 +268,44 @@ export function Dashboard() {
 
         {/* Content viewport */}
         <main className="dash-viewport">
+          {notification && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                padding: "12px 18px",
+                borderRadius: 8,
+                marginBottom: 20,
+                fontSize: 14,
+                fontWeight: 500,
+                background: notification.type === "warning" ? "#fffbeb" : "#f0fdf4",
+                border: notification.type === "warning" ? "1px solid #fde68a" : "1px solid #bbf7d0",
+                color: notification.type === "warning" ? "#b45309" : "#15803d",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Sparkles size={16} />
+                <span>{notification.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotification(null)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "inherit",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  lineHeight: 1,
+                  padding: "0 4px",
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          )}
           <ActivePanel />
         </main>
       </div>

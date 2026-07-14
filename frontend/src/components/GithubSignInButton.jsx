@@ -144,16 +144,44 @@ export async function handleGithubRedirect({ api, setSession, login }) {
 
   console.log('[GitHubOAuth:FE]   Calling backend POST /api/auth/github...');
   try {
-    const { user, accessToken, refreshToken, scanJobId, isNewUser } = await api.githubLogin(
+    const { user, accessToken, refreshToken, scanJobId, isNewUser, roleMismatch } = await api.githubLogin(
       code,
       intendedRole,
       redirectUri,
     );
-    console.log('[GitHubOAuth:FE] ✅ GitHub login successful. userId:', user?.id, '| email:', user?.email, '| role:', user?.role, '| isNewUser:', isNewUser);
+    console.log('[GitHubOAuth:FE] ✅ GitHub login successful. userId:', user?.id, '| email:', user?.email, '| role:', user?.role, '| isNewUser:', isNewUser, '| roleMismatch:', roleMismatch);
     setSession({ user, accessToken, refreshToken });
     login(user);
     // Stash the scan job so the onboarding view can stream its segments live.
     if (scanJobId) sessionStorage.setItem("ff_scan_job_id", scanJobId);
+    
+    if (isNewUser) {
+      sessionStorage.setItem(
+        "ff_auth_notification",
+        JSON.stringify({
+          type: "success",
+          message: "Workspace created successfully! Let's complete your GitHub verification.",
+        })
+      );
+    } else {
+      if (roleMismatch) {
+        sessionStorage.setItem(
+          "ff_auth_notification",
+          JSON.stringify({
+            type: "warning",
+            message: `Welcome back! You already have an active ${roleMismatch.existing.toUpperCase()} workspace. Logging you into your existing workspace.`,
+          })
+        );
+      } else {
+        sessionStorage.setItem(
+          "ff_auth_notification",
+          JSON.stringify({
+            type: "success",
+            message: `Welcome back, ${user.name || "User"}!`,
+          })
+        );
+      }
+    }
     
     const finalNextHash = isNewUser ? nextHash : "#/dashboard/overview";
     return { nextHash: finalNextHash };
