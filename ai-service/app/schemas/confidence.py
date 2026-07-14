@@ -22,9 +22,22 @@ class FeasibilityEvaluation(BaseModel):
     findings: str = Field(min_length=1)
 
 
+class CycleRecord(BaseModel):
+    cycle: int
+    auditor: AuditorEvaluation
+    feasibility: FeasibilityEvaluation
+    confidenceIndex: int
+    issuesFed: list[str]
+    optimizationApplied: bool
+    improvedOverPrevious: bool | None
+
+
 class ConfidenceGridResult(BaseModel):
     auditor: AuditorEvaluation
     feasibility: FeasibilityEvaluation
     confidenceIndex: int  # mean of the 4 individual scores
     optimized: bool
     finalProposal: Proposal
+    cycles: list[CycleRecord]
+    bestCycle: int
+
