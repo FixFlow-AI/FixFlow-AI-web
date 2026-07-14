@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 import {
@@ -44,6 +44,10 @@ export function BriefIntelligence() {
   const [text, setText] = useState(rawBriefText);
   const [parsing, setParsing] = useState(false);
   const [parsingStep, setParsingStep] = useState(0);
+
+  useEffect(() => {
+    setText(rawBriefText);
+  }, [rawBriefText]);
 
   /* ── Decision interaction state ── */
   const [expandedDecision, setExpandedDecision] = useState(null); // index or null

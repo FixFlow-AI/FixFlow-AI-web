@@ -12,10 +12,11 @@ import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
 export function Overview() {
-  const { user, setDashboardTab } = useLandingStore();
+  const { user, setDashboardTab, hydrateLatestProposal } = useLandingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [viewingBrief, setViewingBrief] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -27,6 +28,19 @@ export function Overview() {
       setError(err instanceof ApiError ? err.message : "Could not load your overview.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewBrief = async (proposalId) => {
+    setViewingBrief(true);
+    try {
+      const fullProposal = await api.getProposal(proposalId);
+      hydrateLatestProposal(fullProposal);
+      go("brief-intelligence");
+    } catch (err) {
+      console.error("Failed to load brief details:", err);
+    } finally {
+      setViewingBrief(false);
     }
   };
 
@@ -118,6 +132,19 @@ export function Overview() {
                 </button>
                 <button type="button" className="panel-btn--ghost panel-btn" onClick={() => go("matching")}>
                   Find matches <ArrowRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="panel-btn--ghost panel-btn"
+                  onClick={() => handleViewBrief(data.latestProposal.proposalId)}
+                  disabled={viewingBrief}
+                >
+                  {viewingBrief ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : (
+                    <FileText size={14} />
+                  )}
+                  View Brief
                 </button>
               </div>
             </div>
