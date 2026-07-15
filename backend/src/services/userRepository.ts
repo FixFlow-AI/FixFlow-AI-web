@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'crypto';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
+import { refreshTtlMs } from '../auth/tokens.js';
 
 /**
  * User identity + session storage.
@@ -16,6 +17,16 @@ import { dirname, resolve } from 'path';
 
 export type UserRole = 'client' | 'freelancer' | 'agency' | 'developer';
 export type AuthProvider = 'google' | 'github';
+
+/**
+ * A single active refresh token: the SHA-256 hash of the opaque token plus the
+ * ISO-8601 timestamp of when it was issued. The timestamp lets us evict tokens
+ * older than the refresh TTL so the list cannot accumulate stale entries.
+ */
+export interface RefreshTokenRecord {
+  hash: string;
+  createdAt: string;
+}
 
 export interface User {
   id: string;
@@ -37,11 +48,7 @@ export interface User {
   role: UserRole;
   createdAt: string;
   updatedAt: string;
-  /**
-   * Active refresh tokens, stored as SHA-256 hashes only.
-   * On logout we remove one; on logout-everywhere we clear the array.
-   */
-  refreshTokenHashes: string[];
+  refreshTokens: RefreshTokenRecord[];
 }
 
 export interface UpsertGoogleProfileInput {
@@ -86,7 +93,7 @@ class SeedFileUserRepository implements UserRepository {
       const raw = await readFile(this.filePath, 'utf-8');
       const parsed = JSON.parse(raw);
       const list = Array.isArray(parsed) ? parsed : parsed?.users;
-      this.cache = Array.isArray(list) ? (list as User[]) : [];
+      this.cache = Array.isArray(list) ? list.map(migrateUserRecord) : [];
     } catch {
       this.cache = [];
     }
@@ -142,7 +149,7 @@ class SeedFileUserRepository implements UserRepository {
       role: 'client',
       createdAt: now,
       updatedAt: now,
-      refreshTokenHashes: [],
+      refreshTokens: [],
     };
     users.push(created);
     await this.persist();
@@ -177,7 +184,7 @@ class SeedFileUserRepository implements UserRepository {
       role: 'freelancer', // GitHub sign-ups default to freelancer; route may override
       createdAt: now,
       updatedAt: now,
-      refreshTokenHashes: [],
+      refreshTokens: [],
     };
     users.push(created);
     await this.persist();
@@ -188,10 +195,7 @@ class SeedFileUserRepository implements UserRepository {
     const users = await this.load();
     const u = users.find((x) => x.id === userId);
     if (!u) return;
-    u.refreshTokenHashes = appendBoundedRefreshTokenHash(
-      u.refreshTokenHashes,
-      hash,
-    );
+    u.refreshTokens = appendBoundedRefreshToken(u.refreshTokens, hash);
     u.updatedAt = new Date().toISOString();
     await this.persist();
   }
@@ -200,7 +204,7 @@ class SeedFileUserRepository implements UserRepository {
     const users = await this.load();
     const u = users.find((x) => x.id === userId);
     if (!u) return;
-    u.refreshTokenHashes = u.refreshTokenHashes.filter((h) => h !== hash);
+    u.refreshTokens = u.refreshTokens.filter((r) => r.hash !== hash);
     u.updatedAt = new Date().toISOString();
     await this.persist();
   }
@@ -209,7 +213,7 @@ class SeedFileUserRepository implements UserRepository {
     const users = await this.load();
     const u = users.find((x) => x.id === userId);
     if (!u) return;
-    u.refreshTokenHashes = [];
+    u.refreshTokens = [];
     u.updatedAt = new Date().toISOString();
     await this.persist();
   }
@@ -300,17 +304,75 @@ export function hashRefreshToken(token: string): string {
 
 export const MAX_REFRESH_TOKENS = 30;
 
-export function appendBoundedRefreshTokenHash(
-  hashes: string[],
+/**
+ * Coerces a persisted refresh-token list into structured records. Accepts both
+ * the current `RefreshTokenRecord[]` shape and the legacy bare `string[]` shape
+ * (older seed data written under `refreshTokenHashes`). Legacy hashes with no
+ * known issue time are stamped with the current time, so a one-time migration
+ * does not force every existing user to re-authenticate.
+ */
+export function normalizeRefreshTokens(value: unknown): RefreshTokenRecord[] {
+  if (!Array.isArray(value)) return [];
+  const now = new Date().toISOString();
+  const out: RefreshTokenRecord[] = [];
+  for (const entry of value) {
+    if (typeof entry === 'string') {
+      if (entry) out.push({ hash: entry, createdAt: now });
+    } else if (
+      entry &&
+      typeof entry === 'object' &&
+      typeof (entry as RefreshTokenRecord).hash === 'string'
+    ) {
+      const rec = entry as Partial<RefreshTokenRecord>;
+      out.push({ hash: rec.hash as string, createdAt: rec.createdAt || now });
+    }
+  }
+  return out;
+}
+
+/**
+ * Drops refresh-token records older than the refresh TTL (default 7d). This is
+ * the inline expiry cleanup: it runs whenever tokens are added or validated, so
+ * stale hashes never linger without needing a separate background job.
+ */
+export function pruneExpiredRefreshTokens(
+  records: RefreshTokenRecord[],
+): RefreshTokenRecord[] {
+  const cutoff = Date.now() - refreshTtlMs();
+  return records.filter((r) => {
+    const issued = Date.parse(r.createdAt);
+    // Keep records whose timestamp is unparseable rather than silently dropping.
+    return Number.isNaN(issued) ? true : issued >= cutoff;
+  });
+}
+
+/**
+ * Appends a new token hash (timestamped now) after pruning expired records and
+ * de-duplicating, then enforces the FIFO cap. Returns a fresh array.
+ */
+export function appendBoundedRefreshToken(
+  records: RefreshTokenRecord[],
   hash: string,
-): string[] {
-  const existing = Array.isArray(hashes) ? hashes : [];
-  if (existing.includes(hash)) return existing;
-  const next = [...existing, hash];
+): RefreshTokenRecord[] {
+  const active = pruneExpiredRefreshTokens(normalizeRefreshTokens(records));
+  if (active.some((r) => r.hash === hash)) return active;
+  const next = [...active, { hash, createdAt: new Date().toISOString() }];
   if (next.length > MAX_REFRESH_TOKENS) {
     next.splice(0, next.length - MAX_REFRESH_TOKENS);
   }
   return next;
+}
+
+/**
+ * Migrates a raw persisted user object to the current shape, converting any
+ * legacy `refreshTokenHashes: string[]` into timestamped `refreshTokens`.
+ */
+function migrateUserRecord(raw: unknown): User {
+  const u = { ...(raw as Record<string, unknown>) };
+  const legacy = u.refreshTokens ?? u.refreshTokenHashes;
+  u.refreshTokens = normalizeRefreshTokens(legacy);
+  delete u.refreshTokenHashes;
+  return u as unknown as User;
 }
 
 // ---------- DynamoDB provider ----------
@@ -333,7 +395,7 @@ class DynamoDbUserRepository implements UserRepository {
         Limit: 1,
       }),
     );
-    return (res.Items?.[0] as User) ?? null;
+    return res.Items?.[0] ? migrateUserRecord(res.Items[0]) : null;
   }
 
   async findByGithubUserId(githubUserId: string): Promise<User | null> {
@@ -348,7 +410,7 @@ class DynamoDbUserRepository implements UserRepository {
         Limit: 1,
       }),
     );
-    return (res.Items?.[0] as User) ?? null;
+    return res.Items?.[0] ? migrateUserRecord(res.Items[0]) : null;
   }
 
   async findById(id: string): Promise<User | null> {
@@ -357,7 +419,7 @@ class DynamoDbUserRepository implements UserRepository {
     const res = await ddb.send(
       new GetCommand({ TableName: table('users'), Key: { userId: id } }),
     );
-    return (res.Item as User) ?? null;
+    return res.Item ? migrateUserRecord(res.Item) : null;
   }
 
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
@@ -390,7 +452,7 @@ class DynamoDbUserRepository implements UserRepository {
       role: 'client',
       createdAt: now,
       updatedAt: now,
-      refreshTokenHashes: [],
+      refreshTokens: [],
     };
     await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(created) }));
     return created;
@@ -430,7 +492,7 @@ class DynamoDbUserRepository implements UserRepository {
       role: 'freelancer',
       createdAt: now,
       updatedAt: now,
-      refreshTokenHashes: [],
+      refreshTokens: [],
     };
     await ddb.send(new PutCommand({ TableName: table('users'), Item: this.toItem(created) }));
     return created;
@@ -449,20 +511,17 @@ class DynamoDbUserRepository implements UserRepository {
 
   async addRefreshTokenHash(userId: string, hash: string): Promise<void> {
     await this.mutate(userId, (u) => {
-      u.refreshTokenHashes = appendBoundedRefreshTokenHash(
-        u.refreshTokenHashes,
-        hash,
-      );
+      u.refreshTokens = appendBoundedRefreshToken(u.refreshTokens, hash);
     });
   }
   async removeRefreshTokenHash(userId: string, hash: string): Promise<void> {
     await this.mutate(userId, (u) => {
-      u.refreshTokenHashes = u.refreshTokenHashes.filter((h) => h !== hash);
+      u.refreshTokens = u.refreshTokens.filter((r) => r.hash !== hash);
     });
   }
   async clearRefreshTokens(userId: string): Promise<void> {
     await this.mutate(userId, (u) => {
-      u.refreshTokenHashes = [];
+      u.refreshTokens = [];
     });
   }
   async updateRole(userId: string, role: UserRole): Promise<User | null> {
