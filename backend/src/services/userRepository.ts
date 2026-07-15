@@ -297,27 +297,9 @@ export function hashRefreshToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-/**
- * Maximum number of concurrent refresh tokens (active sessions) retained per
- * user. Without a cap the `refreshTokenHashes` array grows without bound: every
- * fresh sign-in appends a hash and only `/refresh` rotation or an explicit
- * logout ever removes one, so a user hitting many devices/sessions accumulates
- * hashes forever (bloating the record and slowing lookups).
- *
- * Env-driven (`MAX_REFRESH_TOKENS_PER_USER`) with a default of 5, mirroring the
- * "max 5 concurrent sessions per user" rule in security_architecture.md.
- */
-export const MAX_REFRESH_TOKENS_PER_USER: number = (() => {
-  const raw = Number(process.env.MAX_REFRESH_TOKENS_PER_USER);
-  return Number.isInteger(raw) && raw > 0 ? raw : 5;
-})();
 
-/**
- * Appends a refresh-token hash to a user's list while keeping it bounded.
- * De-duplicates, then evicts the oldest hashes (FIFO — the least-recently
- * issued session) until the list is within `MAX_REFRESH_TOKENS_PER_USER`.
- * Returns a new array; callers assign it back to the user record.
- */
+export const MAX_REFRESH_TOKENS = 30;
+
 export function appendBoundedRefreshTokenHash(
   hashes: string[],
   hash: string,
@@ -325,8 +307,8 @@ export function appendBoundedRefreshTokenHash(
   const existing = Array.isArray(hashes) ? hashes : [];
   if (existing.includes(hash)) return existing;
   const next = [...existing, hash];
-  if (next.length > MAX_REFRESH_TOKENS_PER_USER) {
-    next.splice(0, next.length - MAX_REFRESH_TOKENS_PER_USER);
+  if (next.length > MAX_REFRESH_TOKENS) {
+    next.splice(0, next.length - MAX_REFRESH_TOKENS);
   }
   return next;
 }
