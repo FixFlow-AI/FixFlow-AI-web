@@ -300,7 +300,7 @@ export function BriefIntelligence() {
             </div>
           )}
 
-          {isBriefParsed || parsing ? (
+          {isBriefParsed || briefParsing ? (
             <>
               {/* Counts */}
               <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
@@ -308,7 +308,7 @@ export function BriefIntelligence() {
                 {reqCounts.decisions} open decisions
               </p>
 
-              {parsing ? (
+              {briefParsing ? (
                 <div
                   style={{
                     display: "flex",
