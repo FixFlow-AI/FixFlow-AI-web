@@ -59,8 +59,7 @@ async def generate_structured(
     async def _call(model_name: str):
         # Enforce a per-call timeout so a hung Gemini request can never block
         # the handler indefinitely. On timeout, ``asyncio.wait_for`` cancels the
-        # underlying request and raises ``asyncio.TimeoutError``, which callers
-        # treat like any other failure and route to their deterministic fallback.
+
         return await asyncio.wait_for(
             client.aio.models.generate_content(
                 model=model_name,
@@ -70,14 +69,18 @@ async def generate_structured(
             timeout=settings.gemini_timeout_sec,
         )
 
+    fallback_eligible = (
+        model is None and primary_model != settings.gemini_fallback_model
+    )
+
     try:
         response = await _call(primary_model)
+    except asyncio.TimeoutError:
+        if not fallback_eligible:
+            raise
+        response = await _call(settings.gemini_fallback_model)
     except APIError as e:
-        if (
-            e.code in (429, 500, 502, 503, 504)
-            and model is None
-            and primary_model != settings.gemini_fallback_model
-        ):
+        if e.code in (429, 500, 502, 503, 504) and fallback_eligible:
             response = await _call(settings.gemini_fallback_model)
         else:
             raise
