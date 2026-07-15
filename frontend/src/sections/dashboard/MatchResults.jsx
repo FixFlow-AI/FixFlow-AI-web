@@ -8,7 +8,6 @@ import {
   Check,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
-import { api, ApiError } from "../../lib/api";
 
 const FACTOR_LABELS = {
   skillOverlap: "Skill overlap",
@@ -27,35 +26,18 @@ function barColor(v) {
 }
 
 export function MatchResults() {
-  const { parsedProposal } = useLandingStore();
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState("");
+  const {
+    parsedProposal,
+    matchResults: result,
+    matchError: notice,
+    matchingLoading: loading,
+    runMatchFreelancers,
+  } = useLandingStore();
   const [expanded, setExpanded] = useState(null);
 
   const runMatch = async () => {
-    if (!parsedProposal) {
-      setNotice("Please parse a brief first in the Brief Ingestion tab.");
-      return;
-    }
-    setNotice("");
-    setLoading(true);
-    try {
-      // Derive required skills + domains from the parsed brief when available.
-      const requiredSkills =
-        parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [];
-      const domains = parsedProposal?.features?.map((f) => f.title).filter(Boolean) ?? [];
-      const data = await api.matchFreelancers(requiredSkills, 10000, domains, 5);
-      setResult(data);
-    } catch (err) {
-      const reason =
-        err instanceof ApiError
-          ? err.message
-          : "Couldn't reach the matching service.";
-      setNotice(reason);
-    } finally {
-      setLoading(false);
-    }
+    // Fire the store-level thunk — survives tab navigation
+    await runMatchFreelancers();
   };
 
   return (
