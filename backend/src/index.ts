@@ -581,6 +581,16 @@ app.get(
             hasEvaluation: Boolean(latest.evaluation),
           }
         : null,
+      // Full proposal history so the dashboard can list every past project.
+      proposals: proposals.map((p) => ({
+        proposalId: p.proposalId,
+        title: p.title,
+        briefText: p.briefText,
+        createdAt: p.createdAt,
+        features: p.proposal.features?.length ?? 0,
+        risks: p.proposal.risks?.length ?? 0,
+        hasEvaluation: Boolean(p.evaluation),
+      })),
       milestoneSummary,
     });
   })
