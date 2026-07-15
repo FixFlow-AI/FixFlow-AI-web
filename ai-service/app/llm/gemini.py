@@ -7,6 +7,7 @@ is returned directly.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Type, TypeVar
 
 from google import genai
@@ -55,23 +56,29 @@ async def generate_structured(
                 response_schema=response_schema,
             )
 
-    try:
-        response = await client.aio.models.generate_content(
-            model=primary_model,
-            contents=contents,
-            config=config,
+    async def _call(model_name: str):
+        # Enforce a per-call timeout so a hung Gemini request can never block
+        # the handler indefinitely. On timeout, ``asyncio.wait_for`` cancels the
+        # underlying request and raises ``asyncio.TimeoutError``, which callers
+        # treat like any other failure and route to their deterministic fallback.
+        return await asyncio.wait_for(
+            client.aio.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=config,
+            ),
+            timeout=settings.gemini_timeout_sec,
         )
+
+    try:
+        response = await _call(primary_model)
     except APIError as e:
         if (
             e.code in (429, 500, 502, 503, 504)
             and model is None
             and primary_model != settings.gemini_fallback_model
         ):
-            response = await client.aio.models.generate_content(
-                model=settings.gemini_fallback_model,
-                contents=contents,
-                config=config,
-            )
+            response = await _call(settings.gemini_fallback_model)
         else:
             raise
 
