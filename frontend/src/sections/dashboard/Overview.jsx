@@ -7,16 +7,19 @@ import {
   Cpu,
   Coins,
   Award,
+  Clock,
+  CheckCircle,
+  ChevronRight,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
 export function Overview() {
-  const { user, setDashboardTab, hydrateLatestProposal } = useLandingStore();
+  const { user, setDashboardTab, hydrateLatestProposal, proposalHistory, setProposalHistory } = useLandingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [viewingBrief, setViewingBrief] = useState(false);
+  const [viewingBrief, setViewingBrief] = useState(null); // track which proposal is loading
 
   const load = async () => {
     setLoading(true);
@@ -24,6 +27,11 @@ export function Overview() {
     try {
       const res = await api.overview();
       setData(res);
+      // If the overview returns a proposals array, seed the store's history
+      // so it's available even if Dashboard hydration hasn't run yet.
+      if (res?.proposals?.length && proposalHistory.length === 0) {
+        setProposalHistory(res.proposals);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load your overview.");
     } finally {
@@ -32,7 +40,7 @@ export function Overview() {
   };
 
   const handleViewBrief = async (proposalId) => {
-    setViewingBrief(true);
+    setViewingBrief(proposalId);
     try {
       const fullProposal = await api.getProposal(proposalId);
       hydrateLatestProposal(fullProposal);
@@ -40,7 +48,7 @@ export function Overview() {
     } catch (err) {
       console.error("Failed to load brief details:", err);
     } finally {
-      setViewingBrief(false);
+      setViewingBrief(null);
     }
   };
 
@@ -53,6 +61,12 @@ export function Overview() {
     setDashboardTab(tab);
     window.location.hash = `#/dashboard/${tab}`;
   };
+
+  // Merge: prefer the store's full proposalHistory (richer data), else
+  // fall back to the overview API's lightweight proposals array.
+  const history = proposalHistory.length > 0
+    ? proposalHistory
+    : data?.proposals ?? [];
 
   return (
     <div>
@@ -137,9 +151,9 @@ export function Overview() {
                   type="button"
                   className="panel-btn--ghost panel-btn"
                   onClick={() => handleViewBrief(data.latestProposal.proposalId)}
-                  disabled={viewingBrief}
+                  disabled={viewingBrief === data.latestProposal.proposalId}
                 >
-                  {viewingBrief ? (
+                  {viewingBrief === data.latestProposal.proposalId ? (
                     <RefreshCw size={14} className="animate-spin" />
                   ) : (
                     <FileText size={14} />
@@ -161,6 +175,105 @@ export function Overview() {
               <button type="button" className="panel-btn" onClick={() => go("brief-intelligence")}>
                 Parse a brief <ArrowRight size={14} />
               </button>
+            </div>
+          )}
+
+          {/* ─── Proposal History ──────────────────────────────────────── */}
+          {history.length > 0 && (
+            <div className="panel-card" style={{ marginTop: 20 }}>
+              <div className="panel-card-header">
+                <h2 className="panel-card-title">
+                  <Clock size={16} style={{ marginRight: 6, verticalAlign: "-2px" }} />
+                  Proposal History
+                </h2>
+                <span className="panel-badge panel-badge--gray">
+                  {history.length} record{history.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {history.map((p, idx) => {
+                  const id = p.proposalId;
+                  const title = p.title || p.proposal?.project_summary?.split(".")[0] || "Untitled";
+                  const date = p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric", month: "short", day: "numeric",
+                  }) : "—";
+                  const time = p.createdAt ? new Date(p.createdAt).toLocaleTimeString("en-US", {
+                    hour: "2-digit", minute: "2-digit",
+                  }) : "";
+                  const features = p.features ?? p.proposal?.features?.length ?? 0;
+                  const risks = p.risks ?? p.proposal?.risks?.length ?? 0;
+                  const evaluated = p.hasEvaluation ?? Boolean(p.evaluation);
+                  const isLoading = viewingBrief === id;
+
+                  return (
+                    <div
+                      key={id || idx}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => !isLoading && handleViewBrief(id)}
+                      onKeyDown={(e) => e.key === "Enter" && !isLoading && handleViewBrief(id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "14px 4px",
+                        borderBottom: idx < history.length - 1 ? "1px solid #f1f5f9" : "none",
+                        cursor: isLoading ? "wait" : "pointer",
+                        borderRadius: 6,
+                        transition: "background 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    >
+                      {/* Left: title + meta */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "#1e293b",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "100%",
+                        }}>
+                          {title}
+                        </div>
+                        <div style={{
+                          fontSize: 12,
+                          color: "#94a3b8",
+                          marginTop: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}>
+                          <span>{date} {time}</span>
+                          <span>·</span>
+                          <span>{features} feature{features !== 1 ? "s" : ""}</span>
+                          <span>·</span>
+                          <span>{risks} risk{risks !== 1 ? "s" : ""}</span>
+                        </div>
+                      </div>
+
+                      {/* Right: badges + arrow */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 12 }}>
+                        {evaluated ? (
+                          <span className="panel-badge panel-badge--green" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <CheckCircle size={11} /> Evaluated
+                          </span>
+                        ) : (
+                          <span className="panel-badge panel-badge--outline">Parsed</span>
+                        )}
+                        {isLoading ? (
+                          <RefreshCw size={14} className="animate-spin" style={{ color: "#2563eb" }} />
+                        ) : (
+                          <ChevronRight size={16} style={{ color: "#94a3b8" }} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </>
