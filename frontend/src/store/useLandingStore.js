@@ -171,6 +171,10 @@ export const useLandingStore = create((set) => ({
   setMatchResults: (matchResults) => set({ matchResults }),
   setMatchError: (matchError) => set({ matchError }),
 
+  // Full proposal history (all past records from the DB)
+  proposalHistory: [],
+  setProposalHistory: (proposalHistory) => set({ proposalHistory }),
+
   // ── Navigation-resilient loading flags ──────────────────────────────
   // These live in the store (not component-local useState) so that an
   // in-flight AI call survives dashboard tab switches. Components read
@@ -489,6 +493,7 @@ export const useLandingStore = create((set) => ({
       extensionsSource: null,
       matchResults: null,
       matchError: null,
+      proposalHistory: [],
       confidenceNotice: "",
       extensionsNotice: "",
     }),
