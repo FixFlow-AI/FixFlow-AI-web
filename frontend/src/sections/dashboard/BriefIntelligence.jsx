@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
-import { api, ApiError } from "../../lib/api";
 import {
   FileText,
   Cpu,
@@ -36,13 +35,14 @@ export function BriefIntelligence() {
     parsedProposal,
     briefSource,
     briefError,
+    briefParsing,
+    runBriefParse,
     setParsedProposal,
     setBriefSource,
     setBriefError,
   } = useLandingStore();
 
   const [text, setText] = useState(rawBriefText);
-  const [parsing, setParsing] = useState(false);
   const [parsingStep, setParsingStep] = useState(0);
 
   useEffect(() => {
@@ -56,9 +56,6 @@ export function BriefIntelligence() {
 
   const handleParse = async (e) => {
     e.preventDefault();
-    setBriefText(text);
-    setBriefError("");
-    setParsing(true);
     setParsingStep(1);
 
     const stepTimers = [
@@ -66,25 +63,11 @@ export function BriefIntelligence() {
       setTimeout(() => setParsingStep(3), 1200),
     ];
 
-    try {
-      const { proposal, proposalId } = await api.parseBrief(text);
-      setParsedProposal(proposal);
-      useLandingStore.getState().setParsedProposalId(proposalId);
-      setBriefSource("api");
-      setBriefParsed(true);
-    } catch (err) {
-      const reason =
-        err instanceof ApiError && err.status === 503
-          ? "AI is not configured on the server (missing GEMINI_API_KEY). Showing a sample result."
-          : "Couldn't reach the live parser. Showing a sample result.";
-      setBriefError(reason);
-      setParsedProposal(null);
-      setBriefSource("mock");
-      setBriefParsed(true);
-    } finally {
-      stepTimers.forEach(clearTimeout);
-      setParsing(false);
-    }
+    // Fire the store-level thunk. The promise lives in the store —
+    // results are written regardless of whether this component unmounts.
+    await runBriefParse(text);
+
+    stepTimers.forEach(clearTimeout);
   };
 
   /* Build requirements list from parsed proposal or defaults */
@@ -168,11 +151,11 @@ export function BriefIntelligence() {
               />
               <button
                 type="submit"
-                disabled={parsing}
+                disabled={briefParsing}
                 className="panel-btn"
                 style={{ width: "100%", marginTop: 12 }}
               >
-                {parsing ? (
+                {briefParsing ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
                     {parsingStep === 1
