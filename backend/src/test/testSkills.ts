@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   Milestone,
   transitionMilestone,
@@ -14,6 +15,8 @@ import {
   verifyPaymentSignature,
   verifyWebhookSignature,
 } from '../services/paymentService.js';
+import { getMilestoneRepository } from '../services/milestoneRepository.js';
+import { applyTransition } from '../services/escrowService.js';
 
 async function runTests() {
   console.log('==========================================');
@@ -304,11 +307,132 @@ async function runTests() {
     }
 
     const isWebhookValid = verifyWebhookSignature('{}', 'signature', '');
-    if (!isWebhookValid) {
-      throw new Error('Webhook signature verification failed');
+    if (isWebhookValid) {
+      throw new Error('Webhook signature verification succeeded with empty secret');
+    }
+
+    const testSecret = 'test_secret';
+    const testBody = '{"event":"payment.captured"}';
+    const expectedSignature = crypto
+      .createHmac('sha256', testSecret)
+      .update(testBody)
+      .digest('hex');
+    const isWebhookValidReal = verifyWebhookSignature(testBody, expectedSignature, testSecret);
+    if (!isWebhookValidReal) {
+      throw new Error('Webhook signature verification failed for valid signature');
     }
 
     console.log('  -> PASSED: Razorpay payment service verification successful.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 10: saveWithAuditBlock & applyTransition (MFA)
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 10] Verifying saveWithAuditBlock atomic writes and applyTransition MFA...');
+
+    const repo = getMilestoneRepository();
+    const testMilestone: Milestone = {
+      id: 'ms-mfa-test',
+      proposalId: 'prop-mfa-test',
+      title: 'MFA integration test',
+      amount: 1000,
+      state: 'In_Review',
+      version: 1,
+      lastAuditHash: ''
+    };
+
+    await repo.create(testMilestone);
+
+    // 1. Verify that applyTransition fails if MFA token is missing or incorrect
+    try {
+      await applyTransition(testMilestone.id, {
+        toState: 'Approved',
+        triggerUserId: '1c813e5f-e04a-48cf-bebe-a89d4c528037', // suvampaul982@gmail.com with otpSecret JBSWY3DPEHPK3PXP
+        triggerUserRole: 'Client',
+        expectedVersion: 1,
+        mfaToken: '111111' // Incorrect token
+      });
+      throw new Error('Allowed applyTransition with incorrect MFA token');
+    } catch (err: any) {
+      if (!err.message.includes('MFA Verification Failed') && !err.message.includes('MFA Verification Required')) {
+        throw err;
+      }
+      console.log('  -> PASSED: Incorrect MFA token rejected successfully.');
+    }
+
+    // 2. Verify that applyTransition succeeds if correct TOTP is provided
+    const { generateHotp } = await import('../auth/otpVerifier.js');
+    const counter = Math.floor(Date.now() / 30000);
+    const validToken = generateHotp('JBSWY3DPEHPK3PXP', counter);
+
+    const transitionRes = await applyTransition(testMilestone.id, {
+      toState: 'Approved',
+      triggerUserId: '1c813e5f-e04a-48cf-bebe-a89d4c528037',
+      triggerUserRole: 'Client',
+      expectedVersion: 1,
+      mfaToken: validToken
+    });
+
+    if (transitionRes.milestone.state !== 'Approved') {
+      throw new Error('State transition failed even with correct MFA token');
+    }
+    console.log('  -> PASSED: Correct MFA token accepted successfully.');
+
+    // 3. Verify saveWithAuditBlock atomicity/rollback in InMemory repo
+    const mockBlock: AuditTrailBlock = {
+      index: 10,
+      timestamp: new Date().toISOString(),
+      milestoneId: 'ms-mfa-test',
+      fromState: 'Draft',
+      toState: 'Active',
+      triggerUserId: 'u-1',
+      triggerUserRole: 'Client',
+      metadata: 'metadata',
+      previousHash: '',
+      hash: 'hash'
+    };
+
+    const repoAny = repo as any;
+    let originalFn: any;
+    let targetObj: any;
+    let key: string;
+
+    if (typeof repoAny.persist === 'function') {
+      targetObj = repoAny;
+      key = 'persist';
+      originalFn = repoAny.persist;
+      repoAny.persist = () => { throw new Error('Simulated repository write failure'); };
+    } else {
+      targetObj = repoAny.milestones;
+      key = 'set';
+      originalFn = repoAny.milestones.set;
+      repoAny.milestones.set = () => { throw new Error('Simulated repository write failure'); };
+    }
+
+    const milestoneBefore = await repo.get(testMilestone.id);
+    const beforeVersion = milestoneBefore?.version || 1;
+
+    try {
+      const updatedM: Milestone = { ...milestoneBefore!, version: beforeVersion + 1, state: 'Active' };
+      await repo.saveWithAuditBlock(updatedM, mockBlock);
+      throw new Error('saveWithAuditBlock succeeded despite write failure');
+    } catch (err: any) {
+      if (err.message !== 'Simulated repository write failure') {
+        throw err;
+      }
+      const rolledBack = await repo.get(testMilestone.id);
+      if (rolledBack?.state !== milestoneBefore?.state || rolledBack?.version !== beforeVersion) {
+        throw new Error('Rollback failed to restore previous milestone state');
+      }
+      console.log('  -> PASSED: saveWithAuditBlock rolled back successfully on write failure.');
+    } finally {
+      targetObj[key] = originalFn;
+    }
+
   } catch (error: any) {
     console.error('  -> FAILED:', error.message);
     passed = false;
