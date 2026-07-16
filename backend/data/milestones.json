@@ -1,0 +1,29 @@
+{
+  "milestones": {
+    "ms-mfa-test": {
+      "id": "ms-mfa-test",
+      "proposalId": "prop-mfa-test",
+      "title": "MFA integration test",
+      "amount": 1000,
+      "state": "Approved",
+      "version": 2,
+      "lastAuditHash": "aca77f8d52e8e1689e779149ce148c2a64ea8e240b079c404293d180ad45f64f"
+    }
+  },
+  "chains": {
+    "ms-mfa-test": [
+      {
+        "index": 1,
+        "timestamp": "2026-07-16T18:08:07.253Z",
+        "milestoneId": "ms-mfa-test",
+        "fromState": "In_Review",
+        "toState": "Approved",
+        "triggerUserId": "1c813e5f-e04a-48cf-bebe-a89d4c528037",
+        "triggerUserRole": "Client",
+        "metadata": "Milestone state transitioned from In_Review to Approved [MFA Verified]",
+        "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "hash": "aca77f8d52e8e1689e779149ce148c2a64ea8e240b079c404293d180ad45f64f"
+      }
+    ]
+  }
+}
