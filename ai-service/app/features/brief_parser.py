@@ -14,7 +14,7 @@ from pydantic import ValidationError
 from google.genai.errors import APIError
 from ..llm.gemini import generate_structured
 from ..schemas.proposal import Proposal, ParseBriefResponse
-from ..features.fallback_logger import logger as ai_fallback_error
+from ..features.fallback_logger import log_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -358,24 +358,32 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
                                   source="llm",
                                   degradedReason=None)
     except ValidationError as validation_error:
-        ai_fallback_error.error("ai.fallback",
-                     extra={
-                         "feature": feature_name,
-                         "reason": "validation",
-                         "error": str(validation_error)
-                     })
-        logger.info("Initiating fallback brief patch heuristics...")
-        fallback = sanitize_and_patch_brief({})
+        raw_dict = getattr(validation_error, "raw_payload", {})
+        has_salvaged_data = False
+        if isinstance(raw_dict, dict):
+            has_salvaged_data = any(
+                key in raw_dict
+                for key in [
+                    "project_summary",
+                    "features",
+                    "risks",
+                    "timeline",
+                    "delivery_plan",
+                    "effort",
+                    "market",
+                    "impact",
+                ]
+            )
+        degraded_reason = "partial_salvage" if has_salvaged_data else "validation"
+
+        log_fallback(feature_name, degraded_reason, str(validation_error))
+        logger.info("Initiating fallback brief patch heuristics (salvaging what is possible)...")
+        fallback = sanitize_and_patch_brief(raw_dict)
         return ParseBriefResponse(proposal=fallback,
                                   source="fallback",
-                                  degradedReason="validation")
+                                  degradedReason=degraded_reason)
     except ValueError as value_error:
-        ai_fallback_error.error("ai.fallback",
-                     extra={
-                         "feature": feature_name,
-                         "reason": "empty_response",
-                         "error": str(value_error)
-                     })
+        log_fallback(feature_name, "empty_response", str(value_error))
         logger.info("Initiating fallback brief patch heuristics...")
         fallback = sanitize_and_patch_brief({})
         return ParseBriefResponse(proposal=fallback,
@@ -385,24 +393,14 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
         reason = "gemini_error"
         if api_error.code in (401, 403):
             reason = "invalid_key"
-        ai_fallback_error.error("ai.fallback",
-                    extra={
-                        "feature": feature_name,
-                        "reason": reason,
-                        "error": str(api_error)
-                    })
+        log_fallback(feature_name, reason, str(api_error))
         logger.info("Initiating fallback brief patch heuristics...")
         fallback = sanitize_and_patch_brief({})
         return ParseBriefResponse(proposal=fallback,
                                     source="fallback",
                                     degradedReason=reason)
     except Exception as error:  # noqa: BLE001 - deliberate broad fallback
-        ai_fallback_error.error("ai.fallback",
-                     extra={
-                         "feature": feature_name,
-                         "reason": "gemini_error",
-                         "error": str(error)
-                     })
+        log_fallback(feature_name, "gemini_error", str(error))
         logger.info("Initiating fallback brief patch heuristics...")
         fallback = sanitize_and_patch_brief({})
         return ParseBriefResponse(proposal=fallback,
