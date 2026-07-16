@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { api, ApiError } from "../lib/api";
 
 const initialMilestones = [];
 
@@ -164,6 +165,200 @@ export const useLandingStore = create((set) => ({
   setContractExtensions: (contractExtensions) => set({ contractExtensions }),
   setExtensionsSource: (extensionsSource) => set({ extensionsSource }),
 
+  // AI-006: Freelancer matching
+  matchResults: null,
+  matchError: null,
+  setMatchResults: (matchResults) => set({ matchResults }),
+  setMatchError: (matchError) => set({ matchError }),
+
+  // Full proposal history (all past records from the DB)
+  proposalHistory: [],
+  setProposalHistory: (proposalHistory) => set({ proposalHistory }),
+
+  // ── Navigation-resilient loading flags ──────────────────────────────
+  // These live in the store (not component-local useState) so that an
+  // in-flight AI call survives dashboard tab switches. Components read
+  // these flags to show spinners and call the `run*` thunks to trigger.
+  briefParsing: false,
+  confidenceEvaluating: false,
+  interviewGenerating: false,
+  extensionsSuggesting: false,
+  matchingLoading: false,
+
+  // ── Store-level async action thunks ─────────────────────────────────
+  // The promise is owned by the store, not a component. Results are
+  // written to the store regardless of whether the triggering component
+  // is still mounted.
+
+  runBriefParse: async (text) => {
+    set({ briefParsing: true, briefError: "" });
+    useLandingStore.getState().setBriefText(text);
+    try {
+      const { proposal, proposalId } = await api.parseBrief(text);
+      set({
+        parsedProposal: proposal,
+        parsedProposalId: proposalId,
+        briefSource: "api",
+        isBriefParsed: true,
+      });
+    } catch (err) {
+      const reason =
+        err instanceof ApiError && err.status === 503
+          ? "AI is not configured on the server (missing GEMINI_API_KEY). Showing a sample result."
+          : "Couldn't reach the live parser. Showing a sample result.";
+      set({
+        briefError: reason,
+        parsedProposal: null,
+        briefSource: "mock",
+        isBriefParsed: true,
+      });
+    } finally {
+      set({ briefParsing: false });
+    }
+  },
+
+  runConfidenceEval: async () => {
+    const state = useLandingStore.getState();
+    if (!state.parsedProposal) return;
+    set({ confidenceEvaluating: true });
+    try {
+      const result = await api.evaluateProposal(
+        state.rawBriefText,
+        state.parsedProposal,
+        state.parsedProposalId,
+      );
+      set({ confidenceResult: result, confidenceSource: "api" });
+    } catch (err) {
+      const reason =
+        err instanceof ApiError && err.status === 503
+          ? "AI not configured on the server (missing GEMINI_API_KEY). Showing sample confidence."
+          : "Couldn't reach the evaluation service. Showing sample confidence.";
+      set({ confidenceResult: null, confidenceSource: "mock", confidenceNotice: reason });
+    } finally {
+      set({ confidenceEvaluating: false });
+    }
+  },
+
+  runInterviewGenerate: async () => {
+    const state = useLandingStore.getState();
+    set({ interviewGenerating: true });
+    try {
+      const missingSkills = state.parsedProposal?.risks
+        ?.slice(0, 3)
+        .map((r) => r.label) ?? ["Target runtime confirmation"];
+      const githubScan =
+        "Languages: TypeScript, Node.js. Repos: billing-migration, webhook-utils.";
+      const output = await api.interviewQuestions(
+        state.rawBriefText || "Billing migration project",
+        githubScan,
+        missingSkills,
+      );
+      set({ interviewQuestions: output, interviewSource: "api" });
+    } catch (_err) {
+      set({
+        interviewQuestions: {
+          questions: [
+            {
+              question:
+                "How would you keep webhook processing idempotent during a live billing migration?",
+              rationale: "Tests the core reliability requirement of this project.",
+              expectedKeywords: ["idempotency key", "dedupe", "retry", "ledger"],
+              idealAnswerSummary:
+                "Uses a persisted idempotency key and a dedup table to make retries safe.",
+            },
+            {
+              question:
+                "Describe your rollback strategy if the cutover fails mid-migration.",
+              rationale: "Rollback ownership is the top open risk on this brief.",
+              expectedKeywords: ["rollback", "snapshot", "feature flag", "dry run"],
+              idealAnswerSummary:
+                "Has a tested, reversible plan with clear ownership and a dry run.",
+            },
+          ],
+        },
+        interviewSource: "mock",
+      });
+    } finally {
+      set({ interviewGenerating: false });
+    }
+  },
+
+  runExtensionsSuggest: async () => {
+    set({ extensionsSuggesting: true });
+    try {
+      const completedDeliverables = ["Webhook migration"];
+      const chatSummary =
+        "Client mentioned wanting tax-region reconciliation and analytics next. Migration delivered on time with strong reliability.";
+      const output = await api.contractExtensions(
+        completedDeliverables,
+        chatSummary,
+      );
+      set({ contractExtensions: output, extensionsSource: "api" });
+    } catch (err) {
+      const reason =
+        err instanceof ApiError && err.status === 503
+          ? "AI not configured (missing GEMINI_API_KEY). Showing sample suggestions."
+          : "Couldn't reach the extensions service. Showing sample suggestions.";
+      set({
+        contractExtensions: {
+          extensionReasoning:
+            "The migration is delivered and stable. A support window plus the discussed analytics phase are the natural next steps.",
+          suggestedMilestones: [
+            {
+              title: "Post-delivery support & monitoring",
+              description: "2-week support window to monitor the cutover and resolve production issues.",
+              estimatedDuration: "14 days",
+              complexity: "Low",
+              estimatedBudgetPct: 15,
+            },
+            {
+              title: "Tax-region reconciliation analytics",
+              description: "Dashboard for reconciliation variance by tax region, as discussed.",
+              estimatedDuration: "10 days",
+              complexity: "Medium",
+              estimatedBudgetPct: 25,
+            },
+          ],
+        },
+        extensionsSource: "mock",
+        extensionsNotice: reason,
+      });
+    } finally {
+      set({ extensionsSuggesting: false });
+    }
+  },
+
+  runMatchFreelancers: async () => {
+    const state = useLandingStore.getState();
+    if (!state.parsedProposal) {
+      set({ matchError: "Please parse a brief first in the Brief Ingestion tab." });
+      return;
+    }
+    set({ matchingLoading: true, matchError: null });
+    try {
+      const requiredSkills =
+        state.parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [];
+      const domains =
+        state.parsedProposal?.features?.map((f) => f.title).filter(Boolean) ?? [];
+      const data = await api.matchFreelancers(requiredSkills, 10000, domains, 5);
+      set({ matchResults: data });
+    } catch (err) {
+      const reason =
+        err instanceof ApiError
+          ? err.message
+          : "Couldn't reach the matching service.";
+      set({ matchError: reason });
+    } finally {
+      set({ matchingLoading: false });
+    }
+  },
+
+  // Notice text for confidence and extensions (store-level so it survives nav)
+  confidenceNotice: "",
+  setConfidenceNotice: (confidenceNotice) => set({ confidenceNotice }),
+  extensionsNotice: "",
+  setExtensionsNotice: (extensionsNotice) => set({ extensionsNotice }),
+
   // Contract & Escrow
   isAgreementSigned: { client: false, freelancer: false },
   escrowState: "CREATED",
@@ -296,5 +491,10 @@ export const useLandingStore = create((set) => ({
       interviewSource: null,
       contractExtensions: null,
       extensionsSource: null,
+      matchResults: null,
+      matchError: null,
+      proposalHistory: [],
+      confidenceNotice: "",
+      extensionsNotice: "",
     }),
 }));

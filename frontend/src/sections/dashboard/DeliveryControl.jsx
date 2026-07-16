@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Check,
   Clock,
@@ -15,7 +14,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
-import { api, ApiError } from "../../lib/api";
 
 export function DeliveryControl() {
   const {
@@ -23,11 +21,12 @@ export function DeliveryControl() {
     parsedProposal,
     contractExtensions,
     extensionsSource,
-    setContractExtensions,
-    setExtensionsSource,
+    extensionsSuggesting,
+    extensionsNotice,
+    runExtensionsSuggest,
   } = useLandingStore();
-  const [suggesting, setSuggesting] = useState(false);
-  const [extNotice, setExtNotice] = useState("");
+  // Use extensionsNotice from the store (survives navigation)
+  const extNotice = extensionsNotice;
 
   if (!parsedProposal) {
     return (
@@ -65,50 +64,8 @@ export function DeliveryControl() {
   })) || [];
 
   const suggestNextPhase = async () => {
-    setExtNotice("");
-    setSuggesting(true);
-    try {
-      const completedDeliverables = ["Webhook migration"];
-      const chatSummary =
-        "Client mentioned wanting tax-region reconciliation and analytics next. Migration delivered on time with strong reliability.";
-      const output = await api.contractExtensions(
-        completedDeliverables,
-        chatSummary,
-      );
-      setContractExtensions(output);
-      setExtensionsSource("api");
-    } catch (err) {
-      const reason =
-        err instanceof ApiError && err.status === 503
-          ? "AI not configured (missing GEMINI_API_KEY). Showing sample suggestions."
-          : "Couldn't reach the extensions service. Showing sample suggestions.";
-      setExtNotice(reason);
-      setContractExtensions({
-        extensionReasoning:
-          "The migration is delivered and stable. A support window plus the discussed analytics phase are the natural next steps.",
-        suggestedMilestones: [
-          {
-            title: "Post-delivery support & monitoring",
-            description: "2-week support window to monitor the cutover and resolve production issues.",
-            estimatedDuration: "14 days",
-            complexity: "Low",
-            estimatedBudgetPct: 15,
-          },
-          {
-            title: "Tax-region reconciliation analytics",
-            description: "Dashboard for reconciliation variance by tax region, as discussed.",
-            estimatedDuration: "10 days",
-            complexity: "Medium",
-            estimatedBudgetPct: 25,
-          },
-        ],
-        extensionOfferDraft:
-          "Hi — now that the billing migration is live and stable, I'd suggest a short support window plus the tax-region analytics dashboard we discussed. Happy to add these as new milestones to the existing agreement. Want me to draft them?",
-      });
-      setExtensionsSource("mock");
-    } finally {
-      setSuggesting(false);
-    }
+    // Fire the store-level thunk — survives tab navigation
+    await runExtensionsSuggest();
   };
 
   return (
@@ -228,9 +185,9 @@ export function DeliveryControl() {
             type="button"
             className="panel-btn"
             onClick={suggestNextPhase}
-            disabled={suggesting}
+            disabled={extensionsSuggesting}
           >
-            {suggesting ? (
+            {extensionsSuggesting ? (
               <>
                 <RefreshCw size={14} className="animate-spin" /> Analyzing…
               </>

@@ -199,6 +199,29 @@ def test_optimized_flag_matches_cycle_records():
     print("  [ok] optimized flag matches per-cycle optimizationApplied")
 
 
+def test_evaluation_counts_invariant():
+    """Verify that total evaluations match optimization attempts + 1 (BUG-05)."""
+    base = _base_proposal()
+    # Scenario: max_cycles=3. Scores: original=60, opt1=70, opt2=80 (threshold=75)
+    # Loop should:
+    # - Evaluate original (60)
+    # - Optimize (1st attempt) -> opt1 (70)
+    # - Evaluate opt1 (70) -> improved!
+    # - Optimize (2nd attempt) -> opt2 (80)
+    # - Evaluate opt2 (80) -> improved!
+    # - Loop sees opt2 (80) >= threshold (75) -> break.
+    # Total optimizations = 2
+    # Total evaluations = 3 (original, opt1, opt2)
+    fake = _FakeLLM(base, scores=[60, 70, 80])
+    with _patched(fake, threshold=75, max_cycles=3, min_improvement=0):
+        result = asyncio.run(cg.process_confidence_grid("build an app", base))
+        
+    assert fake.optimizer_calls == 2
+    assert fake._auditor_idx == 3  # 3 evaluations
+    assert len(result.cycles) == 3  # cycle 0, cycle 1, cycle 2
+    print("  [ok] evaluation counts invariant verified (evaluations = optimizations + 1)")
+
+
 if __name__ == "__main__":
     print("AIE-03 confidence grid self-correction tests")
     test_passes_first_cycle()
@@ -206,4 +229,6 @@ if __name__ == "__main__":
     test_optimizer_regresses_and_is_reverted()
     test_optimizer_failure_stops_cleanly()
     test_optimized_flag_matches_cycle_records()
+    test_evaluation_counts_invariant()
     print("ALL CONFIDENCE GRID TESTS PASSED")
+

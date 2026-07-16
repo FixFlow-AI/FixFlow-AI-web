@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
-import { api, ApiError } from "../../lib/api";
 import {
   FileText,
   Cpu,
@@ -26,6 +25,53 @@ const defaultRequirements = [];
 
 const defaultDecisions = [];
 
+function InfoTooltip({ text }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span 
+      style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: 4 }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <HelpCircle size={13} style={{ color: "#94a3b8", cursor: "help" }} />
+      {show && (
+        <span className="brief-tooltip">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function extractMetadata(text) {
+  if (!text) return { budget: "Not specified", timeline: "Not specified", source: "Manual" };
+  
+  // Try to find budget (e.g. $1000, $1,500, 1000 USD)
+  const budgetRegex = /(\$\d[\d,]*(\.\d{2})?|\b\d+[\d,]*\s*USD\b)/i;
+  const budgetMatch = text.match(budgetRegex);
+  const budget = budgetMatch ? budgetMatch[0] : "Not specified";
+
+  // Try to find timeline (e.g. 2 weeks, 1 month, 14 days)
+  const timelineRegex = /(timeline is\s+)?(\d+\s*(weeks?|months?|days?|years?))/i;
+  const timelineMatch = text.match(timelineRegex);
+  let timeline = "Not specified";
+  if (timelineMatch) {
+    timeline = timelineMatch[2];
+  } else {
+    const durationRegex = /\b(\d+)\s*(weeks?|months?|days?)\b/i;
+    const durationMatch = text.match(durationRegex);
+    if (durationMatch) {
+      timeline = durationMatch[0];
+    }
+  }
+
+  return {
+    budget,
+    timeline,
+    source: text.length > 200 ? "External Brief" : "Manual Input"
+  };
+}
+
 export function BriefIntelligence() {
   const {
     user,
@@ -36,13 +82,14 @@ export function BriefIntelligence() {
     parsedProposal,
     briefSource,
     briefError,
+    briefParsing,
+    runBriefParse,
     setParsedProposal,
     setBriefSource,
     setBriefError,
   } = useLandingStore();
 
   const [text, setText] = useState(rawBriefText);
-  const [parsing, setParsing] = useState(false);
   const [parsingStep, setParsingStep] = useState(0);
 
   useEffect(() => {
@@ -56,9 +103,6 @@ export function BriefIntelligence() {
 
   const handleParse = async (e) => {
     e.preventDefault();
-    setBriefText(text);
-    setBriefError("");
-    setParsing(true);
     setParsingStep(1);
 
     const stepTimers = [
@@ -66,25 +110,11 @@ export function BriefIntelligence() {
       setTimeout(() => setParsingStep(3), 1200),
     ];
 
-    try {
-      const { proposal, proposalId } = await api.parseBrief(text);
-      setParsedProposal(proposal);
-      useLandingStore.getState().setParsedProposalId(proposalId);
-      setBriefSource("api");
-      setBriefParsed(true);
-    } catch (err) {
-      const reason =
-        err instanceof ApiError && err.status === 503
-          ? "AI is not configured on the server (missing GEMINI_API_KEY). Showing a sample result."
-          : "Couldn't reach the live parser. Showing a sample result.";
-      setBriefError(reason);
-      setParsedProposal(null);
-      setBriefSource("mock");
-      setBriefParsed(true);
-    } finally {
-      stepTimers.forEach(clearTimeout);
-      setParsing(false);
-    }
+    // Fire the store-level thunk. The promise lives in the store —
+    // results are written regardless of whether this component unmounts.
+    await runBriefParse(text);
+
+    stepTimers.forEach(clearTimeout);
   };
 
   /* Build requirements list from parsed proposal or defaults */
@@ -122,6 +152,10 @@ export function BriefIntelligence() {
     decisions: decisions.length,
   };
 
+  const resolvedCount = Object.keys(decisionStatuses).length;
+  const totalDecisions = decisions.length;
+  const completionPct = totalDecisions > 0 ? Math.round((resolvedCount / totalDecisions) * 100) : 0;
+
   return (
     <div>
       {/* Page header */}
@@ -137,22 +171,26 @@ export function BriefIntelligence() {
       {/* Three-column grid */}
       <div className="panel-grid panel-grid--3">
         {/* Left: Source request */}
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <h2 className="panel-card-title">Source request</h2>
+        <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="panel-card-header" style={{ marginBottom: 8 }}>
+            <h2 className="panel-card-title" style={{ display: "flex", alignItems: "center" }}>
+              Source request
+              <InfoTooltip text="The original project description, budget, and timeline you submitted." />
+            </h2>
           </div>
+          <p className="brief-card-desc">The raw brief you submitted — edit anytime to reparse</p>
 
           {/* Input / display area */}
           {!isBriefParsed ? (
-            <form onSubmit={handleParse}>
+            <form onSubmit={handleParse} style={{ display: "flex", flexDirection: "column", flex: 1 }}>
               <textarea
                 value={text}
                 onChange={(e) => {
                   setText(e.target.value);
                   if (isBriefParsed) setBriefParsed(false);
                 }}
-                placeholder="Describe your project requirements..."
-                rows={6}
+                placeholder="Describe your project requirements, budget, and timeline (e.g., 'Create a React landing page. Budget is $1000, timeline is 2 weeks.')"
+                rows={8}
                 style={{
                   width: "100%",
                   padding: 12,
@@ -163,16 +201,18 @@ export function BriefIntelligence() {
                   color: "#0f172a",
                   resize: "vertical",
                   fontFamily: "inherit",
+                  flex: 1,
+                  minHeight: 150
                 }}
                 required
               />
               <button
                 type="submit"
-                disabled={parsing}
+                disabled={briefParsing}
                 className="panel-btn"
                 style={{ width: "100%", marginTop: 12 }}
               >
-                {parsing ? (
+                {briefParsing ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
                     {parsingStep === 1
@@ -189,16 +229,54 @@ export function BriefIntelligence() {
               </button>
             </form>
           ) : (
-            <>
-              <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, margin: "0 0 20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              <div 
+                style={{ 
+                  fontSize: 14, 
+                  color: "#475569", 
+                  lineHeight: 1.7, 
+                  margin: "0 0 16px",
+                  padding: 12,
+                  background: "#f8fafc",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  whiteSpace: "pre-wrap"
+                }}
+              >
                 {text ||
                   "Move our billing service without interrupting active subscriptions. We need a safe rollback path and clear reconciliation before cutover."}
-              </p>
+              </div>
+
+              {/* Structured Metadata */}
+              {(() => {
+                const metadata = extractMetadata(text);
+                return (
+                  <div className="brief-metadata-card">
+                    <div className="brief-metadata-title">Extracted Details</div>
+                    <div className="brief-metadata-grid">
+                      <span className="brief-metadata-label">Budget Range</span>
+                      <span className="brief-metadata-value" style={{ color: metadata.budget !== "Not specified" ? "#16a34a" : "#64748b" }}>
+                        {metadata.budget}
+                      </span>
+
+                      <span className="brief-metadata-label">Timeline</span>
+                      <span className="brief-metadata-value">
+                        {metadata.timeline}
+                      </span>
+
+                      <span className="brief-metadata-label">Ingestion Type</span>
+                      <span className="brief-metadata-value">
+                        {metadata.source}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Attachments */}
               {attachments.length > 0 && (
                 <>
-                  <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 10 }}>
+                  <h3 style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
                     Attachments
                   </h3>
                   {attachments.map((att) => (
@@ -235,49 +313,51 @@ export function BriefIntelligence() {
                 </>
               )}
 
-              <hr className="panel-divider" />
+              <hr className="panel-divider" style={{ marginTop: "auto" }} />
 
               {/* Source info */}
-              <h3 style={{ fontSize: 13, fontWeight: 600, color: "#64748b", marginBottom: 8 }}>
-                Source
-              </h3>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    background: "#dbeafe",
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: "#2563eb",
-                  }}
-                >
-                  {user?.name ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase() : "U"}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: "#dbeafe",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#2563eb",
+                    }}
+                  >
+                    {user?.name ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase() : "U"}
+                  </div>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>Provided by {user?.name || user?.email || "User"}</span>
                 </div>
-                <span style={{ fontSize: 13, color: "#64748b" }}>Provided by {user?.name || user?.email || "User"}</span>
-              </div>
 
-              {/* Reparse button */}
-              <button
-                type="button"
-                className="panel-link"
-                style={{ marginTop: 16 }}
-                onClick={() => setBriefParsed(false)}
-              >
-                <RefreshCw size={13} /> Edit and reparse
-              </button>
-            </>
+                {/* Reparse button */}
+                <button
+                  type="button"
+                  className="panel-link"
+                  onClick={() => setBriefParsed(false)}
+                >
+                  <RefreshCw size={13} /> Edit and reparse
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
         {/* Center: Parsed requirements */}
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <h2 className="panel-card-title">Parsed requirements</h2>
+        <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="panel-card-header" style={{ marginBottom: 8 }}>
+            <h2 className="panel-card-title" style={{ display: "flex", alignItems: "center" }}>
+              Parsed requirements
+              <InfoTooltip text="AI-extracted deliverables, constraints, and scope items from your brief." />
+            </h2>
           </div>
+          <p className="brief-card-desc">AI-extracted scope items categorized by confidence level</p>
 
           {/* Status banner */}
           {briefSource === "api" && isBriefParsed && (
@@ -317,15 +397,34 @@ export function BriefIntelligence() {
             </div>
           )}
 
-          {isBriefParsed || parsing ? (
-            <>
-              {/* Counts */}
-              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-                {reqCounts.outcomes} outcomes · {reqCounts.constraints} constraints ·{" "}
-                {reqCounts.decisions} open decisions
-              </p>
+          {isBriefParsed || briefParsing ? (
+            <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              {/* Counts Chips */}
+              <div className="brief-stat-chips-container">
+                <div className="brief-stat-chip brief-stat-chip--green">
+                  <span className="brief-stat-chip-val">{reqCounts.outcomes}</span>
+                  <span className="brief-stat-chip-label">
+                    Outcomes
+                    <InfoTooltip text="Deliverables the AI is confident about — ready to include in proposals." />
+                  </span>
+                </div>
+                <div className="brief-stat-chip brief-stat-chip--gray">
+                  <span className="brief-stat-chip-val">{reqCounts.constraints}</span>
+                  <span className="brief-stat-chip-label">
+                    Constraints
+                    <InfoTooltip text="Limitations or boundaries (budget, timeline, tech stack) extracted from the brief." />
+                  </span>
+                </div>
+                <div className="brief-stat-chip brief-stat-chip--orange">
+                  <span className="brief-stat-chip-val">{reqCounts.decisions}</span>
+                  <span className="brief-stat-chip-label">
+                    Decisions
+                    <InfoTooltip text="Ambiguous items requiring your clarification before work begins." />
+                  </span>
+                </div>
+              </div>
 
-              {parsing ? (
+              {briefParsing ? (
                 <div
                   style={{
                     display: "flex",
@@ -335,43 +434,64 @@ export function BriefIntelligence() {
                     height: 200,
                     color: "#64748b",
                     gap: 12,
+                    flex: 1
                   }}
                 >
                   <RefreshCw size={28} className="animate-spin" style={{ color: "#2563eb" }} />
                   <span style={{ fontSize: 13, fontWeight: 600 }}>Parsing requirements...</span>
                 </div>
               ) : (
-                requirements.map((req) => (
-                  <div
-                    key={req.text}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "12px 0",
-                      borderBottom: "1px solid #f1f5f9",
-                    }}
-                  >
-                    <span style={{ fontSize: 14, color: "#334155" }}>{req.text}</span>
-                    <span
-                      className={`panel-badge ${
-                        req.status === "Confirmed"
-                          ? "panel-badge--green"
-                          : req.status === "In scope"
-                          ? "panel-badge--outline"
-                          : "panel-badge--gray"
-                      }`}
-                      style={{ flexShrink: 0, marginLeft: 12, display: "flex", alignItems: "center", gap: 4 }}
-                    >
-                      {req.status === "Confirmed" && <Check size={11} />}
-                      {req.status === "In scope" && <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid #94a3b8" }} />}
-                      {req.status === "Constraint" && <Minus size={11} />}
-                      {req.status}
-                    </span>
+                <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+                  <div style={{ flex: 1 }}>
+                    {requirements.map((req) => (
+                      <div
+                        key={req.text}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "12px 0",
+                          borderBottom: "1px solid #f1f5f9",
+                        }}
+                      >
+                        <span style={{ fontSize: 14, color: "#334155" }}>{req.text}</span>
+                        <span
+                          className={`panel-badge ${
+                            req.status === "Confirmed"
+                              ? "panel-badge--green"
+                              : req.status === "In scope"
+                              ? "panel-badge--outline"
+                              : "panel-badge--gray"
+                          }`}
+                          style={{ flexShrink: 0, marginLeft: 12, display: "flex", alignItems: "center", gap: 4 }}
+                        >
+                          {req.status === "Confirmed" && <Check size={11} />}
+                          {req.status === "In scope" && <span style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid #94a3b8" }} />}
+                          {req.status === "Constraint" && <Minus size={11} />}
+                          {req.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))
+
+                  {/* Legend */}
+                  <div className="brief-legend">
+                    <div className="brief-legend-item">
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+                      Confirmed (≥80% confidence)
+                    </div>
+                    <div className="brief-legend-item">
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#94a3b8" }} />
+                      In scope (50-79%)
+                    </div>
+                    <div className="brief-legend-item">
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#64748b" }} />
+                      Constraint (&lt;50%)
+                    </div>
+                  </div>
+                </div>
               )}
-            </>
+            </div>
           ) : (
             <div
               style={{
@@ -379,187 +499,232 @@ export function BriefIntelligence() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                height: 280,
-                color: "#94a3b8",
+                height: 320,
+                color: "#64748b",
                 textAlign: "center",
-                gap: 8,
+                padding: "20px",
+                background: "rgba(248, 250, 252, 0.5)",
+                border: "1px dashed #e2e8f0",
+                borderRadius: 10,
+                gap: 16,
               }}
             >
-              <FileText size={28} />
-              <span style={{ fontSize: 13 }}>
-                Parse a brief to see structured requirements here.
-              </span>
+              <div style={{ background: "#eff6ff", padding: 16, borderRadius: "50%", color: "#2563eb" }}>
+                <FileText size={32} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>Awaiting Project Brief</h4>
+                <p style={{ fontSize: 12, color: "#64748b", maxWidth: 220, margin: "0 auto", lineHeight: 1.5 }}>
+                  Submit your project requirements on the left to extract structured deliverables automatically.
+                </p>
+              </div>
+              <ul style={{ fontSize: 12, color: "#64748b", textAlign: "left", listStyleType: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                <li style={{ display: "flex", alignItems: "center", gap: 6 }}>🟢 Extract key deliverables</li>
+                <li style={{ display: "flex", alignItems: "center", gap: 6 }}>🟢 Identify hidden timeline risks</li>
+                <li style={{ display: "flex", alignItems: "center", gap: 6 }}>🟢 Generate precision developer questions</li>
+              </ul>
             </div>
           )}
         </div>
 
         {/* Right: Needs a decision */}
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <h2 className="panel-card-title">Needs a decision</h2>
+        <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
+          <div className="panel-card-header" style={{ marginBottom: 8 }}>
+            <h2 className="panel-card-title" style={{ display: "flex", alignItems: "center" }}>
+              Needs a decision
+              <InfoTooltip text="Open questions or risks flagged by the AI that need your input before proceeding." />
+            </h2>
           </div>
+          <p className="brief-card-desc">Flagged risks and ambiguities that require your input</p>
 
           {isBriefParsed ? (
-            <>
-              {decisions.map((q, idx) => {
-                const isExpanded = expandedDecision === idx;
-                const status = decisionStatuses[idx]; // undefined | "clarification_requested" | "assumed"
-                const severityColor =
-                  q.severity <= 3 ? "#16a34a" : q.severity <= 6 ? "#d97706" : "#dc2626";
-                const severityBg =
-                  q.severity <= 3 ? "#f0fdf4" : q.severity <= 6 ? "#fffbeb" : "#fef2f2";
-                const isSelected = expandedDecision === idx;
+            <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+              {/* Decision Progress Bar */}
+              {totalDecisions > 0 && (
+                <div className="brief-progress-container">
+                  <div className="brief-progress-header">
+                    <span>Decision Progress</span>
+                    <span>{resolvedCount} of {totalDecisions} resolved ({completionPct}%)</span>
+                  </div>
+                  <div className="brief-progress-bar-bg">
+                    <div className="brief-progress-bar-fill" style={{ width: `${completionPct}%` }} />
+                  </div>
+                </div>
+              )}
 
-                return (
-                  <div key={q.label + idx}>
-                    {/* Clickable row */}
-                    <div
-                      onClick={() => {
-                        setExpandedDecision(isExpanded ? null : idx);
-                        setNoSelectionPrompt(false);
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "14px 0",
-                        borderBottom: isExpanded ? "none" : "1px solid #f1f5f9",
-                        cursor: "pointer",
-                        background: isSelected ? "#f8fafc" : "transparent",
-                        borderRadius: isSelected ? 8 : 0,
-                        paddingLeft: isSelected ? 8 : 0,
-                        paddingRight: isSelected ? 8 : 0,
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: "50%",
-                          background: status === "clarification_requested" ? "#eff6ff" : status === "assumed" ? "#fffbeb" : "#fff7ed",
-                          border: `1px solid ${status === "clarification_requested" ? "#93c5fd" : status === "assumed" ? "#fcd34d" : "#fed7aa"}`,
-                          display: "grid",
-                          placeItems: "center",
-                          flexShrink: 0,
-                          color: status === "clarification_requested" ? "#2563eb" : status === "assumed" ? "#d97706" : "#ea580c",
-                          transition: "all 0.3s ease",
+              <div style={{ flex: 1 }}>
+                {decisions.map((q, idx) => {
+                  const isExpanded = expandedDecision === idx;
+                  const status = decisionStatuses[idx]; // undefined | "clarification_requested" | "assumed"
+                  const severityColor =
+                    q.severity <= 3 ? "#16a34a" : q.severity <= 6 ? "#d97706" : "#dc2626";
+                  const severityBg =
+                    q.severity <= 3 ? "#f0fdf4" : q.severity <= 6 ? "#fffbeb" : "#fef2f2";
+                  const severityDotColor =
+                    q.severity <= 3 ? "#22c55e" : q.severity <= 6 ? "#eab308" : "#ef4444";
+                  const isSelected = expandedDecision === idx;
+
+                  return (
+                    <div key={q.label + idx}>
+                      {/* Clickable row */}
+                      <div
+                        onClick={() => {
+                          setExpandedDecision(isExpanded ? null : idx);
+                          setNoSelectionPrompt(false);
                         }}
-                      >
-                        {status === "clarification_requested" ? (
-                          <MessageSquare size={13} />
-                        ) : status === "assumed" ? (
-                          <Bookmark size={13} />
-                        ) : (
-                          <HelpCircle size={14} />
-                        )}
-                      </span>
-                      <span style={{ fontSize: 13, color: "#334155", flex: 1, fontWeight: 500 }}>
-                        {q.label}
-                      </span>
-                      {/* Status badge (if resolved) */}
-                      {status && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 600,
-                            padding: "2px 8px",
-                            borderRadius: 12,
-                            background: status === "clarification_requested" ? "#eff6ff" : "#fffbeb",
-                            color: status === "clarification_requested" ? "#2563eb" : "#d97706",
-                            border: `1px solid ${status === "clarification_requested" ? "#bfdbfe" : "#fde68a"}`,
-                            whiteSpace: "nowrap",
-                            transition: "all 0.3s ease",
-                          }}
-                        >
-                          {status === "clarification_requested" ? "Clarification sent" : "Assumed"}
-                        </span>
-                      )}
-                      {/* Animated chevron */}
-                      <span
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          transition: "transform 0.25s ease",
-                          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <ChevronRight size={16} style={{ color: "#94a3b8" }} />
-                      </span>
-                    </div>
-
-                    {/* Expanded detail card */}
-                    <div
-                      style={{
-                        maxHeight: isExpanded ? 300 : 0,
-                        overflow: "hidden",
-                        transition: "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease",
-                        opacity: isExpanded ? 1 : 0,
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: "12px 14px",
-                          margin: "0 0 12px",
-                          background: "#f8fafc",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 10,
-                          display: "flex",
-                          flexDirection: "column",
                           gap: 10,
+                          padding: "14px 0",
+                          borderBottom: isExpanded ? "none" : "1px solid #f1f5f9",
+                          cursor: "pointer",
+                          background: isSelected ? "#f8fafc" : "transparent",
+                          borderRadius: isSelected ? 8 : 0,
+                          paddingLeft: isSelected ? 8 : 0,
+                          paddingRight: isSelected ? 8 : 0,
+                          transition: "all 0.2s ease",
                         }}
                       >
-                        {/* Category + Severity row */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: "3px 10px",
-                              borderRadius: 12,
-                              background: "#f1f5f9",
-                              color: "#475569",
-                              border: "1px solid #e2e8f0",
-                            }}
-                          >
-                            {q.category}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 600,
-                              padding: "3px 10px",
-                              borderRadius: 12,
-                              background: severityBg,
-                              color: severityColor,
-                              border: `1px solid ${severityColor}30`,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <Shield size={11} />
-                            Severity {q.severity}/10
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            background: status === "clarification_requested" ? "#eff6ff" : status === "assumed" ? "#fffbeb" : "#fff7ed",
+                            border: `1px solid ${status === "clarification_requested" ? "#93c5fd" : status === "assumed" ? "#fcd34d" : "#fed7aa"}`,
+                            display: "grid",
+                            placeItems: "center",
+                            flexShrink: 0,
+                            color: status === "clarification_requested" ? "#2563eb" : status === "assumed" ? "#d97706" : "#ea580c",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          {status === "clarification_requested" ? (
+                            <MessageSquare size={13} />
+                          ) : status === "assumed" ? (
+                            <Bookmark size={13} />
+                          ) : (
+                            <HelpCircle size={14} />
+                          )}
+                        </span>
+                        
+                        {/* Severity Dot & Label */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                          <span 
+                            className="brief-severity-dot" 
+                            style={{ backgroundColor: severityDotColor }} 
+                            title={`Severity ${q.severity}/10`} 
+                          />
+                          <span style={{ fontSize: 13, color: "#334155", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {q.label}
                           </span>
                         </div>
 
-                        {/* Mitigation */}
-                        {q.mitigation && (
-                          <div>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                              Mitigation
-                            </span>
-                            <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
-                              {q.mitigation}
-                            </p>
-                          </div>
+                        {/* Status badge (if resolved) */}
+                        {status && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              background: status === "clarification_requested" ? "#eff6ff" : "#fffbeb",
+                              color: status === "clarification_requested" ? "#2563eb" : "#d97706",
+                              border: `1px solid ${status === "clarification_requested" ? "#bfdbfe" : "#fde68a"}`,
+                              whiteSpace: "nowrap",
+                              transition: "all 0.3s ease",
+                            }}
+                          >
+                            {status === "clarification_requested" ? "Clarification sent" : "Assumed"}
+                          </span>
                         )}
+                        {/* Animated chevron */}
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            transition: "transform 0.25s ease",
+                            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <ChevronRight size={16} style={{ color: "#94a3b8" }} />
+                        </span>
+                      </div>
+
+                      {/* Expanded detail card */}
+                      <div
+                        style={{
+                          maxHeight: isExpanded ? 300 : 0,
+                          overflow: "hidden",
+                          transition: "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease",
+                          opacity: isExpanded ? 1 : 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            padding: "12px 14px",
+                            margin: "0 0 12px",
+                            background: "#f8fafc",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: 10,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 10,
+                          }}
+                        >
+                          {/* Category + Severity row */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: "3px 10px",
+                                borderRadius: 12,
+                                background: "#f1f5f9",
+                                color: "#475569",
+                                border: "1px solid #e2e8f0",
+                              }}
+                            >
+                              {q.category}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: "3px 10px",
+                                borderRadius: 12,
+                                background: severityBg,
+                                color: severityColor,
+                                border: `1px solid ${severityColor}30`,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Shield size={11} />
+                              Severity {q.severity}/10
+                            </span>
+                          </div>
+
+                          {/* Mitigation */}
+                          {q.mitigation && (
+                            <div>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                Mitigation
+                              </span>
+                              <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
+                                {q.mitigation}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
 
               {/* No-selection prompt */}
               {noSelectionPrompt && expandedDecision === null && (
@@ -621,7 +786,7 @@ export function BriefIntelligence() {
                   Mark as assumption
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <div
               style={{
@@ -629,28 +794,40 @@ export function BriefIntelligence() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                height: 200,
-                color: "#94a3b8",
+                height: 320,
+                color: "#64748b",
                 textAlign: "center",
-                gap: 8,
+                padding: "20px",
+                background: "rgba(248, 250, 252, 0.5)",
+                border: "1px dashed #e2e8f0",
+                borderRadius: 10,
+                gap: 16,
               }}
             >
-              <HelpCircle size={28} />
-              <span style={{ fontSize: 13 }}>
-                Decisions will appear after parsing.
-              </span>
+              <div style={{ background: "#fff7ed", padding: 16, borderRadius: "50%", color: "#ea580c" }}>
+                <HelpCircle size={32} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>Risks & Assumptions</h4>
+                <p style={{ fontSize: 12, color: "#64748b", maxWidth: 220, margin: "0 auto", lineHeight: 1.5 }}>
+                  AI will analyze your brief for gaps, omissions, and ambiguities to raise flags before they become problems.
+                </p>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Bottom info bar */}
-      <div className="panel-action-bar">
+      <div className="panel-action-bar" style={{ marginTop: 24 }}>
         <div className="panel-action-bar-left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#2563eb" }}>ℹ</span>
-          <span style={{ fontSize: 13, color: "#64748b" }}>
-            Every interpretation remains linked to the source request.
+          <span style={{ color: "#2563eb", fontWeight: "bold" }}>ℹ</span>
+          <span style={{ fontSize: 13, color: "#475569" }}>
+            Every interpretation remains directly linked to the source request. Modifying the source request will discard current resolutions.
           </span>
+        </div>
+        <div className="panel-action-bar-right">
+          <span style={{ fontSize: 12, color: "#64748b" }}>Version 1.0</span>
         </div>
       </div>
     </div>

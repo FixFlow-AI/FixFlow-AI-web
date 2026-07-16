@@ -67,7 +67,7 @@ const tabMap = {
 };
 
 export function Dashboard() {
-  const { user, parsedProposal, dashboardTab, setDashboardTab, logout, hydrateLatestProposal } =
+  const { user, parsedProposal, dashboardTab, setDashboardTab, logout, hydrateLatestProposal, setProposalHistory } =
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -97,20 +97,22 @@ export function Dashboard() {
   }, [profileDropdownOpen]);
 
   useEffect(() => {
-    // If we don't have the proposal in-memory but are logged in, try loading the user's latest proposal from the database.
+    // Load ALL proposals for the logged-in user from the database.
+    // Hydrate the latest one into the active workspace AND store the
+    // full list so the Overview tab can display proposal history.
     if (!parsedProposal) {
       api.listProposals()
         .then((res) => {
           if (res?.proposals && res.proposals.length > 0) {
-            // Rehydrate the store with the latest proposal (which is sorted by descending createdAt)
             hydrateLatestProposal(res.proposals[0]);
+            setProposalHistory(res.proposals);
           }
         })
         .catch((err) => {
           console.error("Failed to automatically rehydrate proposal:", err);
         });
     }
-  }, [parsedProposal, hydrateLatestProposal]);
+  }, [parsedProposal, hydrateLatestProposal, setProposalHistory]);
 
   const ActivePanel = tabMap[dashboardTab] || Overview;
 

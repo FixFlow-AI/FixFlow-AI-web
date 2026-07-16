@@ -14,7 +14,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
-import { api, ApiError } from "../../lib/api";
 
 const requirements = [];
 
@@ -70,95 +69,38 @@ export function EvidenceConfidence() {
     parsedProposal,
     confidenceResult,
     confidenceSource,
-    setConfidenceResult,
-    setConfidenceSource,
+    confidenceEvaluating,
     interviewQuestions,
     interviewSource,
-    setInterviewQuestions,
-    setInterviewSource,
+    interviewGenerating,
+    confidenceNotice,
+    runConfidenceEval,
+    runInterviewGenerate,
+    setConfidenceNotice,
   } = useLandingStore();
 
-  const [evaluating, setEvaluating] = useState(false);
-  const [generatingInterview, setGeneratingInterview] = useState(false);
-  const [notice, setNotice] = useState("");
+  // Use the store-level notice that survives navigation
+  const [localNotice, setLocalNotice] = useState("");
+  const notice = confidenceNotice || localNotice;
 
   const runEvaluation = async () => {
-    setNotice("");
-    setEvaluating(true);
-    try {
-      // The evaluate endpoint needs a proposal. Use the live parsed proposal
-      // when available; otherwise tell the user to parse a brief first.
-      if (!parsedProposal) {
-        setNotice(
-          "Parse a brief in the Brief Ingestion tab first to run a live evaluation. Showing sample confidence.",
-        );
-        setConfidenceResult(null);
-        setConfidenceSource("mock");
-        return;
-      }
-      const result = await api.evaluateProposal(
-        rawBriefText,
-        parsedProposal,
-        useLandingStore.getState().parsedProposalId,
+    setLocalNotice("");
+    setConfidenceNotice("");
+    if (!parsedProposal) {
+      setLocalNotice(
+        "Parse a brief in the Brief Ingestion tab first to run a live evaluation. Showing sample confidence.",
       );
-      setConfidenceResult(result);
-      setConfidenceSource("api");
-    } catch (err) {
-      const reason =
-        err instanceof ApiError && err.status === 503
-          ? "AI not configured on the server (missing GEMINI_API_KEY). Showing sample confidence."
-          : "Couldn't reach the evaluation service. Showing sample confidence.";
-      setNotice(reason);
-      setConfidenceResult(null);
-      setConfidenceSource("mock");
-    } finally {
-      setEvaluating(false);
+      useLandingStore.getState().setConfidenceResult(null);
+      useLandingStore.getState().setConfidenceSource("mock");
+      return;
     }
+    // Fire the store-level thunk — survives tab navigation
+    await runConfidenceEval();
   };
 
   const generateInterview = async () => {
-    setGeneratingInterview(true);
-    try {
-      // Derive "missing skills" from open-question confidence items / risks.
-      const missingSkills = parsedProposal?.risks
-        ?.slice(0, 3)
-        .map((r) => r.label) ?? ["Target runtime confirmation"];
-      const githubScan =
-        "Languages: TypeScript, Node.js. Repos: billing-migration, webhook-utils.";
-      const output = await api.interviewQuestions(
-        rawBriefText || "Billing migration project",
-        githubScan,
-        missingSkills,
-      );
-      setInterviewQuestions(output);
-      setInterviewSource("api");
-    } catch (err) {
-      // The backend skill self-heals with fallback questions, so a failure here
-      // is almost always "no key / offline" — show a small local fallback.
-      setInterviewQuestions({
-        questions: [
-          {
-            question:
-              "How would you keep webhook processing idempotent during a live billing migration?",
-            rationale: "Tests the core reliability requirement of this project.",
-            expectedKeywords: ["idempotency key", "dedupe", "retry", "ledger"],
-            idealAnswerSummary:
-              "Uses a persisted idempotency key and a dedup table to make retries safe.",
-          },
-          {
-            question:
-              "Describe your rollback strategy if the cutover fails mid-migration.",
-            rationale: "Rollback ownership is the top open risk on this brief.",
-            expectedKeywords: ["rollback", "snapshot", "feature flag", "dry run"],
-            idealAnswerSummary:
-              "Has a tested, reversible plan with clear ownership and a dry run.",
-          },
-        ],
-      });
-      setInterviewSource("mock");
-    } finally {
-      setGeneratingInterview(false);
-    }
+    // Fire the store-level thunk — survives tab navigation
+    await runInterviewGenerate();
   };
 
   const liveResult = confidenceSource === "api" ? confidenceResult : null;
@@ -559,9 +501,9 @@ export function EvidenceConfidence() {
             type="button"
             className="panel-btn"
             onClick={runEvaluation}
-            disabled={evaluating}
+            disabled={confidenceEvaluating}
           >
-            {evaluating ? (
+            {confidenceEvaluating ? (
               <>
                 <RefreshCw size={14} className="animate-spin" /> Evaluating…
               </>
@@ -575,9 +517,9 @@ export function EvidenceConfidence() {
             type="button"
             className="panel-btn--ghost panel-btn"
             onClick={generateInterview}
-            disabled={generatingInterview}
+            disabled={interviewGenerating}
           >
-            {generatingInterview ? (
+            {interviewGenerating ? (
               <>
                 <RefreshCw size={14} className="animate-spin" /> Generating…
               </>

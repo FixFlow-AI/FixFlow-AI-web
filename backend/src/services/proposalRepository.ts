@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { dirname, resolve } from 'path';
 import type { Proposal } from '../types/ai.js';
 
 /**
@@ -135,15 +137,103 @@ class DynamoDbProposalRepository implements ProposalRepository {
   }
 }
 
+// ---------- File-backed (survives restarts) ----------
+
+class FileProposalRepository implements ProposalRepository {
+  private cache: StoredProposal[] | null = null;
+  private writeChain: Promise<void> = Promise.resolve();
+
+  constructor(private readonly filePath: string) {}
+
+  private async load(): Promise<StoredProposal[]> {
+    if (this.cache) return this.cache;
+    try {
+      const raw = await readFile(this.filePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      const list = Array.isArray(parsed) ? parsed : parsed?.proposals;
+      this.cache = Array.isArray(list) ? (list as StoredProposal[]) : [];
+    } catch {
+      this.cache = [];
+    }
+    return this.cache;
+  }
+
+  private persist(): Promise<void> {
+    this.writeChain = this.writeChain.then(async () => {
+      if (!this.cache) return;
+      await mkdir(dirname(this.filePath), { recursive: true });
+      await writeFile(this.filePath, JSON.stringify({ proposals: this.cache }, null, 2) + '\n', 'utf-8');
+    });
+    return this.writeChain;
+  }
+
+  async create({
+    userId,
+    briefText,
+    proposal,
+    degraded,
+  }: {
+    userId: string;
+    briefText: string;
+    proposal: Proposal;
+    degraded: boolean;
+  }) {
+    const list = await this.load();
+    const now = new Date().toISOString();
+    const sp: StoredProposal = {
+      proposalId: randomUUID(),
+      userId,
+      title: deriveTitle(proposal),
+      briefText,
+      proposal,
+      degraded,
+      createdAt: now,
+      updatedAt: now,
+    };
+    list.push(sp);
+    await this.persist();
+    return sp;
+  }
+
+  async get(id: string) {
+    const list = await this.load();
+    return list.find((p) => p.proposalId === id) ?? null;
+  }
+
+  async listByUser(userId: string) {
+    const list = await this.load();
+    return list
+      .filter((p) => p.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async setEvaluation(id: string, evaluation: unknown) {
+    const list = await this.load();
+    const sp = list.find((p) => p.proposalId === id);
+    if (!sp) return null;
+    sp.evaluation = evaluation;
+    sp.updatedAt = new Date().toISOString();
+    await this.persist();
+    return sp;
+  }
+}
+
 // ---------- Factory ----------
 
 let cached: ProposalRepository | null = null;
 
 export function getProposalRepository(): ProposalRepository {
   if (cached) return cached;
-  const provider = (process.env.PERSISTENCE_PROVIDER || '').toLowerCase();
-  cached = provider === 'dynamodb'
-    ? new DynamoDbProposalRepository()
-    : new InMemoryProposalRepository();
+  const provider = (process.env.PERSISTENCE_PROVIDER || 'file').toLowerCase();
+  if (provider === 'dynamodb') {
+    cached = new DynamoDbProposalRepository();
+  } else if (provider === 'memory') {
+    cached = new InMemoryProposalRepository();
+  } else {
+    const file =
+      process.env.PROPOSALS_STORE_FILE ||
+      resolve(process.cwd(), 'data/proposals.json');
+    cached = new FileProposalRepository(file);
+  }
   return cached;
 }

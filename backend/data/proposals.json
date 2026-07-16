@@ -1,0 +1,594 @@
+{
+  "proposals": [
+    {
+      "proposalId": "ca555471-1e5c-47d5-8f55-546ab0ed38c6",
+      "userId": "fe26f28a-e687-4aa4-aea4-ff52c6f33d69",
+      "title": "Development of a high-performance, responsive React landing page designed for co",
+      "briefText": "Create a React landing page. Budget is $1000, timeline is 2 weeks.",
+      "proposal": {
+        "project_summary": "Development of a high-performance, responsive React landing page designed for conversion, delivered within a 2-week sprint cycle with a fixed budget of $1000.",
+        "features": [
+          {
+            "title": "Responsive Hero Section",
+            "description": "A visually engaging hero section with a clear call-to-action and optimized imagery.",
+            "technical_approach": "React functional components with Tailwind CSS for responsive styling.",
+            "complexity": "Low",
+            "confidence": "High",
+            "confidence_pct": 95,
+            "area": "Frontend"
+          },
+          {
+            "title": "Contact Form Integration",
+            "description": "A functional contact form that captures user data and sends it to a specified email endpoint.",
+            "technical_approach": "React Hook Form with Formspree or similar lightweight backend-as-a-service.",
+            "complexity": "Medium",
+            "confidence": "High",
+            "confidence_pct": 90,
+            "area": "Integration"
+          }
+        ],
+        "risks": [
+          {
+            "label": "Scope Creep",
+            "severity": 40,
+            "mitigation": "Strict adherence to the initial design mockups and feature list.",
+            "category": "Project Management"
+          },
+          {
+            "label": "Asset Availability",
+            "severity": 30,
+            "mitigation": "Client to provide all high-resolution assets by the end of week 1.",
+            "category": "Dependency"
+          }
+        ],
+        "timeline": [
+          {
+            "phase": "Design and Setup",
+            "duration": "1 week",
+            "tasks": [
+              "Environment setup",
+              "UI component development",
+              "Asset integration"
+            ],
+            "dependencies": []
+          },
+          {
+            "phase": "Testing and Deployment",
+            "duration": "1 week",
+            "tasks": [
+              "Form validation testing",
+              "Cross-browser testing",
+              "Deployment to Vercel/Netlify"
+            ],
+            "dependencies": [
+              "Design and Setup"
+            ]
+          }
+        ],
+        "delivery_plan": {
+          "mode": "weekly",
+          "generatedFrom": "llm",
+          "weeks": [
+            {
+              "id": "w1",
+              "label": "Foundation and UI",
+              "startWeek": 1,
+              "endWeek": 1,
+              "sourcePhase": "Design and Setup",
+              "goals": [
+                "Complete UI components",
+                "Responsive layout"
+              ],
+              "tasks": [
+                {
+                  "id": "t1",
+                  "title": "Setup React Project",
+                  "owner": "team",
+                  "status": "planned",
+                  "notify": true
+                }
+              ],
+              "deliverables": [
+                "Initial UI prototype"
+              ],
+              "dependencies": []
+            },
+            {
+              "id": "w2",
+              "label": "Integration and Launch",
+              "startWeek": 2,
+              "endWeek": 2,
+              "sourcePhase": "Testing and Deployment",
+              "goals": [
+                "Form functionality",
+                "Deployment"
+              ],
+              "tasks": [
+                {
+                  "id": "t2",
+                  "title": "Form API integration",
+                  "owner": "team",
+                  "status": "planned",
+                  "notify": true
+                }
+              ],
+              "deliverables": [
+                "Live URL"
+              ],
+              "dependencies": [
+                "w1"
+              ]
+            }
+          ],
+          "roadmap": [
+            {
+              "id": "r1",
+              "title": "Project Completion",
+              "targetWeek": 2,
+              "sourceWeekIds": [
+                "w1",
+                "w2"
+              ],
+              "status": "planned"
+            }
+          ],
+          "backlog": [
+            {
+              "id": "b1",
+              "title": "Advanced Analytics Integration",
+              "sourceWeekId": null,
+              "reason": "future_enhancement",
+              "status": "backlog"
+            }
+          ],
+          "notificationDefaults": {
+            "enabled": true,
+            "channels": [
+              "in_app",
+              "email"
+            ],
+            "events": [
+              "approval",
+              "goal_completed"
+            ]
+          }
+        },
+        "effort": [
+          {
+            "label": "UI Development",
+            "percentage": 60,
+            "timeframe": "Week 1",
+            "description": "Building the visual components and layout."
+          },
+          {
+            "label": "Integration and QA",
+            "percentage": 40,
+            "timeframe": "Week 2",
+            "description": "Connecting forms and final testing."
+          }
+        ],
+        "market": [
+          {
+            "title": "React Ecosystem",
+            "description": "High demand for performant, component-based web interfaces.",
+            "trend": "up",
+            "relevance": 90
+          }
+        ],
+        "impact": [
+          {
+            "title": "Conversion Rate",
+            "description": "Improved user engagement through a modern, fast-loading landing page.",
+            "impact_score": 85,
+            "category": "Business"
+          }
+        ]
+      },
+      "degraded": false,
+      "createdAt": "2026-07-15T16:14:35.014Z",
+      "updatedAt": "2026-07-15T16:16:02.620Z",
+      "evaluation": {
+        "auditor": {
+          "budget_alignment_score": 100,
+          "deliverable_coverage_score": 100,
+          "issues": [],
+          "findings": "The proposal perfectly aligns with the client brief. The budget of $1000 is explicitly acknowledged and maintained. The timeline of 2 weeks is fully accounted for in the project phases and delivery plan. All requested deliverables (React landing page) are covered by the proposed features and tasks."
+        },
+        "feasibility": {
+          "technical_feasibility_score": 95,
+          "timeline_realism_score": 90,
+          "issues": [
+            "The proposal lacks a specific mention of mobile responsiveness testing beyond a general cross-browser task.",
+            "The dependency on client-provided assets by the end of week 1 is a high-risk bottleneck for a 2-week project.",
+            "No explicit mention of SEO optimization or meta-tag configuration, which is standard for landing pages."
+          ],
+          "findings": "The technical stack (React, Tailwind, React Hook Form) is highly appropriate for a landing page and aligns well with the budget and timeline. The 2-week schedule is realistic, provided the client delivers assets promptly. The use of Formspree is a smart, low-overhead choice that keeps development time within the 2-week constraint. The project management approach is sound, though the dependency on client assets should be highlighted as a critical path item in the kickoff meeting."
+        },
+        "confidenceIndex": 96,
+        "optimized": false,
+        "finalProposal": {
+          "project_summary": "Development of a high-performance, responsive React landing page designed for conversion, delivered within a 2-week sprint cycle with a fixed budget of $1000.",
+          "features": [
+            {
+              "title": "Responsive Hero Section",
+              "description": "A visually engaging hero section with a clear call-to-action and optimized imagery.",
+              "technical_approach": "React functional components with Tailwind CSS for responsive styling.",
+              "complexity": "Low",
+              "confidence": "High",
+              "confidence_pct": 95,
+              "area": "Frontend"
+            },
+            {
+              "title": "Contact Form Integration",
+              "description": "A functional contact form that captures user data and sends it to a specified email endpoint.",
+              "technical_approach": "React Hook Form with Formspree or similar lightweight backend-as-a-service.",
+              "complexity": "Medium",
+              "confidence": "High",
+              "confidence_pct": 90,
+              "area": "Integration"
+            }
+          ],
+          "risks": [
+            {
+              "label": "Scope Creep",
+              "severity": 40,
+              "mitigation": "Strict adherence to the initial design mockups and feature list.",
+              "category": "Project Management"
+            },
+            {
+              "label": "Asset Availability",
+              "severity": 30,
+              "mitigation": "Client to provide all high-resolution assets by the end of week 1.",
+              "category": "Dependency"
+            }
+          ],
+          "timeline": [
+            {
+              "phase": "Design and Setup",
+              "duration": "1 week",
+              "tasks": [
+                "Environment setup",
+                "UI component development",
+                "Asset integration"
+              ],
+              "dependencies": []
+            },
+            {
+              "phase": "Testing and Deployment",
+              "duration": "1 week",
+              "tasks": [
+                "Form validation testing",
+                "Cross-browser testing",
+                "Deployment to Vercel/Netlify"
+              ],
+              "dependencies": [
+                "Design and Setup"
+              ]
+            }
+          ],
+          "delivery_plan": {
+            "mode": "weekly",
+            "generatedFrom": "llm",
+            "weeks": [
+              {
+                "id": "w1",
+                "label": "Foundation and UI",
+                "startWeek": 1,
+                "endWeek": 1,
+                "sourcePhase": "Design and Setup",
+                "goals": [
+                  "Complete UI components",
+                  "Responsive layout"
+                ],
+                "tasks": [
+                  {
+                    "id": "t1",
+                    "title": "Setup React Project",
+                    "owner": "team",
+                    "status": "planned",
+                    "notify": true
+                  }
+                ],
+                "deliverables": [
+                  "Initial UI prototype"
+                ],
+                "dependencies": []
+              },
+              {
+                "id": "w2",
+                "label": "Integration and Launch",
+                "startWeek": 2,
+                "endWeek": 2,
+                "sourcePhase": "Testing and Deployment",
+                "goals": [
+                  "Form functionality",
+                  "Deployment"
+                ],
+                "tasks": [
+                  {
+                    "id": "t2",
+                    "title": "Form API integration",
+                    "owner": "team",
+                    "status": "planned",
+                    "notify": true
+                  }
+                ],
+                "deliverables": [
+                  "Live URL"
+                ],
+                "dependencies": [
+                  "w1"
+                ]
+              }
+            ],
+            "roadmap": [
+              {
+                "id": "r1",
+                "title": "Project Completion",
+                "targetWeek": 2,
+                "sourceWeekIds": [
+                  "w1",
+                  "w2"
+                ],
+                "status": "planned"
+              }
+            ],
+            "backlog": [
+              {
+                "id": "b1",
+                "title": "Advanced Analytics Integration",
+                "sourceWeekId": null,
+                "reason": "future_enhancement",
+                "status": "backlog"
+              }
+            ],
+            "notificationDefaults": {
+              "enabled": true,
+              "channels": [
+                "in_app",
+                "email"
+              ],
+              "events": [
+                "approval",
+                "goal_completed"
+              ]
+            }
+          },
+          "effort": [
+            {
+              "label": "UI Development",
+              "percentage": 60,
+              "timeframe": "Week 1",
+              "description": "Building the visual components and layout."
+            },
+            {
+              "label": "Integration and QA",
+              "percentage": 40,
+              "timeframe": "Week 2",
+              "description": "Connecting forms and final testing."
+            }
+          ],
+          "market": [
+            {
+              "title": "React Ecosystem",
+              "description": "High demand for performant, component-based web interfaces.",
+              "trend": "up",
+              "relevance": 90
+            }
+          ],
+          "impact": [
+            {
+              "title": "Conversion Rate",
+              "description": "Improved user engagement through a modern, fast-loading landing page.",
+              "impact_score": 85,
+              "category": "Business"
+            }
+          ]
+        },
+        "cycles": [
+          {
+            "cycle": 0,
+            "auditor": {
+              "budget_alignment_score": 100,
+              "deliverable_coverage_score": 100,
+              "issues": [],
+              "findings": "The proposal perfectly aligns with the client brief. The budget of $1000 is explicitly acknowledged and maintained. The timeline of 2 weeks is fully accounted for in the project phases and delivery plan. All requested deliverables (React landing page) are covered by the proposed features and tasks."
+            },
+            "feasibility": {
+              "technical_feasibility_score": 95,
+              "timeline_realism_score": 90,
+              "issues": [
+                "The proposal lacks a specific mention of mobile responsiveness testing beyond a general cross-browser task.",
+                "The dependency on client-provided assets by the end of week 1 is a high-risk bottleneck for a 2-week project.",
+                "No explicit mention of SEO optimization or meta-tag configuration, which is standard for landing pages."
+              ],
+              "findings": "The technical stack (React, Tailwind, React Hook Form) is highly appropriate for a landing page and aligns well with the budget and timeline. The 2-week schedule is realistic, provided the client delivers assets promptly. The use of Formspree is a smart, low-overhead choice that keeps development time within the 2-week constraint. The project management approach is sound, though the dependency on client assets should be highlighted as a critical path item in the kickoff meeting."
+            },
+            "confidenceIndex": 96,
+            "issuesFed": [
+              "The proposal lacks a specific mention of mobile responsiveness testing beyond a general cross-browser task.",
+              "The dependency on client-provided assets by the end of week 1 is a high-risk bottleneck for a 2-week project.",
+              "No explicit mention of SEO optimization or meta-tag configuration, which is standard for landing pages."
+            ],
+            "optimizationApplied": false,
+            "improvedOverPrevious": null
+          }
+        ],
+        "bestCycle": 0
+      }
+    },
+    {
+      "proposalId": "14dfada2-d736-4f38-8614-6ad4f4e0689d",
+      "userId": "fe26f28a-e687-4aa4-aea4-ff52c6f33d69",
+      "title": "Development of a robust, scalable Node",
+      "briefText": "Build a Node.js backend with Express. Budget is $2000, timeline is 4 weeks.",
+      "proposal": {
+        "project_summary": "Development of a robust, scalable Node.js backend using the Express framework to serve as the core API layer for the client application.",
+        "features": [
+          {
+            "title": "RESTful API Architecture",
+            "description": "Implementation of standard CRUD endpoints for core business entities.",
+            "technical_approach": "Utilize Express router middleware with controller-service pattern for clean separation of concerns.",
+            "complexity": "Low",
+            "confidence": "High",
+            "confidence_pct": 95,
+            "area": "Backend Infrastructure"
+          },
+          {
+            "title": "Database Integration",
+            "description": "Setup of database connectivity and schema management.",
+            "technical_approach": "Integration of Mongoose or Sequelize ORM to manage data persistence and migrations.",
+            "complexity": "Medium",
+            "confidence": "High",
+            "confidence_pct": 90,
+            "area": "Data Layer"
+          }
+        ],
+        "risks": [
+          {
+            "label": "Scope Creep",
+            "severity": 40,
+            "mitigation": "Strict adherence to the 4-week timeline and defined feature set.",
+            "category": "Project Management"
+          },
+          {
+            "label": "Dependency Vulnerabilities",
+            "severity": 20,
+            "mitigation": "Automated security auditing using npm audit and Snyk.",
+            "category": "Security"
+          }
+        ],
+        "timeline": [
+          {
+            "phase": "Foundation & Setup",
+            "duration": "1 week",
+            "tasks": [
+              "Environment configuration",
+              "Project scaffolding",
+              "Database schema design"
+            ],
+            "dependencies": []
+          },
+          {
+            "phase": "Core Development",
+            "duration": "2 weeks",
+            "tasks": [
+              "API endpoint implementation",
+              "Business logic integration"
+            ],
+            "dependencies": [
+              "Foundation & Setup"
+            ]
+          },
+          {
+            "phase": "Testing & Deployment",
+            "duration": "1 week",
+            "tasks": [
+              "Unit testing",
+              "Integration testing",
+              "Deployment to staging"
+            ],
+            "dependencies": [
+              "Core Development"
+            ]
+          }
+        ],
+        "delivery_plan": {
+          "mode": "weekly",
+          "generatedFrom": "derived",
+          "weeks": [
+            {
+              "id": "w1",
+              "label": "Setup Phase",
+              "startWeek": 1,
+              "endWeek": 1,
+              "sourcePhase": "Foundation & Setup",
+              "goals": [
+                "Initialize Node.js project",
+                "Configure Express"
+              ],
+              "tasks": [
+                {
+                  "id": "t1",
+                  "title": "Initialize Repository",
+                  "owner": "team",
+                  "status": "planned",
+                  "notify": true
+                }
+              ],
+              "deliverables": [
+                "Project repository",
+                "Initial architecture"
+              ],
+              "dependencies": []
+            }
+          ],
+          "roadmap": [
+            {
+              "id": "r1",
+              "title": "Backend MVP",
+              "targetWeek": 4,
+              "sourceWeekIds": [
+                "w1"
+              ],
+              "status": "planned"
+            }
+          ],
+          "backlog": [
+            {
+              "id": "b1",
+              "title": "Advanced Caching Layer",
+              "sourceWeekId": null,
+              "reason": "future_enhancement",
+              "status": "backlog"
+            }
+          ],
+          "notificationDefaults": {
+            "enabled": true,
+            "channels": [
+              "in_app",
+              "email"
+            ],
+            "events": [
+              "approval",
+              "goal_completed"
+            ]
+          }
+        },
+        "effort": [
+          {
+            "label": "Development",
+            "percentage": 70,
+            "timeframe": "4 weeks",
+            "description": "Core coding and API implementation."
+          },
+          {
+            "label": "Testing",
+            "percentage": 30,
+            "timeframe": "4 weeks",
+            "description": "Quality assurance and bug fixing."
+          }
+        ],
+        "market": [
+          {
+            "title": "Node.js Ecosystem",
+            "description": "High demand for scalable JavaScript backends.",
+            "trend": "up",
+            "relevance": 90
+          }
+        ],
+        "impact": [
+          {
+            "title": "Operational Efficiency",
+            "description": "Streamlined data handling and API response times.",
+            "impact_score": 85,
+            "category": "Performance"
+          }
+        ]
+      },
+      "degraded": false,
+      "createdAt": "2026-07-15T16:44:51.528Z",
+      "updatedAt": "2026-07-15T16:44:51.528Z"
+    }
+  ]
+}

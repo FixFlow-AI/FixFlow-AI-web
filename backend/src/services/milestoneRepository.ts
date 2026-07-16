@@ -1,3 +1,5 @@
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { dirname, resolve } from 'path';
 import type { Milestone, AuditTrailBlock } from '../skills/escrowStateMachine.js';
 
 /**
@@ -117,15 +119,101 @@ class DynamoDbMilestoneRepository implements MilestoneRepository {
   }
 }
 
+// ---------- File-backed (survives restarts) ----------
+
+interface MilestoneStoreShape {
+  milestones: Record<string, Milestone>;
+  chains: Record<string, AuditTrailBlock[]>;
+}
+
+class FileMilestoneRepository implements MilestoneRepository {
+  private cache: MilestoneStoreShape | null = null;
+  private writeChain: Promise<void> = Promise.resolve();
+
+  constructor(private readonly filePath: string) {}
+
+  private empty(): MilestoneStoreShape {
+    return { milestones: {}, chains: {} };
+  }
+
+  private async load(): Promise<MilestoneStoreShape> {
+    if (this.cache) return this.cache;
+    try {
+      const raw = await readFile(this.filePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      this.cache = {
+        milestones: parsed.milestones || {},
+        chains: parsed.chains || {},
+      };
+    } catch {
+      this.cache = this.empty();
+    }
+    return this.cache;
+  }
+
+  private persist(): Promise<void> {
+    this.writeChain = this.writeChain.then(async () => {
+      if (!this.cache) return;
+      await mkdir(dirname(this.filePath), { recursive: true });
+      await writeFile(this.filePath, JSON.stringify(this.cache, null, 2) + '\n', 'utf-8');
+    });
+    return this.writeChain;
+  }
+
+  async create(m: Milestone) {
+    const s = await this.load();
+    s.milestones[m.id] = m;
+    s.chains[m.id] = [];
+    await this.persist();
+  }
+
+  async get(id: string) {
+    const s = await this.load();
+    return s.milestones[id] ?? null;
+  }
+
+  async list(proposalId?: string) {
+    const s = await this.load();
+    const all = Object.values(s.milestones);
+    return proposalId ? all.filter((m) => m.proposalId === proposalId) : all;
+  }
+
+  async save(m: Milestone) {
+    const s = await this.load();
+    s.milestones[m.id] = m;
+    await this.persist();
+  }
+
+  async getAuditBlocks(milestoneId: string) {
+    const s = await this.load();
+    return [...(s.chains[milestoneId] || [])].sort((a, b) => a.index - b.index);
+  }
+
+  async appendAuditBlock(block: AuditTrailBlock) {
+    const s = await this.load();
+    const chain = s.chains[block.milestoneId] || [];
+    chain.push(block);
+    s.chains[block.milestoneId] = chain;
+    await this.persist();
+  }
+}
+
 // ---------- Factory ----------
 
 let cached: MilestoneRepository | null = null;
 
 export function getMilestoneRepository(): MilestoneRepository {
   if (cached) return cached;
-  const provider = (process.env.PERSISTENCE_PROVIDER || '').toLowerCase();
-  cached = provider === 'dynamodb'
-    ? new DynamoDbMilestoneRepository()
-    : new InMemoryMilestoneRepository();
+  const provider = (process.env.PERSISTENCE_PROVIDER || 'file').toLowerCase();
+  if (provider === 'dynamodb') {
+    cached = new DynamoDbMilestoneRepository();
+  } else if (provider === 'memory') {
+    cached = new InMemoryMilestoneRepository();
+  } else {
+    const file =
+      process.env.MILESTONES_STORE_FILE ||
+      resolve(process.cwd(), 'data/milestones.json');
+    cached = new FileMilestoneRepository(file);
+  }
   return cached;
 }
