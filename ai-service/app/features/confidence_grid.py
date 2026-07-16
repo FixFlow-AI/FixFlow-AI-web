@@ -155,30 +155,29 @@ async def process_confidence_grid(brief_text: str, proposal: Proposal) -> Confid
     best_confidence_index = -1
     cycle = 0
 
+    # 1. Run initial evaluation
     auditor_eval, feasibility_eval, confidence_index = await evaluate_proposal(
         brief_text,
         current,
-        )
+    )
+    best_confidence_index = confidence_index
+    best_proposal = current
+    best_cycle = 0
+
     while True:
-        prev_score = cycle_records[-1].confidenceIndex if cycle_records else None
         logger.info(
             "Confidence Grid Cycle %d completed. Consensual Confidence Index: %d",
             cycle,
             confidence_index,
         )
 
-        if confidence_index > best_confidence_index:
-            best_confidence_index = confidence_index
-            best_proposal = current
-            best_cycle = cycle
-
         combined_issues = [*auditor_eval.issues, *feasibility_eval.issues]
         if not combined_issues:
             combined_issues.append(
                 "Scores indicate overall misalignment across deliverables and timelines."
             )
-        
-        improved_over_previous = None if prev_score is None else (confidence_index > prev_score)
+
+        # Check loop termination at threshold or max cycles
         if confidence_index >= threshold or cycle >= max_cycles:
             cycle_records.append(
                 CycleRecord(
@@ -188,12 +187,12 @@ async def process_confidence_grid(brief_text: str, proposal: Proposal) -> Confid
                     confidenceIndex=confidence_index,
                     issuesFed=combined_issues,
                     optimizationApplied=False,
-                    improvedOverPrevious=improved_over_previous,
+                    improvedOverPrevious=False,
                 )
             )
             break
 
-
+        # Optimize proposal
         optimized_proposal, optimizer_succeeded = await optimize_proposal(
             brief_text,
             current,
@@ -209,17 +208,20 @@ async def process_confidence_grid(brief_text: str, proposal: Proposal) -> Confid
                     confidenceIndex=confidence_index,
                     issuesFed=combined_issues,
                     optimizationApplied=False,
-                    improvedOverPrevious=improved_over_previous,
-                    )
+                    improvedOverPrevious=False,
+                )
             )
             break
 
+        # Evaluate the optimization outcome exactly once
         new_auditor, new_feasibility, new_confidence = await evaluate_proposal(
             brief_text,
             optimized_proposal,
         )
 
-        improved = new_confidence >= best_confidence_index + min_improvement
+        # Determine improvement against current baseline (regression guard)
+        improved = new_confidence >= confidence_index + min_improvement
+
         cycle_records.append(
             CycleRecord(
                 cycle=cycle,
@@ -228,16 +230,25 @@ async def process_confidence_grid(brief_text: str, proposal: Proposal) -> Confid
                 confidenceIndex=confidence_index,
                 issuesFed=combined_issues,
                 optimizationApplied=improved,
-                improvedOverPrevious=improved_over_previous,
+                improvedOverPrevious=improved,
             )
         )
 
         if not improved:
             break
 
+        # Commit proposal and evaluation to current loop state
         current = optimized_proposal
         auditor_eval, feasibility_eval, confidence_index = new_auditor, new_feasibility, new_confidence
+        
+        # Track the best proposal seen so far
+        if confidence_index > best_confidence_index:
+            best_confidence_index = confidence_index
+            best_proposal = current
+            best_cycle = cycle + 1
+            
         cycle += 1
+
     return ConfidenceGridResult(
         auditor=cycle_records[best_cycle].auditor,
         feasibility=cycle_records[best_cycle].feasibility,
