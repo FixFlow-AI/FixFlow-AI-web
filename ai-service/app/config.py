@@ -36,8 +36,16 @@ class Settings:
             "GEMINI_FALLBACK_MODEL",
             self.DEFAULT_FALLBACK_MODEL
         ).strip()
-        self.gemini_timeout_sec: float = float(os.getenv("GEMINI_TIMEOUT_SEC", "25"))
+        self.gemini_timeout_sec: float = float(os.getenv("GEMINI_TIMEOUT_SEC", "15"))
+        # Total attempts per model for transient failures (429/5xx/timeout/network).
         self.gemini_max_retries: int = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
+        # Exponential backoff bounds (seconds): delay = min(max, base * 2**attempt) + jitter.
+        self.gemini_retry_base_delay_sec: float = float(
+            os.getenv("GEMINI_RETRY_BASE_DELAY_SEC", "0.5")
+        )
+        self.gemini_retry_max_delay_sec: float = float(
+            os.getenv("GEMINI_RETRY_MAX_DELAY_SEC", "8")
+        )
         self.port: int = int(os.getenv("PORT", "8000"))
         self.confidence_threshold: int = int(os.getenv("CONFIDENCE_THRESHOLD", "75"))
         self.max_correction_cycles: int = int(os.getenv("MAX_CORRECTION_CYCLES", "1"))

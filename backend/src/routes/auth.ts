@@ -14,6 +14,7 @@ import { requireAuth } from '../auth/middleware.js';
 import {
   getUserRepository,
   hashRefreshToken,
+  pruneExpiredRefreshTokens,
   type UserRole,
   type User,
   type UserRepository,
@@ -256,8 +257,11 @@ authRouter.post(
       return;
     }
     const hash = hashRefreshToken(refreshToken);
-    if (!user.refreshTokenHashes.includes(hash)) {
-      console.error('[AuthRoute] ❌ Refresh: token hash not found in user record. userId:', userId, '| stored hashes count:', user.refreshTokenHashes.length);
+    // Only non-expired tokens count. An expired hash is treated as unknown; the
+    // stale record is cleaned up on the next add/rotation.
+    const activeTokens = pruneExpiredRefreshTokens(user.refreshTokens ?? []);
+    if (!activeTokens.some((r) => r.hash === hash)) {
+      console.error('[AuthRoute] ❌ Refresh: token hash not found or expired. userId:', userId, '| active tokens:', activeTokens.length);
       res.status(401).json({ error: 'Refresh token not recognised.' });
       return;
     }
