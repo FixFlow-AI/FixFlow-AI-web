@@ -49,6 +49,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   refreshTokens: RefreshTokenRecord[];
+  otpSecret?: string;
 }
 
 export interface UpsertGoogleProfileInput {
