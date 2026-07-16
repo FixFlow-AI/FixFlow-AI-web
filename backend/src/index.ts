@@ -1,4 +1,16 @@
 import 'dotenv/config';
+
+// Boot-time check for Razorpay webhook secret (BUG-04)
+const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+if (!webhookSecret) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('CRITICAL ERROR: RAZORPAY_WEBHOOK_SECRET is not configured in production. Process exiting.');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: RAZORPAY_WEBHOOK_SECRET is missing. Webhook signature checks will reject all webhook events.');
+  }
+}
+
 import { createServer } from 'http';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
