@@ -49,7 +49,8 @@ class Settings:
         self.port: int = int(os.getenv("PORT", "8000"))
         self.confidence_threshold: int = int(os.getenv("CONFIDENCE_THRESHOLD", "75"))
         self.max_correction_cycles: int = int(os.getenv("MAX_CORRECTION_CYCLES", "1"))
-        self.confidence_min_improvement: int = int(os.getenv("CONFIDENCE_MIN_IMPROVEMENT", "0"))
+        # The minimum score delta required for each optimization step to be accepted (per-step threshold)
+        self.confidence_min_improvement: int = int(os.getenv("CONFIDENCE_MIN_IMPROVEMENT", "1"))
         self.ai_service_token: str = os.getenv("AI_SERVICE_TOKEN", "").strip()
 
         # ── GitHub onboarding (roles/01, 01a) ──────────────────────────────
@@ -85,3 +86,19 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def resolve_model(candidate: str | None) -> str:
+    """Validate a candidate model against ALLOWED_MODELS.
+
+    Returns the resolved model string, or raises ValueError if not in allowlist.
+    """
+    settings = get_settings()
+    if candidate is None:
+        return settings.gemini_model
+    if candidate not in settings.ALLOWED_MODELS:
+        raise ValueError(
+            f"Model '{candidate}' is not in the allowed list of models: "
+            f"{sorted(list(settings.ALLOWED_MODELS))}"
+        )
+    return candidate
