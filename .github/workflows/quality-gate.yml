@@ -68,9 +68,13 @@ jobs:
     name: CodeQL
     uses: ./.github/workflows/codeql-analysis.yml
 
+  ai-service:
+    name: AI Service
+    uses: ./.github/workflows/ai-service-ci.yml
+
   quality-gate:
     name: Build and Test
-    needs: [branch-policy-check, frontend, backend, security, codeql]
+    needs: [branch-policy-check, frontend, backend, security, codeql, ai-service]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -81,6 +85,7 @@ jobs:
           backend_status="${{ needs.backend.result }}"
           security_status="${{ needs.security.result }}"
           codeql_status="${{ needs.codeql.result }}"
+          ai_service_status="${{ needs.ai-service.result }}"
 
           echo "=========================================="
           echo "         CI QUALITY GATE SUMMARY          "
@@ -90,6 +95,7 @@ jobs:
           echo "Backend CI Status   : $backend_status"
           echo "Security CI Status  : $security_status"
           echo "CodeQL Scan Status  : $codeql_status"
+          echo "AI Service Status   : $ai_service_status"
           echo "=========================================="
 
           # Check if any workflow failed or was cancelled
@@ -97,7 +103,8 @@ jobs:
              [ "$frontend_status" = "failure" ] || [ "$frontend_status" = "cancelled" ] || \
              [ "$backend_status" = "failure" ] || [ "$backend_status" = "cancelled" ] || \
              [ "$security_status" = "failure" ] || [ "$security_status" = "cancelled" ] || \
-             [ "$codeql_status" = "failure" ] || [ "$codeql_status" = "cancelled" ]; then
+             [ "$codeql_status" = "failure" ] || [ "$codeql_status" = "cancelled" ] || \
+             [ "$ai_service_status" = "failure" ] || [ "$ai_service_status" = "cancelled" ]; then
             echo "❌ Quality Gate Failed: One or more checks failed or were cancelled."
             exit 1
           fi
