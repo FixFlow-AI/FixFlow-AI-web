@@ -1,5 +1,7 @@
 import { IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import { verifyAccessToken } from '../auth/tokens.js';
+import { getProposalRepository } from '../services/proposalRepository.js';
 
 // ==========================================
 // Message Contracts & Protocol Types
@@ -153,26 +155,66 @@ export class SyncServer {
     
     // Bind upgrade listener to external HTTP server
     server.on('upgrade', (request: IncomingMessage, socket: any, head: any) => {
-      const pathname = new URL(request.url || '', `http://${request.headers.host}`).pathname;
+      const url = new URL(request.url || '', `http://${request.headers.host || 'localhost'}`);
+      const pathname = url.pathname;
       
       if (pathname === '/sync') {
+        const token = url.searchParams.get('token');
+        if (!token) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+        try {
+          const decoded = verifyAccessToken(token);
+          (request as any).auth = decoded;
+        } catch (err) {
+          socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+
         this.wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
           this.wss.emit('connection', ws, request);
         });
       }
     });
 
-    this.wss.on('connection', (ws: WebSocket) => {
+    this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
       let currentRoomId: string | null = null;
       let currentClientId: string | null = null;
 
-      ws.on('message', (message: string) => {
+      ws.on('message', async (message: string) => {
         try {
           const payload = JSON.parse(message) as IncomingPayload;
-          
+          const { proposalId, clientId } = payload;
+
+          // 1. Authenticate user: ensure clientId matches token sub (BUG-03)
+          const auth = (request as any).auth;
+          if (!auth || clientId !== auth.sub) {
+            console.warn(`WebSocket message rejected: Client ID [${clientId}] does not match token sub [${auth?.sub}].`);
+            ws.close(4003, 'Forbidden: Client ID mismatch');
+            return;
+          }
+
+          // 2. Authorize user: verify proposal exists and matches owner sub (BUG-03)
+          const proposalRepo = getProposalRepository();
+          const proposal = await proposalRepo.get(proposalId);
+          if (!proposal) {
+            console.warn(`WebSocket message rejected: Proposal [${proposalId}] not found.`);
+            ws.close(4004, 'Proposal Not Found');
+            return;
+          }
+
+          if (proposal.userId !== auth.sub) {
+            console.warn(`WebSocket message rejected: User [${auth.sub}] is not authorized for Proposal [${proposalId}].`);
+            ws.close(4003, 'Forbidden: Unauthorized for this proposal');
+            return;
+          }
+
           switch (payload.type) {
             case 'join': {
-              const { proposalId, clientId, role, vectorClock } = payload;
+              const { role, vectorClock } = payload;
               currentRoomId = proposalId;
               currentClientId = clientId;
 
