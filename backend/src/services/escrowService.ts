@@ -6,8 +6,11 @@ import {
   AuditTrailBlock,
   transitionMilestone,
   verifyAuditChain,
+  MFARequiredError,
 } from '../skills/escrowStateMachine.js';
 import { getMilestoneRepository } from './milestoneRepository.js';
+import { verifyOtp } from '../auth/otpVerifier.js';
+import { getUserRepository } from './userRepository.js';
 
 /**
  * Escrow service — orchestrates the pure FSM (escrowStateMachine.ts) with a
@@ -67,8 +70,19 @@ export async function applyTransition(
   const chain = await repo.getAuditBlocks(id);
   const previousBlockIndex = chain.length;
 
-  const mfaVerifier = (_mid: string, _state: MilestoneState) =>
-    Boolean(input.mfaToken && input.mfaToken.trim());
+  // Verify MFA token asynchronously before invoking transition (BUG-06)
+  if (input.toState === 'Approved' || input.toState === 'Funds_Released') {
+    if (!input.mfaToken || !input.mfaToken.trim()) {
+      throw new MFARequiredError(id, input.toState);
+    }
+    const user = await getUserRepository().findById(input.triggerUserId);
+    if (!user || !user.otpSecret || !verifyOtp(input.mfaToken, user.otpSecret)) {
+      throw new Error(`MFA Verification Failed: Milestone [${id}] transition to state [${input.toState}] rejected by verifier.`);
+    }
+  }
+
+  // FSM verification check is pre-satisfied by the service layer checks above
+  const mfaVerifier = (_mid: string, _state: MilestoneState) => true;
 
   const { updatedMilestone, newBlock } = transitionMilestone(
     milestone,
@@ -81,8 +95,7 @@ export async function applyTransition(
     mfaVerifier,
   );
 
-  await repo.save(updatedMilestone);
-  await repo.appendAuditBlock(newBlock);
+  await repo.saveWithAuditBlock(updatedMilestone, newBlock);
 
   return { milestone: updatedMilestone, block: newBlock };
 }
