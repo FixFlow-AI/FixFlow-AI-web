@@ -4318,3 +4318,215 @@ section {
   background: #fef2f2;
   color: #ef4444;
 }
+
+/* ───────── Brief Intelligence Overhaul Styles ───────── */
+.brief-card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: -12px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+/* Info tooltip styling */
+.brief-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 500;
+  width: 220px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: normal;
+  display: block;
+}
+
+.brief-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.95) transparent transparent transparent;
+}
+
+/* Stat visual chips */
+.brief-stat-chips-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.brief-stat-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--canvas-muted);
+  text-align: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.brief-stat-chip:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.brief-stat-chip-val {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.brief-stat-chip-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Color variations */
+.brief-stat-chip--green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.brief-stat-chip--green .brief-stat-chip-val {
+  color: #16a34a;
+}
+
+.brief-stat-chip--gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+.brief-stat-chip--gray .brief-stat-chip-val {
+  color: #475569;
+}
+
+.brief-stat-chip--orange {
+  background: #fff7ed;
+  border-color: #ffedd5;
+}
+.brief-stat-chip--orange .brief-stat-chip-val {
+  color: #ea580c;
+}
+
+/* Severity Dot */
+.brief-severity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Progress bar for decision resolution */
+.brief-progress-container {
+  padding: 12px;
+  background: var(--canvas-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.brief-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.brief-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.brief-progress-bar-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 3px;
+  transition: width 0.4s ease-out;
+}
+
+/* Requirements list legend */
+.brief-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+
+.brief-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Key details table */
+.brief-metadata-card {
+  padding: 12px 16px;
+  background: var(--canvas-muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.brief-metadata-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.brief-metadata-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  row-gap: 8px;
+  column-gap: 16px;
+  font-size: 13px;
+}
+
+.brief-metadata-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.brief-metadata-value {
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+}
+
