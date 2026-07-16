@@ -1,0 +1,37 @@
+{
+  "aggregate_score": 100.0,
+  "results": [
+    {
+      "id": "brief_01_vague",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_02_short",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_03_rfp",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_04_overspecified",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_05_ecommerce",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_06_blockchain",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_07_iot",
+      "status": "PASS"
+    },
+    {
+      "id": "brief_08_saas",
+      "status": "PASS"
+    }
+  ]
+}

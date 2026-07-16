@@ -1,0 +1,809 @@
+{
+  "brief_01_vague": {
+    "project_summary": "Proposal for brief_01_vague",
+    "features": [
+      {
+        "title": "Feature 1 covering frontend",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for frontend",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "frontend"
+      },
+      {
+        "title": "Feature 2 covering design",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for design",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "design"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_02_short": {
+    "project_summary": "Proposal for brief_02_short",
+    "features": [
+      {
+        "title": "Feature 1 covering backend",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for backend",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "backend"
+      },
+      {
+        "title": "Feature 2 covering database",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for database",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "database"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_03_rfp": {
+    "project_summary": "Proposal for brief_03_rfp",
+    "features": [
+      {
+        "title": "Feature 1 covering database",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for database",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "database"
+      },
+      {
+        "title": "Feature 2 covering audit",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for audit",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "audit"
+      },
+      {
+        "title": "Feature 3 covering migration",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for migration",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "migration"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      },
+      {
+        "phase": "Phase 2",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 2.1",
+          "Task 2.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_04_overspecified": {
+    "project_summary": "Proposal for brief_04_overspecified",
+    "features": [
+      {
+        "title": "Feature 1 covering auth",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for auth",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "auth"
+      },
+      {
+        "title": "Feature 2 covering billing",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for billing",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "billing"
+      },
+      {
+        "title": "Feature 3 covering websockets",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for websockets",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "websockets"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_05_ecommerce": {
+    "project_summary": "Proposal for brief_05_ecommerce",
+    "features": [
+      {
+        "title": "Feature 1 covering frontend",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for frontend",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "frontend"
+      },
+      {
+        "title": "Feature 2 covering payments",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for payments",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "payments"
+      },
+      {
+        "title": "Feature 3 covering dashboard",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for dashboard",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "dashboard"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_06_blockchain": {
+    "project_summary": "Proposal for brief_06_blockchain",
+    "features": [
+      {
+        "title": "Feature 1 covering blockchain",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for blockchain",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "blockchain"
+      },
+      {
+        "title": "Feature 2 covering solidity",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for solidity",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "solidity"
+      },
+      {
+        "title": "Feature 3 covering escrow",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for escrow",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "escrow"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_07_iot": {
+    "project_summary": "Proposal for brief_07_iot",
+    "features": [
+      {
+        "title": "Feature 1 covering iot",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for iot",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "iot"
+      },
+      {
+        "title": "Feature 2 covering api",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for api",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "api"
+      },
+      {
+        "title": "Feature 3 covering database",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for database",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "database"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  },
+  "brief_08_saas": {
+    "project_summary": "Proposal for brief_08_saas",
+    "features": [
+      {
+        "title": "Feature 1 covering billing",
+        "description": "Detailed description for feature 1",
+        "technical_approach": "Technical approach for billing",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "billing"
+      },
+      {
+        "title": "Feature 2 covering invoicing",
+        "description": "Detailed description for feature 2",
+        "technical_approach": "Technical approach for invoicing",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "invoicing"
+      },
+      {
+        "title": "Feature 3 covering payments",
+        "description": "Detailed description for feature 3",
+        "technical_approach": "Technical approach for payments",
+        "complexity": "Medium",
+        "confidence": "High",
+        "confidence_pct": 90,
+        "area": "payments"
+      }
+    ],
+    "risks": [
+      {
+        "label": "Integration Interface Drift",
+        "severity": 45,
+        "mitigation": "Implement rigorous automated mock contracts early in the development sprint.",
+        "category": "Technical Integration"
+      }
+    ],
+    "timeline": [
+      {
+        "phase": "Phase 1",
+        "duration": "2 weeks",
+        "tasks": [
+          "Task 1.1",
+          "Task 1.2"
+        ],
+        "dependencies": []
+      }
+    ],
+    "delivery_plan": {
+      "mode": "weekly",
+      "generatedFrom": "derived",
+      "weeks": [
+        {
+          "id": "week-1",
+          "label": "Week 1: Foundations",
+          "startWeek": 1,
+          "endWeek": 1,
+          "sourcePhase": "Initial Integration",
+          "goals": [
+            "Setup runtime systems and confirm initial schemas"
+          ],
+          "tasks": [
+            {
+              "id": "t-1",
+              "title": "Establish repository structure and configure automated lints",
+              "owner": "team",
+              "status": "planned",
+              "notify": false
+            }
+          ],
+          "deliverables": [
+            "Typescript definitions file",
+            "Verify baseline configs"
+          ],
+          "dependencies": []
+        }
+      ],
+      "roadmap": [],
+      "backlog": [],
+      "notificationDefaults": {
+        "enabled": false,
+        "channels": [
+          "in_app"
+        ],
+        "events": [
+          "goal_completed"
+        ]
+      }
+    },
+    "effort": [
+      {
+        "label": "Core Implementation",
+        "percentage": 100,
+        "timeframe": "4 weeks",
+        "description": "Covers core backend routing, typescript schema integrations, and validation testing."
+      }
+    ],
+    "market": [],
+    "impact": []
+  }
+}

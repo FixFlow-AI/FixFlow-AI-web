@@ -1,0 +1,74 @@
+[
+  {
+    "id": "brief_01_vague",
+    "briefText": "We need a simple website for our local bakery to show our menu.",
+    "expected": {
+      "min_features": 1,
+      "min_timeline_phases": 1,
+      "required_areas": ["frontend", "design"]
+    }
+  },
+  {
+    "id": "brief_02_short",
+    "briefText": "Urgently looking for a backend dev to setup PostgreSQL database tables for a blog app.",
+    "expected": {
+      "min_features": 1,
+      "min_timeline_phases": 1,
+      "required_areas": ["backend", "database"]
+    }
+  },
+  {
+    "id": "brief_03_rfp",
+    "briefText": "Enterprise CRM Migration RFP. Phase 1: audit existing database. Phase 2: migrate to postgres. Budget is tight, must complete in 8 weeks.",
+    "expected": {
+      "min_features": 2,
+      "min_timeline_phases": 2,
+      "required_areas": ["database", "audit", "migration"]
+    }
+  },
+  {
+    "id": "brief_04_overspecified",
+    "briefText": "Build a SaaS dashboard. Requirements: 1. OAuth2 login. 2. Stripe subscription checkout. 3. Real-time updates via WebSockets. We want weekly milestones.",
+    "expected": {
+      "min_features": 3,
+      "min_timeline_phases": 1,
+      "required_areas": ["auth", "billing", "websockets"]
+    }
+  },
+  {
+    "id": "brief_05_ecommerce",
+    "briefText": "E-commerce store. Product listing, cart system, stripe payments, order history, and an admin dashboard.",
+    "expected": {
+      "min_features": 3,
+      "min_timeline_phases": 1,
+      "required_areas": ["frontend", "payments", "dashboard"]
+    }
+  },
+  {
+    "id": "brief_06_blockchain",
+    "briefText": "Solidity Smart Contract. Implement a multi-sig escrow wallet. Release funds upon client approval, with dispute arbitration.",
+    "expected": {
+      "min_features": 2,
+      "min_timeline_phases": 1,
+      "required_areas": ["blockchain", "solidity", "escrow"]
+    }
+  },
+  {
+    "id": "brief_07_iot",
+    "briefText": "IoT home temperature tracker. Raspberry Pi sends data via MQTT to a NestJS API. InfluxDB for time-series storage.",
+    "expected": {
+      "min_features": 2,
+      "min_timeline_phases": 1,
+      "required_areas": ["iot", "api", "database"]
+    }
+  },
+  {
+    "id": "brief_08_saas",
+    "briefText": "SaaS Subscription billing engine. Support recurring invoices, failed payment retries, and customer portal.",
+    "expected": {
+      "min_features": 2,
+      "min_timeline_phases": 1,
+      "required_areas": ["billing", "invoicing", "payments"]
+    }
+  }
+]
