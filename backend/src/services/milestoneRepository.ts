@@ -19,6 +19,7 @@ export interface MilestoneRepository {
   save(milestone: Milestone): Promise<void>;
   getAuditBlocks(milestoneId: string): Promise<AuditTrailBlock[]>;
   appendAuditBlock(block: AuditTrailBlock): Promise<void>;
+  saveWithAuditBlock(milestone: Milestone, block: AuditTrailBlock): Promise<void>;
 }
 
 // ---------- In-memory (default for local dev) ----------
@@ -48,6 +49,29 @@ class InMemoryMilestoneRepository implements MilestoneRepository {
     const chain = this.chains.get(block.milestoneId) ?? [];
     chain.push(block);
     this.chains.set(block.milestoneId, chain);
+  }
+  async saveWithAuditBlock(m: Milestone, block: AuditTrailBlock) {
+    const prevMilestone = this.milestones.get(m.id);
+    const prevChain = this.chains.get(m.id) ? [...(this.chains.get(m.id)!)] : undefined;
+
+    try {
+      this.milestones.set(m.id, m);
+      const chain = this.chains.get(block.milestoneId) ?? [];
+      const nextChain = [...chain, block];
+      this.chains.set(block.milestoneId, nextChain);
+    } catch (err) {
+      if (prevMilestone) {
+        this.milestones.set(m.id, prevMilestone);
+      } else {
+        this.milestones.delete(m.id);
+      }
+      if (prevChain) {
+        this.chains.set(m.id, prevChain);
+      } else {
+        this.chains.delete(m.id);
+      }
+      throw err;
+    }
   }
 }
 
@@ -115,6 +139,28 @@ class DynamoDbMilestoneRepository implements MilestoneRepository {
         TableName: table('audit_blocks'),
         Item: { ...block, blockIndex: block.index },
       }),
+    );
+  }
+  async saveWithAuditBlock(m: Milestone, block: AuditTrailBlock) {
+    const { ddb, table } = await import('../config/aws.js');
+    const { TransactWriteCommand } = await import('@aws-sdk/lib-dynamodb');
+    await ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: table('milestones'),
+              Item: this.toItem(m),
+            },
+          },
+          {
+            Put: {
+              TableName: table('audit_blocks'),
+              Item: { ...block, blockIndex: block.index },
+            },
+          },
+        ],
+      })
     );
   }
 }
@@ -195,6 +241,31 @@ class FileMilestoneRepository implements MilestoneRepository {
     chain.push(block);
     s.chains[block.milestoneId] = chain;
     await this.persist();
+  }
+
+  async saveWithAuditBlock(m: Milestone, block: AuditTrailBlock) {
+    const s = await this.load();
+    const prevMilestone = s.milestones[m.id];
+    const prevChain = s.chains[block.milestoneId] ? [...s.chains[block.milestoneId]] : undefined;
+
+    try {
+      s.milestones[m.id] = m;
+      const chain = s.chains[block.milestoneId] || [];
+      s.chains[block.milestoneId] = [...chain, block];
+      await this.persist();
+    } catch (err) {
+      if (prevMilestone) {
+        s.milestones[m.id] = prevMilestone;
+      } else {
+        delete s.milestones[m.id];
+      }
+      if (prevChain) {
+        s.chains[block.milestoneId] = prevChain;
+      } else {
+        delete s.chains[block.milestoneId];
+      }
+      throw err;
+    }
   }
 }
 
