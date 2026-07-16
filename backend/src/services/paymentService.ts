@@ -92,8 +92,8 @@ export function verifyWebhookSignature(
   webhookSecret: string
 ): boolean {
   if (!webhookSecret) {
-    console.log('[SIMULATION] Webhook secret not configured. Bypassing signature check.');
-    return true;
+    console.error('CRITICAL SECURITY ALERT: Webhook secret not configured. Rejecting payload.');
+    return false; // ← Reject unsigned webhooks
   }
 
   try {
