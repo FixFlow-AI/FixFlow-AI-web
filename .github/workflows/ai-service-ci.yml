@@ -1,0 +1,51 @@
+name: AI Service CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: AI Service Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ai_service:
+              - 'ai-service/**'
+              - '.github/workflows/ai-service-ci.yml'
+
+      - name: Set up Python
+        if: steps.filter.outputs.ai_service == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: steps.filter.outputs.ai_service == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+        working-directory: ai-service
+
+      - name: Run Hardening & Resilience Tests
+        if: steps.filter.outputs.ai_service == 'true'
+        run: |
+          python test_confidence_grid.py
+          python test_gemini_resilience.py
+          python test_hardening.py
+        working-directory: ai-service
+
+      - name: Run Quality Gate Evaluation (Fixture Mode)
+        if: steps.filter.outputs.ai_service == 'true'
+        run: |
+          python eval/run_eval.py
+        working-directory: ai-service
