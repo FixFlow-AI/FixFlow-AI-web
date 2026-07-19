@@ -10,12 +10,13 @@ import {
   Clock,
   CheckCircle,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
 export function Overview() {
-  const { user, setDashboardTab, hydrateLatestProposal, proposalHistory, setProposalHistory } = useLandingStore();
+  const { user, setDashboardTab, hydrateLatestProposal, proposalHistory, setProposalHistory, startNewProposal } = useLandingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -62,6 +63,11 @@ export function Overview() {
     window.location.hash = `#/dashboard/${tab}`;
   };
 
+  const handleNewProposal = () => {
+    startNewProposal();
+    go("brief-intelligence");
+  };
+
   // Merge: prefer the store's full proposalHistory (richer data), else
   // fall back to the overview API's lightweight proposals array.
   const history = proposalHistory.length > 0
@@ -70,13 +76,26 @@ export function Overview() {
 
   return (
     <div>
-      <div className="panel-page-header">
-        <h1 className="panel-page-title">
-          Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
-        </h1>
-        <p className="panel-page-subtitle">
-          {user?.email} · {user?.role}
-        </p>
+      <div className="panel-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 className="panel-page-title">
+            Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+          </h1>
+          <p className="panel-page-subtitle">
+            {user?.email} · {user?.role}
+          </p>
+        </div>
+        {user?.role === "client" && (
+          <button
+            type="button"
+            className="panel-btn"
+            onClick={handleNewProposal}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Plus size={16} />
+            <span>New Proposal</span>
+          </button>
+        )}
       </div>
 
       {loading ? (
