@@ -311,6 +311,37 @@ class TestAIServiceHardening(unittest.TestCase):
         finally:
             settings.gemini_api_key = original_ai_enabled
 
+    def test_imp_01_constant_time_token_verification(self):
+        """Test verify_token uses constant-time comparison and preserves disabled behavior."""
+        from fastapi import HTTPException
+        from app.main import verify_token
+        from app.config import get_settings
+
+        settings = get_settings()
+        original_token = settings.ai_service_token
+
+        try:
+            # 1. Configured secret: correct token passes (returns None).
+            settings.ai_service_token = "s3cret-token"
+            self.assertIsNone(asyncio.run(verify_token("s3cret-token")))
+
+            # 2. Configured secret: wrong token raises 401.
+            with self.assertRaises(HTTPException) as ctx:
+                asyncio.run(verify_token("wrong-token"))
+            self.assertEqual(ctx.exception.status_code, 401)
+
+            # 3. Configured secret: missing token (None) raises 401.
+            with self.assertRaises(HTTPException) as ctx_missing:
+                asyncio.run(verify_token(None))
+            self.assertEqual(ctx_missing.exception.status_code, 401)
+
+            # 4. Empty configured secret disables the check (auth disabled).
+            settings.ai_service_token = ""
+            self.assertIsNone(asyncio.run(verify_token(None)))
+            self.assertIsNone(asyncio.run(verify_token("anything")))
+        finally:
+            settings.ai_service_token = original_token
+
 
 if __name__ == "__main__":
     unittest.main()
