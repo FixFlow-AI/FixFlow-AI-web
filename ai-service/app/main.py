@@ -38,6 +38,8 @@ from .schemas.opportunity import (
 from .features.opportunity import extract_opportunity, score_opportunity
 from .schemas.growth import GrowthPlan, GrowthPlanRequest
 from .features.growth import generate_growth_plan
+from .schemas.discovery import DiscoveryRequest, DiscoveryTurn
+from .features.discovery import run_discovery_turn
 
 logging.basicConfig(level=logging.INFO)
 
@@ -297,4 +299,17 @@ async def growth_plan(body: GrowthPlanRequest) -> GrowthPlan:
         body.verified_skills,
         body.experience,
     )
+
+
+@app.post(
+    "/ai/discovery/next",
+    response_model=DiscoveryTurn,
+    dependencies=[Depends(verify_token)],
+)
+async def discovery_next(body: DiscoveryRequest) -> DiscoveryTurn:
+    """Requirement Discovery Agent (Talent section): given the initial request
+    and the answers gathered so far, return the next adaptive question or the
+    finished structured brief once confidence is high enough."""
+    require_ai()
+    return await run_discovery_turn(body.initialRequest, body.answers)
 
