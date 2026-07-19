@@ -21,17 +21,26 @@ The file is both pytest-discoverable and runnable standalone
 from __future__ import annotations
 
 import asyncio
+import time
 from contextlib import contextmanager
 
 from google.genai.errors import APIError
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import app.llm.gemini as g
+import app.llm.cache as cache_mod
 from app.config import get_settings
 
 
 class Out(BaseModel):
     ok: bool = True
+
+
+class Strict(BaseModel):
+    """Schema with a required, non-coercible field used to force a
+    ``ValidationError`` on the manual-validation fallback path (BUG-10)."""
+
+    value: int
 
 
 class _Resp:
@@ -103,6 +112,19 @@ def _patched(
         settings.gemini_retry_base_delay_sec,
         settings.gemini_retry_max_delay_sec,
     )
+    # The primary circuit breaker is a module-global singleton whose state would
+    # otherwise leak across tests (accumulated failures would trip it Open and
+    # change routing). Snapshot and reset it to a clean Closed state per test.
+    breaker = g.primary_breaker
+    saved_breaker = (breaker.state, breaker.failure_count, breaker.last_state_change)
+    breaker.state = "Closed"
+    breaker.failure_count = 0
+    breaker.last_state_change = time.time()
+    # The in-memory response cache is also a module-global. A cache hit would
+    # short-circuit generate_structured before the fake client is ever called,
+    # so start every test from an empty cache for deterministic routing.
+    saved_cache = dict(cache_mod._local_cache)
+    cache_mod._local_cache.clear()
     g._client = _FakeClient(fake)  # type: ignore[assignment]
     settings.gemini_max_retries = max_retries
     settings.gemini_timeout_sec = timeout
@@ -118,6 +140,9 @@ def _patched(
             settings.gemini_retry_base_delay_sec,
             settings.gemini_retry_max_delay_sec,
         ) = saved
+        (breaker.state, breaker.failure_count, breaker.last_state_change) = saved_breaker
+        cache_mod._local_cache.clear()
+        cache_mod._local_cache.update(saved_cache)
 
 
 def _run(fake_ctx_kwargs=None, **call_kwargs):
@@ -272,6 +297,36 @@ def test_backoff_applied_between_retries():
     print("  [ok] backoff applied between retries (attempts-1 times)")
 
 
+# ── BUG-10: manual-validation fallback raises ValidationError, not NameError ─
+def test_schema_violation_raises_validation_error_with_raw_payload():
+    """Malformed-but-parseable JSON on the manual fallback path must raise a
+    ``pydantic.ValidationError`` carrying the parsed dict as ``raw_payload`` —
+    not a ``NameError`` from an undefined ``ValidationError`` reference.
+
+    Regression guard for BUG-10.
+    """
+    # `.parsed` is None (SDK didn't populate it) but `.text` is valid JSON that
+    # violates the schema: "abc" cannot be coerced to the required int `value`.
+    bad_json = '{"value": "abc"}'
+    with _patched([("ok", _Resp(parsed=None, text=bad_json))]):
+        raised: Exception | None = None
+        try:
+            asyncio.run(
+                g.generate_structured(
+                    system_instruction="sys",
+                    contents="content",
+                    response_schema=Strict,
+                )
+            )
+        except Exception as exc:  # noqa: BLE001 - capture to assert exact type
+            raised = exc
+    assert isinstance(raised, ValidationError), (
+        f"expected pydantic.ValidationError, got {type(raised).__name__}: {raised}"
+    )
+    assert getattr(raised, "raw_payload", None) == {"value": "abc"}
+    print("  [ok] schema violation -> ValidationError with raw_payload (BUG-10)")
+
+
 # ── pure helper unit tests ────────────────────────────────────────────────
 def test_is_transient_classification():
     assert g._is_transient(asyncio.TimeoutError()) is True
@@ -312,6 +367,7 @@ if __name__ == "__main__":
     test_retry_count_respects_max_retries()
     test_pinned_model_is_never_swapped()
     test_backoff_applied_between_retries()
+    test_schema_violation_raises_validation_error_with_raw_payload()
     test_is_transient_classification()
     test_backoff_delay_bounds()
     print("ALL GEMINI RESILIENCE TESTS PASSED")

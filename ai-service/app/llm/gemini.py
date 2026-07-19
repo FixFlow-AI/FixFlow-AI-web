@@ -16,7 +16,7 @@ from typing import Type, TypeVar
 from google import genai
 from google.genai import types
 from google.genai.errors import APIError
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..config import get_settings, resolve_model
 from ..telemetry import get_request_id, record_call
