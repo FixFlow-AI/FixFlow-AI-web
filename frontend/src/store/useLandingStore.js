@@ -127,6 +127,7 @@ export const useLandingStore = create((set) => ({
   // Brief Ingestion
   rawBriefText: "",
   isBriefParsed: false,
+  isNewProposalMode: false,
   setBriefText: (rawBriefText) => set({ rawBriefText }),
   setBriefParsed: (isBriefParsed) => set({ isBriefParsed }),
 
@@ -200,7 +201,13 @@ export const useLandingStore = create((set) => ({
         parsedProposalId: proposalId,
         briefSource: "api",
         isBriefParsed: true,
+        isNewProposalMode: false,
       });
+      // Refresh the proposal history in store after successfully parsing the new proposal
+      const res = await api.listProposals();
+      if (res?.proposals) {
+        set({ proposalHistory: res.proposals });
+      }
     } catch (err) {
       const reason =
         err instanceof ApiError && err.status === 503
@@ -469,6 +476,32 @@ export const useLandingStore = create((set) => ({
         confidenceResult: storedProposal.evaluation || null,
         confidenceSource: storedProposal.evaluation ? "api" : null,
       };
+    }),
+  startNewProposal: () =>
+    set({
+      rawBriefText: "",
+      isBriefParsed: false,
+      isNewProposalMode: true,
+      parsedProposal: null,
+      parsedProposalId: null,
+      briefSource: null,
+      briefError: "",
+      isProposalGenerated: false,
+      generatedProposal: "",
+      confidenceResult: null,
+      confidenceSource: null,
+      interviewQuestions: null,
+      interviewSource: null,
+      contractExtensions: null,
+      extensionsSource: null,
+      matchResults: null,
+      matchError: null,
+      isAgreementSigned: { client: false, freelancer: false },
+      escrowState: "CREATED",
+      milestones: [],
+      changeRequests: [],
+      confidenceNotice: "",
+      extensionsNotice: "",
     }),
   resetMockData: () =>
     set({
