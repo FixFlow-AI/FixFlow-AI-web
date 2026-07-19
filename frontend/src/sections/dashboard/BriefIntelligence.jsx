@@ -15,6 +15,7 @@ import {
   Shield,
   MessageSquare,
   Bookmark,
+  Plus,
 } from "lucide-react";
 
 /* Static attachments shown in the mockup */
@@ -87,6 +88,7 @@ export function BriefIntelligence() {
     setParsedProposal,
     setBriefSource,
     setBriefError,
+    startNewProposal,
   } = useLandingStore();
 
   const [text, setText] = useState(rawBriefText);
@@ -95,6 +97,14 @@ export function BriefIntelligence() {
   useEffect(() => {
     setText(rawBriefText);
   }, [rawBriefText]);
+
+  const handleNewProposal = () => {
+    startNewProposal();
+    setParsingStep(0);
+    setExpandedDecision(null);
+    setDecisionStatuses({});
+    setNoSelectionPrompt(false);
+  };
 
   /* ── Decision interaction state ── */
   const [expandedDecision, setExpandedDecision] = useState(null); // index or null
@@ -159,13 +169,26 @@ export function BriefIntelligence() {
   return (
     <div>
       {/* Page header */}
-      <div className="panel-page-header">
-        <h1 className="panel-page-title">Brief intelligence</h1>
-        <p className="panel-page-subtitle">
-          {parsedProposal?.project_summary
-            ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
-            : "No active project brief"}
-        </p>
+      <div className="panel-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 className="panel-page-title">Brief intelligence</h1>
+          <p className="panel-page-subtitle">
+            {parsedProposal?.project_summary
+              ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
+              : "No active project brief"}
+          </p>
+        </div>
+        {isBriefParsed && user?.role === "client" && (
+          <button
+            type="button"
+            className="panel-btn"
+            onClick={handleNewProposal}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Plus size={16} />
+            <span>New Proposal</span>
+          </button>
+        )}
       </div>
 
       {/* Three-column grid */}
