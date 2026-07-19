@@ -1,7 +1,7 @@
 # IMP-01 — Constant-Time Comparison for the AI-Service Shared Secret
 
 > **Role**: AI Engineer / Security Auditor · **Priority**: 🟢 Low · **Effort**: ~0.25 day
-> **Status**: 🔴 Not started. Identified in [main.py — `verify_token`](../../ai-service/app/main.py).
+> **Status**: ✅ Implemented in [main.py — `verify_token`](../../ai-service/app/main.py).
 
 ---
 
@@ -74,10 +74,10 @@ Assert a wrong token yields 401 and a correct token passes; assert an empty conf
 
 ## 4. Done When
 
-- [ ] Token comparison uses `hmac.compare_digest` (constant-time).
-- [ ] Empty configured secret preserves the "auth disabled" behavior (with an optional warning).
-- [ ] Tests cover correct/incorrect/empty-secret cases.
-- [ ] `python -m compileall app` passes.
+- [x] Token comparison uses `hmac.compare_digest` (constant-time).
+- [x] Empty configured secret preserves the "auth disabled" behavior (with an optional warning).
+- [x] Tests cover correct/incorrect/empty-secret cases.
+- [x] `python -m compileall app` passes.
 
 ---
 
