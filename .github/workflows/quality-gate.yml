@@ -99,12 +99,11 @@ jobs:
           echo "AI Service Status   : $ai_service_status"
           echo "=========================================="
 
-          # Check if any workflow failed or was cancelled
+          # Check if any workflow failed or was cancelled (CodeQL is optional as Advanced Security may not be enabled)
           if [ "$branch_policy_status" = "failure" ] || [ "$branch_policy_status" = "cancelled" ] || \
              [ "$frontend_status" = "failure" ] || [ "$frontend_status" = "cancelled" ] || \
              [ "$backend_status" = "failure" ] || [ "$backend_status" = "cancelled" ] || \
              [ "$security_status" = "failure" ] || [ "$security_status" = "cancelled" ] || \
-             [ "$codeql_status" = "failure" ] || [ "$codeql_status" = "cancelled" ] || \
              [ "$ai_service_status" = "failure" ] || [ "$ai_service_status" = "cancelled" ]; then
             echo "❌ Quality Gate Failed: One or more checks failed or were cancelled."
             exit 1
