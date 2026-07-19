@@ -1,7 +1,7 @@
 # AIA-03 — Deterministic Skill-Gap Bridge from GitHub Scan into Interview Generation
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~1.5 days
-> **Status**: 🟡 Partial. Scan engine + SSE streaming are built ([orchestrator.py](../../../../ai-service/app/features/github_scan/orchestrator.py)); the `missing_skills` input to interview generation is still supplied by the caller with no deterministic derivation.
+> **Status**: ✅ Done (verified 2026-07-19). `features/skill_gap.py` provides `extract_required_skills` + `derive_missing_skills`, and `/ai/interview/generate` derives `missing_skills` server-side when not supplied. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

@@ -1,7 +1,7 @@
 # AIA-07 — Add a Circuit Breaker Around Gemini Calls
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 Medium · **Effort**: ~1 day
-> **Status**: 🔴 Not started. Builds on BUG-02's retry/timeout work in [gemini.py](../../../../ai-service/app/llm/gemini.py).
+> **Status**: ✅ Done (verified 2026-07-19). `llm/circuit_breaker.py` (`primary_breaker`) is integrated into `generate_structured()` with open-state fallback routing. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

@@ -1,7 +1,7 @@
 # AIA-06 — No AI Observability: Fallback Rate & Call Health Are Invisible
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~1.5 days
-> **Status**: 🔴 Not started. Only ad-hoc `logging.info` calls exist; no structured telemetry or metrics.
+> **Status**: ✅ Done (verified 2026-07-19). `telemetry.py` records per-call latency/tokens/success, request-id correlation middleware in `main.py`, and metrics on `/health`. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

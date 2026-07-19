@@ -1,7 +1,7 @@
 # AIE-06 — AI-005 Opportunity Intelligence Scoring (Design + Deterministic Scorer)
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
-> **Status**: 🔴 Not started. No `Opportunity` schema, extractor, or scorer exists in `ai-service/`.
+> **Status**: ✅ Done (verified 2026-07-19). `schemas/opportunity.py`, `features/opportunity.py` (deterministic scorer), and `POST /ai/opportunity/score` are all implemented. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

@@ -1,7 +1,7 @@
 # AIE-03 — Confidence Grid Improvement Check Compares Against Best, Not Current
 
 > **Role**: AI Engineer · **Priority**: 🟡 High · **Effort**: ~1 day
-> **Status**: 🟡 ~30%. Regression-guard logic in [confidence_grid.py L200-L235](../../../../ai-service/app/features/confidence_grid.py#L200-L235) uses the wrong baseline.
+> **Status**: ✅ Done (verified 2026-07-19). The guard now uses the per-step baseline: `improved = new_confidence >= confidence_index + min_improvement`. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

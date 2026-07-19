@@ -1,7 +1,7 @@
 # AIE-08 — `Union[..., Any]` in Request Models Silently Disables Validation
 
 > **Role**: AI Engineer · **Priority**: 🟡 Medium · **Effort**: ~0.5 day
-> **Status**: 🔴 Not started. Present in [main.py L88-L99](../../../../ai-service/app/main.py#L88-L99).
+> **Status**: ✅ Done (verified 2026-07-19). Request models in `main.py` now use `Union[str, dict]` / `Union[str, list]` — the bare `Any` union that disabled validation is gone. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

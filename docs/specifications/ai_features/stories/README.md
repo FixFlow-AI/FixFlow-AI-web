@@ -1,5 +1,8 @@
 # FixFlowAI — Codebase Hardening Backlog
 
+> **📍 Canonical AI-service status board:** [`docs/stories/ai-service/README.md`](../../../stories/ai-service/README.md).
+> As of 2026-07-19 the AI-service story statuses were re-verified against the code — most `AIE-*` / `AIA-*` / `AI-007` items are now **✅ done** (the statuses in this file's headers have been corrected). Two new AI-service improvement stories were added there: **AIE-09** (confidence-grid hybrid scoring) and **AIE-10** (brief-parser ungrounded numbers).
+
 > **Engineering stories for security auditing, robustness, and fault tolerance.** Each story is a self-contained `.md` containing the current problem, why it matters, a step-wise solution, Mermaid visuals, and "done when" acceptance criteria.
 
 ---
@@ -94,6 +97,8 @@ We recommend resolving stories in three phases:
 | `AIE-06` | [Opportunity intelligence scoring (AI-005)](./AIE-06-opportunity-intelligence-scoring.md) | 🟡 High | ~2 days | `schemas/opportunity.py`, `features/opportunity.py` |
 | `AIE-07` | [Fallback logger crashes on missing fields](./AIE-07-fallback-logger-hardening.md) | 🟡 Medium | ~0.5 day | `fallback_logger.py` |
 | `AIE-08` | [`Union[..., Any]` disables request validation](./AIE-08-request-model-any-union-validation-hole.md) | 🟡 Medium | ~0.5 day | `main.py`, `interview.py`, `extensions.py` |
+| `AIE-09` | [Confidence grid hybrid deterministic scoring](../../../stories/ai-service/AIE-09-confidence-grid-hybrid-scoring.md) 🆕 | 🔴 Critical | ~2.5 days | `confidence_grid.py`, `schemas/confidence.py`, `config.py` |
+| `AIE-10` | [Brief parser ungrounded confidence numbers](../../../stories/ai-service/AIE-10-brief-parser-ungrounded-confidence.md) 🆕 | 🟡 High | ~1.5 days | `brief_parser.py`, `schemas/proposal.py` |
 
 ### AI Automation Engineer (AIA) — resilience, cost, telemetry, pipelines
 

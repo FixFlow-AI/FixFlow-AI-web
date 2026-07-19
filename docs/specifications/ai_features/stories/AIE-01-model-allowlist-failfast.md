@@ -1,7 +1,7 @@
 # AIE-01 — Model Allow-List Enforcement & Fail-Fast on Invalid Model IDs
 
 > **Role**: AI Engineer · **Priority**: 🔴 Critical · **Effort**: ~0.5 day
-> **Status**: 🟡 ~70% complete. Partial implementation exists in [config.py](../../../../ai-service/app/config.py) and [main.py L36-L40](../../../../ai-service/app/main.py#L36-L40); runtime path still trusts unvalidated model overrides.
+> **Status**: ✅ Done (verified 2026-07-19). `ALLOWED_MODELS` + `model_valid`/`fallback_model_valid` in `config.py`, boot-time fail-fast in `main.py`, and `resolve_model()` validates overrides. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

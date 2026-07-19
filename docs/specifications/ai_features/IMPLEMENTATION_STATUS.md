@@ -1,5 +1,7 @@
 # FixFlowAI — AI Features Implementation Status & Priority Board
 
+> **⚠️ Superseded for AI-service status (2026-07-19).** The tables below (from the 2026-07-05 pass) are **stale**: re-verification against `ai-service/app/` shows `AIE-01/02/03/06/07/08`, `AIA-02/03/06/07`, `AI-007`, `BUG-02/05` are all **done** in code. The current, code-verified AI-service board is [`docs/stories/ai-service/README.md`](../../stories/ai-service/README.md), which also tracks the two new improvement stories **AIE-09** (confidence-grid hybrid scoring) and **AIE-10** (brief-parser ungrounded numbers).
+>
 > **What this is:** the single, current source of truth for **what is built, what is partial, and what is not started** across the AI layer — verified against the actual `ai-service/` and `backend/` code (not just the specs). It re-prioritizes every **incomplete** story and shows the recommended build order.
 > **Last verified:** 2026-07-05 (against `ai-service/app/` + `backend/src/`).
 > **How to use:** pick the next unblocked item from §3, open its story file for the step-by-step, and check it off in §2 when the "Done When" boxes pass.

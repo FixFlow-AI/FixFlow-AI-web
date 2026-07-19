@@ -1,7 +1,7 @@
 # AIE-02 — Brief Parser Discards Partial LLM Output on Fallback
 
 > **Role**: AI Engineer · **Priority**: 🔴 Critical · **Effort**: ~1 day
-> **Status**: 🟡 Partial. Honest `{proposal, source, degradedReason}` contract exists in [brief_parser.py](../../../../ai-service/app/features/brief_parser.py), but every fallback path throws away the model's partial output.
+> **Status**: ✅ Done (verified 2026-07-19). The `{proposal, source, degradedReason}` contract exists and `parse_brief` now salvages the model's partial payload (`raw_payload` → `sanitize_and_patch_brief`), tagging `partial_salvage`. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

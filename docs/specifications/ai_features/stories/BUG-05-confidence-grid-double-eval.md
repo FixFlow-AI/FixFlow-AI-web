@@ -1,7 +1,7 @@
 # BUG-05 — Confidence Grid Double-Evaluates on First Cycle
 
 > **Role**: AI Engineer · **Priority**: 🟡 Medium · **Effort**: ~1 day
-> **Status**: 🔴 Not started. Identified in [confidence_grid.py L158-L240](../../../../ai-service/app/features/confidence_grid.py#L158-L240).
+> **Status**: ✅ Done (verified 2026-07-19). The loop evaluates the initial proposal once, then each optimized proposal exactly once per cycle — no redundant re-evaluation. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

@@ -1,7 +1,7 @@
 # AIA-02 — No Result Cache for Idempotent Gemini Calls
 
 > **Role**: AI Automation Engineer · **Priority**: 🟡 High · **Effort**: ~1 day
-> **Status**: 🔴 Not started. Every request re-calls Gemini even for identical inputs.
+> **Status**: ✅ Done (verified 2026-07-19). `llm/cache.py` is wired into `generate_structured()` (checked before call, set after success; fallbacks never cached). Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 

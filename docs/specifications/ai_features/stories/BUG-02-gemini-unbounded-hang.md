@@ -1,7 +1,7 @@
 # BUG-02 — Gemini Wrapper Has No Timeout and Single-Point Retry
 
 > **Role**: AI Automation Engineer · **Priority**: 🔴 Critical · **Effort**: ~2 days
-> **Status**: 🔴 Not started. Identified in [gemini.py L58-L76](../../../../ai-service/app/llm/gemini.py#L58-L76).
+> **Status**: ✅ Done (verified 2026-07-19). `generate_structured()` wraps each call in `asyncio.wait_for(timeout=GEMINI_TIMEOUT_SEC)` with bounded retries + exponential backoff/jitter. Canonical status: [ai-service backlog](../../../stories/ai-service/README.md).
 
 ---
 
