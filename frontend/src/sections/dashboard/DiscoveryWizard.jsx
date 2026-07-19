@@ -1,0 +1,258 @@
+import { useState, useCallback } from "react";
+import { api } from "../../lib/api";
+import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText } from "lucide-react";
+
+/**
+ * Requirement Discovery Agent UI (Talent section only).
+ *
+ * Runs an adaptive, one-question-at-a-time discovery loop against
+ * `POST /api/discovery/next`. Prefers multiple-choice answers, adapts to prior
+ * answers, and stops once the agent reports `status: "complete"`. On completion
+ * it assembles a rich brief string and hands it to `onBriefReady` (which the
+ * parent wires to the existing brief-parse flow).
+ *
+ * Props:
+ *   - initialRequest: string  (the client's initial idea text)
+ *   - onBriefReady: (briefText: string, brief: object) => void
+ */
+export function DiscoveryWizard({ initialRequest, onBriefReady }) {
+  const [started, setStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [answers, setAnswers] = useState([]);
+  const [turn, setTurn] = useState(null); // latest DiscoveryTurn from the server
+  const [customText, setCustomText] = useState("");
+  const [done, setDone] = useState(false);
+
+  const question = turn?.status === "questioning" ? turn.next_question : null;
+  const confidence = turn?.confidence ?? 0;
+
+  const requestTurn = useCallback(
+    async (nextAnswers) => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await api.discoveryNext(initialRequest, nextAnswers);
+        setTurn(res);
+        if (res.status === "complete" && res.brief) {
+          setDone(true);
+          onBriefReady?.(briefToText(initialRequest, res.brief), res.brief);
+        }
+      } catch (err) {
+        setError(
+          err?.status === 503
+            ? "AI discovery is not configured on the server (missing GEMINI_API_KEY)."
+            : "Couldn't reach the discovery agent. Please try again.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [initialRequest, onBriefReady],
+  );
+
+  const start = () => {
+    setStarted(true);
+    setAnswers([]);
+    setDone(false);
+    requestTurn([]);
+  };
+
+  const submitAnswer = (answerText) => {
+    if (!question || !answerText?.trim()) return;
+    const nextAnswers = [...answers, { question: question.question, answer: answerText.trim() }];
+    setAnswers(nextAnswers);
+    setCustomText("");
+    requestTurn(nextAnswers);
+  };
+
+  // ── Intro (before the first question) ──
+  if (!started) {
+    return (
+      <div>
+        <div style={introHeader}>
+          <MessageSquareText size={16} style={{ color: "#2563eb" }} />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>Guided requirement discovery</span>
+        </div>
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 12px" }}>
+          Answer a few quick questions and the AI will build a complete, proposal-ready brief for you.
+        </p>
+        <button
+          type="button"
+          className="panel-btn"
+          style={{ width: "100%" }}
+          onClick={start}
+          disabled={!initialRequest?.trim()}
+        >
+          <Sparkles size={14} /> Start discovery
+        </button>
+        {!initialRequest?.trim() && (
+          <p style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>
+            Describe your idea above first.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Confidence progress */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginBottom: 4 }}>
+          <span>{done ? "Discovery complete" : `Question ${answers.length + 1}`}</span>
+          <span style={{ fontWeight: 700, color: confidence >= 90 ? "#16a34a" : "#2563eb" }}>
+            {confidence}% ready
+          </span>
+        </div>
+        <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden" }}>
+          <div
+            style={{
+              height: "100%",
+              width: `${confidence}%`,
+              borderRadius: 3,
+              background: confidence >= 90 ? "#16a34a" : "linear-gradient(90deg,#2563eb,#7c3aed)",
+              transition: "width 0.4s ease",
+            }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div style={errorBox}>
+          <span>{error}</span>
+          <button type="button" className="panel-link" onClick={() => requestTurn(answers)}>
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#64748b", fontSize: 13, padding: "16px 0" }}>
+          <RefreshCw size={14} className="spin" /> Thinking…
+        </div>
+      )}
+
+      {/* Completed */}
+      {done && !loading && (
+        <div style={completeBox}>
+          <Check size={16} style={{ color: "#16a34a" }} />
+          <span style={{ fontSize: 13, color: "#166534" }}>
+            Brief assembled from {answers.length} answer{answers.length === 1 ? "" : "s"}. Generating your proposal…
+          </span>
+        </div>
+      )}
+
+      {/* Active question */}
+      {!loading && !done && question && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+            {question.category}
+          </div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#0f172a", margin: "0 0 12px" }}>
+            {question.question}
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(question.options || []).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => submitAnswer(opt.label)}
+                style={optionBtn}
+              >
+                <span style={optionKey}>{opt.key}</span>
+                <span style={{ flex: 1, textAlign: "left" }}>{opt.label}</span>
+                <ArrowRight size={14} style={{ color: "#94a3b8" }} />
+              </button>
+            ))}
+          </div>
+
+          {question.allow_custom && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>Or type your own answer</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && submitAnswer(customText)}
+                  placeholder="Your answer…"
+                  style={customInput}
+                />
+                <button
+                  type="button"
+                  className="panel-btn"
+                  onClick={() => submitAnswer(customText)}
+                  disabled={!customText.trim()}
+                >
+                  Send
+                </button>
+              </div>
+              <button
+                type="button"
+                className="panel-link"
+                style={{ marginTop: 8, fontSize: 12 }}
+                onClick={() => submitAnswer("I don't know")}
+              >
+                Skip — I don't know
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Assemble a readable brief string from the structured brief for the parser. */
+function briefToText(initialRequest, b) {
+  const lines = [`Project request: ${initialRequest}`, ""];
+  const put = (label, val) => {
+    if (Array.isArray(val) ? val.length : val) {
+      lines.push(`${label}: ${Array.isArray(val) ? val.join(", ") : val}`);
+    }
+  };
+  put("Goal", b.project_goal);
+  put("Problem", b.problem_statement);
+  put("Target users", b.target_users);
+  put("Platform", b.platform);
+  put("Industry", b.industry);
+  put("Core features", b.core_features);
+  put("Nice-to-have features", b.nice_to_have_features);
+  put("Integrations", b.integrations);
+  put("Authentication", b.authentication);
+  if (b.admin_panel) lines.push("Admin panel: required");
+  put("AI features", b.ai_features);
+  put("Timeline", b.timeline);
+  put("Budget", b.budget);
+  put("Design style", b.design_style);
+  put("Technical preferences", b.technical_preferences);
+  put("Existing assets", b.existing_assets);
+  put("Success criteria", b.success_criteria);
+  return lines.join("\n");
+}
+
+/* ── inline styles (match existing panel look) ── */
+const introHeader = { display: "flex", alignItems: "center", gap: 8, marginBottom: 8 };
+const errorBox = {
+  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+  fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a",
+  borderRadius: 8, padding: "8px 12px", marginBottom: 12,
+};
+const completeBox = {
+  display: "flex", alignItems: "center", gap: 8,
+  background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 12px",
+};
+const optionBtn = {
+  display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 12px",
+  border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", cursor: "pointer",
+  fontSize: 13, color: "#0f172a", textAlign: "left",
+};
+const optionKey = {
+  width: 22, height: 22, borderRadius: 6, background: "#eff6ff", color: "#2563eb",
+  display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, flexShrink: 0,
+};
+const customInput = {
+  flex: 1, padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13,
+};

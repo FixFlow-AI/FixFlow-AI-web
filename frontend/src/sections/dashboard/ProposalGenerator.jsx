@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
+import { DiscoveryWizard } from "./DiscoveryWizard";
 import {
   Sparkles,
   RefreshCw,
@@ -52,6 +53,8 @@ export function ProposalGenerator() {
     setProposalGenerated,
     setDashboardTab,
     parsedProposal,
+    runBriefParse,
+    briefParsing,
   } = useLandingStore();
 
   const [generating, setGenerating] = useState(false);
@@ -752,8 +755,7 @@ export function ProposalGenerator() {
             value={ideaText}
             onChange={(e) => setIdeaText(e.target.value)}
             rows={6}
-            placeholder="Please parse a brief first in the Brief Ingestion tab to load the proposal generator."
-            disabled={!parsedProposal}
+            placeholder="Describe what you want to build and why. Then run guided discovery below to complete the brief."
             style={{
               width: "100%",
               padding: 12,
@@ -765,9 +767,30 @@ export function ProposalGenerator() {
               resize: "vertical",
               fontFamily: "inherit",
               marginBottom: 12,
-              background: !parsedProposal ? "#f8fafc" : "#fff",
+              background: "#fff",
             }}
           />
+
+          {/* Requirement Discovery Agent — Talent section only. Turns the idea
+              above into a complete brief via adaptive Q&A, then triggers the
+              existing brief-parse flow so the proposal can be generated. */}
+          <div
+            style={{
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              padding: 14,
+              marginBottom: 12,
+              background: "#fbfdff",
+            }}
+          >
+            <DiscoveryWizard
+              initialRequest={ideaText}
+              onBriefReady={(briefText) => {
+                setIdeaText(briefText);
+                runBriefParse(briefText);
+              }}
+            />
+          </div>
 
           <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>
             Attach reference <span style={{ color: "#cbd5e1" }}>(optional)</span>
