@@ -1,7 +1,7 @@
 # BUG-03 — WebSocket Sync Has Zero Authentication
 
 > **Role**: Security Engineer · **Priority**: 🟡 High · **Effort**: ~2 days
-> **Status**: 🔴 Not started. Identified in [syncServer.ts L165-L171](../../../../backend/src/skills/syncServer.ts#L165-L171).
+> **Status**: ✅ Done (verified 2026-07-17). JWT-gated upgrade, per-message `clientId===sub` check, proposal-ownership authorization, and token-derived role enforcement all implemented in [syncServer.ts](../../../../backend/src/skills/syncServer.ts). `npm run build` passes.
 
 ---
 
@@ -106,11 +106,13 @@ Query the `proposalRepository` to verify that the proposal exists and matches th
 
 ## 4. Done When
 
-- [ ] WebSocket upgrade requires a valid JWT `token` parameter.
-- [ ] Unauthorized WebSocket connections are closed with `401` or `403` status.
-- [ ] `join` payload claims (`clientId`, `role`) are validated against the JWT claims.
-- [ ] Database query confirms user permissions before returning the proposal state cache.
-- [ ] `npm run build` compiles successfully.
+- [x] WebSocket upgrade requires a valid JWT `token` parameter.
+- [x] Unauthorized WebSocket connections are closed with `401` or `403` status.
+- [x] `join` payload claims (`clientId`, `role`) are validated against the JWT claims — `clientId` must equal the token `sub`, and the session role is derived from the token (`resolveClientRole(auth.role)`); a mismatched declared role is rejected with close code `4003`.
+- [x] Database query confirms user permissions before returning the proposal state cache — `proposalRepository.get()` + `proposal.userId === auth.sub` (unknown proposal → `4004`, non-owner → `4003`).
+- [x] `npm run build` compiles successfully.
+
+> **Remaining (out of BUG-03 scope, tracked separately):** multi-party collaboration (currently owner-only, since `StoredProposal` has no collaborators field) and a per-room/per-user connection cap for the DoS concern. Open these as follow-ups if needed.
 
 ---
 

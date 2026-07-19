@@ -10,10 +10,13 @@
       "role": "client",
       "createdAt": "2026-07-02T07:01:56.797Z",
       "updatedAt": "2026-07-15T16:43:54.379Z",
-      "refreshTokenHashes": [
-        "28bfa5660ddbe8d22739fe4f927da8c1e0807dd5cb6d1453c4e5e2f708530a70"
-      ],
-      "otpSecret": "JBSWY3DPEHPK3PXP"
+      "otpSecret": "JBSWY3DPEHPK3PXP",
+      "refreshTokens": [
+        {
+          "hash": "28bfa5660ddbe8d22739fe4f927da8c1e0807dd5cb6d1453c4e5e2f708530a70",
+          "createdAt": "2026-07-17T03:33:59.861Z"
+        }
+      ]
     },
     {
       "id": "23eee7b9-75b4-4820-b6c6-5eab02a96410",
@@ -25,12 +28,21 @@
       "role": "client",
       "createdAt": "2026-07-02T07:03:51.349Z",
       "updatedAt": "2026-07-03T12:46:08.796Z",
-      "refreshTokenHashes": [
-        "854176339118618476b0fafa5234ff230103c9d9bb1d3727fb5b68735739efa5",
-        "337557e610619c74689b88975428ee16766b88ee2fdb9fc126f6547644c3d396",
-        "8526f5bf9ff1f62ce4f64a8c72ddd77f135a25ede297dbba0317978aabf34839"
-      ],
-      "otpSecret": "JBSWY3DPEHPK3PXP"
+      "otpSecret": "JBSWY3DPEHPK3PXP",
+      "refreshTokens": [
+        {
+          "hash": "854176339118618476b0fafa5234ff230103c9d9bb1d3727fb5b68735739efa5",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "337557e610619c74689b88975428ee16766b88ee2fdb9fc126f6547644c3d396",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "8526f5bf9ff1f62ce4f64a8c72ddd77f135a25ede297dbba0317978aabf34839",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        }
+      ]
     },
     {
       "id": "fe26f28a-e687-4aa4-aea4-ff52c6f33d69",
@@ -41,23 +53,70 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-16T15:59:34.573Z",
-      "refreshTokenHashes": [
-        "74aa8d8ff7bdb9f08c8c3e9a7a7f13025bc745a36c4cda45f08a012133c5c7ff",
-        "b25808e6b9caabe2eb30420c763c08e78c7084a581cad7f66ae4a932ba26bbca",
-        "482202c73f6c654d33e51d1b67e428847c17a100aefa0154b503cfe5db74a691",
-        "2ec9d8f0976fa611e40aa80534e3aa6d7798e404b438b0d073bc972158ceea6d",
-        "d813e44624602f437002f35e2fbf2ce65bc33f7705b69fb6e1dbfc438688583f",
-        "0ab6f77e98a8a8aca747e39aa46fe634e4d78e136a3babf4b822186e063d7239",
-        "c64a7199fe0e566452b364f2f791f91cceaf49bd8e63e592647f03372ee99f53",
-        "b6a624fd433cb36113eba5426b014ffbf0bddd108134ce3dbe159a2c2e72f81d",
-        "8f57d12a3fe20ec3794dcf533c04b81d97b44cc42a8451f4aa1b0268e55212e0",
-        "a41b79de61300c5737f70cfecf9f34946a5cef489e765f4abcfe8e93a80d3f9c",
-        "e4491b2ef190fccafccf731a10f985cfdf4fde2c730019cb9a511b9e294065a4",
-        "a89f76a9ce76b5bad4ecad71d4a7290bbebb45b3724793198367fb67789396f6",
-        "996e15fee5fde3c7b182d7e63f6c5206f584abd249a425426950eee66afcb716"
-      ],
-      "otpSecret": "JBSWY3DPEHPK3PXP"
+      "updatedAt": "2026-07-18T19:54:59.376Z",
+      "otpSecret": "JBSWY3DPEHPK3PXP",
+      "refreshTokens": [
+        {
+          "hash": "74aa8d8ff7bdb9f08c8c3e9a7a7f13025bc745a36c4cda45f08a012133c5c7ff",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "b25808e6b9caabe2eb30420c763c08e78c7084a581cad7f66ae4a932ba26bbca",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "482202c73f6c654d33e51d1b67e428847c17a100aefa0154b503cfe5db74a691",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "2ec9d8f0976fa611e40aa80534e3aa6d7798e404b438b0d073bc972158ceea6d",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "d813e44624602f437002f35e2fbf2ce65bc33f7705b69fb6e1dbfc438688583f",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "0ab6f77e98a8a8aca747e39aa46fe634e4d78e136a3babf4b822186e063d7239",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "c64a7199fe0e566452b364f2f791f91cceaf49bd8e63e592647f03372ee99f53",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "b6a624fd433cb36113eba5426b014ffbf0bddd108134ce3dbe159a2c2e72f81d",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "a41b79de61300c5737f70cfecf9f34946a5cef489e765f4abcfe8e93a80d3f9c",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "e4491b2ef190fccafccf731a10f985cfdf4fde2c730019cb9a511b9e294065a4",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "a89f76a9ce76b5bad4ecad71d4a7290bbebb45b3724793198367fb67789396f6",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "9cccecfbe996ec1e6da3f2b130728ec17c73095f822cb3c2dd884441822e156f",
+          "createdAt": "2026-07-17T03:33:59.868Z"
+        },
+        {
+          "hash": "bf91aef5d15b8d224496010a4ab3791c493aeef6e60195a2e87e39cc6737a4d6",
+          "createdAt": "2026-07-17T04:24:52.946Z"
+        },
+        {
+          "hash": "9187af8660a5f73cc9ac2cff229ddc2dc778152691742121abb8fb065fed5914",
+          "createdAt": "2026-07-18T17:44:37.276Z"
+        },
+        {
+          "hash": "74567869e9273ca07241bc1594717306995671fa0bf67533cbbaec756e73b2b1",
+          "createdAt": "2026-07-18T19:54:59.376Z"
+        }
+      ]
     },
     {
       "id": "d51a5022-c779-49b9-85fe-786c5291f33c",
@@ -71,18 +130,45 @@
       "role": "freelancer",
       "createdAt": "2026-07-07T07:48:51.920Z",
       "updatedAt": "2026-07-15T14:33:50.374Z",
-      "refreshTokenHashes": [
-        "5cf22c19ebcf73717b1568a3afffd016db42e851cc3cb02125a7ecd3f96c9037",
-        "71bd0aada950dc0874ceffdf4f9068dd0ae04fc12a45558f18bb570416499f27",
-        "cb9971991442ae40565a62ced947acc9b95b465654580925bcace859c2143a38",
-        "042ef41c45cf8c4bd54650fa7c62cce5de57cbd3abb2be5e4fb3343aa07658aa",
-        "ebb62589a73d9908b290c27ffac9213888f6b53d23a8b70ab2e8cea2500da857",
-        "ac8a5b1ad7f9f198dadac19b7fd35917d90e2c15bccb9b361143b27010e78101",
-        "cbb9190033dfb3acc75e58edc0b58fb0bed2aac863960ae21526c5eef41912be",
-        "5bff13e4d342d4ff51a0fbcb0de69be7460d50a902be7271094ee0910800fc63",
-        "6cd5a109f74e53bc7c7eea524257679775f2b4c4c9fbe17adfefa3c2ad5471f5"
-      ],
-      "githubAccessToken": "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"
+      "githubAccessToken": "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",
+      "refreshTokens": [
+        {
+          "hash": "5cf22c19ebcf73717b1568a3afffd016db42e851cc3cb02125a7ecd3f96c9037",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "71bd0aada950dc0874ceffdf4f9068dd0ae04fc12a45558f18bb570416499f27",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "cb9971991442ae40565a62ced947acc9b95b465654580925bcace859c2143a38",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "042ef41c45cf8c4bd54650fa7c62cce5de57cbd3abb2be5e4fb3343aa07658aa",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "ebb62589a73d9908b290c27ffac9213888f6b53d23a8b70ab2e8cea2500da857",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "ac8a5b1ad7f9f198dadac19b7fd35917d90e2c15bccb9b361143b27010e78101",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "cbb9190033dfb3acc75e58edc0b58fb0bed2aac863960ae21526c5eef41912be",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "5bff13e4d342d4ff51a0fbcb0de69be7460d50a902be7271094ee0910800fc63",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "6cd5a109f74e53bc7c7eea524257679775f2b4c4c9fbe17adfefa3c2ad5471f5",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        }
+      ]
     },
     {
       "id": "88cfe3f4-993e-4c06-b5a5-10a33db0b9bd",
@@ -95,7 +181,7 @@
       "role": "client",
       "createdAt": "2026-07-13T18:12:27.033Z",
       "updatedAt": "2026-07-13T18:12:48.816Z",
-      "refreshTokenHashes": []
+      "refreshTokens": []
     },
     {
       "id": "1da49cce-774f-4eeb-a01c-19fde7261784",
@@ -108,9 +194,15 @@
       "role": "client",
       "createdAt": "2026-07-14T09:15:32.840Z",
       "updatedAt": "2026-07-14T09:17:05.685Z",
-      "refreshTokenHashes": [
-        "1273c7a2e3bae5e7449b7b75a01ef4d5c42b6c5e25f891976b47eba2a5012156",
-        "32f00d02a45dde97dd7fa01adb54d9aaa2fb5aa78309db5cea22ea9a7eda3d65"
+      "refreshTokens": [
+        {
+          "hash": "1273c7a2e3bae5e7449b7b75a01ef4d5c42b6c5e25f891976b47eba2a5012156",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "32f00d02a45dde97dd7fa01adb54d9aaa2fb5aa78309db5cea22ea9a7eda3d65",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        }
       ]
     },
     {
@@ -124,9 +216,15 @@
       "role": "developer",
       "createdAt": "2026-07-14T09:17:39.722Z",
       "updatedAt": "2026-07-14T09:22:09.249Z",
-      "refreshTokenHashes": [
-        "f83bad84251183b700c339f8660017144b261ecf6f18c1d6cb0bcb2dd7547fd8",
-        "15223f0f3af83ae25dd5db73f8cb6a2df2a64e76d99afca25744e71e76ab037d"
+      "refreshTokens": [
+        {
+          "hash": "f83bad84251183b700c339f8660017144b261ecf6f18c1d6cb0bcb2dd7547fd8",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        },
+        {
+          "hash": "15223f0f3af83ae25dd5db73f8cb6a2df2a64e76d99afca25744e71e76ab037d",
+          "createdAt": "2026-07-17T03:33:59.862Z"
+        }
       ]
     }
   ]

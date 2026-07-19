@@ -16,7 +16,7 @@ I verified every prior story against the current code. **The trackers are stale 
 |:---|:---|:---|
 | BUG-01 Escrow atomicity | 🔴 Not started | ✅ **Done** — `escrowService.applyTransition` now calls `repo.saveWithAuditBlock(...)` (single transactional write). |
 | BUG-02 Gemini unbounded hang | ✅ done | ✅ **Done** — `gemini.generate_structured` wraps calls in `asyncio.wait_for(timeout=…)` + bounded retry/backoff. |
-| BUG-03 WebSocket sync auth | 🔴 Not started | ❓ **Unverified** — `syncServer.ts` not re-audited here; treat as still open until checked. |
+| BUG-03 WebSocket sync auth | 🔴 Not started | ✅ **Done** (2026-07-17) — JWT-gated upgrade, per-message `clientId===sub`, proposal-ownership authorization, and token-derived role enforcement in `syncServer.ts`. |
 | BUG-04 Webhook secret bypass | 🔴 Not started | ✅ **Done** — `verifyWebhookSignature` returns `false` on missing secret; `index.ts` fails fast in production. |
 | BUG-05 Confidence grid double-eval | ✅ done | ✅ **Done**. |
 | BUG-06 MFA verifier stub | 🔴 Not started | ✅ **Done** — `escrowService` now calls real `verifyOtp(token, user.otpSecret)`; dummy strings no longer pass. |
@@ -42,7 +42,7 @@ I verified every prior story against the current code. **The trackers are stale 
 | AIA-01 Async eval jobs | 🔴 0% | 🔴 **Not started**. |
 | AIA-04 Discovery automation | 🔴 0% | 🔴 **Not started**. |
 
-**Bottom line:** the two stale trackers ([stories/README](../specifications/ai_features/stories/README.md), [IMPLEMENTATION_STATUS](../specifications/ai_features/IMPLEMENTATION_STATUS.md)) badly under-report progress. **Recommended housekeeping:** flip the verified items to ✅ so the team stops re-doing finished work. Genuinely remaining from the old backlog: **AIE-04, AIE-05, AIA-01, AIA-04, AIE-08**, and verifying **BUG-03**.
+**Bottom line:** the two stale trackers ([stories/README](../specifications/ai_features/stories/README.md), [IMPLEMENTATION_STATUS](../specifications/ai_features/IMPLEMENTATION_STATUS.md)) badly under-report progress. **Recommended housekeeping:** flip the verified items to ✅ so the team stops re-doing finished work. Genuinely remaining from the old backlog: **AIE-04, AIE-05, AIA-01, AIA-04, AIE-08** (BUG-03 has since been completed — see below).
 
 ---
 

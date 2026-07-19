@@ -9,6 +9,23 @@ import { getProposalRepository } from '../services/proposalRepository.js';
 
 export type ClientRole = 'Freelancer' | 'Client' | 'Collaborator';
 
+/**
+ * Maps a platform account role (JWT `role` claim) to the authoritative
+ * collaboration role used inside a sync room. The room role is derived from the
+ * verified token — never from the client-declared `join.role` — so a
+ * participant cannot elevate themselves (BUG-03).
+ */
+const USER_ROLE_TO_CLIENT_ROLE: Record<string, ClientRole> = {
+  client: 'Client',
+  agency: 'Client',
+  freelancer: 'Freelancer',
+  developer: 'Freelancer',
+};
+
+export function resolveClientRole(userRole: string | undefined): ClientRole {
+  return (userRole && USER_ROLE_TO_CLIENT_ROLE[userRole]) || 'Collaborator';
+}
+
 export interface VectorClock {
   [clientId: string]: number;
 }
@@ -215,6 +232,19 @@ export class SyncServer {
           switch (payload.type) {
             case 'join': {
               const { role, vectorClock } = payload;
+
+              // 3. Validate role: the session role is derived from the verified
+              // token, not trusted from the payload. If the client declares a
+              // role, it must match what the account is entitled to (BUG-03).
+              const authoritativeRole = resolveClientRole(auth.role);
+              if (role && role !== authoritativeRole) {
+                console.warn(
+                  `WebSocket join rejected: declared role [${role}] does not match account role [${authoritativeRole}] for user [${auth.sub}].`,
+                );
+                ws.close(4003, 'Forbidden: role does not match your account');
+                return;
+              }
+
               currentRoomId = proposalId;
               currentClientId = clientId;
 
@@ -236,8 +266,8 @@ export class SyncServer {
                 room.vectorClock[cid] = Math.max(room.vectorClock[cid] ?? 0, count);
               }
 
-              room.sessions.set(clientId, { ws, clientId, role });
-              console.log(`Client [${clientId}] joined Room [${proposalId}] as [${role}].`);
+              room.sessions.set(clientId, { ws, clientId, role: authoritativeRole });
+              console.log(`Client [${clientId}] joined Room [${proposalId}] as [${authoritativeRole}].`);
 
               // Transmit initial sync state back
               const response: ServerSyncResponsePayload = {
