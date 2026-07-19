@@ -56,11 +56,11 @@ Newly discovered, **not** covered by the prior backlog. Prefixes: `SEC-*` securi
 | `SEC-02` | [Escrow endpoints trust client-supplied identity & lack ownership checks (IDOR)](./SEC-02-escrow-object-level-authorization.md) | 🔓 Security | 🔴 Critical | ~1.5 days | `index.ts`, `escrowService.ts`, `milestoneRepository.ts` |
 | `BUG-08` | [Razorpay webhook HMAC computed over re-serialized body — real webhooks never validate](./BUG-08-webhook-rawbody-signature-mismatch.md) | 🐞 Code-breaking | 🔴 Critical | ~0.5 day | `index.ts`, `paymentService.ts` |
 | `BUG-09` | [`verifyPaymentSignature` silently bypasses on mock id / missing secret](./BUG-09-payment-signature-mock-bypass.md) | 🐞/🔓 | 🟡 High | ~0.5 day | `paymentService.ts`, `index.ts` |
-| `BUG-10` | [AI service `ValidationError` is undefined — fallback path throws `NameError`](./BUG-10-gemini-validationerror-nameerror.md) | 🐞 Code-breaking | 🟡 High | ~0.25 day | `llm/gemini.py` |
 | `BUG-11` | [Non-FSM direct `save()` after transition clobbers version & skips audit](./BUG-11-non-fsm-milestone-save-clobber.md) | 🐞 Concurrency | 🟡 Medium | ~1 day | `index.ts`, `milestoneRepository.ts` |
 | `SEC-03` | [Wide-open CORS + no rate limiting on auth/AI endpoints](./SEC-03-cors-and-rate-limiting.md) | 🔓 Security | 🟡 Medium | ~1 day | `index.ts` |
 | `SEC-04` | [Deterministic calculator endpoints are unauthenticated](./SEC-04-unauthenticated-calculators.md) | 🔓 Security | 🟢 Low | ~0.25 day | `index.ts` |
-| `IMP-01` | [Constant-time comparison for the AI-service shared secret](./IMP-01-constant-time-ai-token.md) | ✨ Improvement | 🟢 Low | ~0.25 day | `ai-service/app/main.py` |
+
+> **Removed as implemented (git-recoverable):** `BUG-10` (the `ValidationError` NameError is fixed — it's imported and used in `gemini.py`) and `IMP-01` (constant-time token comparison is live in `main.py`).
 
 ---
 
@@ -77,11 +77,9 @@ flowchart TD
     SEC02["SEC-02 escrow IDOR + trusted identity"]:::crit
     BUG08["BUG-08 webhook raw-body"]:::crit
     BUG09["BUG-09 payment sig bypass"]:::high
-    BUG10["BUG-10 ValidationError NameError"]:::high
     BUG11["BUG-11 non-FSM save clobber"]:::med
     SEC03["SEC-03 CORS + rate limit"]:::med
     SEC04["SEC-04 unauth calculators"]:::low
-    IMP01["IMP-01 constant-time token"]:::low
 
     SEC01 --> SEC02
     BUG08 --> BUG09
@@ -91,5 +89,5 @@ flowchart TD
 ## 3. Suggested Execution Order
 
 1. **Phase 1 — Stop the bleeding (Critical):** `SEC-01` (open auth door), `BUG-08` (payments silently broken), `SEC-02` (anyone can drive anyone's escrow).
-2. **Phase 2 — Payment & AI correctness (High):** `BUG-09`, `BUG-10`, `BUG-11`.
-3. **Phase 3 — Hardening (Medium/Low):** `SEC-03`, `SEC-04`, `IMP-01`.
+2. **Phase 2 — Payment & AI correctness (High):** `BUG-09`, `BUG-11`.
+3. **Phase 3 — Hardening (Medium/Low):** `SEC-03`, `SEC-04`.

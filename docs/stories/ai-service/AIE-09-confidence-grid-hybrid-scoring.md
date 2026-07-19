@@ -122,5 +122,6 @@ When the LLM fails, fall back to the **deterministic-only** score (not the curre
 | [confidence.py](../../../ai-service/app/schemas/confidence.py) | Evaluation schemas to extend with evidence |
 | [opportunity.py](../../../ai-service/app/features/opportunity.py) | Reference deterministic weighted scorer to mirror |
 | [skill_gap.py](../../../ai-service/app/features/skill_gap.py) | Tokenization/coverage logic to reuse for deliverable matching |
-| [AIE-03](../../specifications/ai_features/stories/AIE-03-confidence-grid-regression-guard.md) | Regression guard the loop already uses |
 | [AIE-10](./AIE-10-brief-parser-ungrounded-confidence.md) | Sibling: fabricated numbers in the brief parser |
+
+> Note: the confidence-grid regression guard (formerly story `AIE-03`) is already implemented in `confidence_grid.py` — the per-step improvement baseline is in place. This story builds on top of it.
