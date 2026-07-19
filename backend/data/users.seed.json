@@ -2,14 +2,14 @@
   "users": [
     {
       "id": "1c813e5f-e04a-48cf-bebe-a89d4c528037",
-      "email": "suvampaul982@gmail.com",
+      "email": "developer@company.com",
       "emailVerified": true,
-      "name": "SUVAM",
+      "name": "Jane DeveloperJane Client",
       "picture": "https://lh3.googleusercontent.com/a/default-user",
       "googleSub": "dev-sub-123456",
       "role": "client",
       "createdAt": "2026-07-02T07:01:56.797Z",
-      "updatedAt": "2026-07-15T16:43:54.379Z",
+      "updatedAt": "2026-07-19T18:48:14.266Z",
       "otpSecret": "JBSWY3DPEHPK3PXP",
       "refreshTokens": [
         {
@@ -53,7 +53,7 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-18T19:54:59.376Z",
+      "updatedAt": "2026-07-19T19:17:17.494Z",
       "otpSecret": "JBSWY3DPEHPK3PXP",
       "refreshTokens": [
         {
@@ -93,10 +93,6 @@
           "createdAt": "2026-07-17T03:33:59.862Z"
         },
         {
-          "hash": "e4491b2ef190fccafccf731a10f985cfdf4fde2c730019cb9a511b9e294065a4",
-          "createdAt": "2026-07-17T03:33:59.862Z"
-        },
-        {
           "hash": "a89f76a9ce76b5bad4ecad71d4a7290bbebb45b3724793198367fb67789396f6",
           "createdAt": "2026-07-17T03:33:59.862Z"
         },
@@ -105,16 +101,28 @@
           "createdAt": "2026-07-17T03:33:59.868Z"
         },
         {
-          "hash": "bf91aef5d15b8d224496010a4ab3791c493aeef6e60195a2e87e39cc6737a4d6",
-          "createdAt": "2026-07-17T04:24:52.946Z"
-        },
-        {
           "hash": "9187af8660a5f73cc9ac2cff229ddc2dc778152691742121abb8fb065fed5914",
           "createdAt": "2026-07-18T17:44:37.276Z"
         },
         {
           "hash": "74567869e9273ca07241bc1594717306995671fa0bf67533cbbaec756e73b2b1",
           "createdAt": "2026-07-18T19:54:59.376Z"
+        },
+        {
+          "hash": "a50c34317e639b42997f6443f129078dd41c5ba505e7ba6c2988a3f1412f1620",
+          "createdAt": "2026-07-19T18:25:15.369Z"
+        },
+        {
+          "hash": "9ad9b6bf53ae432a101889b075105d0ccb482359ac7e822e068d0dc66a53d8e4",
+          "createdAt": "2026-07-19T18:48:50.379Z"
+        },
+        {
+          "hash": "16a009e1f504a360b0137592493587ae9cfab8162edcec12c33958f5609a7308",
+          "createdAt": "2026-07-19T18:49:03.008Z"
+        },
+        {
+          "hash": "7f6406d21bb274106ce3814853f5ae981dd943c60df14e1dfee081e2db9eb0d6",
+          "createdAt": "2026-07-19T19:17:17.494Z"
         }
       ]
     },
@@ -129,7 +137,7 @@
       "githubUsername": "Suvam-paul145",
       "role": "freelancer",
       "createdAt": "2026-07-07T07:48:51.920Z",
-      "updatedAt": "2026-07-15T14:33:50.374Z",
+      "updatedAt": "2026-07-19T18:46:13.442Z",
       "githubAccessToken": "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",
       "refreshTokens": [
         {
@@ -158,10 +166,6 @@
         },
         {
           "hash": "cbb9190033dfb3acc75e58edc0b58fb0bed2aac863960ae21526c5eef41912be",
-          "createdAt": "2026-07-17T03:33:59.862Z"
-        },
-        {
-          "hash": "5bff13e4d342d4ff51a0fbcb0de69be7460d50a902be7271094ee0910800fc63",
           "createdAt": "2026-07-17T03:33:59.862Z"
         },
         {
