@@ -6,6 +6,7 @@ TypeScript backend remains the gateway and system of record.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 from typing import Any, List, Optional, Union, Literal
@@ -69,13 +70,23 @@ logging.info(
     settings.gemini_fallback_model
 )
 
+if not settings.ai_service_token:
+    logging.warning(
+        "AI_SERVICE_TOKEN is not configured: the AI service accepts requests "
+        "from anyone who can reach it. Set AI_SERVICE_TOKEN to gate the LLM routes."
+    )
+
 
 # --------------------------------------------------------------------------
 # Auth (optional shared secret) + AI-key guard
 # --------------------------------------------------------------------------
 
 async def verify_token(x_ai_service_token: Optional[str] = Header(default=None)) -> None:
-    if settings.ai_service_token and x_ai_service_token != settings.ai_service_token:
+    expected = settings.ai_service_token
+    if not expected:
+        return  # token auth disabled
+    provided = x_ai_service_token or ""
+    if not hmac.compare_digest(provided, expected):
         raise HTTPException(status_code=401, detail="Invalid or missing x-ai-service-token.")
 
 
