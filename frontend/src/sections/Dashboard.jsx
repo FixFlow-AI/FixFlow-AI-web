@@ -67,7 +67,7 @@ const tabMap = {
 };
 
 export function Dashboard() {
-  const { user, parsedProposal, dashboardTab, setDashboardTab, logout, hydrateLatestProposal, setProposalHistory } =
+  const { user, parsedProposal, isNewProposalMode, dashboardTab, setDashboardTab, logout, hydrateLatestProposal, setProposalHistory } =
     useLandingStore();
   const [collapsed, setCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -100,7 +100,9 @@ export function Dashboard() {
     // Load ALL proposals for the logged-in user from the database.
     // Hydrate the latest one into the active workspace AND store the
     // full list so the Overview tab can display proposal history.
-    if (!parsedProposal) {
+    // Skip when the user explicitly clicked "New Proposal" — they want
+    // a clean slate, not the previous brief re-loaded.
+    if (!parsedProposal && !isNewProposalMode) {
       api.listProposals()
         .then((res) => {
           if (res?.proposals && res.proposals.length > 0) {
@@ -112,7 +114,7 @@ export function Dashboard() {
           console.error("Failed to automatically rehydrate proposal:", err);
         });
     }
-  }, [parsedProposal, hydrateLatestProposal, setProposalHistory]);
+  }, [parsedProposal, isNewProposalMode, hydrateLatestProposal, setProposalHistory]);
 
   const ActivePanel = tabMap[dashboardTab] || Overview;
 
