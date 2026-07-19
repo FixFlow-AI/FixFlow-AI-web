@@ -173,3 +173,51 @@ export interface ParseBriefResponse {
   source: "llm" | "fallback";
   degradedReason?: string | null;
 }
+
+// ── Requirement Discovery Agent (Talent section) ──────────────────────────
+
+export interface DiscoveryOption {
+  key: string;
+  label: string;
+}
+
+export interface DiscoveryQuestion {
+  category: string;
+  question: string;
+  options: DiscoveryOption[];
+  allow_custom: boolean;
+  multi_select: boolean;
+}
+
+export interface DiscoveryProjectBrief {
+  project_goal: string;
+  target_users: string;
+  platform: string;
+  industry: string;
+  problem_statement: string;
+  core_features: string[];
+  nice_to_have_features: string[];
+  integrations: string[];
+  authentication: string;
+  admin_panel: boolean;
+  ai_features: string[];
+  timeline: string;
+  budget: string;
+  design_style: string;
+  technical_preferences: string[];
+  existing_assets: string[];
+  success_criteria: string;
+}
+
+export interface DiscoveryTurn {
+  status: 'questioning' | 'complete';
+  confidence: number;
+  next_question: DiscoveryQuestion | null;
+  brief: DiscoveryProjectBrief | null;
+  missing_information: string[];
+}
+
+export interface DiscoveryAnswer {
+  question: string;
+  answer: string;
+}

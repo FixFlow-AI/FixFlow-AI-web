@@ -15,6 +15,8 @@ import type {
   InterviewOutput,
   Proposal,
   ParseBriefResponse,
+  DiscoveryTurn,
+  DiscoveryAnswer,
 } from '../types/ai.js';
 import type { GithubScanResult } from '../types/github.js';
 
@@ -111,6 +113,18 @@ export async function generateContractExtensions(
     completedDeliverables,
     chatSummary,
   });
+}
+
+/**
+ * Requirement Discovery Agent (Talent section) — one adaptive turn. Given the
+ * initial request and the answers gathered so far, returns the next
+ * multiple-choice question or the finished structured brief.
+ */
+export async function runDiscoveryTurn(
+  initialRequest: string,
+  answers: DiscoveryAnswer[],
+): Promise<DiscoveryTurn> {
+  return postJson<DiscoveryTurn>('/ai/discovery/next', { initialRequest, answers });
 }
 
 export interface GithubScanRequestBody {

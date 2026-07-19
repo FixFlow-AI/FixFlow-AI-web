@@ -20,6 +20,7 @@ import {
   evaluateProposal,
   generateInterviewQuestions,
   generateContractExtensions,
+  runDiscoveryTurn,
   isAiServiceConfigured,
   AiServiceError,
 } from './services/aiClient.js';
@@ -170,6 +171,36 @@ app.get(
       return;
     }
     res.json(sp);
+  })
+);
+
+// ==========================================
+// Requirement Discovery Agent (Talent section only)
+// ==========================================
+
+app.post(
+  '/api/discovery/next',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    if (!requireAiService(res)) return;
+    const { initialRequest, answers } = req.body ?? {};
+    if (typeof initialRequest !== 'string' || !initialRequest.trim()) {
+      res.status(400).json({ error: 'initialRequest is required and must be a non-empty string.' });
+      return;
+    }
+    // Sanitize the answer history: only accept well-formed {question, answer} pairs.
+    const safeAnswers = Array.isArray(answers)
+      ? answers
+          .filter(
+            (a: unknown): a is { question: string; answer: string } =>
+              Boolean(a) &&
+              typeof (a as any).question === 'string' &&
+              typeof (a as any).answer === 'string',
+          )
+          .map((a) => ({ question: a.question, answer: a.answer }))
+      : [];
+    const result = await runDiscoveryTurn(initialRequest, safeAnswers);
+    res.json(result);
   })
 );
 
