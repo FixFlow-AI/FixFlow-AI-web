@@ -36,6 +36,18 @@ jobs:
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
         working-directory: ai-service
 
+      - name: Lint for undefined names (F821)
+        if: steps.filter.outputs.ai_service == 'true'
+        run: |
+          ruff check --select F821 app
+        working-directory: ai-service
+
+      - name: Compile check
+        if: steps.filter.outputs.ai_service == 'true'
+        run: |
+          python -m compileall app
+        working-directory: ai-service
+
       - name: Run Hardening & Resilience Tests
         if: steps.filter.outputs.ai_service == 'true'
         run: |

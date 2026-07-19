@@ -5,3 +5,9 @@
 # Test runner for the offline suites (smoke_test.py, test_confidence_grid.py).
 # Tests drive async code via asyncio.run(), so pytest-asyncio is not required.
 pytest>=8.0.0
+
+# Linter. Used in CI to catch undefined-name references (pyflakes F821) that
+# `python -m compileall` cannot detect, since such names only resolve at
+# runtime (e.g. inside an `except` clause). Guards against regressions of
+# BUG-10 (ValidationError referenced but never imported).
+ruff>=0.5.0
