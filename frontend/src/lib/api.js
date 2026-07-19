@@ -126,6 +126,15 @@ export const api = {
   listProposals: () => request("/proposals"),
   getProposal: (id) => request(`/proposals/${encodeURIComponent(id)}`),
 
+  // Requirement Discovery Agent (Talent section): one adaptive Q&A turn.
+  // Returns { status, confidence, next_question, brief, missing_information }.
+  discoveryNext: (initialRequest, answers, signal) =>
+    request("/discovery/next", {
+      method: "POST",
+      body: { initialRequest, answers },
+      signal,
+    }),
+
   // Subsystem 1: semantic brief parsing -> structured proposal
   parseBrief: (briefText, signal) =>
     request("/proposals/parse", { method: "POST", body: { briefText }, signal }),
