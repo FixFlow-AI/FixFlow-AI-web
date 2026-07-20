@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { DiscoveryWizard } from "./DiscoveryWizard";
 import {
@@ -22,6 +22,7 @@ import {
   Paperclip,
   MoreHorizontal,
   FileText,
+  X,
 } from "lucide-react";
 
 /* Stepper for proposal stages */
@@ -61,6 +62,28 @@ export function ProposalGenerator() {
   const [ideaText, setIdeaText] = useState(rawBriefText || "");
   const [activeTab, setActiveTab] = useState("scope");
   const [activeStep, setActiveStep] = useState(1);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [showIntelligenceModal, setShowIntelligenceModal] = useState(false);
+
+  const tabsRef = useRef(null);
+
+  const handleViewFullSummary = () => {
+    setActiveStep(2);
+    setActiveTab("scope");
+    setShowSummaryModal(true);
+    setTimeout(() => {
+      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+  };
+
+  const handleViewFullIntelligence = () => {
+    setActiveStep(3);
+    setActiveTab("risks");
+    setShowIntelligenceModal(true);
+    setTimeout(() => {
+      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+  };
 
   const displaySummary = parsedProposal
     ? [
@@ -834,7 +857,7 @@ export function ProposalGenerator() {
         </div>
 
         {/* Center: AI summary preview */}
-        <div className="panel-card">
+        <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
           <div className="panel-card-header">
             <h2 className="panel-card-title">AI summary preview</h2>
             {isProposalGenerated && (
@@ -843,40 +866,42 @@ export function ProposalGenerator() {
           </div>
 
           {displaySummary.length > 0 && (isProposalGenerated || generating) ? (
-            <>
-              {displaySummary.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "10px 0",
-                      borderBottom: "1px solid #f1f5f9",
-                    }}
-                  >
-                    <Icon size={16} style={{ color: "#2563eb", flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: "#64748b", minWidth: 120 }}>
-                      {item.label}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
-                      {item.value}
-                    </span>
-                  </div>
-                );
-              })}
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+              <div className="fixflow-custom-scroll" style={{ maxHeight: 250, paddingRight: 4, flex: 1 }}>
+                {displaySummary.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 0",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                    >
+                      <Icon size={16} style={{ color: "#2563eb", flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#64748b", minWidth: 120 }}>
+                        {item.label}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>
+                        {item.value}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
 
               <button
                 type="button"
                 className="panel-link"
-                style={{ marginTop: 12 }}
-                onClick={() => setActiveStep(2)}
+                style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer" }}
+                onClick={handleViewFullSummary}
               >
                 View full summary <ArrowRight size={14} />
               </button>
-            </>
+            </div>
           ) : (
             <div
               style={{
@@ -899,85 +924,86 @@ export function ProposalGenerator() {
         </div>
 
         {/* Right: Intelligence at a glance */}
-        <div className="panel-card">
+        <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
           <div className="panel-card-header">
             <h2 className="panel-card-title">Intelligence at a glance</h2>
           </div>
 
           {displayIntelligence.length > 0 ? (
-            displayIntelligence.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    padding: "14px 0",
-                    borderBottom: "1px solid #f1f5f9",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      background: item.color + "15",
-                      display: "grid",
-                      placeItems: "center",
-                      color: item.color,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon size={15} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifycontent: "space-between", gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                        {item.label}
-                      </span>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+              <div className="fixflow-custom-scroll" style={{ maxHeight: 250, paddingRight: 4, flex: 1 }}>
+                {displayIntelligence.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.label}
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        padding: "14px 0",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                    >
                       <span
                         style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: "2px 8px",
-                          borderRadius: 12,
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
                           background: item.color + "15",
+                          display: "grid",
+                          placeItems: "center",
                           color: item.color,
+                          flexShrink: 0,
                         }}
                       >
-                        {item.badge}
+                        <Icon size={15} />
                       </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                            {item.label}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              background: item.color + "15",
+                              color: item.color,
+                            }}
+                          >
+                            {item.badge}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                          {item.value}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                      {item.value}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                className="panel-link"
+                style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600, cursor: "pointer" }}
+                onClick={handleViewFullIntelligence}
+              >
+                View full intelligence report <ArrowRight size={14} />
+              </button>
+            </div>
           ) : (
             <p style={{ fontSize: 13, color: "#64748b", padding: "10px 0", textAlign: "center" }}>
               No risk insights. Generate a proposal to populate risks.
             </p>
           )}
-
-          <button
-            type="button"
-            className="panel-link"
-            style={{ marginTop: 8 }}
-            onClick={() => {
-              setActiveStep(3);
-              setActiveTab("risks");
-            }}
-          >
-            View full intelligence report <ArrowRight size={14} />
-          </button>
         </div>
       </div>
 
       {/* Tabs section */}
-      <div style={{ marginTop: 24 }}>
+      <div style={{ marginTop: 24 }} ref={tabsRef}>
         <div
           style={{
             display: "flex",
@@ -1011,6 +1037,188 @@ export function ProposalGenerator() {
         {/* Tab content — renders based on activeTab */}
         {renderTabContent()}
       </div>
+
+      {/* ── FULL SUMMARY MODAL ── */}
+      {showSummaryModal && (
+        <div className="fixflow-modal-overlay" onClick={() => setShowSummaryModal(false)}>
+          <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="fixflow-modal-header">
+              <h3 className="fixflow-modal-title">
+                <Sparkles size={20} style={{ color: "#2563eb" }} />
+                Full AI Project Proposal Summary
+              </h3>
+              <button
+                type="button"
+                className="panel-btn--ghost"
+                onClick={() => setShowSummaryModal(false)}
+                style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fixflow-modal-body fixflow-custom-scroll">
+              <div style={{ marginBottom: 20, padding: 14, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                  Project Executive Summary
+                </h4>
+                <p style={{ fontSize: 14, color: "#1e293b", lineHeight: 1.6, margin: 0 }}>
+                  {parsedProposal?.project_summary || "No parsed summary available."}
+                </p>
+              </div>
+
+              {/* Scope Breakdown */}
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
+                Extracted Deliverables & Scope ({parsedProposal?.features?.length || 0})
+              </h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+                {parsedProposal?.features?.map((f, i) => (
+                  <div key={f.title + i} style={{ padding: 12, border: "1px solid #f1f5f9", borderRadius: 8, background: "#fff" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#2563eb" }}>{f.title}</span>
+                      <span className={`panel-badge panel-badge--${f.complexity === "High" ? "orange" : f.complexity === "Medium" ? "blue" : "green"}`}>
+                        {f.complexity} Complexity
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 13, color: "#475569", margin: "4px 0 8px" }}>{f.description}</p>
+                    <div style={{ fontSize: 12, color: "#64748b", background: "#f8fafc", padding: "6px 10px", borderRadius: 6 }}>
+                      <strong>Technical Approach:</strong> {f.technical_approach}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Timeline Breakdown */}
+              {parsedProposal?.timeline?.length > 0 && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
+                    Phased Execution Roadmap
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                    {parsedProposal.timeline.map((phase, idx) => (
+                      <div key={phase.phase + idx} style={{ padding: 12, border: "1px solid #f1f5f9", borderRadius: 8, background: "#fff" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+                          <span>Phase {idx + 1}: {phase.phase}</span>
+                          <span style={{ color: "#2563eb" }}>{phase.duration}</span>
+                        </div>
+                        <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12, color: "#475569" }}>
+                          {phase.tasks.map((t, ti) => (
+                            <li key={t + ti}>{t}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="fixflow-modal-footer">
+              <button
+                type="button"
+                className="panel-btn--ghost panel-btn"
+                onClick={() => setShowSummaryModal(false)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={() => {
+                  setShowSummaryModal(false);
+                  setActiveTab("scope");
+                }}
+              >
+                View Scope Tab
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FULL INTELLIGENCE REPORT MODAL ── */}
+      {showIntelligenceModal && (
+        <div className="fixflow-modal-overlay" onClick={() => setShowIntelligenceModal(false)}>
+          <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="fixflow-modal-header">
+              <h3 className="fixflow-modal-title">
+                <AlertTriangle size={20} style={{ color: "#f59e0b" }} />
+                Full Intelligence & Risk Analysis Report
+              </h3>
+              <button
+                type="button"
+                className="panel-btn--ghost"
+                onClick={() => setShowIntelligenceModal(false)}
+                style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fixflow-modal-body fixflow-custom-scroll">
+              {/* Risk Analysis Section */}
+              <h4 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
+                Identified Technical & Operational Risks ({parsedProposal?.risks?.length || 0})
+              </h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+                {parsedProposal?.risks?.map((risk, idx) => {
+                  const severityColor = risk.severity >= 70 ? "#ef4444" : risk.severity >= 40 ? "#f59e0b" : "#16a34a";
+                  const severityBg = risk.severity >= 70 ? "#fef2f2" : risk.severity >= 40 ? "#fffbeb" : "#f0fdf4";
+                  return (
+                    <div key={risk.label + idx} style={{ padding: 14, border: "1px solid #f1f5f9", borderRadius: 10, background: "#fff" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{risk.label}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 12, background: severityBg, color: severityColor }}>
+                          Severity {risk.severity}/100
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Category: <strong>{risk.category}</strong></div>
+                      <div style={{ background: "#f8fafc", padding: 10, borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                        <strong style={{ fontSize: 11, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>Recommended Mitigation:</strong>
+                        <p style={{ fontSize: 13, color: "#334155", margin: "4px 0 0", lineHeight: 1.5 }}>{risk.mitigation}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Market Intelligence */}
+              {parsedProposal?.market?.length > 0 && (
+                <>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
+                    Market & Strategic Insights
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {parsedProposal.market.map((m, i) => (
+                      <div key={m.title + i} style={{ padding: 12, border: "1px solid #f1f5f9", borderRadius: 8, background: "#fff" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{m.title}</div>
+                        <p style={{ fontSize: 12, color: "#475569", margin: "4px 0" }}>{m.description}</p>
+                        <div style={{ fontSize: 11, color: "#2563eb", fontWeight: 600 }}>Relevance Score: {m.relevance}/100</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="fixflow-modal-footer">
+              <button
+                type="button"
+                className="panel-btn--ghost panel-btn"
+                onClick={() => setShowIntelligenceModal(false)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={() => {
+                  setShowIntelligenceModal(false);
+                  setActiveTab("risks");
+                }}
+              >
+                View Risk Tab
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
