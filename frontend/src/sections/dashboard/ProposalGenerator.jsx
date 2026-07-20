@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { DiscoveryWizard } from "./DiscoveryWizard";
 import {
@@ -19,6 +19,7 @@ import {
   Shield,
   TrendingUp,
   Plus,
+  Lock,
   Paperclip,
   MoreHorizontal,
   FileText,
@@ -33,6 +34,22 @@ const proposalSteps = [
   { num: 4, label: "Timeline & roles" },
   { num: 5, label: "Review & finalize" },
 ];
+
+// Which detail views belong to each approval step. Steps 1 and 5 have no tabs
+// (idea capture and final review); steps 2-4 group the relevant analysis tabs.
+const STEP_TABS = {
+  2: ["scope", "architecture"],
+  3: ["risks", "competitors"],
+  4: ["milestones", "roles"],
+};
+
+// The client's per-step approval action label (step 5 hands off to Agreement).
+const STEP_APPROVE_LABEL = {
+  2: "Approve scope & continue",
+  3: "Approve intelligence & continue",
+  4: "Approve timeline & continue",
+  5: "Approve & send to Agreement",
+};
 
 const summaryItems = [];
 const intelligenceItems = [];
@@ -62,6 +79,22 @@ export function ProposalGenerator() {
   const [ideaText, setIdeaText] = useState(rawBriefText || "");
   const [activeTab, setActiveTab] = useState("scope");
   const [activeStep, setActiveStep] = useState(1);
+  // Sequential approval: a step unlocks only after the previous one is approved.
+  const [approvedSteps, setApprovedSteps] = useState([]);
+  const hasProposal = Boolean(parsedProposal);
+
+  const isStepUnlocked = (num) => num === 1 || approvedSteps.includes(num - 1);
+  const approveStep = (num) => {
+    setApprovedSteps((prev) => (prev.includes(num) ? prev : [...prev, num]));
+    if (num + 1 <= proposalSteps.length) setActiveStep(num + 1);
+  };
+
+  // When entering a step, focus its first relevant detail tab.
+  useEffect(() => {
+    const allowed = STEP_TABS[activeStep];
+    if (allowed && !allowed.includes(activeTab)) setActiveTab(allowed[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep]);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showIntelligenceModal, setShowIntelligenceModal] = useState(false);
 
@@ -134,6 +167,7 @@ export function ProposalGenerator() {
 
   const handleGenerate = () => {
     setGenerating(true);
+    setApprovedSteps([]); // regenerating restarts the approval sequence
     const sections = buildSections();
     let idx = 0;
     let text = "";
@@ -146,6 +180,9 @@ export function ProposalGenerator() {
         setGenerating(false);
         setGeneratedProposal(text);
         setProposalGenerated(true);
+        // Step 1 (the brief) is complete once a proposal exists → unlock step 2.
+        setApprovedSteps([1]);
+        setActiveStep(2);
       }
     }, 450);
   };
@@ -725,45 +762,115 @@ export function ProposalGenerator() {
         </div>
       </div>
 
-      {/* Horizontal stepper */}
+      {/* Horizontal stepper — sequential, approval-gated */}
       <div className="panel-stepper">
         {proposalSteps.map((step, i) => {
-          const stepState = step.num === activeStep
-            ? "active"
-            : step.num < activeStep
-            ? "done"
-            : "";
+          const approved = approvedSteps.includes(step.num);
+          const unlocked = isStepUnlocked(step.num);
+          const isActive = step.num === activeStep;
           return (
             <div key={step.label} style={{ display: "flex", alignItems: "center" }}>
               <div
-                className={`panel-step${stepState === "active" ? " panel-step--active" : stepState === "done" ? " panel-step--done" : ""}`}
+                className={`panel-step${isActive ? " panel-step--active" : approved ? " panel-step--done" : ""}`}
                 onClick={() => {
-                  /* Allow clicking completed or adjacent steps */
-                  if (step.num <= activeStep + 1) setActiveStep(step.num);
+                  // A step can only be opened once it is unlocked (previous approved).
+                  if (unlocked) setActiveStep(step.num);
                 }}
-                style={{ cursor: step.num <= activeStep + 1 ? "pointer" : "default" }}
+                style={{ cursor: unlocked ? "pointer" : "not-allowed", opacity: unlocked ? 1 : 0.45 }}
+                title={unlocked ? undefined : "Approve the previous step to unlock this one"}
               >
                 <span className="panel-step-num">
-                  {stepState === "done" ? <Check size={12} /> : step.num}
+                  {approved ? <Check size={12} /> : unlocked ? step.num : <Lock size={11} />}
                 </span>
                 {step.label}
               </div>
               {i < proposalSteps.length - 1 && (
-                <ArrowRight
-                  size={14}
-                  className="panel-step-arrow"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => {
-                    if (step.num + 1 <= activeStep + 1) setActiveStep(step.num + 1);
-                  }}
-                />
+                <ArrowRight size={14} className="panel-step-arrow" />
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Main three-column grid */}
+      {/* Sequential approval bar — the client approves each section to unlock the next */}
+      <div
+        className="panel-card"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginTop: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              background: approvedSteps.includes(activeStep) ? "#f0fdf4" : "#eff6ff",
+              color: approvedSteps.includes(activeStep) ? "#16a34a" : "#2563eb",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 13,
+              fontWeight: 800,
+              flexShrink: 0,
+            }}
+          >
+            {approvedSteps.includes(activeStep) ? <Check size={15} /> : activeStep}
+          </span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+              Step {activeStep} — {proposalSteps[activeStep - 1].label}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              {!hasProposal
+                ? "Generate a proposal to begin the approval flow."
+                : approvedSteps.includes(activeStep)
+                ? "Approved. You can move on to the next step."
+                : activeStep === 1
+                ? "The brief is captured — generate a proposal to approve it."
+                : "Review this section, then approve to unlock the next step."}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {activeStep > 1 && (
+            <button
+              type="button"
+              className="panel-btn--ghost panel-btn"
+              onClick={() => setActiveStep(activeStep - 1)}
+            >
+              Back
+            </button>
+          )}
+          {approvedSteps.includes(activeStep) ? (
+            <span className="panel-badge panel-badge--green">
+              <Check size={12} /> Approved
+            </span>
+          ) : activeStep === 1 ? (
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>Awaiting proposal generation</span>
+          ) : (
+            <button
+              type="button"
+              className="panel-btn"
+              disabled={!hasProposal}
+              onClick={() => {
+                approveStep(activeStep);
+                if (activeStep === 5) setDashboardTab("agreement-composer");
+              }}
+            >
+              <Check size={14} /> {STEP_APPROVE_LABEL[activeStep]}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Step 1 — describe idea + AI summary + intelligence at a glance */}
+      {activeStep === 1 && (
       <div className="panel-grid panel-grid--3">
         {/* Left: Describe idea */}
         <div className="panel-card">
@@ -1002,9 +1109,11 @@ export function ProposalGenerator() {
           )}
         </div>
       </div>
+      )}
 
-      {/* Tabs section */}
-      <div style={{ marginTop: 24 }} ref={tabsRef}>
+      {/* Steps 2-4 — grouped detail views, shown only for the current step */}
+      {activeStep >= 2 && activeStep <= 4 && (
+      <div style={{ marginTop: 8 }} ref={tabsRef}>
         <div
           style={{
             display: "flex",
@@ -1013,7 +1122,9 @@ export function ProposalGenerator() {
             marginBottom: 20,
           }}
         >
-          {tabs.map((tab) => (
+          {tabs
+            .filter((t) => (STEP_TABS[activeStep] || []).includes(t.id))
+            .map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -1038,6 +1149,54 @@ export function ProposalGenerator() {
         {/* Tab content — renders based on activeTab */}
         {renderTabContent()}
       </div>
+      )}
+
+      {/* Step 5 — review & finalize (all prior steps must be approved) */}
+      {activeStep === 5 && (
+        <div className="panel-card" style={{ marginTop: 8 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Review & finalize</h3>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 14px" }}>
+            Each section below was approved in sequence. Finalizing sends this proposal to the Agreement step.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {proposalSteps.slice(0, 4).map((s) => {
+              const ok = approvedSteps.includes(s.num);
+              return (
+                <div
+                  key={s.num}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    border: "1px solid #f1f5f9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: ok ? "#f0fdf4" : "#fef2f2",
+                      color: ok ? "#16a34a" : "#ef4444",
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {ok ? <Check size={13} /> : <Lock size={11} />}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", flex: 1 }}>{s.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: ok ? "#16a34a" : "#94a3b8" }}>
+                    {ok ? "Approved" : "Pending"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── FULL SUMMARY MODAL ── */}
       {showSummaryModal && (
