@@ -1629,6 +1629,8 @@ export function ProposalGenerator() {
             </div>
           </div>
         </div>
+      )}
+
       {/* ── SAVED DRAFTS SELECTION MODAL ── */}
       {showDraftsModal && (
         <div className="fixflow-modal-overlay" onClick={() => setShowDraftsModal(false)}>
