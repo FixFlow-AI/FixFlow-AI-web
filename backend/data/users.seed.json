@@ -53,7 +53,7 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-19T19:17:17.494Z",
+      "updatedAt": "2026-07-20T15:15:48.052Z",
       "otpSecret": "JBSWY3DPEHPK3PXP",
       "refreshTokens": [
         {
@@ -121,8 +121,12 @@
           "createdAt": "2026-07-19T18:49:03.008Z"
         },
         {
-          "hash": "7f6406d21bb274106ce3814853f5ae981dd943c60df14e1dfee081e2db9eb0d6",
-          "createdAt": "2026-07-19T19:17:17.494Z"
+          "hash": "6088a73aeb49a6fde52452d38417eefabd0fe826f422c3df184dfdf63dc5cbd6",
+          "createdAt": "2026-07-20T08:38:34.210Z"
+        },
+        {
+          "hash": "639342694c269241052f7a013a1b0162c8c1f8a1002296ab38d8cdaab1a9a7e1",
+          "createdAt": "2026-07-20T15:15:48.052Z"
         }
       ]
     },

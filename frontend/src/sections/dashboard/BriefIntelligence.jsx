@@ -110,6 +110,7 @@ export function BriefIntelligence() {
   const [expandedDecision, setExpandedDecision] = useState(null); // index or null
   const [decisionStatuses, setDecisionStatuses] = useState({}); // { [index]: "clarification_requested" | "assumed" }
   const [noSelectionPrompt, setNoSelectionPrompt] = useState(false);
+  const [hoveredAction, setHoveredAction] = useState(null); // 'clarify' | 'assume' | null
 
   const handleParse = async (e) => {
     e.preventDefault();
@@ -771,43 +772,84 @@ export function BriefIntelligence() {
                 </div>
               )}
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 20 }}>
-                <button
-                  type="button"
-                  className="panel-btn"
-                  style={{ width: "100%" }}
-                  onClick={() => {
-                    if (expandedDecision === null) {
-                      setNoSelectionPrompt(true);
-                      return;
-                    }
-                    setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "clarification_requested" }));
-                    setNoSelectionPrompt(false);
-                    // Auto-collapse after marking
-                    setTimeout(() => setExpandedDecision(null), 600);
-                  }}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 20 }}>
+                {/* Option 1: Request Clarification */}
+                <div
+                  style={{ position: "relative" }}
+                  onMouseEnter={() => setHoveredAction("clarify")}
+                  onMouseLeave={() => setHoveredAction(null)}
                 >
-                  <MessageSquare size={14} />
-                  Request clarification
-                </button>
-                <button
-                  type="button"
-                  className="panel-btn--ghost panel-btn"
-                  style={{ width: "100%" }}
-                  onClick={() => {
-                    if (expandedDecision === null) {
-                      setNoSelectionPrompt(true);
-                      return;
-                    }
-                    setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "assumed" }));
-                    setNoSelectionPrompt(false);
-                    // Auto-collapse after marking
-                    setTimeout(() => setExpandedDecision(null), 600);
-                  }}
+                  <button
+                    type="button"
+                    className="panel-btn"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      if (expandedDecision === null) {
+                        setNoSelectionPrompt(true);
+                        return;
+                      }
+                      setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "clarification_requested" }));
+                      setNoSelectionPrompt(false);
+                      // Auto-collapse after marking
+                      setTimeout(() => setExpandedDecision(null), 600);
+                    }}
+                  >
+                    <MessageSquare size={14} />
+                    Request clarification
+                  </button>
+
+                  {hoveredAction === "clarify" && (
+                    <div className="action-button-tooltip">
+                      <div style={{ fontWeight: 700, color: "#93c5fd", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                        <MessageSquare size={13} />
+                        Request Clarification
+                      </div>
+                      <div style={{ fontSize: 11, color: "#cbd5e1", lineHeight: 1.45 }}>
+                        <strong style={{ color: "#fbbf24" }}>Requirement:</strong> Select a decision item above first.<br />
+                        <strong style={{ color: "#38bdf8" }}>What it does:</strong> Flags high-risk ambiguity and requests direct client input before contract setup.
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Option 2: Mark as Assumption */}
+                <div
+                  style={{ position: "relative" }}
+                  onMouseEnter={() => setHoveredAction("assume")}
+                  onMouseLeave={() => setHoveredAction(null)}
                 >
-                  <Bookmark size={14} />
-                  Mark as assumption
-                </button>
+                  <button
+                    type="button"
+                    className="panel-btn--ghost panel-btn"
+                    style={{ width: "100%" }}
+                    onClick={() => {
+                      if (expandedDecision === null) {
+                        setNoSelectionPrompt(true);
+                        return;
+                      }
+                      setDecisionStatuses((prev) => ({ ...prev, [expandedDecision]: "assumed" }));
+                      setNoSelectionPrompt(false);
+                      // Auto-collapse after marking
+                      setTimeout(() => setExpandedDecision(null), 600);
+                    }}
+                  >
+                    <Bookmark size={14} />
+                    Mark as assumption
+                  </button>
+
+                  {hoveredAction === "assume" && (
+                    <div className="action-button-tooltip">
+                      <div style={{ fontWeight: 700, color: "#fde68a", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                        <Bookmark size={13} />
+                        Mark as Assumption
+                      </div>
+                      <div style={{ fontSize: 11, color: "#cbd5e1", lineHeight: 1.45 }}>
+                        <strong style={{ color: "#fbbf24" }}>Requirement:</strong> Select a decision item above first.<br />
+                        <strong style={{ color: "#38bdf8" }}>What it does:</strong> Accepts standard AI mitigation as an official contract assumption to maintain project velocity.
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
