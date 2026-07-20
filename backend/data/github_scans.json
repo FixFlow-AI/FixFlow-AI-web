@@ -128,6 +128,73 @@
         }
       },
       "finishedAt": "2026-07-12T20:17:08.668Z"
+    },
+    "ghscan_349de483-84fe-4c56-99dd-73a76d8e7a58": {
+      "jobId": "ghscan_349de483-84fe-4c56-99dd-73a76d8e7a58",
+      "freelancerId": "d51a5022-c779-49b9-85fe-786c5291f33c",
+      "githubUsername": "Suvam-paul145",
+      "status": "complete",
+      "segmentStatus": {
+        "skills": "done",
+        "projects": "done",
+        "experience": "done"
+      },
+      "reposDiscovered": 85,
+      "reposAnalyzed": 46,
+      "createdAt": "2026-07-20T18:06:39.053Z",
+      "updatedAt": "2026-07-20T18:07:08.681Z",
+      "experience": {
+        "totalCommits": 918,
+        "reposAnalyzed": 46,
+        "activeYears": 1.9,
+        "avgStars": 1,
+        "collaborationRepos": 6,
+        "documentationQuality": 30,
+        "linesAuthored": 4141835,
+        "pullRequests": 113,
+        "accountAgeYears": 1.9,
+        "followers": 24,
+        "totalStars": 73,
+        "contributionsPerWeek": 34.7,
+        "collaborationScore": 100
+      },
+      "languages": {
+        "Python": 36,
+        "JavaScript": 11,
+        "TypeScript": 14,
+        "CSS": 4,
+        "Dockerfile": 0,
+        "HTML": 22,
+        "Shell": 0,
+        "Makefile": 0,
+        "PowerShell": 0,
+        "Batchfile": 0,
+        "Procfile": 0,
+        "HCL": 0,
+        "Roff": 0,
+        "SCSS": 2,
+        "Jupyter Notebook": 10,
+        "Move": 0,
+        "Solidity": 0,
+        "PHP": 0,
+        "Java": 0,
+        "PLpgSQL": 0,
+        "C": 0,
+        "C++": 0
+      },
+      "confidence": {
+        "score": 88,
+        "band": "match_ready",
+        "factorBreakdown": {
+          "skillBreadthDepth": 86,
+          "projectStrength": 98,
+          "recency": 100,
+          "contributionVolume": 100,
+          "documentation": 30
+        },
+        "previousScore": 88
+      },
+      "finishedAt": "2026-07-20T18:07:08.681Z"
     }
   },
   "skills": {
@@ -679,6 +746,25 @@
         "editable": false
       },
       {
+        "name": "Render",
+        "category": "tool",
+        "confidence": 70,
+        "evidence": [
+          {
+            "repo": "Dev-AI-OS-assistant",
+            "signal": "topic",
+            "detail": "declared topic: render"
+          },
+          {
+            "repo": "Narralytics",
+            "signal": "topic",
+            "detail": "declared topic: render"
+          }
+        ],
+        "source": "github_scan",
+        "editable": false
+      },
+      {
         "name": "Vercel",
         "category": "tool",
         "confidence": 70,
@@ -1061,7 +1147,7 @@
     "d51a5022-c779-49b9-85fe-786c5291f33c": [
       {
         "repoName": "Dev-AI-OS-assistant",
-        "summary": "An AI-powered assistant utilizing a microservices architecture to automate complex operating system workflows.",
+        "summary": "An AI-powered assistant utilizing a modular microservices architecture to automate complex operating system workflows.",
         "domain": "ai",
         "stack": [
           "TypeScript"
@@ -1076,9 +1162,9 @@
         "complexity": "High",
         "commits": 32,
         "commitActivity": [
-          0,
-          0,
           4,
+          0,
+          0,
           0,
           0,
           0,
@@ -1093,8 +1179,8 @@
       },
       {
         "repoName": "KaryaSetu",
-        "summary": "A full-stack productivity platform that uses AI-driven suggestions and smart reminders to automate task management.",
-        "domain": "software",
+        "summary": "A full-stack productivity platform that leverages AI-driven suggestions and smart reminders to automate task management.",
+        "domain": "web",
         "stack": [
           "TypeScript"
         ],
@@ -1108,9 +1194,9 @@
         "complexity": "Medium",
         "commits": 25,
         "commitActivity": [
-          0,
-          0,
           17,
+          0,
+          0,
           0,
           0,
           0,
@@ -1130,7 +1216,7 @@
         "stack": [],
         "stars": 2,
         "commitShare": 100,
-        "lastActiveAt": "2026-07-12T19:05:06Z",
+        "lastActiveAt": "2026-07-20T18:01:52Z",
         "rankScore": 206,
         "url": "https://github.com/Suvam-paul145/Suvam-paul145",
         "primaryLanguage": null,
@@ -1138,7 +1224,6 @@
         "complexity": "Low",
         "commits": 49,
         "commitActivity": [
-          1,
           1,
           0,
           0,
@@ -1149,13 +1234,14 @@
           1,
           0,
           0,
+          0,
           0
         ],
-        "updatedAt": "2026-07-12T19:05:06Z"
+        "updatedAt": "2026-07-20T18:01:52Z"
       },
       {
         "repoName": "Python-With-Django",
-        "summary": "A collection of training materials and code samples for Django development.",
+        "summary": "An HTML-based project repository used for academic training purposes.",
         "domain": "software",
         "stack": [
           "HTML"
@@ -1175,9 +1261,9 @@
           0,
           0,
           0,
-          0,
-          0,
           6,
+          0,
+          0,
           0,
           0,
           0,
@@ -1207,9 +1293,9 @@
         "commitActivity": [
           0,
           0,
-          0,
-          0,
           8,
+          0,
+          0,
           0,
           0,
           0,
@@ -1222,8 +1308,8 @@
       },
       {
         "repoName": "Narralytics",
-        "summary": "A data analytics platform designed to bridge the gap between raw business data and actionable decision-making.",
-        "domain": "analytics",
+        "summary": "A data analytics application built with React and Python to help bridge the gap between raw data and business decisions.",
+        "domain": "data",
         "stack": [
           "Python",
           "React",
@@ -1273,9 +1359,9 @@
         "complexity": "Medium",
         "commits": 14,
         "commitActivity": [
-          0,
-          4,
           5,
+          0,
+          0,
           0,
           0,
           0,
@@ -1322,7 +1408,8 @@
         "recency": 100,
         "contributionVolume": 100,
         "documentation": 30
-      }
+      },
+      "previousScore": 88
     }
   },
   "snapshots": {
