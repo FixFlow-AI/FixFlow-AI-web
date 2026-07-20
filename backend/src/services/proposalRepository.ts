@@ -13,6 +13,17 @@ import type { Proposal } from '../types/ai.js';
  * Table: <prefix>_proposals  (PK proposalId, GSI UserProposalsIndex: userId + createdAt)
  */
 
+/**
+ * The client's step-by-step approval workflow state for a proposal. Persisted
+ * so the sequential proposal builder (Talent tab) restores exactly where the
+ * user left off — which step is active and which sections have been approved.
+ */
+export interface ProposalWorkflow {
+  activeStep: number; // 1-based index of the step the user is on (1..N)
+  approvedSteps: number[]; // contiguous prefix of approved step numbers, e.g. [1,2,3]
+  updatedAt: string; // ISO timestamp of the last change (for last-write-wins)
+}
+
 export interface StoredProposal {
   proposalId: string;
   userId: string;
@@ -21,6 +32,7 @@ export interface StoredProposal {
   proposal: Proposal;
   degraded: boolean;
   evaluation?: unknown; // ConfidenceGridResult, stored opaque to avoid a hard dep
+  workflow?: ProposalWorkflow; // sequential approval state (see above)
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +42,7 @@ export interface ProposalRepository {
   get(proposalId: string): Promise<StoredProposal | null>;
   listByUser(userId: string): Promise<StoredProposal[]>;
   setEvaluation(proposalId: string, evaluation: unknown): Promise<StoredProposal | null>;
+  setWorkflow(proposalId: string, workflow: ProposalWorkflow): Promise<StoredProposal | null>;
 }
 
 function deriveTitle(p: Proposal): string {
@@ -81,6 +94,13 @@ class InMemoryProposalRepository implements ProposalRepository {
     sp.updatedAt = new Date().toISOString();
     return sp;
   }
+  async setWorkflow(id: string, workflow: ProposalWorkflow) {
+    const sp = this.store.get(id);
+    if (!sp) return null;
+    sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    return sp;
+  }
 }
 
 // ---------- DynamoDB ----------
@@ -129,6 +149,16 @@ class DynamoDbProposalRepository implements ProposalRepository {
     const sp = await this.get(id);
     if (!sp) return null;
     sp.evaluation = evaluation;
+    sp.updatedAt = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    await ddb.send(new PutCommand({ TableName: table('proposals'), Item: sp }));
+    return sp;
+  }
+  async setWorkflow(id: string, workflow: ProposalWorkflow) {
+    const sp = await this.get(id);
+    if (!sp) return null;
+    sp.workflow = workflow;
     sp.updatedAt = new Date().toISOString();
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -212,6 +242,16 @@ class FileProposalRepository implements ProposalRepository {
     const sp = list.find((p) => p.proposalId === id);
     if (!sp) return null;
     sp.evaluation = evaluation;
+    sp.updatedAt = new Date().toISOString();
+    await this.persist();
+    return sp;
+  }
+
+  async setWorkflow(id: string, workflow: ProposalWorkflow) {
+    const list = await this.load();
+    const sp = list.find((p) => p.proposalId === id);
+    if (!sp) return null;
+    sp.workflow = workflow;
     sp.updatedAt = new Date().toISOString();
     await this.persist();
     return sp;

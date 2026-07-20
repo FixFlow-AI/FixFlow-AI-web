@@ -174,6 +174,62 @@ app.get(
   })
 );
 
+// Total steps in the sequential proposal builder (Describe → Scope →
+// Intelligence → Timeline → Review). Kept in sync with the frontend stepper.
+const PROPOSAL_TOTAL_STEPS = 5;
+
+/**
+ * Coerce a client-supplied workflow into a logically valid one:
+ * - approvedSteps must be a contiguous prefix starting at 1 (you cannot approve
+ *   step 3 without having approved 1 and 2);
+ * - activeStep is clamped to [1, TOTAL] and can be at most (highest approved + 1).
+ * This makes the persisted state tamper-resistant regardless of client input.
+ */
+function sanitizeWorkflow(activeStep: unknown, approvedSteps: unknown) {
+  const uniq = Array.isArray(approvedSteps)
+    ? [...new Set(approvedSteps.filter((n) => Number.isInteger(n) && n >= 1 && n <= PROPOSAL_TOTAL_STEPS))].sort(
+        (a, b) => a - b,
+      )
+    : [];
+  const prefix: number[] = [];
+  for (let i = 0; i < uniq.length; i++) {
+    if (uniq[i] === i + 1) prefix.push(uniq[i]);
+    else break;
+  }
+  const maxAllowed = Math.min((prefix.length ? prefix[prefix.length - 1] : 0) + 1, PROPOSAL_TOTAL_STEPS);
+  let step = Number.isInteger(activeStep) ? (activeStep as number) : 1;
+  step = Math.min(Math.max(step, 1), maxAllowed);
+  return { activeStep: step, approvedSteps: prefix, updatedAt: new Date().toISOString() };
+}
+
+// Persist the client's sequential step/approval state for a proposal so the
+// builder restores exactly where the owner left off when they return.
+app.put(
+  '/api/proposals/:id/workflow',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const repo = getProposalRepository();
+    const sp = await repo.get(req.params.id);
+    if (!sp || sp.userId !== req.auth!.sub) {
+      res.status(404).json({ error: 'Proposal not found.' });
+      return;
+    }
+    const { activeStep, approvedSteps } = req.body ?? {};
+    const workflow = sanitizeWorkflow(activeStep, approvedSteps);
+
+    // Last-write-wins guard: ignore a stale write if the stored workflow is newer.
+    const clientUpdatedAt = typeof req.body?.updatedAt === 'string' ? Date.parse(req.body.updatedAt) : NaN;
+    const storedUpdatedAt = sp.workflow?.updatedAt ? Date.parse(sp.workflow.updatedAt) : NaN;
+    if (!Number.isNaN(clientUpdatedAt) && !Number.isNaN(storedUpdatedAt) && clientUpdatedAt < storedUpdatedAt) {
+      res.json({ workflow: sp.workflow });
+      return;
+    }
+
+    const updated = await repo.setWorkflow(req.params.id, workflow);
+    res.json({ workflow: updated?.workflow ?? workflow });
+  })
+);
+
 // ==========================================
 // Requirement Discovery Agent (Talent section only)
 // ==========================================
