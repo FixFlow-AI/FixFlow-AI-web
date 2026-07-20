@@ -208,6 +208,7 @@ export function BriefIntelligence() {
           {!isBriefParsed ? (
             <form onSubmit={handleParse} style={{ display: "flex", flexDirection: "column", flex: 1 }}>
               <textarea
+                data-lenis-prevent="true"
                 value={text}
                 onChange={(e) => {
                   setText(e.target.value);

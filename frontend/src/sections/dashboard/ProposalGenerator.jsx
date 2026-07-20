@@ -775,6 +775,7 @@ export function ProposalGenerator() {
           </p>
 
           <textarea
+            data-lenis-prevent="true"
             value={ideaText}
             onChange={(e) => setIdeaText(e.target.value)}
             rows={6}
