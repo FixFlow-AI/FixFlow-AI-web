@@ -7,6 +7,7 @@ into a strict ``Proposal``. On any Gemini/validation error, fall back to
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import Any, List
 from pydantic import ValidationError
@@ -23,7 +24,7 @@ Your task is to convert unstructured client briefs (chat transcripts, RFCs, RFPs
 
 RULES:
 1. Extract implicit/explicit specifications, SLAs, timeline constraints, budget figures, and dependencies.
-2. Formulate realistic confidence indices and identify crucial development complexity cards.
+2. Provide qualitative, defensible signals only: per-feature `complexity` (High/Medium/Low), each risk's `category` and a concrete `mitigation`, market `trend`, and impact `category`. Do NOT invent numeric scores. The service computes `confidence_pct`, `confidence` (label), `risk.severity`, `impact_score`, and `market.relevance` deterministically from the proposal structure — any numbers you emit for those fields are ignored placeholders and will be overwritten.
 3. Keep feature counts realistic, drafting actionable, complete deliverables.
 4. Output strict JSON conforming to the requested schema. Do not output markdown decorators or extra prose."""
 
@@ -50,6 +51,223 @@ def _safe_array(val: Any) -> List[Any]:
 
 def _rand(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:9]}"
+
+
+# ---------------------------------------------------------------------------
+# AIE-10 — Deterministic, grounded scoring
+#
+# The LLM emits only *qualitative* signals (complexity, confidence label,
+# risk category + mitigation, market trend, impact category). Every numeric
+# field shown to users is derived here from those grounded signals plus the
+# proposal's own structure, so the numbers are explainable, stable run-to-run,
+# and identical between the LLM path and the fallback path for the same input.
+# ---------------------------------------------------------------------------
+
+# A concrete `technical_approach` must clear this length to count as grounded.
+_MIN_TECHNICAL_APPROACH_LEN = 15
+# A `mitigation` at/above this length is treated as a strong, actionable plan.
+_STRONG_MITIGATION_LEN = 30
+
+# Tokens ignored when matching a feature against the delivery plan (too generic
+# to signal a real linkage).
+_STOPWORDS = {
+    "the", "and", "for", "with", "from", "that", "this", "core", "system",
+    "module", "platform", "setup", "phase", "sprint", "week", "project",
+}
+
+
+def _significant_tokens(text: str) -> List[str]:
+    """Lowercased alphanumeric tokens (>=4 chars) that carry topical meaning."""
+    return [
+        tok
+        for tok in re.findall(r"[a-z0-9]+", (text or "").lower())
+        if len(tok) >= 4 and tok not in _STOPWORDS
+    ]
+
+
+def _clamp(value: int, low: int = 0, high: int = 100) -> int:
+    return max(low, min(high, value))
+
+
+# --- Step 3.1: confidence_pct + label -------------------------------------
+
+_COMPLEXITY_BASE_CONFIDENCE = {"Low": 85, "Medium": 70, "High": 55}
+
+
+def derive_confidence_pct(
+    complexity: str,
+    has_technical_approach: bool,
+    in_delivery_plan: bool,
+    dependencies_resolved: bool,
+) -> int:
+    """Per-feature confidence from grounded inputs.
+
+    base(complexity) + concrete approach (+5) + scheduled in delivery plan (+5)
+    + scheduled with resolvable dependencies (+5). The dependency bonus only
+    applies when the feature is actually scheduled, since an unscheduled
+    feature has no dependencies to resolve.
+    """
+    score = _COMPLEXITY_BASE_CONFIDENCE.get(complexity, 70)
+    if has_technical_approach:
+        score += 5
+    if in_delivery_plan:
+        score += 5
+        if dependencies_resolved:
+            score += 5
+    return _clamp(score)
+
+
+def derive_confidence_label(confidence_pct: int) -> str:
+    """Qualitative band derived from the number so the two never disagree."""
+    if confidence_pct >= 80:
+        return "High"
+    if confidence_pct >= 60:
+        return "Medium"
+    return "Low"
+
+
+# --- Step 3.2: risk severity ----------------------------------------------
+
+def _category_severity_base(category: str) -> int:
+    c = (category or "").lower()
+    if any(k in c for k in ("security", "compliance", "legal", "privacy", "data loss")):
+        return 80
+    if any(k in c for k in ("integration", "technical", "dependency", "architecture")):
+        return 65
+    if any(k in c for k in ("performance", "scalability", "reliability")):
+        return 60
+    if any(k in c for k in ("timeline", "schedule", "resource", "budget")):
+        return 60
+    if any(k in c for k in ("scope", "requirement")):
+        return 55
+    return 50
+
+
+def derive_severity(category: str, mitigation: str) -> int:
+    """Severity from a category weight, adjusted by mitigation strength.
+
+    No mitigation raises severity (+20); a strong, actionable mitigation lowers
+    it (-15); a weak/short mitigation is neutral.
+    """
+    score = _category_severity_base(category)
+    text = (mitigation or "").strip()
+    if not text:
+        score += 20
+    elif len(text) >= _STRONG_MITIGATION_LEN:
+        score -= 15
+    return _clamp(score)
+
+
+# --- Step 3.3: impact_score + market.relevance ----------------------------
+
+def _category_impact_base(category: str) -> int:
+    c = (category or "").lower()
+    if any(k in c for k in ("revenue", "growth", "financial", "sales", "market")):
+        return 85
+    if any(k in c for k in ("efficiency", "automation", "operational", "productivity", "cost")):
+        return 75
+    if any(k in c for k in ("risk", "compliance", "security")):
+        return 70
+    if any(k in c for k in ("experience", "ux", "satisfaction", "engagement")):
+        return 65
+    return 60
+
+
+def derive_impact_score(category: str, linked_to_feature: bool) -> int:
+    """Advisory impact from category weight, boosted when tied to a feature."""
+    score = _category_impact_base(category)
+    if linked_to_feature:
+        score += 10
+    return _clamp(score)
+
+
+_TREND_RELEVANCE_DELTA = {"up": 20, "stable": 0, "down": -10}
+
+
+def derive_relevance(trend: str, linked_to_feature: bool) -> int:
+    """Advisory market relevance from trend direction and feature linkage."""
+    score = 60 + _TREND_RELEVANCE_DELTA.get(trend, 0)
+    if linked_to_feature:
+        score += 10
+    return _clamp(score)
+
+
+# --- Grounding signals derived from proposal structure --------------------
+
+def _delivery_plan_corpus(proposal: Proposal) -> str:
+    """Lowercased text of everything scheduled in the weekly delivery plan."""
+    parts: List[str] = []
+    for week in proposal.delivery_plan.weeks:
+        parts.append(week.label)
+        parts.append(week.sourcePhase)
+        parts.extend(week.goals)
+        parts.extend(week.deliverables)
+        parts.extend(task.title for task in week.tasks)
+    return " ".join(parts).lower()
+
+
+def _dependencies_resolved(proposal: Proposal) -> bool:
+    """True when every delivery-week dependency points at a known week.
+
+    A plan with no dependencies is trivially resolved; a dangling reference
+    (typo, deleted week) marks the schedule as not fully resolved.
+    """
+    week_ids = {w.id for w in proposal.delivery_plan.weeks}
+    week_labels = {w.label.lower() for w in proposal.delivery_plan.weeks}
+    for week in proposal.delivery_plan.weeks:
+        for dep in week.dependencies:
+            d = (dep or "").strip()
+            if not d:
+                continue
+            if d not in week_ids and d.lower() not in week_labels:
+                return False
+    return True
+
+
+def _text_linked_to_features(text: str, feature_tokens: set[str]) -> bool:
+    """True when advisory item text shares a topical token with any feature."""
+    return any(tok in feature_tokens for tok in _significant_tokens(text))
+
+
+def apply_deterministic_scores(proposal: Proposal) -> Proposal:
+    """Overwrite every LLM/fallback numeric field with a grounded derivation.
+
+    Mutates and returns ``proposal``. Runs identically on the LLM path and the
+    fallback path, so proposals with the same structure always score the same.
+    """
+    corpus = _delivery_plan_corpus(proposal)
+    deps_resolved = _dependencies_resolved(proposal)
+
+    feature_tokens: set[str] = set()
+    for feature in proposal.features:
+        feature_tokens.update(_significant_tokens(feature.title))
+        feature_tokens.update(_significant_tokens(feature.area))
+
+    for feature in proposal.features:
+        has_approach = len(feature.technical_approach.strip()) >= _MIN_TECHNICAL_APPROACH_LEN
+        tokens = _significant_tokens(feature.title) + _significant_tokens(feature.area)
+        in_plan = any(tok in corpus for tok in tokens)
+        feature.confidence_pct = derive_confidence_pct(
+            feature.complexity, has_approach, in_plan, deps_resolved
+        )
+        feature.confidence = derive_confidence_label(feature.confidence_pct)
+
+    for risk in proposal.risks:
+        risk.severity = derive_severity(risk.category, risk.mitigation)
+
+    for item in proposal.impact:
+        linked = _text_linked_to_features(
+            f"{item.title} {item.description}", feature_tokens
+        )
+        item.impact_score = derive_impact_score(item.category, linked)
+
+    for item in proposal.market:
+        linked = _text_linked_to_features(
+            f"{item.title} {item.description}", feature_tokens
+        )
+        item.relevance = derive_relevance(item.trend, linked)
+
+    return proposal
 
 
 def sanitize_and_patch_brief(raw: Any) -> Proposal:
@@ -308,7 +526,7 @@ def sanitize_and_patch_brief(raw: Any) -> Proposal:
         else "derived"
     )
 
-    return Proposal.model_validate(
+    proposal = Proposal.model_validate(
         {
             "project_summary": _safe_string(
                 raw.get("project_summary"),
@@ -330,6 +548,8 @@ def sanitize_and_patch_brief(raw: Any) -> Proposal:
             "impact": impact,
         }
     )
+    # Ground the numeric fields deterministically (identical to the LLM path).
+    return apply_deterministic_scores(proposal)
 
 
 # ---------------------------------------------------------------------------
@@ -354,6 +574,8 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
             response_schema=Proposal,
             temperature=0.2,
         )
+        # Discard the LLM's fabricated numbers; derive them from grounded fields.
+        proposal = apply_deterministic_scores(proposal)
         return ParseBriefResponse(proposal=proposal,
                                   source="llm",
                                   degradedReason=None)
