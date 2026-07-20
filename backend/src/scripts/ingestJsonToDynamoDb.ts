@@ -194,21 +194,54 @@ async function main() {
     console.log(`✅ Milestones ingested: ${mileList.length} records.`);
   }
 
-  // 5. Ingest Roster Freelancers (freelancers.seed.json)
+  // 5. Ingest Roster Freelancers (freelancers.seed.json + Registered Freelancer Users)
   const freelancersData = await readJsonFile<any>('data/freelancers.seed.json');
-  if (freelancersData) {
-    const rawRoster: any[] = Array.isArray(freelancersData)
-      ? freelancersData
-      : (freelancersData as any).freelancers || [];
-    
-    const roster = rawRoster.map((f) => ({
-      ...f,
-      freelancerId: f.freelancerId || f.id || f.userId,
-    }));
-    if (roster.length > 0) {
-      await batchWriteItems(table('freelancers'), roster);
-      console.log(`✅ Freelancers Roster ingested: ${roster.length} records.`);
+  const rawRoster: any[] = Array.isArray(freelancersData)
+    ? freelancersData
+    : (freelancersData as any)?.freelancers || [];
+
+  const rosterMap = new Map<string, any>();
+  for (const f of rawRoster) {
+    const fId = f.freelancerId || f.id || f.userId;
+    rosterMap.set(fId, { ...f, freelancerId: fId });
+  }
+
+  // Backfill registered freelancers from users.seed.json & github_scans.json
+  if (usersList.length > 0) {
+    for (const u of usersList) {
+      if (u.role === 'freelancer') {
+        const uId = u.userId || u.id;
+        const userSkills = scansData?.skills?.[uId] ? scansData.skills[uId].map((s: any) => s.name || s.skillName) : [];
+        const userJob = scansData?.jobs ? Object.values<any>(scansData.jobs).find((j: any) => j.freelancerId === uId) : null;
+        const userLangs = userJob?.languages || {};
+        const userConf = scansData?.confidence?.[uId]?.score ?? 88;
+        const userSnap = scansData?.snapshots?.[uId];
+
+        rosterMap.set(uId, {
+          freelancerId: uId,
+          id: uId,
+          name: u.name || u.githubUsername || 'Suvam Paul',
+          title: userSnap?.bio || 'Backend Developer | AWS | Open Source contributor',
+          skills: userSkills.length > 0 ? userSkills : ['Express', 'Node.js', 'FastAPI', 'Django', 'React', 'PostgreSQL', 'AWS Lambda', 'Docker'],
+          githubLanguages: Object.keys(userLangs).length > 0 ? Object.keys(userLangs) : ['Python', 'TypeScript', 'JavaScript', 'HTML'],
+          domains: ['backend', 'devops', 'cloud'],
+          rateMin: 60,
+          rateMax: 150,
+          reputationScore: userConf,
+          available: true,
+          activeEscrows: 0,
+          sbtCount: 1,
+          githubUsername: u.githubUsername || 'Suvam-paul145',
+          email: u.email,
+        });
+      }
     }
+  }
+
+  const completeRoster = Array.from(rosterMap.values());
+  if (completeRoster.length > 0) {
+    await batchWriteItems(table('freelancers'), completeRoster);
+    console.log(`✅ Freelancers Roster ingested: ${completeRoster.length} records (including registered users).`);
   }
 
   console.log('\n====================================================');
