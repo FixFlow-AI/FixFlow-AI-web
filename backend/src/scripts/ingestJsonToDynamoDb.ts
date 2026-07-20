@@ -50,22 +50,34 @@ async function main() {
   console.log('====================================================\n');
 
   // 1. Ingest Users (users.seed.json)
-  const usersData = await readJsonFile<any[]>('data/users.seed.json');
-  if (usersData && Array.isArray(usersData)) {
-    const formattedUsers = usersData.map((u) => ({
-      userId: u.id,
-      email: u.email,
-      role: u.role || 'client',
-      googleSub: u.googleSub || undefined,
-      githubUserId: u.githubUserId || undefined,
-      githubUsername: u.githubUsername || undefined,
-      githubAccessToken: u.githubAccessToken || undefined,
-      name: u.name || undefined,
-      picture: u.picture || undefined,
-      createdAt: u.createdAt || new Date().toISOString(),
-      updatedAt: u.updatedAt || new Date().toISOString(),
-      refreshTokens: u.refreshTokens || [],
-    }));
+  const usersDataRaw = await readJsonFile<any>('data/users.seed.json');
+  const usersList: any[] = Array.isArray(usersDataRaw)
+    ? usersDataRaw
+    : usersDataRaw?.users
+    ? usersDataRaw.users
+    : [];
+
+  if (usersList.length > 0) {
+    const formattedUsers = usersList.map((u) => {
+      const item: Record<string, any> = {
+        userId: u.id || u.userId,
+        id: u.id || u.userId,
+        email: u.email,
+        role: u.role || 'freelancer',
+        name: u.name || u.githubUsername || 'User',
+        picture: u.picture || '',
+        createdAt: u.createdAt || new Date().toISOString(),
+        updatedAt: u.updatedAt || new Date().toISOString(),
+        emailVerified: u.emailVerified ?? true,
+      };
+      if (u.googleSub) item.googleSub = String(u.googleSub);
+      if (u.githubUserId) item.githubUserId = String(u.githubUserId);
+      if (u.githubUsername) item.githubUsername = u.githubUsername;
+      if (u.githubAccessToken) item.githubAccessToken = u.githubAccessToken;
+      if (u.authProvider) item.authProvider = u.authProvider;
+      if (u.refreshTokens) item.refreshTokenHashes = (u.refreshTokens || []).map((t: any) => t.hash || t);
+      return item;
+    });
     await batchWriteItems(table('users'), formattedUsers);
     console.log(`✅ Users ingested: ${formattedUsers.length} records.`);
   }
