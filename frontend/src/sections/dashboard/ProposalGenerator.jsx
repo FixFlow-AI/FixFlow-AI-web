@@ -25,6 +25,10 @@ import {
   MoreHorizontal,
   FileText,
   X,
+  Download,
+  Copy,
+  FolderOpen,
+  RotateCcw,
 } from "lucide-react";
 
 /* Stepper for proposal stages */
@@ -162,6 +166,82 @@ export function ProposalGenerator() {
   }, [parsedProposalId, proposalWorkflow]);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showIntelligenceModal, setShowIntelligenceModal] = useState(false);
+  const [showDraftsModal, setShowDraftsModal] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [copyToast, setCopyToast] = useState(false);
+  const [draftList, setDraftList] = useState([]);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
+
+  const { startNewProposal } = useLandingStore();
+
+  const handleOpenDrafts = async () => {
+    setShowDraftsModal(true);
+    setShowMoreMenu(false);
+    setLoadingDrafts(true);
+    try {
+      const res = await api.listProposals();
+      if (res && res.proposals) {
+        setDraftList(res.proposals);
+      }
+    } catch (err) {
+      console.error("Failed to load proposal drafts:", err);
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  const handleSelectDraft = (draft) => {
+    if (draft && draft.proposal) {
+      useLandingStore.setState({
+        parsedProposal: draft.proposal,
+        parsedProposalId: draft.proposalId,
+        rawBriefText: draft.proposal.project_summary || "",
+        isBriefParsed: true,
+        briefSource: "api",
+        proposalWorkflow: draft.workflow || null,
+      });
+      if (draft.workflow && Array.isArray(draft.workflow.approvedSteps)) {
+        setApprovedSteps(draft.workflow.approvedSteps);
+        setActiveStep(draft.workflow.activeStep || 1);
+      } else {
+        setApprovedSteps([1]);
+        setActiveStep(2);
+      }
+      setShowDraftsModal(false);
+    }
+  };
+
+  const handleExportProposal = () => {
+    setShowMoreMenu(false);
+    const sections = buildSections();
+    const fullText = sections.length > 0 ? sections.join("") : generatedProposal || rawBriefText;
+    const blob = new Blob([fullText], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `proposal_${parsedProposalId || "draft"}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyBrief = () => {
+    setShowMoreMenu(false);
+    const textToCopy = rawBriefText || parsedProposal?.project_summary || "";
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
+      setCopyToast(true);
+      setTimeout(() => setCopyToast(false), 2500);
+    }
+  };
+
+  const handleStartNew = () => {
+    setShowMoreMenu(false);
+    startNewProposal();
+    setApprovedSteps([]);
+    setActiveStep(1);
+  };
 
   const tabsRef = useRef(null);
 
@@ -817,13 +897,118 @@ export function ProposalGenerator() {
               Describe your idea and our AI will generate a complete, evidence-ready project proposal.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" className="panel-btn--ghost panel-btn">
-              <FileText size={14} /> Load saved draft
+          <div style={{ display: "flex", gap: 8, position: "relative" }}>
+            <button
+              type="button"
+              className="panel-btn--ghost panel-btn"
+              onClick={handleOpenDrafts}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <FolderOpen size={14} style={{ color: "#2563eb" }} />
+              <span>Load saved draft</span>
             </button>
-            <button type="button" className="panel-btn--ghost panel-btn" style={{ padding: "10px" }}>
-              <MoreHorizontal size={16} />
-            </button>
+
+            {/* More Options Dropdown */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="panel-btn--ghost panel-btn"
+                onClick={() => setShowMoreMenu((prev) => !prev)}
+                style={{ padding: "10px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                title="More Options"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+
+              {showMoreMenu && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    right: 0,
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 10,
+                    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)",
+                    zIndex: 1000,
+                    width: 210,
+                    padding: "6px 0",
+                    animation: "briefTooltipFadeIn 0.2s ease",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleExportProposal}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 14px",
+                      background: "none",
+                      border: "none",
+                      fontSize: 13,
+                      color: "#334155",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    <Download size={14} style={{ color: "#2563eb" }} />
+                    Export Markdown (.md)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyBrief}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 14px",
+                      background: "none",
+                      border: "none",
+                      fontSize: 13,
+                      color: "#334155",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    <Copy size={14} style={{ color: "#16a34a" }} />
+                    {copyToast ? "Copied!" : "Copy Raw Brief"}
+                  </button>
+
+                  <div style={{ height: 1, background: "#f1f5f9", margin: "4px 0" }} />
+
+                  <button
+                    type="button"
+                    onClick={handleStartNew}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "8px 14px",
+                      background: "none",
+                      border: "none",
+                      fontSize: 13,
+                      color: "#dc2626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                  >
+                    <RotateCcw size={14} />
+                    Start New Proposal
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1440,6 +1625,91 @@ export function ProposalGenerator() {
                 }}
               >
                 View Risk Tab
+              </button>
+            </div>
+          </div>
+        </div>
+      {/* ── SAVED DRAFTS SELECTION MODAL ── */}
+      {showDraftsModal && (
+        <div className="fixflow-modal-overlay" onClick={() => setShowDraftsModal(false)}>
+          <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 650 }}>
+            <div className="fixflow-modal-header">
+              <h3 className="fixflow-modal-title">
+                <FolderOpen size={20} style={{ color: "#2563eb" }} />
+                Saved Proposal Drafts & History
+              </h3>
+              <button
+                type="button"
+                className="panel-btn--ghost"
+                onClick={() => setShowDraftsModal(false)}
+                style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="fixflow-modal-body fixflow-custom-scroll" style={{ maxHeight: 420 }}>
+              {loadingDrafts ? (
+                <div style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ color: "#2563eb", marginBottom: 8 }} />
+                  <div>Loading saved proposal drafts...</div>
+                </div>
+              ) : draftList.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {draftList.map((draft, idx) => (
+                    <div
+                      key={draft.proposalId || idx}
+                      onClick={() => handleSelectDraft(draft)}
+                      style={{
+                        padding: 14,
+                        border: draft.proposalId === parsedProposalId ? "2px solid #2563eb" : "1px solid #e2e8f0",
+                        borderRadius: 10,
+                        background: draft.proposalId === parsedProposalId ? "#eff6ff" : "#fff",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#cbd5e1";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#e2e8f0";
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                          {draft.title || draft.proposal?.project_summary?.slice(0, 50) + "..." || `Draft #${idx + 1}`}
+                        </span>
+                        {draft.proposalId === parsedProposalId && (
+                          <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>Active Workspace</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px", lineHeight: 1.5 }}>
+                        {draft.proposal?.project_summary || "No description available"}
+                      </p>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "#64748b" }}>
+                        <span>Created: {new Date(draft.createdAt || Date.now()).toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>{draft.proposal?.features?.length || 0} Features</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "30px 20px", color: "#64748b" }}>
+                  <FileText size={36} style={{ color: "#cbd5e1", marginBottom: 8 }} />
+                  <h4 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>No Saved Drafts Found</h4>
+                  <p style={{ fontSize: 12, color: "#64748b", maxWidth: 280, margin: "0 auto" }}>
+                    Submit a project brief to automatically save and parse your proposal draft.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="fixflow-modal-footer">
+              <button
+                type="button"
+                className="panel-btn--ghost panel-btn"
+                onClick={() => setShowDraftsModal(false)}
+              >
+                Close
               </button>
             </div>
           </div>
