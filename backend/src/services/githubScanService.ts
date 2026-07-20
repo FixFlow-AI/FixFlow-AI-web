@@ -201,6 +201,11 @@ async function runScan(
           reposAnalyzed: data.reposAnalyzed ?? 0,
           finishedAt: new Date().toISOString(),
         });
+
+        if (typeof (repo as any).syncFreelancerRoster === 'function') {
+          await (repo as any).syncFreelancerRoster(freelancerId);
+        }
+
         publish(event, data);
         return;
       }

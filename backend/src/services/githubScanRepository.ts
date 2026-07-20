@@ -358,6 +358,53 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
       snapshot: (snapRes.Item as GithubProfileSnapshot) ?? null,
     };
   }
+
+  /** Automatically upsert freelancer entry in fixflow_freelancers marketplace table */
+  async syncFreelancerRoster(freelancerId: string): Promise<void> {
+    try {
+      const { ddb, table } = await import('../config/aws.js');
+      const { PutCommand, GetCommand } = await import('@aws-sdk/lib-dynamodb');
+
+      const userRes = await ddb.send(
+        new GetCommand({ TableName: table('users'), Key: { userId: freelancerId } }),
+      );
+      const user = userRes.Item;
+      if (!user) return;
+
+      const profileData = await this.getProfile(freelancerId);
+      const skillNames = profileData.skills.map((s) => s.name);
+      const languages = profileData.latestJob?.languages
+        ? Object.keys(profileData.latestJob.languages)
+        : [];
+      const score = profileData.confidence?.score ?? 85;
+      const bio =
+        profileData.snapshot?.bio ||
+        'Full Stack Engineer & Open Source Contributor';
+
+      const rosterItem = {
+        freelancerId,
+        id: freelancerId,
+        name: user.name || user.githubUsername || 'Freelancer',
+        email: user.email,
+        githubUsername: user.githubUsername,
+        title: bio,
+        skills: skillNames.length > 0 ? skillNames : ['TypeScript', 'React', 'Node.js'],
+        githubLanguages: languages.length > 0 ? languages : ['JavaScript', 'TypeScript'],
+        domains: ['backend', 'devops', 'cloud'],
+        rateMin: 60,
+        rateMax: 150,
+        reputationScore: score,
+        available: true,
+        activeEscrows: 0,
+        sbtCount: 1,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await ddb.send(new PutCommand({ TableName: table('freelancers'), Item: rosterItem }));
+    } catch (err) {
+      console.warn(`[githubScanRepository] Roster auto-sync skipped: ${(err as Error).message}`);
+    }
+  }
 }
 
 // ---------- Factory ----------
