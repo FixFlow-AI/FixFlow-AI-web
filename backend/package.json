@@ -9,7 +9,8 @@
     "dev": "tsc && node dist/index.js",
     "lint": "echo 'Skipping lint - not configured'",
     "typecheck": "tsc --noEmit",
-    "test": "node dist/test/testSkills.js"
+    "test": "node dist/test/testSkills.js",
+    "ddb:ingest": "npx tsx src/scripts/ingestJsonToDynamoDb.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1075.0",

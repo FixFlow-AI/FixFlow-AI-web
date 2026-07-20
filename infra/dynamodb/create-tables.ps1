@@ -237,8 +237,17 @@ $tables = @{
 '@
 
   # 12) Growth plans — AI improvement plan (items embedded as a JSON list).
-  #     Query by planId; list a freelancer's plans via GSI.
-  "growth_plans" = @'
+  # 12b) Profile snapshots — bio, readme, repos context for AI scanning
+  "profile_snapshots" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "freelancerId", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "freelancerId", "KeyType": "HASH" } ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+'growth_plans" = @'
 {
   "AttributeDefinitions": [
     { "AttributeName": "planId", "AttributeType": "S" },

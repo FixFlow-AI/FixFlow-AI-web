@@ -60,14 +60,100 @@ class HttpRepository implements FreelancerRepository {
   }
 }
 
+/** Queries profiles directly from DynamoDB tables. */
+class DynamoDbFreelancerRepository implements FreelancerRepository {
+  async listActiveFreelancers(): Promise<FreelancerProfile[]> {
+    const { ddb, table } = await import('../config/aws.js');
+    const { ScanCommand, QueryCommand } = await import('@aws-sdk/lib-dynamodb');
+
+    // 1. Try querying the dedicated freelancers table first
+    try {
+      const rosterRes = await ddb.send(new ScanCommand({ TableName: table('freelancers') }));
+      if (rosterRes.Items && rosterRes.Items.length > 0) {
+        return rosterRes.Items as FreelancerProfile[];
+      }
+    } catch {
+      /* Fallback to user scanning */
+    }
+
+    // 2. Fallback to scanning users with role = 'freelancer'
+    const usersRes = await ddb.send(
+      new ScanCommand({
+        TableName: table('users'),
+        FilterExpression: '#r = :r',
+        ExpressionAttributeNames: { '#r': 'role' },
+        ExpressionAttributeValues: { ':r': 'freelancer' },
+      }),
+    );
+    const freelancers = usersRes.Items ?? [];
+    if (freelancers.length === 0) return [];
+
+    const profiles = await Promise.all(
+      freelancers.map(async (u) => {
+        const [skillsRes, snapRes, confRes] = await Promise.all([
+          ddb.send(
+            new QueryCommand({
+              TableName: table('freelancer_skills'),
+              KeyConditionExpression: 'freelancerId = :f',
+              ExpressionAttributeValues: { ':f': u.userId || u.id },
+            }),
+          ),
+          ddb.send(
+            new QueryCommand({
+              TableName: table('profile_snapshots'),
+              KeyConditionExpression: 'freelancerId = :f',
+              ExpressionAttributeValues: { ':f': u.userId || u.id },
+            }),
+          ),
+          ddb.send(
+            new QueryCommand({
+              TableName: table('profile_confidence'),
+              KeyConditionExpression: 'freelancerId = :f',
+              ExpressionAttributeValues: { ':f': u.userId || u.id },
+            }),
+          ),
+        ]);
+
+        const skills = (skillsRes.Items ?? []).map((s: any) => s.skillName || s.name);
+        const snapshot = snapRes.Items?.[0] as any;
+        const languages = snapshot?.languages ? Object.keys(snapshot.languages) : [];
+        const confidence = confRes.Items?.[0] as any;
+
+        return {
+          id: u.userId || u.id,
+          name: u.name || u.githubUsername || 'Freelancer',
+          title: u.title || 'Full Stack Engineer',
+          skills,
+          githubLanguages: languages,
+          domains: u.domains || ['software'],
+          rateMin: u.rateMin ?? 50,
+          rateMax: u.rateMax ?? 150,
+          reputationScore: confidence?.score ?? 85,
+          available: u.available ?? true,
+          activeEscrows: u.activeEscrows ?? 0,
+          sbtCount: u.sbtCount ?? 1,
+        } as FreelancerProfile;
+      }),
+    );
+
+    return profiles;
+  }
+}
+
 let cached: FreelancerRepository | null = null;
 
 export function getFreelancerRepository(): FreelancerRepository {
   if (cached) return cached;
 
-  const provider = (process.env.FREELANCER_PROVIDER || 'seed').toLowerCase();
+  const provider = (
+    process.env.PERSISTENCE_PROVIDER ||
+    process.env.FREELANCER_PROVIDER ||
+    'seed'
+  ).toLowerCase();
 
-  if (provider === 'http') {
+  if (provider === 'dynamodb') {
+    cached = new DynamoDbFreelancerRepository();
+  } else if (provider === 'http') {
     const url = process.env.FREELANCER_API_URL;
     if (!url) {
       throw new Error('FREELANCER_PROVIDER=http requires FREELANCER_API_URL to be set.');

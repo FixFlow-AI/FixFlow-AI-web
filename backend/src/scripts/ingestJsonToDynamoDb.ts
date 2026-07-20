@@ -1,0 +1,210 @@
+import { readFile } from 'fs/promises';
+import { resolve } from 'path';
+import dotenv from 'dotenv';
+import { ddb, table } from '../config/aws.js';
+import { PutCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+
+// Load environment variables from .env
+dotenv.config();
+
+/**
+ * Ingestion script to migrate all local JSON data files into DynamoDB tables.
+ *
+ * Source JSON files:
+ *  - backend/data/users.seed.json        -> <prefix>_users
+ *  - backend/data/github_scans.json      -> <prefix>_github_scan_jobs, <prefix>_freelancer_skills,
+ *                                           <prefix>_freelancer_projects, <prefix>_profile_confidence,
+ *                                           <prefix>_profile_snapshots
+ *  - backend/data/proposals.json         -> <prefix>_proposals
+ *  - backend/data/milestones.json        -> <prefix>_milestones
+ *  - backend/data/freelancers.seed.json  -> <prefix>_freelancers / <prefix>_users
+ */
+
+async function readJsonFile<T>(relativePath: string): Promise<T | null> {
+  try {
+    const fullPath = resolve(process.cwd(), relativePath);
+    const content = await readFile(fullPath, 'utf-8');
+    return JSON.parse(content) as T;
+  } catch (err) {
+    console.warn(`[ingest] Warning: Could not read ${relativePath}: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+async function batchWriteItems(tableName: string, items: Array<Record<string, any>>) {
+  if (items.length === 0) return;
+  console.log(`[ingest] Writing ${items.length} items to DynamoDB table: ${tableName}`);
+  
+  const puts = items.map((Item) => ({ PutRequest: { Item } }));
+  for (let i = 0; i < puts.length; i += 25) {
+    const chunk = puts.slice(i, i + 25);
+    await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
+  }
+}
+
+async function main() {
+  console.log('====================================================');
+  console.log('🚀 FixFlowAI DynamoDB Ingestion Pipeline Started');
+  console.log(`Region: ${process.env.AWS_REGION || 'ap-south-1'}`);
+  console.log(`Table Prefix: ${process.env.DDB_TABLE_PREFIX || 'fixflow'}`);
+  console.log('====================================================\n');
+
+  // 1. Ingest Users (users.seed.json)
+  const usersData = await readJsonFile<any[]>('data/users.seed.json');
+  if (usersData && Array.isArray(usersData)) {
+    const formattedUsers = usersData.map((u) => ({
+      userId: u.id,
+      email: u.email,
+      role: u.role || 'client',
+      googleSub: u.googleSub || undefined,
+      githubUserId: u.githubUserId || undefined,
+      githubUsername: u.githubUsername || undefined,
+      githubAccessToken: u.githubAccessToken || undefined,
+      name: u.name || undefined,
+      picture: u.picture || undefined,
+      createdAt: u.createdAt || new Date().toISOString(),
+      updatedAt: u.updatedAt || new Date().toISOString(),
+      refreshTokens: u.refreshTokens || [],
+    }));
+    await batchWriteItems(table('users'), formattedUsers);
+    console.log(`✅ Users ingested: ${formattedUsers.length} records.`);
+  }
+
+  // 2. Ingest GitHub Scans (github_scans.json)
+  const scansData = await readJsonFile<any>('data/github_scans.json');
+  if (scansData) {
+    // 2a. Jobs
+    if (scansData.jobs) {
+      const jobsList = Object.values(scansData.jobs);
+      await batchWriteItems(table('github_scan_jobs'), jobsList as any[]);
+      console.log(`✅ GitHub Scan Jobs ingested: ${jobsList.length} records.`);
+    }
+
+    // 2b. Skills
+    if (scansData.skills) {
+      const allSkills: any[] = [];
+      for (const [freelancerId, skillsList] of Object.entries<any[]>(scansData.skills)) {
+        for (const skill of skillsList) {
+          allSkills.push({
+            freelancerId,
+            skillName: skill.name || skill.skillName,
+            name: skill.name,
+            category: skill.category || 'other',
+            confidence: skill.confidence ?? 85,
+            evidence: skill.evidence || [],
+            source: skill.source || 'github_scan',
+            editable: false,
+          });
+        }
+      }
+      await batchWriteItems(table('freelancer_skills'), allSkills);
+      console.log(`✅ Freelancer Skills ingested: ${allSkills.length} records.`);
+    }
+
+    // 2c. Projects
+    if (scansData.projects) {
+      const allProjects: any[] = [];
+      for (const [freelancerId, projList] of Object.entries<any[]>(scansData.projects)) {
+        for (const proj of projList) {
+          allProjects.push({
+            freelancerId,
+            projectId: proj.repoName || proj.projectId,
+            repoName: proj.repoName,
+            summary: proj.summary || '',
+            domain: proj.domain || 'software',
+            stack: proj.stack || [],
+            stars: proj.stars ?? 0,
+            commitShare: proj.commitShare ?? 100,
+            lastActiveAt: proj.lastActiveAt || new Date().toISOString(),
+            rankScore: proj.rankScore ?? 0,
+          });
+        }
+      }
+      await batchWriteItems(table('freelancer_projects'), allProjects);
+      console.log(`✅ Freelancer Projects ingested: ${allProjects.length} records.`);
+    }
+
+    // 2d. Confidence
+    if (scansData.confidence) {
+      const confItems: any[] = [];
+      for (const [freelancerId, conf] of Object.entries<any>(scansData.confidence)) {
+        confItems.push({
+          freelancerId,
+          ...conf,
+          computedAt: new Date().toISOString(),
+        });
+      }
+      await batchWriteItems(table('profile_confidence'), confItems);
+      console.log(`✅ Profile Confidence scores ingested: ${confItems.length} records.`);
+    }
+
+    // 2e. Snapshots
+    if (scansData.snapshots) {
+      const snapItems: any[] = [];
+      for (const [freelancerId, snap] of Object.entries<any>(scansData.snapshots)) {
+        snapItems.push({
+          freelancerId,
+          ...snap,
+        });
+      }
+      await batchWriteItems(table('profile_snapshots'), snapItems);
+      console.log(`✅ Profile Snapshots ingested: ${snapItems.length} records.`);
+    }
+  }
+
+  // 3. Ingest Proposals (proposals.json)
+  const proposalsData = await readJsonFile<any>('data/proposals.json');
+  if (proposalsData) {
+    const propList = Array.isArray(proposalsData)
+      ? proposalsData
+      : Array.isArray(proposalsData.proposals)
+      ? proposalsData.proposals
+      : Object.values(proposalsData);
+    await batchWriteItems(table('proposals'), propList as any[]);
+    console.log(`✅ Proposals ingested: ${propList.length} records.`);
+  }
+
+  // 4. Ingest Milestones (milestones.json)
+  const milestonesData = await readJsonFile<any>('data/milestones.json');
+  if (milestonesData) {
+    const rawList: any[] = Array.isArray(milestonesData)
+      ? milestonesData
+      : milestonesData.milestones
+      ? Object.values(milestonesData.milestones)
+      : Object.values(milestonesData);
+    
+    const mileList = rawList.map((m) => ({
+      ...m,
+      milestoneId: m.milestoneId || m.id,
+      id: m.id || m.milestoneId,
+    }));
+    await batchWriteItems(table('milestones'), mileList);
+    console.log(`✅ Milestones ingested: ${mileList.length} records.`);
+  }
+
+  // 5. Ingest Roster Freelancers (freelancers.seed.json)
+  const freelancersData = await readJsonFile<any>('data/freelancers.seed.json');
+  if (freelancersData) {
+    const rawRoster: any[] = Array.isArray(freelancersData)
+      ? freelancersData
+      : (freelancersData as any).freelancers || [];
+    
+    const roster = rawRoster.map((f) => ({
+      ...f,
+      freelancerId: f.freelancerId || f.id || f.userId,
+    }));
+    if (roster.length > 0) {
+      await batchWriteItems(table('freelancers'), roster);
+      console.log(`✅ Freelancers Roster ingested: ${roster.length} records.`);
+    }
+  }
+
+  console.log('\n====================================================');
+  console.log('🎉 DynamoDB Data Ingestion Completed Successfully!');
+  console.log('====================================================');
+}
+
+main().catch((err) => {
+  console.error('❌ Ingestion failed:', err);
+  process.exit(1);
+});
