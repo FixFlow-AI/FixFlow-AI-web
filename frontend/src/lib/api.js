@@ -126,6 +126,15 @@ export const api = {
   listProposals: () => request("/proposals"),
   getProposal: (id) => request(`/proposals/${encodeURIComponent(id)}`),
 
+  // Persist the sequential step/approval state for a proposal so the builder
+  // restores where the user left off. Best-effort; server sanitizes the input.
+  saveProposalWorkflow: (id, activeStep, approvedSteps, updatedAt, signal) =>
+    request(`/proposals/${encodeURIComponent(id)}/workflow`, {
+      method: "PUT",
+      body: { activeStep, approvedSteps, updatedAt },
+      signal,
+    }),
+
   // Requirement Discovery Agent (Talent section): one adaptive Q&A turn.
   // Returns { status, confidence, next_question, brief, missing_information }.
   discoveryNext: (initialRequest, answers, signal) =>

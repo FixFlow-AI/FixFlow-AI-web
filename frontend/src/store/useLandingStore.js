@@ -137,6 +137,10 @@ export const useLandingStore = create((set) => ({
   parsedProposalId: null,
   briefSource: null, // "api" | "mock" | null
   briefError: "",
+  // Sequential step/approval state for the active proposal (loaded from the DB
+  // via listProposals/hydrate). null until a persisted workflow is loaded.
+  proposalWorkflow: null,
+  setProposalWorkflow: (proposalWorkflow) => set({ proposalWorkflow }),
   setParsedProposal: (parsedProposal) => set({ parsedProposal }),
   setParsedProposalId: (parsedProposalId) => set({ parsedProposalId }),
   setBriefSource: (briefSource) => set({ briefSource }),
@@ -202,6 +206,7 @@ export const useLandingStore = create((set) => ({
         briefSource: "api",
         isBriefParsed: true,
         isNewProposalMode: false,
+        proposalWorkflow: null, // a freshly parsed proposal starts with no approvals
       });
       // Refresh the proposal history in store after successfully parsing the new proposal
       const res = await api.listProposals();
@@ -475,6 +480,8 @@ export const useLandingStore = create((set) => ({
         generatedProposal: generatedMarkdown,
         confidenceResult: storedProposal.evaluation || null,
         confidenceSource: storedProposal.evaluation ? "api" : null,
+        // Restore the persisted sequential approval state (null for older proposals).
+        proposalWorkflow: storedProposal.workflow || null,
       };
     }),
   startNewProposal: () =>
@@ -486,6 +493,7 @@ export const useLandingStore = create((set) => ({
       parsedProposalId: null,
       briefSource: null,
       briefError: "",
+      proposalWorkflow: null,
       isProposalGenerated: false,
       generatedProposal: "",
       confidenceResult: null,
