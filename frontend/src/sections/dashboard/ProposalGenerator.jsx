@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { DiscoveryWizard } from "./DiscoveryWizard";
+import { api } from "../../lib/api";
 import {
   Sparkles,
   RefreshCw,
@@ -71,6 +72,8 @@ export function ProposalGenerator() {
     setProposalGenerated,
     setDashboardTab,
     parsedProposal,
+    parsedProposalId,
+    proposalWorkflow,
     runBriefParse,
     briefParsing,
   } = useLandingStore();
@@ -82,11 +85,44 @@ export function ProposalGenerator() {
   // Sequential approval: a step unlocks only after the previous one is approved.
   const [approvedSteps, setApprovedSteps] = useState([]);
   const hasProposal = Boolean(parsedProposal);
+  // Tracks which proposalId the local step state was hydrated for, so we never
+  // clobber in-session progress on unrelated re-renders.
+  const hydratedFor = useRef(null);
 
   const isStepUnlocked = (num) => num === 1 || approvedSteps.includes(num - 1);
+
+  // Persist workflow state: localStorage immediately (instant/offline restore)
+  // + DB best-effort (authoritative, cross-device). Only runs once a proposal
+  // has been persisted (has an id).
+  const persistWorkflow = (step, approved) => {
+    if (!parsedProposalId) return;
+    const updatedAt = new Date().toISOString();
+    try {
+      localStorage.setItem(
+        `ff_wf_${parsedProposalId}`,
+        JSON.stringify({ activeStep: step, approvedSteps: approved, updatedAt }),
+      );
+    } catch {
+      /* storage disabled/full — DB remains the source of truth */
+    }
+    api.saveProposalWorkflow(parsedProposalId, step, approved, updatedAt).catch(() => {
+      /* best-effort; localStorage already holds the latest for the next load */
+    });
+  };
+
+  // Navigate to an (already unlocked) step and persist the position.
+  const goToStep = (step) => {
+    setActiveStep(step);
+    persistWorkflow(step, approvedSteps);
+  };
+
+  // Approve the current step, unlock + advance to the next, and persist.
   const approveStep = (num) => {
-    setApprovedSteps((prev) => (prev.includes(num) ? prev : [...prev, num]));
-    if (num + 1 <= proposalSteps.length) setActiveStep(num + 1);
+    const nextApproved = approvedSteps.includes(num) ? approvedSteps : [...approvedSteps, num];
+    const nextStep = num + 1 <= proposalSteps.length ? num + 1 : num;
+    setApprovedSteps(nextApproved);
+    setActiveStep(nextStep);
+    persistWorkflow(nextStep, nextApproved);
   };
 
   // When entering a step, focus its first relevant detail tab.
@@ -95,6 +131,35 @@ export function ProposalGenerator() {
     if (allowed && !allowed.includes(activeTab)) setActiveTab(allowed[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStep]);
+
+  // Restore persisted step/approval state when the active proposal changes.
+  // Priority: DB workflow (via store) > localStorage cache > clean defaults.
+  // Runs once per proposalId so it won't overwrite in-session progress.
+  useEffect(() => {
+    if (!parsedProposalId) {
+      hydratedFor.current = null;
+      return;
+    }
+    if (hydratedFor.current === parsedProposalId) return;
+
+    let wf = proposalWorkflow;
+    if (!wf) {
+      try {
+        wf = JSON.parse(localStorage.getItem(`ff_wf_${parsedProposalId}`) || "null");
+      } catch {
+        wf = null;
+      }
+    }
+    if (wf && Array.isArray(wf.approvedSteps)) {
+      setApprovedSteps(wf.approvedSteps);
+      setActiveStep(Math.min(Math.max(wf.activeStep || 1, 1), proposalSteps.length));
+    } else {
+      // Brand-new proposal, or switched to a different one: start clean.
+      setApprovedSteps([]);
+      setActiveStep(1);
+    }
+    hydratedFor.current = parsedProposalId;
+  }, [parsedProposalId, proposalWorkflow]);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showIntelligenceModal, setShowIntelligenceModal] = useState(false);
 
@@ -183,6 +248,7 @@ export function ProposalGenerator() {
         // Step 1 (the brief) is complete once a proposal exists → unlock step 2.
         setApprovedSteps([1]);
         setActiveStep(2);
+        persistWorkflow(2, [1]);
       }
     }, 450);
   };
@@ -774,7 +840,7 @@ export function ProposalGenerator() {
                 className={`panel-step${isActive ? " panel-step--active" : approved ? " panel-step--done" : ""}`}
                 onClick={() => {
                   // A step can only be opened once it is unlocked (previous approved).
-                  if (unlocked) setActiveStep(step.num);
+                  if (unlocked) goToStep(step.num);
                 }}
                 style={{ cursor: unlocked ? "pointer" : "not-allowed", opacity: unlocked ? 1 : 0.45 }}
                 title={unlocked ? undefined : "Approve the previous step to unlock this one"}
@@ -842,7 +908,7 @@ export function ProposalGenerator() {
             <button
               type="button"
               className="panel-btn--ghost panel-btn"
-              onClick={() => setActiveStep(activeStep - 1)}
+              onClick={() => goToStep(activeStep - 1)}
             >
               Back
             </button>
