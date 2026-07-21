@@ -32,6 +32,7 @@ import {
   Activity,
   Handshake,
   GitCommitHorizontal,
+  X,
 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useLandingStore } from "../../store/useLandingStore";
@@ -153,16 +154,28 @@ function classifySkills(skills) {
   return AREA_ORDER.filter((k) => buckets[k]).map((k) => buckets[k]);
 }
 
-export function FreelancerAnalytics() {
+export function FreelancerAnalytics({ externalProfile = null, readOnly = false }) {
   const { user } = useLandingStore();
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(externalProfile);
+  const [loading, setLoading] = useState(!externalProfile);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState("");
+  const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [showLanguagesModal, setShowLanguagesModal] = useState(false);
+  const [skillFilter, setSkillFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
   const esRef = useRef(null);
 
   const loadProfile = useCallback(async () => {
+    // In read-only mode (a client viewing a candidate) the profile is supplied
+    // by the parent — never fetch the logged-in user's own analytics.
+    if (externalProfile) {
+      setProfile(externalProfile);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -172,12 +185,17 @@ export function FreelancerAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [externalProfile]);
 
   useEffect(() => {
+    if (externalProfile) {
+      setProfile(externalProfile);
+      setLoading(false);
+      return;
+    }
     loadProfile();
     return () => esRef.current?.close();
-  }, [loadProfile]);
+  }, [loadProfile, externalProfile]);
 
   const startRescan = async () => {
     setScanning(true);
@@ -255,23 +273,25 @@ export function FreelancerAnalytics() {
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-4">
-      {/* Slim toolbar (re-analyze) */}
-      <div className="flex items-center justify-end gap-3">
-        {scanNote && (
-          <span className="flex items-center gap-1.5 text-xs font-medium text-blue-600">
-            <Loader2 size={13} className="animate-spin" /> {scanNote}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={startRescan}
-          disabled={scanning}
-          className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.6)] transition hover:brightness-110 disabled:opacity-60"
-        >
-          {scanning ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} className="transition group-hover:rotate-180" />}
-          {scanning ? "Analyzing…" : hasData ? "Re-analyze" : "Analyze my GitHub"}
-        </button>
-      </div>
+      {/* Slim toolbar (re-analyze) — hidden when a client is viewing read-only */}
+      {!readOnly && (
+        <div className="flex items-center justify-end gap-3">
+          {scanNote && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-blue-600">
+              <Loader2 size={13} className="animate-spin" /> {scanNote}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={startRescan}
+            disabled={scanning}
+            className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.6)] transition hover:brightness-110 disabled:opacity-60"
+          >
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} className="transition group-hover:rotate-180" />}
+            {scanning ? "Analyzing…" : hasData ? "Re-analyze" : "Analyze my GitHub"}
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -285,10 +305,16 @@ export function FreelancerAnalytics() {
       {loading ? (
         <SkeletonDashboard />
       ) : !hasData ? (
-        <>
-          {snapshot && <ProfileHeader snapshot={snapshot} username={username} experience={experience} />}
-          <OnboardingCard scanning={scanning} onScan={startRescan} />
-        </>
+        readOnly ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+            This candidate hasn't published a verified analytics profile yet.
+          </div>
+        ) : (
+          <>
+            {snapshot && <ProfileHeader snapshot={snapshot} username={username} experience={experience} />}
+            <OnboardingCard scanning={scanning} onScan={startRescan} />
+          </>
+        )
       ) : (
         <>
           <ProfileHeader snapshot={snapshot} username={username} experience={experience} />
@@ -298,20 +324,249 @@ export function FreelancerAnalytics() {
               <VerificationCard confidence={confidence} scannedAt={scannedAt} />
             </div>
             <div className="lg:col-span-2">
-              <SkillsMatrix skills={skills} />
+              <SkillsMatrix skills={skills} onOpenDetailed={() => setShowSkillsModal(true)} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="lg:col-span-1">
-              <LanguageCard languages={languages} />
+              <LanguageCard languages={languages} onOpenDetailed={() => setShowLanguagesModal(true)} />
             </div>
             <div className="lg:col-span-2">
-              <ProjectsCard projects={projects} />
+              <ProjectsCard projects={projects} onOpenDetailed={() => setShowProjectsModal(true)} />
             </div>
           </div>
 
           {experience && <ExperienceSignals experience={experience} />}
+
+          {/* ── DETAILED SKILLS MATRIX MODAL ── */}
+          {showSkillsModal && (
+            <div className="fixflow-modal-overlay" onClick={() => setShowSkillsModal(false)}>
+              <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780 }}>
+                <div className="fixflow-modal-header">
+                  <h3 className="fixflow-modal-title flex items-center gap-2 text-base font-bold text-slate-900">
+                    <ShieldCheck size={22} className="text-indigo-600" />
+                    Verified Skills & Code Evidence Matrix ({skills.length})
+                  </h3>
+                  <button
+                    type="button"
+                    className="panel-btn--ghost"
+                    onClick={() => setShowSkillsModal(false)}
+                    style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="fixflow-modal-body fixflow-custom-scroll space-y-4" style={{ maxHeight: 520 }}>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Filter skills by name or domain..."
+                      value={skillFilter}
+                      onChange={(e) => setSkillFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none"
+                    />
+                    <Code2 size={16} className="absolute left-3 top-3 text-slate-400" />
+                  </div>
+
+                  {classifySkills(skills.filter((s) => s.name.toLowerCase().includes(skillFilter.toLowerCase()))).map(({ meta, items }) => {
+                    const Icon = meta.icon;
+                    return (
+                      <div key={meta.key} className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: `${meta.dot}20`, color: meta.dot }}>
+                              <Icon size={14} />
+                            </span>
+                            <span className="font-bold text-slate-800 text-sm">{meta.label}</span>
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{items.length} verified</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                          {items.sort((a, b) => b.confidence - a.confidence).map((s) => (
+                            <div
+                              key={s.name}
+                              className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm hover:border-indigo-300 transition"
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-bold text-slate-900 text-sm">{s.name}</span>
+                                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-600">
+                                  {s.confidence}% Rating
+                                </span>
+                              </div>
+                              <div className="h-1.5 w-full rounded-full bg-slate-100 mb-2 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
+                                  style={{ width: `${s.confidence}%` }}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1.5 border-t border-slate-100">
+                                <span>{s.evidence?.length || 0} code repo evidence</span>
+                                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                                  <CheckCircle2 size={11} /> Read-only
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="fixflow-modal-footer">
+                  <button
+                    type="button"
+                    className="panel-btn--ghost panel-btn"
+                    onClick={() => setShowSkillsModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── EXPLORE REPOSITORIES MODAL ── */}
+          {showProjectsModal && (
+            <div className="fixflow-modal-overlay" onClick={() => setShowProjectsModal(false)}>
+              <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780 }}>
+                <div className="fixflow-modal-header">
+                  <h3 className="fixflow-modal-title flex items-center gap-2 text-base font-bold text-slate-900">
+                    <FolderGit2 size={22} className="text-blue-600" />
+                    Scanned Repositories & Contribution Analysis ({projects.length})
+                  </h3>
+                  <button
+                    type="button"
+                    className="panel-btn--ghost"
+                    onClick={() => setShowProjectsModal(false)}
+                    style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="fixflow-modal-body fixflow-custom-scroll space-y-4" style={{ maxHeight: 520 }}>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Filter repositories by name or tech stack..."
+                      value={projectFilter}
+                      onChange={(e) => setProjectFilter(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                    />
+                    <Github size={16} className="absolute left-3 top-3 text-slate-400" />
+                  </div>
+
+                  <div className="space-y-3">
+                    {projects
+                      .filter((p) => p.repoName?.toLowerCase().includes(projectFilter.toLowerCase()) || p.summary?.toLowerCase().includes(projectFilter.toLowerCase()))
+                      .map((p) => (
+                        <div key={p.repoName} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              <FolderGit2 size={18} className="text-blue-600" />
+                              <a
+                                href={username ? `https://github.com/${username}/${p.repoName}` : "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-bold text-slate-900 text-sm hover:text-blue-600 flex items-center gap-1"
+                              >
+                                {p.repoName} <ExternalLink size={12} />
+                              </a>
+                              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 uppercase">
+                                {p.domain || "software"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                              <span className="flex items-center gap-1"><Star size={13} className="text-amber-500 fill-amber-500" /> {p.stars || 0}</span>
+                              <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
+                                {p.commitShare || 100}% Code Share
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed">{p.summary || "Public repository analyzed by FixFlowAI Gemini code scanner."}</p>
+
+                          {p.stack?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {p.stack.map((t) => (
+                                <span key={t} className="rounded-md bg-blue-50/70 px-2 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-100">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="fixflow-modal-footer">
+                  <button
+                    type="button"
+                    className="panel-btn--ghost panel-btn"
+                    onClick={() => setShowProjectsModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── FULL LANGUAGES DISTRIBUTION MODAL ── */}
+          {showLanguagesModal && (
+            <div className="fixflow-modal-overlay" onClick={() => setShowLanguagesModal(false)}>
+              <div className="fixflow-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+                <div className="fixflow-modal-header">
+                  <h3 className="fixflow-modal-title flex items-center gap-2 text-base font-bold text-slate-900">
+                    <Code2 size={22} className="text-indigo-600" />
+                    Full Programming Languages Distribution ({Object.keys(languages || {}).length})
+                  </h3>
+                  <button
+                    type="button"
+                    className="panel-btn--ghost"
+                    onClick={() => setShowLanguagesModal(false)}
+                    style={{ padding: 6, borderRadius: "50%", cursor: "pointer" }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="fixflow-modal-body fixflow-custom-scroll space-y-3" style={{ maxHeight: 450 }}>
+                  {Object.entries(languages || {})
+                    .filter(([, pct]) => pct > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([lang, pct], idx) => (
+                      <div key={lang} className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-2">
+                        <div className="flex items-center justify-between text-sm font-bold text-slate-800">
+                          <span className="flex items-center gap-2">
+                            <span className="h-3 w-3 rounded-full" style={{ background: colorFor(idx) }} />
+                            {lang}
+                          </span>
+                          <span className="text-indigo-600 font-extrabold">{pct}%</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: colorFor(idx) }} />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+
+                <div className="fixflow-modal-footer">
+                  <button
+                    type="button"
+                    className="panel-btn--ghost panel-btn"
+                    onClick={() => setShowLanguagesModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -500,14 +755,18 @@ function GradientRing({ score }) {
 
 /* ───────────────── Verified skills matrix ───────────────── */
 
-function SkillsMatrix({ skills }) {
+function SkillsMatrix({ skills, onOpenDetailed }) {
   const groups = classifySkills(skills);
   return (
     <Card className="h-full p-5">
       <CardHead
         title="Verified Skills Matrix"
         right={
-          <button className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+          <button
+            type="button"
+            onClick={onOpenDetailed}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+          >
             View detailed skills <ArrowRight size={13} />
           </button>
         }
@@ -530,8 +789,9 @@ function SkillsMatrix({ skills }) {
                   {[...items].sort((a, b) => b.confidence - a.confidence).map((s) => (
                     <span
                       key={s.name}
-                      title={`${s.confidence}% confidence · proven in ${s.evidence?.length || 0} repo(s)`}
-                      className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${meta.chip}`}
+                      onClick={onOpenDetailed}
+                      title={`${s.confidence}% confidence · proven in ${s.evidence?.length || 0} repo(s) — Click to view details`}
+                      className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${meta.chip} cursor-pointer hover:opacity-80 transition`}
                     >
                       {s.name}
                     </span>
@@ -548,7 +808,7 @@ function SkillsMatrix({ skills }) {
 
 /* ───────────────── Language distribution ───────────────── */
 
-function LanguageCard({ languages }) {
+function LanguageCard({ languages, onOpenDetailed }) {
   const entries = Object.entries(languages || {}).filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1]);
   const top = entries.slice(0, 4);
   return (
@@ -570,7 +830,11 @@ function LanguageCard({ languages }) {
               ))}
             </div>
           </div>
-          <button className="mx-auto mt-4 flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+          <button
+            type="button"
+            onClick={onOpenDetailed}
+            className="mx-auto mt-4 flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer"
+          >
             View all languages <ArrowRight size={13} />
           </button>
         </>
@@ -614,14 +878,18 @@ function LangDonut({ entries }) {
 
 /* ───────────────── Scanned projects ───────────────── */
 
-function ProjectsCard({ projects }) {
+function ProjectsCard({ projects, onOpenDetailed }) {
   const sorted = [...projects].sort((a, b) => (b.rankScore || 0) - (a.rankScore || 0));
   return (
     <Card className="flex h-full flex-col p-5">
       <CardHead
         title="Scanned Projects"
         right={
-          <button className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700">
+          <button
+            type="button"
+            onClick={onOpenDetailed}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+          >
             Explore all repositories <ArrowRight size={13} />
           </button>
         }
@@ -631,7 +899,7 @@ function ProjectsCard({ projects }) {
       ) : (
         <div className="-mr-2 max-h-[360px] space-y-1 overflow-y-auto pr-2">
           {sorted.map((p, i) => (
-            <ProjectRow key={p.repoName} p={p} accent={colorFor(i)} />
+            <ProjectRow key={p.repoName} p={p} accent={colorFor(i)} onOpenDetailed={onOpenDetailed} />
           ))}
         </div>
       )}
@@ -639,12 +907,12 @@ function ProjectsCard({ projects }) {
   );
 }
 
-function ProjectRow({ p, accent }) {
+function ProjectRow({ p, accent, onOpenDetailed }) {
   const cx = COMPLEXITY[p.complexity || "Medium"];
   const tags = [p.primaryLanguage, ...(p.stack || []).filter((t) => t !== p.primaryLanguage)].filter(Boolean).slice(0, 4);
   const letter = (p.repoName || "?")[0].toUpperCase();
   return (
-    <div className="flex items-center gap-4 rounded-xl px-2 py-3 transition hover:bg-slate-50/70">
+    <div onClick={onOpenDetailed} className="flex items-center gap-4 rounded-xl px-2 py-3 transition hover:bg-slate-50/70 cursor-pointer">
       {/* icon */}
       <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg text-sm font-bold text-white" style={{ background: accent }}>
         {letter}

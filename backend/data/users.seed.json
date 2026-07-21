@@ -53,7 +53,7 @@
       "googleSub": "111538751099892482216",
       "role": "client",
       "createdAt": "2026-07-03T12:46:43.891Z",
-      "updatedAt": "2026-07-20T18:37:06.027Z",
+      "updatedAt": "2026-07-20T19:03:03.033Z",
       "otpSecret": "JBSWY3DPEHPK3PXP",
       "refreshTokens": [
         {
@@ -125,8 +125,8 @@
           "createdAt": "2026-07-20T17:49:41.365Z"
         },
         {
-          "hash": "803b4990b0bb661a743c6d97b2dff573c1e4f6dc6321f1b45941944fb7dcc8d5",
-          "createdAt": "2026-07-20T18:37:06.027Z"
+          "hash": "577b84f82c6df2784852d2233902a8e3237d46a54ea1cac47a1f17ee76cc2cc9",
+          "createdAt": "2026-07-20T19:03:03.033Z"
         }
       ]
     },
@@ -141,7 +141,7 @@
       "githubUsername": "Suvam-paul145",
       "role": "freelancer",
       "createdAt": "2026-07-07T07:48:51.920Z",
-      "updatedAt": "2026-07-20T18:32:02.056Z",
+      "updatedAt": "2026-07-20T18:57:06.044Z",
       "githubAccessToken": "REDACTED_GITHUB_OAUTH_TOKEN",
       "refreshTokens": [
         {
@@ -177,8 +177,8 @@
           "createdAt": "2026-07-17T03:33:59.862Z"
         },
         {
-          "hash": "c7d43ed0dc1f3e441562bb2954dbff0f10366d517ac6d018a3a792cdd04782f4",
-          "createdAt": "2026-07-20T18:32:02.056Z"
+          "hash": "98047a87539bd1b7aa903efe69e91e2660009597817983f306932f538f1e6a37",
+          "createdAt": "2026-07-20T18:57:06.044Z"
         }
       ]
     },

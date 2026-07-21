@@ -111,6 +111,9 @@ export const api = {
 
   // Freelancer GitHub onboarding (roles/01)
   freelancerProfile: () => request("/freelancer/profile"),
+  // A client viewing a matched candidate's analytics dashboard (read-only).
+  candidateProfile: (id, signal) =>
+    request(`/freelancers/${encodeURIComponent(id)}/profile`, { signal }),
   // On-demand re-analysis — the ONLY caller that re-invokes the GitHub API for
   // a returning freelancer. Returns { scanJobId } to stream live segments.
   rescanGithub: () => request("/freelancer/scan/rescan", { method: "POST" }),

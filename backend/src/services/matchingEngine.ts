@@ -32,6 +32,29 @@ export interface MatchResult {
   fitReasons: string[];
   skillGaps: string[];
   riskFlags: string[];
+  /** 'primary' = ranked shortlist; 'supplementary' = added for team coverage. */
+  matchType?: 'primary' | 'supplementary';
+  /** For supplementary picks: which otherwise-uncovered required skills they cover. */
+  coversSkills?: string[];
+}
+
+/** Skill-coverage summary for the shortlist, used to decide if a team is needed. */
+export interface ShortlistCoverage {
+  requiredSkills: string[];
+  coveredSkills: string[];
+  uncoveredSkills: string[];
+  coveragePct: number;
+  strongCandidateCount: number;
+  /** True when the shortlist alone is unlikely to deliver (few strong fits or gaps remain). */
+  teamRecommended: boolean;
+}
+
+export interface ShortlistOutput {
+  shortlist: MatchResult[];
+  /** Complementary freelancers that, together with the shortlist, cover the project. */
+  supplementary: MatchResult[];
+  coverage: ShortlistCoverage;
+  totalCandidatesEvaluated: number;
 }
 
 export interface MatchWeights {
@@ -65,6 +88,9 @@ const DEFAULT_SYNONYMS: Record<string, string> = {
 };
 
 function num(envVal: string | undefined, fallback: number): number {
+  // An unset OR empty/whitespace env var must fall back — not coerce to 0.
+  // (Number('') === 0, which previously zeroed out weights and broke scoring.)
+  if (envVal === undefined || String(envVal).trim() === '') return fallback;
   const n = Number(envVal);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
@@ -143,14 +169,14 @@ export interface MatchInput {
 export function generateShortlist(
   input: MatchInput,
   roster: FreelancerProfile[],
-): { shortlist: MatchResult[]; totalCandidatesEvaluated: number } {
+): ShortlistOutput {
   const weights = getWeights();
   const norm = makeNorm(getSynonyms());
 
   const required = (input.requiredSkills ?? []).filter(Boolean);
   const requiredNorm = required.map(norm);
   const wantedDomains = (input.domains ?? []).map(norm);
-  const limit = input.limit && input.limit > 0 ? input.limit : 5;
+  const limit = input.limit && input.limit > 0 ? input.limit : 10;
 
   const scored = (roster ?? []).map((f) => {
     const skillOverlap = jaccard(required, f.skills, norm);
@@ -218,8 +244,91 @@ export function generateShortlist(
 
   scored.sort((a, b) => b.compositeScore - a.compositeScore);
 
+  const totalCandidatesEvaluated = (roster ?? []).length;
+  const profById = new Map((roster ?? []).map((f) => [f.id, f]));
+
+  const strongMin = num(process.env.MATCH_STRONG_MIN, 45);
+  const minStrong = Math.max(1, Math.round(num(process.env.MATCH_MIN_STRONG, 3)));
+  const strongCandidateCount = scored.filter((m) => m.compositeScore >= strongMin).length;
+
+  // The shortlist = the *suitable* candidates (strong fit) who can solve the
+  // problem, capped at `limit` (top 10). If none clear the bar, fall back to the
+  // top few so the client is never shown an empty list.
+  const strong = scored.filter((m) => m.compositeScore >= strongMin);
+  const primary = (strong.length > 0 ? strong : scored.slice(0, Math.min(limit, 3))).slice(0, limit);
+  const shortlist: MatchResult[] = primary.map((m) => ({ ...m, matchType: 'primary' as const }));
+
+  // ── Skill coverage across the shortlist (can the team collectively deliver?) ──
+  const normToLabel = new Map<string, string>();
+  required.forEach((label) => {
+    const k = norm(label);
+    if (!normToLabel.has(k)) normToLabel.set(k, label);
+  });
+
+  const covered = new Set<string>();
+  for (const m of shortlist) {
+    const f = profById.get(m.freelancerId);
+    if (!f) continue;
+    const fSkills = new Set(f.skills.map(norm));
+    for (const rk of requiredNorm) if (fSkills.has(rk)) covered.add(rk);
+  }
+  const uncoveredSkills = [...normToLabel.keys()]
+    .filter((k) => !covered.has(k))
+    .map((k) => normToLabel.get(k) as string);
+  const coveredSkills = [...covered].map((k) => normToLabel.get(k) ?? k);
+  const coveragePct = requiredNorm.length
+    ? Math.round((covered.size / new Set(requiredNorm).size) * 100)
+    : 100;
+
+  // Fewer suitable freelancers than we'd want, or open skill gaps → recommend a team.
+  const teamRecommended =
+    strongCandidateCount < minStrong || (requiredNorm.length > 0 && uncoveredSkills.length > 0);
+
+  // ── Supplementary picks: complementary freelancers to complete the project ──
+  // When the shortlist can't deliver alone, surface additional profiles that
+  // cover the remaining skill gaps (or, if coverage is already full but strong
+  // fits are scarce, the next best available candidates) so a viable team can
+  // be formed instead of leaving the client stuck.
+  let supplementary: MatchResult[] = [];
+  if (teamRecommended) {
+    const shortlistIds = new Set(shortlist.map((m) => m.freelancerId));
+    const suppLimit = Math.max(1, Math.round(num(process.env.MATCH_SUPP_LIMIT, 5)));
+    const pool = scored.filter((m) => !shortlistIds.has(m.freelancerId));
+
+    const ranked = pool
+      .map((m) => {
+        const f = profById.get(m.freelancerId);
+        const fSkills = new Set((f?.skills ?? []).map(norm));
+        const coversSkills = uncoveredSkills.filter((label) => fSkills.has(norm(label)));
+        return { m, coversCount: coversSkills.length, coversSkills };
+      })
+      // With open gaps, require covering ≥1; otherwise allow the next top scorers.
+      .filter((x) => (uncoveredSkills.length > 0 ? x.coversCount > 0 : true))
+      .sort((a, b) => b.coversCount - a.coversCount || b.m.compositeScore - a.m.compositeScore)
+      .slice(0, suppLimit);
+
+    supplementary = ranked.map(({ m, coversSkills }) => ({
+      ...m,
+      matchType: 'supplementary' as const,
+      coversSkills,
+      fitReasons:
+        coversSkills.length > 0
+          ? [`Complements the team — covers: ${coversSkills.join(', ')}`, ...m.fitReasons]
+          : ['Additional capacity to help deliver the project', ...m.fitReasons],
+    }));
+  }
+
   return {
-    shortlist: scored.slice(0, limit),
-    totalCandidatesEvaluated: (roster ?? []).length,
+    shortlist,
+    supplementary,
+    coverage: {
+      requiredSkills: required,
+      coveredSkills,
+      uncoveredSkills,
+      coveragePct,
+      strongCandidateCount,
+      teamRecommended,
+    },
+    totalCandidatesEvaluated,
   };
 }

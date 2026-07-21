@@ -32,6 +32,7 @@ import {
 import { calculateClientScore } from './skills/clientScoring.js';
 import { generateShortlist } from './services/matchingEngine.js';
 import { getFreelancerRepository } from './services/freelancerRepository.js';
+import { getGithubScanRepository } from './services/githubScanRepository.js';
 import { getProposalRepository } from './services/proposalRepository.js';
 import { authRouter } from './routes/auth.js';
 import { freelancerRouter } from './routes/freelancer.js';
@@ -380,6 +381,65 @@ app.post(
         roster,
       ),
     );
+  }),
+);
+
+// ==========================================
+// Candidate profile — a client viewing a matched freelancer's analytics.
+// Returns the same shape the freelancer sees in their Analytics dashboard
+// (verified skills, projects, confidence). Falls back to the roster profile
+// when a freelancer has no GitHub scan yet, so clients always see something.
+// ==========================================
+
+app.get(
+  '/api/freelancers/:id/profile',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const id = req.params.id;
+    const scan = await getGithubScanRepository().getProfile(id);
+    const hasScan = Boolean(
+      (scan.skills && scan.skills.length) ||
+        (scan.projects && scan.projects.length) ||
+        scan.confidence,
+    );
+
+    if (hasScan) {
+      res.json({ ...scan, source: 'scan' });
+      return;
+    }
+
+    // No scan on file → synthesize a lightweight, honest profile from the roster
+    // (skills + reputation are real roster fields; projects remain empty).
+    const roster = await getFreelancerRepository().listActiveFreelancers();
+    const entry = roster.find((f) => f.id === id) || null;
+    if (!entry) {
+      res.status(404).json({ error: 'Candidate not found.' });
+      return;
+    }
+
+    const rep = typeof entry.reputationScore === 'number' ? entry.reputationScore : 80;
+    const languages: Record<string, number> = {};
+    const langs = entry.githubLanguages ?? [];
+    langs.forEach((l) => {
+      languages[l] = Math.max(1, Math.round(100 / langs.length));
+    });
+
+    res.json({
+      source: 'roster',
+      skills: (entry.skills ?? []).map((name) => ({
+        name,
+        confidence: Math.min(95, rep),
+        category: 'skill',
+        evidence: [],
+      })),
+      projects: [],
+      confidence: {
+        score: rep,
+        band: rep >= 85 ? 'match_ready' : rep >= 70 ? 'developing' : 'emerging',
+      },
+      latestJob: { languages },
+      snapshot: { name: entry.name, bio: entry.title },
+    });
   }),
 );
 

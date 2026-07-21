@@ -3,6 +3,37 @@ import { api, ApiError } from "../lib/api";
 
 const initialMilestones = [];
 
+// Compact tech lexicon used to pull real, matchable skills out of a proposal's
+// free-text (feature titles/areas/technical_approach). Kept deliberately small
+// and aligned with the vocabulary freelancer profiles use, so the matching
+// engine can compute meaningful skill/GitHub/domain overlap.
+const SKILL_LEXICON = [
+  "node.js", "node", "express", "nestjs", "fastapi", "django", "flask", "spring",
+  "graphql", "grpc", "rest", "microservices", "websockets", "go", "golang", "rust",
+  "java", "kotlin", "php", "laravel", "ruby", "rails", "python",
+  "react", "next.js", "vue", "svelte", "angular", "tailwind", "typescript",
+  "javascript", "redux", "zustand",
+  "postgresql", "postgres", "mysql", "mongodb", "redis", "prisma", "dynamodb",
+  "elasticsearch", "sql",
+  "docker", "kubernetes", "k8s", "aws", "gcp", "azure", "terraform", "ci/cd", "nginx",
+  "solidity", "polygon", "web3", "ethers", "smart contract",
+  "razorpay", "stripe", "webhooks", "payments", "etl", "reconciliation", "observability",
+];
+
+/** Extract matchable tech skills from a parsed proposal's text. */
+function extractProposalSkills(proposal) {
+  const text = (proposal?.features ?? [])
+    .map((f) => `${f.title ?? ""} ${f.area ?? ""} ${f.technical_approach ?? ""}`)
+    .join(" ")
+    .toLowerCase();
+  if (!text.trim()) return [];
+  const found = new Set();
+  for (const term of SKILL_LEXICON) {
+    if (text.includes(term)) found.add(term);
+  }
+  return [...found];
+}
+
 export const useLandingStore = create((set) => ({
   // Original state defaults
   audience: "client",
@@ -348,11 +379,24 @@ export const useLandingStore = create((set) => ({
     }
     set({ matchingLoading: true, matchError: null });
     try {
-      const requiredSkills =
-        state.parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [];
-      const domains =
-        state.parsedProposal?.features?.map((f) => f.title).filter(Boolean) ?? [];
-      const data = await api.matchFreelancers(requiredSkills, 10000, domains, 5);
+      // Derive real tech skills from the proposal text so matching scores are
+      // meaningful. Feature "area"/"title" are categories (e.g. "Core E-commerce")
+      // that never overlap with a freelancer's actual skills — using them alone
+      // zeroed out skill/GitHub/domain factors. Fall back to areas only if the
+      // lexicon finds nothing.
+      let requiredSkills = extractProposalSkills(state.parsedProposal);
+      if (requiredSkills.length === 0) {
+        requiredSkills =
+          state.parsedProposal?.features?.map((f) => f.area).filter(Boolean) ?? [];
+      }
+      const domains = [
+        ...new Set(
+          (state.parsedProposal?.features ?? []).map((f) => f.area).filter(Boolean),
+        ),
+      ];
+      // Budget left neutral (no reliable numeric budget on the proposal) and
+      // top 10 candidates so the client sees enough to assemble a team.
+      const data = await api.matchFreelancers(requiredSkills, undefined, domains, 10);
       set({ matchResults: data });
     } catch (err) {
       const reason =
