@@ -56,7 +56,7 @@ async function request(path, { method = "GET", body, signal } = {}) {
     console.error(
       `[API] ❌ Network error on ${method} /api${path}.`,
       'Error:', networkError?.message || networkError,
-      '| Is the backend running? Check http://localhost:4000/api/health',
+      '| Is the backend running? Check http://localhost:5000/api/health',
     );
     throw new ApiError(
       "Could not reach the backend. Is the API server running?",
@@ -74,7 +74,7 @@ async function request(path, { method = "GET", body, signal } = {}) {
       const isHtml = text.trim().startsWith("<");
       payload = {
         error: isHtml
-          ? `Backend service endpoint not reachable (${response.status}). Please ensure the backend server is running on port 4000.`
+          ? `Backend service endpoint not reachable (${response.status}). Please ensure the backend server is running on port 5000.`
           : text.slice(0, 200),
       };
     }
