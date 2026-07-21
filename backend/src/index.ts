@@ -392,7 +392,7 @@ app.post(
 // ==========================================
 
 app.get(
-  '/api/freelancers/:id/profile',
+  ['/api/freelancers/:id/profile', '/api/freelancer/:id/profile'],
   requireAuth,
   asyncRoute(async (req, res) => {
     const id = req.params.id;

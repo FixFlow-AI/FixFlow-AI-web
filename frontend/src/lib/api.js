@@ -71,7 +71,12 @@ async function request(path, { method = "GET", body, signal } = {}) {
       payload = JSON.parse(text);
     } catch {
       console.error(`[API] ❌ Response from ${path} is not valid JSON. Raw text:`, text.slice(0, 200));
-      payload = { error: text };
+      const isHtml = text.trim().startsWith("<");
+      payload = {
+        error: isHtml
+          ? `Backend service endpoint not reachable (${response.status}). Please ensure the backend server is running on port 4000.`
+          : text.slice(0, 200),
+      };
     }
   }
 
