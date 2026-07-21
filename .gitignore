@@ -11,4 +11,6 @@ docs/specifications/ai_engineering_sprints.md
 References/buildX prize track
 
 secrets
-backend\data
+backend/data/
+data/
+*.seed.json
