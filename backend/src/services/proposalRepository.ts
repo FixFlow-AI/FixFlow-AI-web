@@ -2,6 +2,10 @@ import { randomUUID } from 'crypto';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import type { Proposal } from '../types/ai.js';
+import {
+  ClientMatchVersionMismatchError,
+  type ClientMatchWorkflow,
+} from './clientMatchWorkflow.js';
 
 /**
  * Persistence for parsed proposals + their confidence-grid evaluations.
@@ -34,6 +38,8 @@ export interface StoredProposal {
   pinned?: boolean;
   evaluation?: unknown; // ConfidenceGridResult, stored opaque to avoid a hard dep
   workflow?: ProposalWorkflow; // sequential approval state (see above)
+  /** Client-owned shortlist, invitation, and selection state for this proposal. */
+  clientMatchWorkflow?: ClientMatchWorkflow;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +50,11 @@ export interface ProposalRepository {
   listByUser(userId: string): Promise<StoredProposal[]>;
   setEvaluation(proposalId: string, evaluation: unknown): Promise<StoredProposal | null>;
   setWorkflow(proposalId: string, workflow: ProposalWorkflow): Promise<StoredProposal | null>;
+  setClientMatchWorkflow(
+    proposalId: string,
+    workflow: ClientMatchWorkflow,
+    expectedVersion?: number,
+  ): Promise<StoredProposal | null>;
   updateTitle(proposalId: string, title: string): Promise<StoredProposal | null>;
   togglePin(proposalId: string, pinned?: boolean): Promise<StoredProposal | null>;
 }
@@ -111,6 +122,17 @@ class InMemoryProposalRepository implements ProposalRepository {
     const sp = this.store.get(id);
     if (!sp) return null;
     sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    return sp;
+  }
+  async setClientMatchWorkflow(id: string, workflow: ClientMatchWorkflow, expectedVersion?: number) {
+    const sp = this.store.get(id);
+    if (!sp) return null;
+    const currentVersion = sp.clientMatchWorkflow?.version;
+    if (expectedVersion === undefined ? currentVersion !== undefined : currentVersion !== expectedVersion) {
+      throw new ClientMatchVersionMismatchError(expectedVersion ?? 0, currentVersion ?? 0);
+    }
+    sp.clientMatchWorkflow = workflow;
     sp.updatedAt = new Date().toISOString();
     return sp;
   }
@@ -192,6 +214,39 @@ class DynamoDbProposalRepository implements ProposalRepository {
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
     await ddb.send(new PutCommand({ TableName: table('proposals'), Item: sp }));
+    return sp;
+  }
+  async setClientMatchWorkflow(id: string, workflow: ClientMatchWorkflow, expectedVersion?: number) {
+    const sp = await this.get(id);
+    if (!sp) return null;
+    const currentVersion = sp.clientMatchWorkflow?.version;
+    if (expectedVersion === undefined ? currentVersion !== undefined : currentVersion !== expectedVersion) {
+      throw new ClientMatchVersionMismatchError(expectedVersion ?? 0, currentVersion ?? 0);
+    }
+    sp.clientMatchWorkflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    try {
+      await ddb.send(
+        new PutCommand({
+          TableName: table('proposals'),
+          Item: sp,
+          ConditionExpression:
+            expectedVersion === undefined
+              ? 'attribute_not_exists(#workflow)'
+              : '#workflow.#version = :expectedVersion',
+          ExpressionAttributeNames: { '#workflow': 'clientMatchWorkflow', '#version': 'version' },
+          ExpressionAttributeValues:
+            expectedVersion === undefined ? undefined : { ':expectedVersion': expectedVersion },
+        }),
+      );
+    } catch (error) {
+      if ((error as { name?: string }).name === 'ConditionalCheckFailedException') {
+        throw new ClientMatchVersionMismatchError(expectedVersion ?? 0, currentVersion ?? 0);
+      }
+      throw error;
+    }
     return sp;
   }
   async updateTitle(id: string, title: string) {
@@ -301,6 +356,20 @@ class FileProposalRepository implements ProposalRepository {
     const sp = list.find((p) => p.proposalId === id);
     if (!sp) return null;
     sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    await this.persist();
+    return sp;
+  }
+
+  async setClientMatchWorkflow(id: string, workflow: ClientMatchWorkflow, expectedVersion?: number) {
+    const list = await this.load();
+    const sp = list.find((p) => p.proposalId === id);
+    if (!sp) return null;
+    const currentVersion = sp.clientMatchWorkflow?.version;
+    if (expectedVersion === undefined ? currentVersion !== undefined : currentVersion !== expectedVersion) {
+      throw new ClientMatchVersionMismatchError(expectedVersion ?? 0, currentVersion ?? 0);
+    }
+    sp.clientMatchWorkflow = workflow;
     sp.updatedAt = new Date().toISOString();
     await this.persist();
     return sp;
