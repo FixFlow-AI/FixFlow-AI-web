@@ -335,6 +335,8 @@ export function Overview() {
                     const isEditingThis = editingId === id;
                     const isPinned = Boolean(p.pinned);
                     const isActiveWorkspace = id === parsedProposalId;
+                    const isLoading = viewingBrief === id;
+
 
 
                     return (
