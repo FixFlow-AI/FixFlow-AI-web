@@ -231,6 +231,43 @@ app.put(
   })
 );
 
+// Rename proposal title
+app.patch(
+  '/api/proposals/:id/title',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { title } = req.body ?? {};
+    if (typeof title !== 'string' || !title.trim()) {
+      res.status(400).json({ error: 'title is required and must be a non-empty string.' });
+      return;
+    }
+    const repo = getProposalRepository();
+    const updated = await repo.updateTitle(req.params.id, title.trim());
+    if (!updated) {
+      res.status(404).json({ error: 'Proposal not found.' });
+      return;
+    }
+    res.json({ proposal: updated });
+  })
+);
+
+// Toggle proposal pinned status
+app.patch(
+  '/api/proposals/:id/pin',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { pinned } = req.body ?? {};
+    const repo = getProposalRepository();
+    const updated = await repo.togglePin(req.params.id, typeof pinned === 'boolean' ? pinned : undefined);
+    if (!updated) {
+      res.status(404).json({ error: 'Proposal not found.' });
+      return;
+    }
+    res.json({ proposal: updated });
+  })
+);
+
+
 // ==========================================
 // Requirement Discovery Agent (Talent section only)
 // ==========================================
