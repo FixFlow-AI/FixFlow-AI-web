@@ -37,6 +37,7 @@ import { getGithubScanRepository } from './services/githubScanRepository.js';
 import { getProposalRepository } from './services/proposalRepository.js';
 import { authRouter } from './routes/auth.js';
 import { freelancerRouter } from './routes/freelancer.js';
+import { interviewRouter } from './routes/interview.js';
 import { requireAuth } from './auth/middleware.js';
 import { requireRole } from './auth/roles.js';
 import {
@@ -82,6 +83,10 @@ app.use('/api/auth', authRouter);
 
 // Freelancer routes (roles/01): verified profile + GitHub scan status/stream.
 app.use('/api/freelancer', freelancerRouter);
+
+// Proctored interview-gate routes: client authors screening questions;
+// freelancers take an auto-scored, proctored interview to apply.
+app.use('/api/interview', interviewRouter);
 
 /**
  * Small wrapper so async route handlers forward errors to the error middleware
