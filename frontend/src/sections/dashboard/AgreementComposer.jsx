@@ -19,7 +19,7 @@ import {
 import { useLandingStore } from "../../store/useLandingStore";
 
 export function AgreementComposer() {
-  const { user, parsedProposal } = useLandingStore();
+  const { user, parsedProposal, matchResults } = useLandingStore();
 
   if (!parsedProposal) {
     return (
@@ -56,6 +56,9 @@ export function AgreementComposer() {
   const firstPhase = parsedProposal.timeline?.[0];
   const firstPhaseTitle = firstPhase ? firstPhase.phase : "Migration Phase";
   const firstPhaseTasks = firstPhase ? firstPhase.tasks : [];
+  const selectedTalent = (matchResults?.candidates || [])
+    .filter((candidate) => candidate.status === "selected")
+    .map((candidate) => candidate.name);
 
   return (
     <div>
@@ -82,7 +85,7 @@ export function AgreementComposer() {
           <Building2 size={14} /> Client: {orgName}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
-          <Users size={14} /> Delivery team: {user?.name || "Independent Talent"}
+          <Users size={14} /> Delivery team: {selectedTalent.length ? selectedTalent.join(", ") : "Select talent in Matches"}
         </span>
       </div>
 
