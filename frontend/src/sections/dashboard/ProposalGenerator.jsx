@@ -195,16 +195,10 @@ export function ProposalGenerator() {
     }
   };
 
-  const handleSelectDraft = (draft) => {
-    if (draft && draft.proposal) {
-      useLandingStore.setState({
-        parsedProposal: draft.proposal,
-        parsedProposalId: draft.proposalId,
-        rawBriefText: draft.proposal.project_summary || "",
-        isBriefParsed: true,
-        briefSource: "api",
-        proposalWorkflow: draft.workflow || null,
-      });
+  const handleSelectDraft = async (draft) => {
+    if (draft && draft.proposalId) {
+      const selectProposalById = useLandingStore.getState().selectProposalById;
+      await selectProposalById(draft.proposalId);
       if (draft.workflow && Array.isArray(draft.workflow.approvedSteps)) {
         setApprovedSteps(draft.workflow.approvedSteps);
         setActiveStep(draft.workflow.activeStep || 1);
@@ -215,6 +209,7 @@ export function ProposalGenerator() {
       setShowDraftsModal(false);
     }
   };
+
 
   const handleExportProposal = () => {
     setShowMoreMenu(false);
