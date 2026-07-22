@@ -219,12 +219,16 @@ export function Overview() {
               </div>
               <hr className="panel-divider" />
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" className="panel-btn" onClick={() => go("evidence-confidence")}>
-                  <Cpu size={14} /> Evaluate
-                </button>
-                <button type="button" className="panel-btn--ghost panel-btn" onClick={() => go("matching")}>
-                  Find matches <ArrowRight size={14} />
-                </button>
+                {user?.role === "client" && (
+                  <>
+                    <button type="button" className="panel-btn" onClick={() => go("evidence-confidence")}>
+                      <Cpu size={14} /> Evaluate
+                    </button>
+                    <button type="button" className="panel-btn--ghost panel-btn" onClick={() => go("matching")}>
+                      Find matches <ArrowRight size={14} />
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   className="panel-btn--ghost panel-btn"
@@ -241,18 +245,37 @@ export function Overview() {
               </div>
             </div>
           ) : (
-            /* Honest empty state for a brand-new account — no mock data. */
+            /* Honest empty state for a brand-new account — no mock data.
+               The brief/proposal flow is client-only, so freelancers get a
+               starting point that actually applies to them. */
             <div className="panel-card" style={{ textAlign: "center", padding: 40 }}>
               <FileText size={32} style={{ color: "#94a3b8" }} />
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
-                No projects yet
-              </h2>
-              <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
-                Start by parsing a project brief — that creates your first real proposal.
-              </p>
-              <button type="button" className="panel-btn" onClick={() => go("brief-intelligence")}>
-                Parse a brief <ArrowRight size={14} />
-              </button>
+              {user?.role === "client" ? (
+                <>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
+                    No projects yet
+                  </h2>
+                  <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
+                    Start by parsing a project brief — that creates your first real proposal.
+                  </p>
+                  <button type="button" className="panel-btn" onClick={() => go("brief-intelligence")}>
+                    Parse a brief <ArrowRight size={14} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: 18, fontWeight: 700, margin: "12px 0 4px" }}>
+                    No active projects yet
+                  </h2>
+                  <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px" }}>
+                    Analyze your GitHub to build your verified profile — that's how clients
+                    discover and match with you.
+                  </p>
+                  <button type="button" className="panel-btn" onClick={() => go("analytics")}>
+                    Open Code Analytics <ArrowRight size={14} />
+                  </button>
+                </>
+              )}
             </div>
           )}
 
