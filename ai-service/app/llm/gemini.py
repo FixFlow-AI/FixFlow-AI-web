@@ -190,14 +190,25 @@ async def generate_structured(
                 )
             )
 
-    parsed = getattr(response, "parsed", None)
+    parsed = None
+    try:
+        parsed = getattr(response, "parsed", None)
+    except Exception as exc:
+        logger.warning("[%s] SDK response.parsed access failed: %s", get_request_id(), exc)
+
     if isinstance(parsed, response_schema):
         await set_cached_response(system_instruction, contents, response_schema, parsed)
         return parsed
 
-    text = (getattr(response, "text", None) or "").strip()
+    text = ""
+    try:
+        text = (getattr(response, "text", None) or "").strip()
+    except Exception as exc:
+        logger.warning("[%s] Extraction of response.text failed: %s", get_request_id(), exc)
+
     if not text:
         raise ValueError("LLM response returned empty text.")
+
     # Fall back to manual validation if the SDK did not populate `.parsed`.
     try:
         validated = response_schema.model_validate_json(text)
@@ -212,3 +223,4 @@ async def generate_structured(
         # Attach the raw dictionary payload to the exception for fallback recovery
         setattr(e, "raw_payload", raw_payload)
         raise e
+
