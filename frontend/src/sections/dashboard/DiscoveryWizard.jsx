@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { api } from "../../lib/api";
-import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText, RotateCcw } from "lucide-react";
+import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText, RotateCcw, DollarSign, Calendar } from "lucide-react";
 
 
 /**
@@ -25,8 +25,11 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
   const [answers, setAnswers] = useState([]);
   const [turn, setTurn] = useState(null); // latest DiscoveryTurn from the server
   const [customText, setCustomText] = useState("");
+  const [numBudget, setNumBudget] = useState("");
+  const [numMonths, setNumMonths] = useState("");
   const [done, setDone] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
+
 
   // Restore saved session on mount if available
   useEffect(() => {
@@ -127,6 +130,24 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
     setCustomText("");
     requestTurn(nextAnswers);
   };
+
+  const handleSubmitNumeric = () => {
+    const parts = [];
+    if (numBudget?.trim()) {
+      const val = Number(numBudget.replace(/[^0-9.]/g, ""));
+      parts.push(`Budget: $${val ? val.toLocaleString() : numBudget} USD`);
+    }
+    if (numMonths?.trim()) {
+      const m = Number(numMonths.replace(/[^0-9]/g, ""));
+      parts.push(`Target Duration: ${m || numMonths} Month${m === 1 ? "" : "s"}`);
+    }
+    if (parts.length === 0) return;
+    const answerText = parts.join(" | ");
+    submitAnswer(answerText);
+    setNumBudget("");
+    setNumMonths("");
+  };
+
 
   // ── Intro (before the first question) ──
   if (!started) {
@@ -250,7 +271,7 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
 
           {question.allow_custom && (
             <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>Or type your own answer</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>Or type your custom response</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
                   type="text"
@@ -279,8 +300,63 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
               </button>
             </div>
           )}
+
+          {/* Always Available Numerical Parameters (Budget & Duration) */}
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px dashed #e2e8f0" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              <DollarSign size={13} style={{ color: "#16a34a" }} />
+              <span>Enter Exact Numerical Budget ($) & Duration (Months)</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <div>
+                <label style={{ fontSize: 10, color: "#64748b", display: "block", marginBottom: 3, fontWeight: 600 }}>
+                  Budget ($ USD)
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#94a3b8" }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    placeholder="e.g. 5000"
+                    value={numBudget}
+                    onChange={(e) => setNumBudget(e.target.value)}
+                    style={{ ...customInput, width: "100%", paddingLeft: 20 }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "#64748b", display: "block", marginBottom: 3, fontWeight: 600 }}>
+                  Duration (Months)
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Calendar size={12} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                  <input
+                    type="number"
+                    min="1"
+                    max="36"
+                    step="1"
+                    placeholder="e.g. 3"
+                    value={numMonths}
+                    onChange={(e) => setNumMonths(e.target.value)}
+                    style={{ ...customInput, width: "100%", paddingLeft: 24 }}
+                  />
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="panel-btn--ghost panel-btn"
+              onClick={handleSubmitNumeric}
+              disabled={!numBudget.trim() && !numMonths.trim()}
+              style={{ width: "100%", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 10px" }}
+            >
+              <Check size={13} style={{ color: "#16a34a" }} /> Submit Numerical Budget & Timeline
+            </button>
+          </div>
         </div>
       )}
+
     </div>
   );
 }
