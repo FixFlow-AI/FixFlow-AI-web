@@ -14,6 +14,7 @@ if (!webhookSecret) {
 import { createServer } from 'http';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import { z } from 'zod';
 
 import {
   parseBrief,
@@ -37,6 +38,16 @@ import { getProposalRepository } from './services/proposalRepository.js';
 import { authRouter } from './routes/auth.js';
 import { freelancerRouter } from './routes/freelancer.js';
 import { requireAuth } from './auth/middleware.js';
+import { requireRole } from './auth/roles.js';
+import {
+  ClientMatchActionSchema,
+  ClientMatchVersionMismatchError,
+  InvalidClientMatchTransitionError,
+  createClientMatchWorkflow,
+  refreshClientMatchWorkflow,
+  transitionClientMatch,
+  verifyClientMatchAudit,
+} from './services/clientMatchWorkflow.js';
 import { SyncServer } from './skills/syncServer.js';
 import {
   createMilestone,
@@ -406,32 +417,153 @@ app.post('/api/client-score', (req: Request, res: Response) => {
 });
 
 // ==========================================
-// AI-006: Freelancer ↔ Client Matching (deterministic, no key required)
+// AI-006: Client hiring matches
 // ==========================================
 
+const ClientMatchRunInputSchema = z.object({
+  requiredSkills: z.array(z.string().trim().min(1)).min(1).max(30),
+  budget: z.number().positive().max(10_000_000).optional(),
+  domains: z.array(z.string().trim().min(1)).max(12).optional(),
+  // The zero-noise product promise is a compact shortlist, not an open roster.
+  limit: z.number().int().min(3).max(5).optional(),
+  // Required only when refreshing a persisted shortlist, preventing stale overwrites.
+  expectedVersion: z.number().int().positive().optional(),
+});
+
+const ClientMatchActionInputSchema = z.object({
+  action: ClientMatchActionSchema,
+  expectedVersion: z.number().int().positive(),
+});
+
+function getOwnedProposalForClient(proposalId: string, clientId: string) {
+  return getProposalRepository().get(proposalId).then((proposal) =>
+    proposal && proposal.userId === clientId ? proposal : null,
+  );
+}
+
+/**
+ * Generates or refreshes a persisted client shortlist. Candidate scores are
+ * evidence snapshots; invitation and selection state is retained across a re-run.
+ */
+app.post(
+  '/api/proposals/:id/matches/run',
+  requireAuth,
+  requireRole('client'),
+  asyncRoute(async (req, res) => {
+    const parsed = ClientMatchRunInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid match request.', details: parsed.error.flatten() });
+      return;
+    }
+
+    const repo = getProposalRepository();
+    const proposal = await getOwnedProposalForClient(req.params.id, req.auth!.sub);
+    if (!proposal) {
+      res.status(404).json({ error: 'Project proposal not found.' });
+      return;
+    }
+
+    const roster = await getFreelancerRepository().listActiveFreelancers();
+    const output = generateShortlist(
+      {
+        requiredSkills: parsed.data.requiredSkills,
+        budget: parsed.data.budget,
+        domains: parsed.data.domains,
+        limit: parsed.data.limit ?? 5,
+      },
+      roster,
+    );
+
+    const existing = proposal.clientMatchWorkflow;
+    if (existing && parsed.data.expectedVersion === undefined) {
+      res.status(409).json({
+        error: 'The shortlist already exists. Reload it before refreshing so client decisions are preserved.',
+        workflow: existing,
+      });
+      return;
+    }
+
+    const workflow = existing
+      ? refreshClientMatchWorkflow(existing, output, parsed.data.expectedVersion!, req.auth!.sub)
+      : createClientMatchWorkflow(output, req.auth!.sub);
+    const updated = await repo.setClientMatchWorkflow(
+      proposal.proposalId,
+      workflow,
+      existing?.version,
+    );
+
+    res.json({ workflow: updated?.clientMatchWorkflow ?? workflow });
+  }),
+);
+
+/** Returns the client-owned hiring state for one project. */
+app.get(
+  '/api/proposals/:id/matches',
+  requireAuth,
+  requireRole('client'),
+  asyncRoute(async (req, res) => {
+    const proposal = await getOwnedProposalForClient(req.params.id, req.auth!.sub);
+    if (!proposal) {
+      res.status(404).json({ error: 'Project proposal not found.' });
+      return;
+    }
+    if (proposal.clientMatchWorkflow && !verifyClientMatchAudit(proposal.clientMatchWorkflow)) {
+      res.status(409).json({ error: 'Match history integrity check failed. Re-run the shortlist before taking action.' });
+      return;
+    }
+    res.json({ workflow: proposal.clientMatchWorkflow ?? null });
+  }),
+);
+
+/** Moves a candidate through the client-side hiring FSM using optimistic concurrency. */
+app.patch(
+  '/api/proposals/:id/matches/:freelancerId',
+  requireAuth,
+  requireRole('client'),
+  asyncRoute(async (req, res) => {
+    const parsed = ClientMatchActionInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid hiring action.', details: parsed.error.flatten() });
+      return;
+    }
+
+    const proposal = await getOwnedProposalForClient(req.params.id, req.auth!.sub);
+    if (!proposal || !proposal.clientMatchWorkflow) {
+      res.status(404).json({ error: 'Project shortlist not found.' });
+      return;
+    }
+
+    const workflow = transitionClientMatch(
+      proposal.clientMatchWorkflow,
+      req.params.freelancerId,
+      parsed.data.action,
+      parsed.data.expectedVersion,
+      req.auth!.sub,
+    );
+    const updated = await getProposalRepository().setClientMatchWorkflow(
+      proposal.proposalId,
+      workflow,
+      proposal.clientMatchWorkflow.version,
+    );
+
+    res.json({ workflow: updated?.clientMatchWorkflow ?? workflow });
+  }),
+);
+
+// Backwards-compatible direct scoring endpoint. New dashboard code must use
+// the project-scoped routes above so invitations and selections are durable.
 app.post(
   '/api/leads/match',
   requireAuth,
+  requireRole('client'),
   asyncRoute(async (req, res) => {
-    const { requiredSkills = [], budget, limit, domains } = req.body ?? {};
-    if (!Array.isArray(requiredSkills)) {
-      res.status(400).json({ error: 'requiredSkills must be an array of strings.' });
+    const parsed = ClientMatchRunInputSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid match request.', details: parsed.error.flatten() });
       return;
     }
-    // Roster comes from the repository layer (seed file / HTTP API / future DB),
-    // never hardcoded in the engine.
     const roster = await getFreelancerRepository().listActiveFreelancers();
-    res.json(
-      generateShortlist(
-        {
-          requiredSkills,
-          budget: typeof budget === 'number' ? budget : undefined,
-          limit: typeof limit === 'number' ? limit : undefined,
-          domains: Array.isArray(domains) ? domains : undefined,
-        },
-        roster,
-      ),
-    );
+    res.json(generateShortlist({ ...parsed.data, limit: parsed.data.limit ?? 5 }, roster));
   }),
 );
 
@@ -445,7 +577,21 @@ app.post(
 app.get(
   ['/api/freelancers/:id/profile', '/api/freelancer/:id/profile'],
   requireAuth,
+  requireRole('client'),
   asyncRoute(async (req, res) => {
+    const proposalId = typeof req.query.proposalId === 'string' ? req.query.proposalId : '';
+    const proposal = proposalId
+      ? await getOwnedProposalForClient(proposalId, req.auth!.sub)
+      : null;
+    const isMatchedCandidate = Boolean(
+      proposal?.clientMatchWorkflow?.candidates.some(
+        (candidate) => candidate.freelancerId === req.params.id,
+      ),
+    );
+    if (!isMatchedCandidate) {
+      res.status(404).json({ error: 'Candidate is not part of this project shortlist.' });
+      return;
+    }
     const id = req.params.id;
     const scan = await getGithubScanRepository().getProfile(id);
     const hasScan = Boolean(
@@ -814,6 +960,18 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AiServiceError) {
     console.error('AI service error:', err.message);
     res.status(err.status).json({ error: err.message });
+    return;
+  }
+  if (err instanceof ClientMatchVersionMismatchError) {
+    res.status(409).json({
+      error: err.message,
+      expectedVersion: err.expectedVersion,
+      actualVersion: err.actualVersion,
+    });
+    return;
+  }
+  if (err instanceof InvalidClientMatchTransitionError) {
+    res.status(409).json({ error: err.message });
     return;
   }
   console.error('Unhandled API error:', err);
