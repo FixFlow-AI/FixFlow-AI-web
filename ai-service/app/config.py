@@ -26,16 +26,19 @@ class Settings:
         "gemini-3.1-pro",
     })
 
-    DEFAULT_MODEL: str = "gemini-3.5-flash"
+    DEFAULT_MODEL: str = "gemini-3.1-flash-lite"
+    PROPOSAL_MODEL: str = "gemini-3.5-flash"
     DEFAULT_FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
 
     def __init__(self) -> None:
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
         self.gemini_model: str = os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL).strip()
+        self.gemini_proposal_model: str = os.getenv("GEMINI_PROPOSAL_MODEL", self.PROPOSAL_MODEL).strip()
         self.gemini_fallback_model: str = os.getenv(
             "GEMINI_FALLBACK_MODEL",
             self.DEFAULT_FALLBACK_MODEL
         ).strip()
+
         self.gemini_timeout_sec: float = float(os.getenv("GEMINI_TIMEOUT_SEC", "15"))
         # Total attempts per model for transient failures (429/5xx/timeout/network).
         self.gemini_max_retries: int = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
