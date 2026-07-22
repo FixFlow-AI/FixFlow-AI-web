@@ -42,6 +42,21 @@ export function Overview() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editTitleText, setEditTitleText] = useState("");
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, proposalId, title, isPinned }
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClose = () => setContextMenu(null);
+    document.addEventListener("click", handleClose);
+    document.addEventListener("contextmenu", handleClose);
+    window.addEventListener("scroll", handleClose, true);
+    return () => {
+      document.removeEventListener("click", handleClose);
+      document.removeEventListener("contextmenu", handleClose);
+      window.removeEventListener("scroll", handleClose, true);
+    };
+  }, [contextMenu]);
+
 
 
   const load = async () => {
@@ -342,6 +357,16 @@ export function Overview() {
                     return (
                       <div
                         key={id || idx}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setContextMenu({
+                            x: e.clientX,
+                            y: e.clientY,
+                            proposalId: id,
+                            title,
+                            isPinned,
+                          });
+                        }}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -460,46 +485,8 @@ export function Overview() {
                           </div>
                         </div>
 
-                        {/* Right: badges & controls */}
+                        {/* Right: badges & chevron */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                          <button
-                            type="button"
-                            className="panel-btn--ghost"
-                            title={isPinned ? "Unpin proposal" : "Pin proposal to top"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              togglePinProposal(id);
-                            }}
-                            style={{
-                              padding: 6,
-                              borderRadius: 6,
-                              color: isPinned ? "#d97706" : "#94a3b8",
-                              background: isPinned ? "#fef3c7" : "transparent",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                          </button>
-
-                          <button
-                            type="button"
-                            className="panel-btn--ghost"
-                            title="Rename proposal title"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingId(id);
-                              setEditTitleText(title);
-                            }}
-                            style={{
-                              padding: 6,
-                              borderRadius: 6,
-                              color: "#64748b",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Pencil size={14} />
-                          </button>
-
                           {evaluated ? (
                             <span className="panel-badge panel-badge--green" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <CheckCircle size={11} /> Evaluated
@@ -532,6 +519,7 @@ export function Overview() {
                   })}
 
 
+
                 </div>
               ) : (
                 /* No matching proposals search state */
@@ -557,7 +545,123 @@ export function Overview() {
           )}
         </>
       )}
+
+      {contextMenu && (
+        <div
+          style={{
+            position: "fixed",
+            left: Math.min(contextMenu.x, window.innerWidth - 220),
+            top: Math.min(contextMenu.y, window.innerHeight - 150),
+            zIndex: 9999,
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            borderRadius: 10,
+            boxShadow: "0 12px 28px -5px rgba(15, 23, 42, 0.2), 0 4px 6px -2px rgba(15, 23, 42, 0.05)",
+            padding: 6,
+            minWidth: 200,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#0f172a",
+              background: "none",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background 0.12s ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+            onClick={() => {
+              const id = contextMenu.proposalId;
+              setContextMenu(null);
+              handleSelectProposal(id);
+            }}
+          >
+            <ArrowRight size={14} style={{ color: "#2563eb" }} />
+            <span>Make Active Workspace</span>
+          </button>
+
+          <button
+            type="button"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#0f172a",
+              background: "none",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background 0.12s ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+            onClick={() => {
+              const id = contextMenu.proposalId;
+              const isPinned = contextMenu.isPinned;
+              setContextMenu(null);
+              togglePinProposal(id, !isPinned);
+            }}
+          >
+            {contextMenu.isPinned ? <PinOff size={14} style={{ color: "#d97706" }} /> : <Pin size={14} style={{ color: "#d97706" }} />}
+            <span>{contextMenu.isPinned ? "Unpin Proposal" : "Pin to Top"}</span>
+          </button>
+
+          <button
+            type="button"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              width: "100%",
+              padding: "8px 12px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#0f172a",
+              background: "none",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+              textAlign: "left",
+              transition: "background 0.12s ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+            onClick={() => {
+              const id = contextMenu.proposalId;
+              const title = contextMenu.title;
+              setContextMenu(null);
+              setEditingId(id);
+              setEditTitleText(title);
+            }}
+          >
+            <Pencil size={14} style={{ color: "#475569" }} />
+            <span>Rename Title</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
+
+
 
