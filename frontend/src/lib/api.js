@@ -143,6 +143,19 @@ export const api = {
       signal,
     }),
 
+  updateProposalTitle: (id, title) =>
+    request(`/proposals/${encodeURIComponent(id)}/title`, {
+      method: "PATCH",
+      body: { title },
+    }),
+
+  togglePinProposal: (id, pinned) =>
+    request(`/proposals/${encodeURIComponent(id)}/pin`, {
+      method: "PATCH",
+      body: { pinned },
+    }),
+
+
   // Requirement Discovery Agent (Talent section): one adaptive Q&A turn.
   // Returns { status, confidence, next_question, brief, missing_information }.
   discoveryNext: (initialRequest, answers, signal) =>
