@@ -258,6 +258,16 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
     const { QueryCommand, BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb');
     const tableName = table(suffix);
 
+    // Deduplicate items by sortKey to prevent duplicate keys in PutRequests
+    const uniqueMap = new Map<string, Record<string, any>>();
+    for (const it of items) {
+      const k = String(it[sortKey] || '').toLowerCase();
+      if (k && !uniqueMap.has(k)) {
+        uniqueMap.set(k, it);
+      }
+    }
+    const uniqueItems = Array.from(uniqueMap.values());
+
     const existing = await ddb.send(
       new QueryCommand({
         TableName: tableName,
@@ -266,19 +276,34 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
         ProjectionExpression: `freelancerId, ${sortKey}`,
       }),
     );
-    const deletes = (existing.Items ?? []).map((it) => ({
-      DeleteRequest: { Key: { freelancerId, [sortKey]: it[sortKey] } },
-    }));
-    const puts = items.map((it) => ({ PutRequest: { Item: { ...it, freelancerId } } }));
 
-    // BatchWrite caps at 25 requests per call.
-    const all = [...deletes, ...puts];
-    for (let i = 0; i < all.length; i += 25) {
-      const chunk = all.slice(i, i + 25);
-      if (chunk.length === 0) continue;
-      await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
+    const deleteKeys = new Set<string>();
+    const deletes: Array<{ DeleteRequest: { Key: { freelancerId: string; [k: string]: any } } }> = [];
+    for (const it of existing.Items ?? []) {
+      const k = String(it[sortKey] || '').toLowerCase();
+      if (k && !deleteKeys.has(k)) {
+        deleteKeys.add(k);
+        deletes.push({ DeleteRequest: { Key: { freelancerId, [sortKey]: it[sortKey] } } });
+      }
+    }
+
+    const puts = uniqueItems.map((it) => ({ PutRequest: { Item: { ...it, freelancerId } } }));
+
+    // BatchWrite caps at 25 requests per call. Execute deletes first, then puts separately.
+    for (let i = 0; i < deletes.length; i += 25) {
+      const chunk = deletes.slice(i, i + 25);
+      if (chunk.length > 0) {
+        await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
+      }
+    }
+    for (let i = 0; i < puts.length; i += 25) {
+      const chunk = puts.slice(i, i + 25);
+      if (chunk.length > 0) {
+        await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
+      }
     }
   }
+
 
   async replaceSkills(freelancerId: string, skills: VerifiedSkill[]) {
     await this.replaceRows(
