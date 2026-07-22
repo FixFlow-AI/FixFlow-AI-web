@@ -14,6 +14,10 @@ import {
   Search,
   X,
   SearchX,
+  Pin,
+  PinOff,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
@@ -28,12 +32,17 @@ export function Overview() {
     startNewProposal,
     parsedProposalId,
     selectProposalById,
+    renameProposal,
+    togglePinProposal,
   } = useLandingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [viewingBrief, setViewingBrief] = useState(null); // track which proposal is loading
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editTitleText, setEditTitleText] = useState("");
+
 
   const load = async () => {
     setLoading(true);
@@ -323,23 +332,18 @@ export function Overview() {
                     const features = p.features ?? p.proposal?.features?.length ?? 0;
                     const risks = p.risks ?? p.proposal?.risks?.length ?? 0;
                     const evaluated = p.hasEvaluation ?? Boolean(p.evaluation);
-                    const isActiveWorkspace = id === parsedProposalId;
-                    const isLoading = viewingBrief === id;
+                    const isEditingThis = editingId === id;
+                    const isPinned = Boolean(p.pinned);
 
                     return (
                       <div
                         key={id || idx}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => !isLoading && handleSelectProposal(id)}
-                        onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSelectProposal(id)}
                         style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
                           padding: "14px 8px",
                           borderBottom: idx < filteredHistory.length - 1 ? "1px solid #f1f5f9" : "none",
-                          cursor: isLoading ? "wait" : "pointer",
                           borderRadius: 6,
                           background: isActiveWorkspace ? "#f8fafc" : "transparent",
                           transition: "background 0.15s ease",
@@ -352,30 +356,94 @@ export function Overview() {
                         }}
                       >
                         {/* Left: title + meta */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: "#1e293b",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                            maxWidth: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}>
-                            <span>{title}</span>
-                            {isActiveWorkspace && (
-                              <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>
-                                Active Workspace
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
+                          {isEditingThis ? (
+                            <div
+                              style={{ display: "flex", alignItems: "center", gap: 6 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="text"
+                                value={editTitleText}
+                                onChange={(e) => setEditTitleText(e.target.value)}
+                                autoFocus
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  padding: "4px 8px",
+                                  borderRadius: 6,
+                                  border: "1px solid #2563eb",
+                                  outline: "none",
+                                  width: "100%",
+                                  maxWidth: 320,
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    renameProposal(id, editTitleText);
+                                    setEditingId(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingId(null);
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="panel-btn--ghost"
+                                title="Save Title"
+                                onClick={() => {
+                                  renameProposal(id, editTitleText);
+                                  setEditingId(null);
+                                }}
+                                style={{ padding: 4, color: "#16a34a" }}
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="panel-btn--ghost"
+                                title="Cancel"
+                                onClick={() => setEditingId(null)}
+                                style={{ padding: 4, color: "#94a3b8" }}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: "#1e293b",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}>
+                              <span
+                                style={{ cursor: isLoading ? "wait" : "pointer" }}
+                                onClick={() => !isLoading && handleSelectProposal(id)}
+                              >
+                                {title}
                               </span>
-                            )}
-                          </div>
+                              {isActiveWorkspace && (
+                                <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>
+                                  Active Workspace
+                                </span>
+                              )}
+                              {isPinned && (
+                                <span className="panel-badge panel-badge--amber" style={{ fontSize: 10, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                  <Pin size={10} style={{ color: "#d97706" }} /> Pinned
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           <div style={{
                             fontSize: 12,
                             color: "#94a3b8",
-                            marginTop: 2,
+                            marginTop: 3,
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
@@ -388,8 +456,46 @@ export function Overview() {
                           </div>
                         </div>
 
-                        {/* Right: badges + arrow */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 12 }}>
+                        {/* Right: badges & controls */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            className="panel-btn--ghost"
+                            title={isPinned ? "Unpin proposal" : "Pin proposal to top"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePinProposal(id);
+                            }}
+                            style={{
+                              padding: 6,
+                              borderRadius: 6,
+                              color: isPinned ? "#d97706" : "#94a3b8",
+                              background: isPinned ? "#fef3c7" : "transparent",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="panel-btn--ghost"
+                            title="Rename proposal title"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingId(id);
+                              setEditTitleText(title);
+                            }}
+                            style={{
+                              padding: 6,
+                              borderRadius: 6,
+                              color: "#64748b",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </button>
+
                           {evaluated ? (
                             <span className="panel-badge panel-badge--green" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <CheckCircle size={11} /> Evaluated
@@ -397,15 +503,30 @@ export function Overview() {
                           ) : (
                             <span className="panel-badge panel-badge--outline">Parsed</span>
                           )}
-                          {isLoading ? (
-                            <RefreshCw size={14} className="animate-spin" style={{ color: "#2563eb" }} />
-                          ) : (
-                            <ChevronRight size={16} style={{ color: isActiveWorkspace ? "#2563eb" : "#94a3b8" }} />
-                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => !isLoading && handleSelectProposal(id)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: isLoading ? "wait" : "pointer",
+                              padding: 4,
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            {isLoading ? (
+                              <RefreshCw size={14} className="animate-spin" style={{ color: "#2563eb" }} />
+                            ) : (
+                              <ChevronRight size={16} style={{ color: isActiveWorkspace ? "#2563eb" : "#94a3b8" }} />
+                            )}
+                          </button>
                         </div>
                       </div>
                     );
                   })}
+
 
                 </div>
               ) : (
