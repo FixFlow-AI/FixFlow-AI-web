@@ -334,6 +334,8 @@ export function Overview() {
                     const evaluated = p.hasEvaluation ?? Boolean(p.evaluation);
                     const isEditingThis = editingId === id;
                     const isPinned = Boolean(p.pinned);
+                    const isActiveWorkspace = id === parsedProposalId;
+
 
                     return (
                       <div
