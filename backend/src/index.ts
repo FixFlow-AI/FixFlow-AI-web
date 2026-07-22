@@ -245,7 +245,9 @@ app.post(
       res.status(400).json({ error: 'initialRequest is required and must be a non-empty string.' });
       return;
     }
-    // Sanitize the answer history: only accept well-formed {question, answer} pairs.
+
+    // Sanitize client inputs & cap lengths
+    const cleanRequest = initialRequest.trim().slice(0, 2000);
     const safeAnswers = Array.isArray(answers)
       ? answers
           .filter(
@@ -254,12 +256,24 @@ app.post(
               typeof (a as any).question === 'string' &&
               typeof (a as any).answer === 'string',
           )
-          .map((a) => ({ question: a.question, answer: a.answer }))
+          .map((a) => ({
+            question: String(a.question).trim().slice(0, 500),
+            answer: String(a.answer).trim().slice(0, 500),
+          }))
       : [];
-    const result = await runDiscoveryTurn(initialRequest, safeAnswers);
+
+    const result = await runDiscoveryTurn(cleanRequest, safeAnswers);
+
+    // Audit log discovery progress for security and compliance
+    const userId = req.auth?.sub || 'anonymous';
+    console.log(
+      `[Discovery Audit] userId=${userId} turn=${safeAnswers.length + 1} status=${result.status} confidence=${result.confidence}%`
+    );
+
     res.json(result);
   })
 );
+
 
 // ==========================================
 // Subsystem 2: Confidence Grid (multi-agent evaluation + self-correction)
