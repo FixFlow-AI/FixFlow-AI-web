@@ -204,6 +204,7 @@ export const useLandingStore = create((set) => ({
   // AI-006: Freelancer matching
   matchResults: null,
   matchError: null,
+  matchActionLoading: null,
   setMatchResults: (matchResults) => set({ matchResults }),
   setMatchError: (matchError) => set({ matchError }),
 
@@ -371,10 +372,25 @@ export const useLandingStore = create((set) => ({
     }
   },
 
+  loadClientMatches: async () => {
+    const state = useLandingStore.getState();
+    if (!state.parsedProposalId) return;
+    set({ matchingLoading: true, matchError: null });
+    try {
+      const data = await api.getProposalMatches(state.parsedProposalId);
+      set({ matchResults: data.workflow || null });
+    } catch (err) {
+      const reason = err instanceof ApiError ? err.message : "Couldn't load this project's hiring matches.";
+      set({ matchError: reason });
+    } finally {
+      set({ matchingLoading: false });
+    }
+  },
+
   runMatchFreelancers: async () => {
     const state = useLandingStore.getState();
-    if (!state.parsedProposal) {
-      set({ matchError: "Please parse a brief first in the Brief Ingestion tab." });
+    if (!state.parsedProposal || !state.parsedProposalId) {
+      set({ matchError: "Please parse and save a brief first in the Brief Ingestion tab." });
       return;
     }
     set({ matchingLoading: true, matchError: null });
@@ -394,10 +410,17 @@ export const useLandingStore = create((set) => ({
           (state.parsedProposal?.features ?? []).map((f) => f.area).filter(Boolean),
         ),
       ];
-      // Budget left neutral (no reliable numeric budget on the proposal) and
-      // top 10 candidates so the client sees enough to assemble a team.
-      const data = await api.matchFreelancers(requiredSkills, undefined, domains, 10);
-      set({ matchResults: data });
+      // The persisted workflow keeps client invitations and selection decisions
+      // when a shortlist is refreshed. The product default stays at 3–5 people.
+      const data = await api.runProposalMatches(state.parsedProposalId, {
+        requiredSkills,
+        domains,
+        limit: 5,
+        ...(state.matchResults?.version
+          ? { expectedVersion: state.matchResults.version }
+          : {}),
+      });
+      set({ matchResults: data.workflow });
     } catch (err) {
       const reason =
         err instanceof ApiError
@@ -406,6 +429,26 @@ export const useLandingStore = create((set) => ({
       set({ matchError: reason });
     } finally {
       set({ matchingLoading: false });
+    }
+  },
+
+  updateClientMatch: async (freelancerId, action) => {
+    const state = useLandingStore.getState();
+    if (!state.parsedProposalId || !state.matchResults?.version) return;
+    set({ matchActionLoading: freelancerId, matchError: null });
+    try {
+      const data = await api.updateProposalMatch(
+        state.parsedProposalId,
+        freelancerId,
+        action,
+        state.matchResults.version,
+      );
+      set({ matchResults: data.workflow });
+    } catch (err) {
+      const reason = err instanceof ApiError ? err.message : "Couldn't save the hiring decision.";
+      set({ matchError: reason });
+    } finally {
+      set({ matchActionLoading: null });
     }
   },
 
@@ -526,8 +569,9 @@ export const useLandingStore = create((set) => ({
         confidenceSource: storedProposal.evaluation ? "api" : null,
         // Restore the persisted sequential approval state (null for older proposals).
         proposalWorkflow: storedProposal.workflow || null,
-        // Reset downstream matches and AI artifacts so they re-calculate for the selected proposal
-        matchResults: null,
+        // Restore client hiring decisions with the proposal; unlike transient AI
+        // artifacts, invitations and selections are durable project state.
+        matchResults: storedProposal.clientMatchWorkflow || null,
         matchError: null,
         interviewQuestions: null,
         contractExtensions: null,
