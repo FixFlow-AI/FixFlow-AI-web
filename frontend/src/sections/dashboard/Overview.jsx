@@ -18,7 +18,9 @@ import {
   PinOff,
   Pencil,
   Check,
+  MoreVertical,
 } from "lucide-react";
+
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
@@ -47,15 +49,20 @@ export function Overview() {
   useEffect(() => {
     if (!contextMenu) return;
     const handleClose = () => setContextMenu(null);
-    document.addEventListener("click", handleClose);
-    document.addEventListener("contextmenu", handleClose);
-    window.addEventListener("scroll", handleClose, true);
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handleClose);
+      document.addEventListener("contextmenu", handleClose);
+      window.addEventListener("scroll", handleClose, true);
+    }, 20);
+
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("click", handleClose);
       document.removeEventListener("contextmenu", handleClose);
       window.removeEventListener("scroll", handleClose, true);
     };
   }, [contextMenu]);
+
 
 
 
@@ -359,6 +366,7 @@ export function Overview() {
                         key={id || idx}
                         onContextMenu={(e) => {
                           e.preventDefault();
+                          e.stopPropagation();
                           setContextMenu({
                             x: e.clientX,
                             y: e.clientY,
@@ -485,7 +493,7 @@ export function Overview() {
                           </div>
                         </div>
 
-                        {/* Right: badges & chevron */}
+                        {/* Right: badges, 3-dots menu & chevron */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                           {evaluated ? (
                             <span className="panel-badge panel-badge--green" style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -494,6 +502,33 @@ export function Overview() {
                           ) : (
                             <span className="panel-badge panel-badge--outline">Parsed</span>
                           )}
+
+                          <button
+                            type="button"
+                            className="panel-btn--ghost"
+                            title="Proposal Options (Pin / Rename)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setContextMenu({
+                                x: rect.left - 170,
+                                y: rect.bottom + 4,
+                                proposalId: id,
+                                title,
+                                isPinned,
+                              });
+                            }}
+                            style={{
+                              padding: 6,
+                              borderRadius: 6,
+                              color: "#64748b",
+                              cursor: "pointer",
+                              display: "grid",
+                              placeItems: "center",
+                            }}
+                          >
+                            <MoreVertical size={16} />
+                          </button>
 
                           <button
                             type="button"
@@ -517,6 +552,7 @@ export function Overview() {
                       </div>
                     );
                   })}
+
 
 
 
