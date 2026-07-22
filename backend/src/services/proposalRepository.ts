@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { dirname, resolve } from 'path';
+import type { PutCommandInput } from '@aws-sdk/lib-dynamodb';
 import type { Proposal } from '../types/ai.js';
 import {
   ClientMatchVersionMismatchError,
@@ -59,6 +60,34 @@ export interface ProposalRepository {
   togglePin(proposalId: string, pinned?: boolean): Promise<StoredProposal | null>;
 }
 
+/**
+ * Build the DynamoDB optimistic-concurrency condition used for client match
+ * workflows. DynamoDB rejects expression aliases that are not referenced by
+ * the condition, so the creation and update cases intentionally use different
+ * attribute maps.
+ */
+export function buildClientMatchWorkflowCondition(
+  expectedVersion?: number,
+): Pick<
+  PutCommandInput,
+  'ConditionExpression' | 'ExpressionAttributeNames' | 'ExpressionAttributeValues'
+> {
+  if (expectedVersion === undefined) {
+    return {
+      ConditionExpression: 'attribute_not_exists(#workflow)',
+      ExpressionAttributeNames: { '#workflow': 'clientMatchWorkflow' },
+    };
+  }
+
+  return {
+    ConditionExpression: '#workflow.#version = :expectedVersion',
+    ExpressionAttributeNames: {
+      '#workflow': 'clientMatchWorkflow',
+      '#version': 'version',
+    },
+    ExpressionAttributeValues: { ':expectedVersion': expectedVersion },
+  };
+}
 
 function deriveTitle(p: Proposal): string {
   return (p.project_summary || 'Untitled project').split('.')[0].slice(0, 80);
@@ -227,18 +256,13 @@ class DynamoDbProposalRepository implements ProposalRepository {
     sp.updatedAt = new Date().toISOString();
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    const condition = buildClientMatchWorkflowCondition(expectedVersion);
     try {
       await ddb.send(
         new PutCommand({
           TableName: table('proposals'),
           Item: sp,
-          ConditionExpression:
-            expectedVersion === undefined
-              ? 'attribute_not_exists(#workflow)'
-              : '#workflow.#version = :expectedVersion',
-          ExpressionAttributeNames: { '#workflow': 'clientMatchWorkflow', '#version': 'version' },
-          ExpressionAttributeValues:
-            expectedVersion === undefined ? undefined : { ':expectedVersion': expectedVersion },
+          ...condition,
         }),
       );
     } catch (error) {

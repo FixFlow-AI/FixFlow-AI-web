@@ -24,6 +24,7 @@ import {
   transitionClientMatch,
   verifyClientMatchAudit,
 } from '../services/clientMatchWorkflow.js';
+import { buildClientMatchWorkflowCondition } from '../services/proposalRepository.js';
 
 async function runTests() {
   console.log('==========================================');
@@ -511,6 +512,25 @@ async function runTests() {
     };
     if (verifyClientMatchAudit(tampered)) {
       throw new Error('Tampered client-match audit chain was accepted');
+    }
+
+    const initialWrite = buildClientMatchWorkflowCondition();
+    if (
+      initialWrite.ConditionExpression !== 'attribute_not_exists(#workflow)' ||
+      !initialWrite.ExpressionAttributeNames ||
+      '#version' in initialWrite.ExpressionAttributeNames ||
+      'ExpressionAttributeValues' in initialWrite
+    ) {
+      throw new Error('Initial client-match DynamoDB condition includes unused expression aliases');
+    }
+
+    const versionedWrite = buildClientMatchWorkflowCondition(workflow.version);
+    if (
+      versionedWrite.ConditionExpression !== '#workflow.#version = :expectedVersion' ||
+      versionedWrite.ExpressionAttributeNames?.['#version'] !== 'version' ||
+      versionedWrite.ExpressionAttributeValues?.[':expectedVersion'] !== workflow.version
+    ) {
+      throw new Error('Versioned client-match DynamoDB condition is malformed');
     }
     console.log('  -> PASSED: Client hiring-match state transitions, OCC, and audit chain verified.');
   } catch (error: any) {

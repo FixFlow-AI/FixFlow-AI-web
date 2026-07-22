@@ -975,7 +975,9 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
   console.error('Unhandled API error:', err);
-  res.status(500).json({ error: err.message || 'Internal server error.' });
+  res.status(500).json({
+    error: 'We could not complete that request right now. Please try again.',
+  });
 });
 
 // Create a raw HTTP server so the WebSocket sync server can share the same port.
