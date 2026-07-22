@@ -69,10 +69,11 @@ class DiscoveryTurn(BaseModel):
 
 
 class DiscoveryAnswer(BaseModel):
-    question: str = Field(min_length=1)
-    answer: str
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(max_length=500)
 
 
 class DiscoveryRequest(BaseModel):
-    initialRequest: str = Field(min_length=1)
+    initialRequest: str = Field(min_length=1, max_length=2000)
     answers: List[DiscoveryAnswer] = Field(default_factory=list)
+
