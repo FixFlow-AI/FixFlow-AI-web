@@ -42,7 +42,7 @@ def test_extensions_fallback():
     print("  [ok] extensions fallback -> suggested milestones")
 
 
-def test_health_and_guards():
+def test_health_and_guards(monkeypatch):
     client = TestClient(app)
     r = client.get("/health")
     assert r.status_code == 200
@@ -51,13 +51,21 @@ def test_health_and_guards():
     print(f"  [ok] /health -> {body}")
 
     # With no GEMINI_API_KEY configured, AI routes should 503 (require_ai guard).
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    from app.config import get_settings
+    get_settings.cache_clear()
+
     r = client.post("/ai/brief/parse", json={"briefText": "build an app"})
     assert r.status_code == 503, r.status_code
     print("  [ok] /ai/brief/parse guarded (503 without key)")
 
+    # Restore key settings cache for subsequent tests
+    get_settings.cache_clear()
+
     # Validation: empty briefText -> 422 from Pydantic request model.
     r = client.post("/ai/brief/parse", json={"briefText": ""})
     assert r.status_code == 422, r.status_code
+
     print("  [ok] request validation rejects empty briefText (422)")
 
 
