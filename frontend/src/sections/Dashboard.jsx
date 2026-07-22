@@ -40,9 +40,12 @@ import { getRefreshToken, getUser, clearSession } from "../lib/auth";
    —————————————————————————————————————————— */
 const menuItems = [
   { id: "overview", label: "Overview", icon: Home },
-  { id: "proposal-generator", label: "AI Builder", icon: Sparkles },
-  { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText },
-  { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck },
+  // Client hiring pipeline (brief → proposal → evaluate → match). Per the role
+  // permission matrix (docs/specifications/roles/00), freelancers cannot post
+  // briefs or run shortlists, so these panels are client-only.
+  { id: "proposal-generator", label: "AI Builder", icon: Sparkles, roles: ["client"] },
+  { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText, roles: ["client"] },
+  { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck, roles: ["client"] },
   { id: "matching", label: "Talent Matches", icon: Users, roles: ["client"] },
   { id: "analytics", label: "Code Analytics", icon: LineChart, roles: ["freelancer"] },
   { id: "agreement-composer", label: "Agreement", icon: Handshake },
@@ -50,6 +53,14 @@ const menuItems = [
   { id: "milestone-funds", label: "Escrow Funds", icon: Wallet },
   { id: "outcome-evidence", label: "Outcomes", icon: BarChart3 },
 ];
+
+/** Tabs a given role is allowed to open (mirrors the nav `roles` gating). */
+function isTabAllowedForRole(tabId, role) {
+  const item = menuItems.find((m) => m.id === tabId);
+  // Panels not in the nav (e.g. role-onboarding) stay reachable.
+  if (!item) return true;
+  return !item.roles || item.roles.includes(role);
+}
 
 const tabMap = {
   overview: Overview,
@@ -116,7 +127,17 @@ export function Dashboard() {
     }
   }, [parsedProposal, isNewProposalMode, hydrateLatestProposal, setProposalHistory]);
 
-  const ActivePanel = tabMap[dashboardTab] || Overview;
+  // Guard: if a stale URL hash points a freelancer at a client-only panel
+  // (or vice-versa), bounce them back to Overview instead of rendering it.
+  useEffect(() => {
+    if (user?.role && !isTabAllowedForRole(dashboardTab, user.role)) {
+      setDashboardTab("overview");
+      window.location.hash = "#/dashboard/overview";
+    }
+  }, [dashboardTab, user?.role, setDashboardTab]);
+
+  const effectiveTab = isTabAllowedForRole(dashboardTab, user?.role) ? dashboardTab : "overview";
+  const ActivePanel = tabMap[effectiveTab] || Overview;
 
   const handleTabChange = (tabId) => {
     setDashboardTab(tabId);
