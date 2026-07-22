@@ -192,6 +192,50 @@ create dev_project_members '{
     {"AttributeName":"userId","KeyType":"RANGE"}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
+# ── Proctored interview gate (freelancer application screening) ──────────────
+
+create interview_question_sets '{
+  "AttributeDefinitions":[{"AttributeName":"jobId","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"jobId","KeyType":"HASH"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create job_applications '{
+  "AttributeDefinitions":[
+    {"AttributeName":"jobId","AttributeType":"S"},
+    {"AttributeName":"freelancerId","AttributeType":"S"},
+    {"AttributeName":"createdAt","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"jobId","KeyType":"HASH"},
+    {"AttributeName":"freelancerId","KeyType":"RANGE"}],
+  "GlobalSecondaryIndexes":[{"IndexName":"FreelancerApplicationsIndex",
+    "KeySchema":[
+      {"AttributeName":"freelancerId","KeyType":"HASH"},
+      {"AttributeName":"createdAt","KeyType":"RANGE"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create interview_sessions '{
+  "AttributeDefinitions":[
+    {"AttributeName":"sessionId","AttributeType":"S"},
+    {"AttributeName":"applicationId","AttributeType":"S"},
+    {"AttributeName":"startedAt","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"sessionId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{"IndexName":"ApplicationSessionsIndex",
+    "KeySchema":[
+      {"AttributeName":"applicationId","KeyType":"HASH"},
+      {"AttributeName":"startedAt","KeyType":"RANGE"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+create interview_events '{
+  "AttributeDefinitions":[
+    {"AttributeName":"sessionId","AttributeType":"S"},
+    {"AttributeName":"eventSeq","AttributeType":"N"}],
+  "KeySchema":[
+    {"AttributeName":"sessionId","KeyType":"HASH"},
+    {"AttributeName":"eventSeq","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
 echo
 echo "Done. Set these in backend/.env:"
 echo "  AWS_REGION=${REGION}"
