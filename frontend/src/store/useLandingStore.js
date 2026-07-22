@@ -545,7 +545,44 @@ export const useLandingStore = create((set) => ({
       console.error("Failed to select active proposal:", err);
     }
   },
+  renameProposal: async (proposalId, newTitle) => {
+    if (!proposalId || !newTitle.trim()) return;
+    try {
+      const res = await api.updateProposalTitle(proposalId, newTitle.trim());
+      if (res?.proposal) {
+        set((state) => {
+          const updatedHistory = state.proposalHistory.map((p) =>
+            p.proposalId === proposalId ? { ...p, title: res.proposal.title } : p
+          );
+          return {
+            proposalHistory: updatedHistory,
+            parsedProposal:
+              state.parsedProposalId === proposalId
+                ? { ...state.parsedProposal, title: res.proposal.title }
+                : state.parsedProposal,
+          };
+        });
+      }
+    } catch (err) {
+      console.error("Failed to rename proposal title:", err);
+    }
+  },
+  togglePinProposal: async (proposalId) => {
+    if (!proposalId) return;
+    try {
+      const res = await api.togglePinProposal(proposalId);
+      if (res?.proposal) {
+        const listRes = await api.listProposals();
+        if (listRes?.proposals) {
+          set({ proposalHistory: listRes.proposals });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin status:", err);
+    }
+  },
   startNewProposal: () =>
+
 
     set({
       rawBriefText: "",
