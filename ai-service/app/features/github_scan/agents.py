@@ -180,7 +180,7 @@ def _framework_skill(name: str, info: Dict[str, Any]) -> VerifiedSkill:
 
 
 def _deterministic_skills(agg: Dict[str, Any]) -> List[VerifiedSkill]:
-    skills: List[VerifiedSkill] = []
+    by_name: Dict[str, VerifiedSkill] = {}
 
     # Languages — multi-signal confidence (authored volume, breadth, recency,
     # ownership, impact). We skip languages the user barely authored so the
@@ -191,14 +191,19 @@ def _deterministic_skills(agg: Dict[str, Any]) -> List[VerifiedSkill]:
         # Require some authored footprint OR a meaningful share to list it.
         if attributed.get(lang, 0.0) < 500 and percents.get(lang, 0) < 3:
             continue
-        skills.append(_language_skill(lang, agg))
+        skill = _language_skill(lang, agg)
+        by_name[skill.name.lower()] = skill
 
     # Frameworks / tools — from real dependencies + topics.
     for name, info in (agg.get("frameworks") or {}).items():
-        skills.append(_framework_skill(name, info))
+        skill = _framework_skill(name, info)
+        key = skill.name.lower()
+        if key not in by_name:
+            by_name[key] = skill
 
-    skills.sort(key=lambda s: s.confidence, reverse=True)
-    return skills
+    res = list(by_name.values())
+    res.sort(key=lambda s: s.confidence, reverse=True)
+    return res
 
 
 async def skills_agent(agg: Dict[str, Any]) -> Tuple[List[VerifiedSkill], SegmentState]:
@@ -251,8 +256,17 @@ async def skills_agent(agg: Dict[str, Any]) -> Tuple[List[VerifiedSkill], Segmen
         det.append(skill)
         by_name[canonical.lower()] = skill
 
-    det.sort(key=lambda s: s.confidence, reverse=True)
-    return det, "done"
+    # Deduplicate final result strictly by lowercase name
+    unique_skills: Dict[str, VerifiedSkill] = {}
+    for s in det:
+        k = s.name.lower()
+        if k not in unique_skills or s.confidence > unique_skills[k].confidence:
+            unique_skills[k] = s
+
+    final_skills = list(unique_skills.values())
+    final_skills.sort(key=lambda s: s.confidence, reverse=True)
+    return final_skills, "done"
+
 
 
 def _topic_skill(
