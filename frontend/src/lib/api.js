@@ -117,8 +117,11 @@ export const api = {
   // Freelancer GitHub onboarding (roles/01)
   freelancerProfile: () => request("/freelancer/profile"),
   // A client viewing a matched candidate's analytics dashboard (read-only).
-  candidateProfile: (id, signal) =>
-    request(`/freelancers/${encodeURIComponent(id)}/profile`, { signal }),
+  candidateProfile: (id, proposalId, signal) =>
+    request(
+      `/freelancers/${encodeURIComponent(id)}/profile?proposalId=${encodeURIComponent(proposalId)}`,
+      { signal },
+    ),
   // On-demand re-analysis — the ONLY caller that re-invokes the GitHub API for
   // a returning freelancer. Returns { scanJobId } to stream live segments.
   rescanGithub: () => request("/freelancer/scan/rescan", { method: "POST" }),
@@ -133,6 +136,26 @@ export const api = {
   overview: () => request("/overview"),
   listProposals: () => request("/proposals"),
   getProposal: (id) => request(`/proposals/${encodeURIComponent(id)}`),
+
+  // Client-owned hiring workflow. Scores, invitations, and selections are
+  // persisted against the proposal rather than held only in browser state.
+  getProposalMatches: (id, signal) =>
+    request(`/proposals/${encodeURIComponent(id)}/matches`, { signal }),
+  runProposalMatches: (id, payload, signal) =>
+    request(`/proposals/${encodeURIComponent(id)}/matches/run`, {
+      method: "POST",
+      body: payload,
+      signal,
+    }),
+  updateProposalMatch: (proposalId, freelancerId, action, expectedVersion, signal) =>
+    request(
+      `/proposals/${encodeURIComponent(proposalId)}/matches/${encodeURIComponent(freelancerId)}`,
+      {
+        method: "PATCH",
+        body: { action, expectedVersion },
+        signal,
+      },
+    ),
 
   // Persist the sequential step/approval state for a proposal so the builder
   // restores where the user left off. Best-effort; server sanitizes the input.
