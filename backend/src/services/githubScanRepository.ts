@@ -247,7 +247,21 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
     return (res.Items?.[0] as ScanJob) ?? null;
   }
 
-  /** Delete all rows for a freelancer in a composite-key table, then put the new set. */
+  /**
+   * Replace all rows for a freelancer in a composite-key table.
+   *
+   * DynamoDB rejects a BatchWriteItem call with "Provided list of item keys
+   * contains duplicates" when a single request contains two operations that
+   * share the same primary key. To stay clear of that we:
+   *   1. Deduplicate the incoming items by a canonical (lower-cased) sort key
+   *      so the same skill/project can never be written twice.
+   *   2. Delete the existing rows and write the new ones in SEPARATE batch
+   *      calls — a delete + put for the same key in one request is illegal.
+   *   3. Delete every pre-existing row by its exact stored key (which is
+   *      already unique), so legacy case-variant duplicates ("react" left
+   *      behind next to "React") are cleaned up instead of orphaned.
+   *   4. Retry any UnprocessedItems DynamoDB returns under throttling.
+   */
   private async replaceRows(
     suffix: string,
     freelancerId: string,
@@ -258,13 +272,11 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
     const { QueryCommand, BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb');
     const tableName = table(suffix);
 
-    // Deduplicate items by sortKey to prevent duplicate keys in PutRequests
+    // 1. Canonical dedup of incoming items — guarantees put keys are unique.
     const uniqueMap = new Map<string, Record<string, any>>();
     for (const it of items) {
-      const k = String(it[sortKey] || '').toLowerCase();
-      if (k && !uniqueMap.has(k)) {
-        uniqueMap.set(k, it);
-      }
+      const k = String(it[sortKey] ?? '').trim().toLowerCase();
+      if (k && !uniqueMap.has(k)) uniqueMap.set(k, it);
     }
     const uniqueItems = Array.from(uniqueMap.values());
 
@@ -277,31 +289,36 @@ class DynamoDbGithubScanRepository implements GithubScanRepository {
       }),
     );
 
-    const deleteKeys = new Set<string>();
-    const deletes: Array<{ DeleteRequest: { Key: { freelancerId: string; [k: string]: any } } }> = [];
+    // 3. Delete every existing row (keys are already unique in the table).
+    //    We do NOT dedup by lower-case here: that would leave legacy
+    //    case-variant rows orphaned and they'd resurface as duplicate skills.
+    const deletes: Array<{ DeleteRequest: { Key: Record<string, any> } }> = [];
     for (const it of existing.Items ?? []) {
-      const k = String(it[sortKey] || '').toLowerCase();
-      if (k && !deleteKeys.has(k)) {
-        deleteKeys.add(k);
+      if (it[sortKey] != null) {
         deletes.push({ DeleteRequest: { Key: { freelancerId, [sortKey]: it[sortKey] } } });
       }
     }
 
     const puts = uniqueItems.map((it) => ({ PutRequest: { Item: { ...it, freelancerId } } }));
 
-    // BatchWrite caps at 25 requests per call. Execute deletes first, then puts separately.
-    for (let i = 0; i < deletes.length; i += 25) {
-      const chunk = deletes.slice(i, i + 25);
-      if (chunk.length > 0) {
-        await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
+    // 2 + 4. BatchWrite caps at 25 requests/call. Deletes first, then puts.
+    const flush = async (requests: Array<Record<string, any>>) => {
+      for (let i = 0; i < requests.length; i += 25) {
+        const chunk = requests.slice(i, i + 25);
+        if (chunk.length === 0) continue;
+        let pending: Record<string, any> = { [tableName]: chunk };
+        for (let attempt = 0; attempt < 4 && Object.keys(pending).length > 0; attempt++) {
+          const res = await ddb.send(new BatchWriteCommand({ RequestItems: pending }));
+          const unprocessed = res.UnprocessedItems ?? {};
+          if (!unprocessed[tableName]?.length) break;
+          pending = unprocessed;
+          await new Promise((r) => setTimeout(r, 100 * (attempt + 1)));
+        }
       }
-    }
-    for (let i = 0; i < puts.length; i += 25) {
-      const chunk = puts.slice(i, i + 25);
-      if (chunk.length > 0) {
-        await ddb.send(new BatchWriteCommand({ RequestItems: { [tableName]: chunk } }));
-      }
-    }
+    };
+
+    await flush(deletes);
+    await flush(puts);
   }
 
 
