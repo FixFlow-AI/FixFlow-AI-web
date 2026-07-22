@@ -51,18 +51,32 @@ OUTPUT PROTOCOL (strict JSON matching the schema)
 Output strictly the JSON for the schema. No markdown, no extra prose."""
 
 
+def _sanitize_text(text: str, max_len: int = 500) -> str:
+    if not text:
+        return ""
+    # Strip backticks, system instruction injection tokens, and control chars
+    clean = text.replace("```", "").replace("System:", "").replace("SYSTEM:", "")
+    # Remove control characters except standard whitespace
+    clean = "".join(ch for ch in clean if ch.isprintable() or ch in "\n\r\t")
+    return clean.strip()[:max_len]
+
+
 def _build_contents(initial_request: str, answers: List[DiscoveryAnswer]) -> str:
-    lines = [f"INITIAL CLIENT REQUEST:\n{initial_request}\n"]
+    safe_req = _sanitize_text(initial_request, max_len=1000)
+    lines = [f"INITIAL CLIENT REQUEST:\n{safe_req}\n"]
     if answers:
         lines.append("ANSWERS COLLECTED SO FAR (most recent last):")
         for i, a in enumerate(answers, start=1):
-            lines.append(f"{i}. Q: {a.question}\n   A: {a.answer}")
+            q_clean = _sanitize_text(a.question, max_len=300)
+            ans_clean = _sanitize_text(a.answer, max_len=300)
+            lines.append(f"{i}. Q: {q_clean}\n   A: {ans_clean}")
     else:
         lines.append("No follow-up answers collected yet. Ask the highest-impact question first.")
     lines.append(
         "\nDecide the single next question, OR finish with the structured brief if confidence >= 90."
     )
     return "\n".join(lines)
+
 
 
 async def run_discovery_turn(
