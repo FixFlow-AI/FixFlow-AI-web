@@ -296,11 +296,12 @@ export function FreelancerAnalytics({ externalProfile = null, readOnly = false }
       {error && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <span className="flex items-center gap-2"><AlertTriangle size={15} /> {error}</span>
-          <button onClick={loadProfile} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50">
+          <button onClick={() => { setError(""); loadProfile(); }} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 hover:bg-rose-50">
             <RefreshCw size={12} /> Retry
           </button>
         </div>
       )}
+
 
       {loading ? (
         <SkeletonDashboard />
