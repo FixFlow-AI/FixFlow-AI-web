@@ -19,13 +19,21 @@ import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
 
 export function Overview() {
-  const { user, setDashboardTab, hydrateLatestProposal, proposalHistory, setProposalHistory, startNewProposal } = useLandingStore();
+  const {
+    user,
+    setDashboardTab,
+    hydrateLatestProposal,
+    proposalHistory,
+    setProposalHistory,
+    startNewProposal,
+    parsedProposalId,
+    selectProposalById,
+  } = useLandingStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [viewingBrief, setViewingBrief] = useState(null); // track which proposal is loading
   const [searchQuery, setSearchQuery] = useState("");
-
 
   const load = async () => {
     setLoading(true);
@@ -45,18 +53,18 @@ export function Overview() {
     }
   };
 
-  const handleViewBrief = async (proposalId) => {
+  const handleSelectProposal = async (proposalId) => {
     setViewingBrief(proposalId);
     try {
-      const fullProposal = await api.getProposal(proposalId);
-      hydrateLatestProposal(fullProposal);
+      await selectProposalById(proposalId);
       go("brief-intelligence");
     } catch (err) {
-      console.error("Failed to load brief details:", err);
+      console.error("Failed to select proposal:", err);
     } finally {
       setViewingBrief(null);
     }
   };
+
 
   useEffect(() => {
     load();
@@ -315,6 +323,7 @@ export function Overview() {
                     const features = p.features ?? p.proposal?.features?.length ?? 0;
                     const risks = p.risks ?? p.proposal?.risks?.length ?? 0;
                     const evaluated = p.hasEvaluation ?? Boolean(p.evaluation);
+                    const isActiveWorkspace = id === parsedProposalId;
                     const isLoading = viewingBrief === id;
 
                     return (
@@ -322,20 +331,25 @@ export function Overview() {
                         key={id || idx}
                         role="button"
                         tabIndex={0}
-                        onClick={() => !isLoading && handleViewBrief(id)}
-                        onKeyDown={(e) => e.key === "Enter" && !isLoading && handleViewBrief(id)}
+                        onClick={() => !isLoading && handleSelectProposal(id)}
+                        onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSelectProposal(id)}
                         style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "14px 4px",
+                          padding: "14px 8px",
                           borderBottom: idx < filteredHistory.length - 1 ? "1px solid #f1f5f9" : "none",
                           cursor: isLoading ? "wait" : "pointer",
                           borderRadius: 6,
+                          background: isActiveWorkspace ? "#f8fafc" : "transparent",
                           transition: "background 0.15s ease",
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        onMouseEnter={(e) => {
+                          if (!isActiveWorkspace) e.currentTarget.style.background = "#f8fafc";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActiveWorkspace) e.currentTarget.style.background = "transparent";
+                        }}
                       >
                         {/* Left: title + meta */}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -347,8 +361,16 @@ export function Overview() {
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
                             maxWidth: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
                           }}>
-                            {title}
+                            <span>{title}</span>
+                            {isActiveWorkspace && (
+                              <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>
+                                Active Workspace
+                              </span>
+                            )}
                           </div>
                           <div style={{
                             fontSize: 12,
@@ -378,12 +400,13 @@ export function Overview() {
                           {isLoading ? (
                             <RefreshCw size={14} className="animate-spin" style={{ color: "#2563eb" }} />
                           ) : (
-                            <ChevronRight size={16} style={{ color: "#94a3b8" }} />
+                            <ChevronRight size={16} style={{ color: isActiveWorkspace ? "#2563eb" : "#94a3b8" }} />
                           )}
                         </div>
                       </div>
                     );
                   })}
+
                 </div>
               ) : (
                 /* No matching proposals search state */
