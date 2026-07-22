@@ -319,6 +319,79 @@ $tables = @{
   "BillingMode": "PAY_PER_REQUEST"
 }
 '@
+
+  # 16) Interview question sets — client-authored screening questions per job.
+  "interview_question_sets" = @'
+{
+  "AttributeDefinitions": [ { "AttributeName": "jobId", "AttributeType": "S" } ],
+  "KeySchema": [ { "AttributeName": "jobId", "KeyType": "HASH" } ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 17) Job applications — freelancer application lifecycle + ban flag.
+  "job_applications" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "jobId", "AttributeType": "S" },
+    { "AttributeName": "freelancerId", "AttributeType": "S" },
+    { "AttributeName": "createdAt", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "jobId", "KeyType": "HASH" },
+    { "AttributeName": "freelancerId", "KeyType": "RANGE" }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "FreelancerApplicationsIndex",
+      "KeySchema": [
+        { "AttributeName": "freelancerId", "KeyType": "HASH" },
+        { "AttributeName": "createdAt", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 18) Interview sessions — proctored session state, answers, scores, media keys.
+  "interview_sessions" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "sessionId", "AttributeType": "S" },
+    { "AttributeName": "applicationId", "AttributeType": "S" },
+    { "AttributeName": "startedAt", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "sessionId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "ApplicationSessionsIndex",
+      "KeySchema": [
+        { "AttributeName": "applicationId", "KeyType": "HASH" },
+        { "AttributeName": "startedAt", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 19) Interview events — append-only proctoring log per session.
+  "interview_events" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "sessionId", "AttributeType": "S" },
+    { "AttributeName": "eventSeq", "AttributeType": "N" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "sessionId", "KeyType": "HASH" },
+    { "AttributeName": "eventSeq", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
 }
 
 # Deterministic order so dependent reads are predictable in logs.
@@ -327,7 +400,8 @@ $order = @(
   "opportunities", "raw_posts",
   "github_scan_jobs", "freelancer_skills", "freelancer_projects",
   "profile_confidence", "growth_plans",
-  "dev_projects", "dev_tasks", "dev_project_members"
+  "dev_projects", "dev_tasks", "dev_project_members",
+  "interview_question_sets", "job_applications", "interview_sessions", "interview_events"
 )
 
 Write-Host "Region : $Region"
