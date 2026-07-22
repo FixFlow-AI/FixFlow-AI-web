@@ -44,7 +44,8 @@ const menuItems = [
   { id: "analytics", label: "Analytics", icon: LineChart, roles: ["freelancer"] },
   { id: "brief-intelligence", label: "Brief", icon: FileText },
   { id: "evidence-confidence", label: "Evidence", icon: BadgeCheck },
-  { id: "matching", label: "Matches", icon: Users },
+  // Client-only: this tab owns invitations and selection decisions.
+  { id: "matching", label: "Matches", icon: Users, roles: ["client"] },
   { id: "proposal-generator", label: "Talent", icon: Sparkles },
   { id: "agreement-composer", label: "Agreement", icon: Handshake },
   { id: "delivery-control", label: "Delivery", icon: PackageCheck },
