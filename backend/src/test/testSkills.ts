@@ -17,6 +17,13 @@ import {
 } from '../services/paymentService.js';
 import { getMilestoneRepository } from '../services/milestoneRepository.js';
 import { applyTransition } from '../services/escrowService.js';
+import {
+  ClientMatchVersionMismatchError,
+  InvalidClientMatchTransitionError,
+  createClientMatchWorkflow,
+  transitionClientMatch,
+  verifyClientMatchAudit,
+} from '../services/clientMatchWorkflow.js';
 
 async function runTests() {
   console.log('==========================================');
@@ -433,6 +440,79 @@ async function runTests() {
       targetObj[key] = originalFn;
     }
 
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 11: Client hiring-match FSM, OCC, and audit chain
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 11] Verifying client hiring-match FSM, OCC, and audit trail...');
+    const shortlist = {
+      shortlist: [
+        {
+          freelancerId: 'freelancer-1',
+          name: 'Ada Lovelace',
+          title: 'Full-stack Engineer',
+          compositeScore: 91,
+          factorBreakdown: { skillOverlap: 95, githubSignal: 88 },
+          fitReasons: ['Strong verified React and Node.js evidence'],
+          skillGaps: [],
+          riskFlags: [],
+          matchType: 'primary' as const,
+        },
+      ],
+      supplementary: [],
+      coverage: {
+        requiredSkills: ['React', 'Node.js'],
+        coveredSkills: ['React', 'Node.js'],
+        uncoveredSkills: [],
+        coveragePct: 100,
+        strongCandidateCount: 1,
+        teamRecommended: false,
+      },
+      totalCandidatesEvaluated: 1,
+    };
+
+    let workflow = createClientMatchWorkflow(shortlist, 'client-1');
+    if (!verifyClientMatchAudit(workflow) || workflow.auditTrail[0].triggerUserId !== 'client-1') {
+      throw new Error('Initial shortlist did not produce a valid, attributed audit entry');
+    }
+
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'shortlist', workflow.version, 'client-1');
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1');
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'start_interview', workflow.version, 'client-1');
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'select', workflow.version, 'client-1');
+    if (workflow.candidates[0].status !== 'selected' || !verifyClientMatchAudit(workflow)) {
+      throw new Error('Valid client hiring transitions did not preserve an auditable selected state');
+    }
+
+    try {
+      transitionClientMatch(workflow, 'freelancer-1', 'archive', workflow.version - 1, 'client-1');
+      throw new Error('Stale client-match version was accepted');
+    } catch (error) {
+      if (!(error instanceof ClientMatchVersionMismatchError)) throw error;
+    }
+
+    try {
+      transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1');
+      throw new Error('Terminal selected state accepted an invalid transition');
+    } catch (error) {
+      if (!(error instanceof InvalidClientMatchTransitionError)) throw error;
+    }
+
+    const tampered = {
+      ...workflow,
+      auditTrail: workflow.auditTrail.map((entry, index) =>
+        index === 1 ? { ...entry, triggerUserId: 'attacker' } : entry,
+      ),
+    };
+    if (verifyClientMatchAudit(tampered)) {
+      throw new Error('Tampered client-match audit chain was accepted');
+    }
+    console.log('  -> PASSED: Client hiring-match state transitions, OCC, and audit chain verified.');
   } catch (error: any) {
     console.error('  -> FAILED:', error.message);
     passed = false;
