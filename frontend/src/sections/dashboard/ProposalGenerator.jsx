@@ -29,7 +29,10 @@ import {
   Copy,
   FolderOpen,
   RotateCcw,
+  Search,
+  SearchX,
 } from "lucide-react";
+
 
 /* Stepper for proposal stages */
 const proposalSteps = [
@@ -86,8 +89,10 @@ export function ProposalGenerator() {
   const [ideaText, setIdeaText] = useState(rawBriefText || "");
   const [activeTab, setActiveTab] = useState("scope");
   const [activeStep, setActiveStep] = useState(1);
+  const [draftSearchQuery, setDraftSearchQuery] = useState("");
   // Sequential approval: a step unlocks only after the previous one is approved.
   const [approvedSteps, setApprovedSteps] = useState([]);
+
   const hasProposal = Boolean(parsedProposal);
   // Tracks which proposalId the local step state was hydrated for, so we never
   // clobber in-session progress on unrelated re-renders.
@@ -1650,51 +1655,141 @@ export function ProposalGenerator() {
               </button>
             </div>
             <div className="fixflow-modal-body fixflow-custom-scroll" style={{ maxHeight: 420 }}>
+              {draftList.length > 0 && (
+                <div style={{ position: "relative", marginBottom: 12 }}>
+                  <Search
+                    size={14}
+                    style={{
+                      position: "absolute",
+                      left: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#94a3b8",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search drafts by title, features, or summary..."
+                    value={draftSearchQuery}
+                    onChange={(e) => setDraftSearchQuery(e.target.value)}
+                    style={{
+                      width: "100%",
+                      paddingLeft: 30,
+                      paddingRight: draftSearchQuery ? 28 : 10,
+                      paddingTop: 8,
+                      paddingBottom: 8,
+                      fontSize: 13,
+                      borderRadius: 8,
+                      border: "1px solid #cbd5e1",
+                      background: "#fff",
+                      color: "#0f172a",
+                      outline: "none",
+                    }}
+                  />
+                  {draftSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setDraftSearchQuery("")}
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        display: "grid",
+                        placeItems: "center",
+                        padding: 0,
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {loadingDrafts ? (
                 <div style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
                   <RefreshCw size={24} className="animate-spin" style={{ color: "#2563eb", marginBottom: 8 }} />
                   <div>Loading saved proposal drafts...</div>
                 </div>
               ) : draftList.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {draftList.map((draft, idx) => (
-                    <div
-                      key={draft.proposalId || idx}
-                      onClick={() => handleSelectDraft(draft)}
-                      style={{
-                        padding: 14,
-                        border: draft.proposalId === parsedProposalId ? "2px solid #2563eb" : "1px solid #e2e8f0",
-                        borderRadius: 10,
-                        background: draft.proposalId === parsedProposalId ? "#eff6ff" : "#fff",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#cbd5e1";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#e2e8f0";
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                          {draft.title || draft.proposal?.project_summary?.slice(0, 50) + "..." || `Draft #${idx + 1}`}
-                        </span>
-                        {draft.proposalId === parsedProposalId && (
-                          <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>Active Workspace</span>
-                        )}
+                (() => {
+                  const filteredDrafts = draftList.filter((draft) => {
+                    if (!draftSearchQuery.trim()) return true;
+                    const q = draftSearchQuery.toLowerCase().trim();
+                    const title = (draft.title || "").toLowerCase();
+                    const summary = (draft.proposal?.project_summary || "").toLowerCase();
+                    return title.includes(q) || summary.includes(q);
+                  });
+
+                  if (filteredDrafts.length === 0) {
+                    return (
+                      <div style={{ textAlign: "center", padding: "30px 20px", color: "#64748b" }}>
+                        <SearchX size={32} style={{ color: "#cbd5e1", marginBottom: 8 }} />
+                        <h4 style={{ fontSize: 14, fontWeight: 600, color: "#1e293b", marginBottom: 4 }}>
+                          No drafts match "{draftSearchQuery}"
+                        </h4>
+                        <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>
+                          Try a different search keyword.
+                        </p>
+                        <button
+                          type="button"
+                          className="panel-btn--ghost panel-btn"
+                          onClick={() => setDraftSearchQuery("")}
+                          style={{ fontSize: 12 }}
+                        >
+                          Clear search
+                        </button>
                       </div>
-                      <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px", lineHeight: 1.5 }}>
-                        {draft.proposal?.project_summary || "No description available"}
-                      </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "#64748b" }}>
-                        <span>Created: {new Date(draft.createdAt || Date.now()).toLocaleDateString()}</span>
-                        <span>•</span>
-                        <span>{draft.proposal?.features?.length || 0} Features</span>
-                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {filteredDrafts.map((draft, idx) => (
+                        <div
+                          key={draft.proposalId || idx}
+                          onClick={() => handleSelectDraft(draft)}
+                          style={{
+                            padding: 14,
+                            border: draft.proposalId === parsedProposalId ? "2px solid #2563eb" : "1px solid #e2e8f0",
+                            borderRadius: 10,
+                            background: draft.proposalId === parsedProposalId ? "#eff6ff" : "#fff",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#cbd5e1";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (draft.proposalId !== parsedProposalId) e.currentTarget.style.borderColor = "#e2e8f0";
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+                              {draft.title || draft.proposal?.project_summary?.slice(0, 50) + "..." || `Draft #${idx + 1}`}
+                            </span>
+                            {draft.proposalId === parsedProposalId && (
+                              <span className="panel-badge panel-badge--blue" style={{ fontSize: 10 }}>Active Workspace</span>
+                            )}
+                          </div>
+                          <p style={{ fontSize: 12, color: "#475569", margin: "0 0 8px", lineHeight: 1.5 }}>
+                            {draft.proposal?.project_summary || "No description available"}
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "#64748b" }}>
+                            <span>Created: {new Date(draft.createdAt || Date.now()).toLocaleDateString()}</span>
+                            <span>•</span>
+                            <span>{draft.proposal?.features?.length || 0} Features</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()
               ) : (
                 <div style={{ textAlign: "center", padding: "30px 20px", color: "#64748b" }}>
                   <FileText size={36} style={{ color: "#cbd5e1", marginBottom: 8 }} />
@@ -1717,6 +1812,7 @@ export function ProposalGenerator() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
