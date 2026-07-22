@@ -84,7 +84,7 @@ if not settings.ai_service_token:
 # --------------------------------------------------------------------------
 
 async def verify_token(x_ai_service_token: Optional[str] = Header(default=None)) -> None:
-    expected = settings.ai_service_token
+    expected = get_settings().ai_service_token
     if not expected:
         return  # token auth disabled
     provided = x_ai_service_token or ""
@@ -93,11 +93,12 @@ async def verify_token(x_ai_service_token: Optional[str] = Header(default=None))
 
 
 def require_ai() -> None:
-    if not settings.ai_enabled:
+    if not get_settings().ai_enabled:
         raise HTTPException(
             status_code=503,
             detail="GEMINI_API_KEY is not configured on the AI service.",
         )
+
 
 
 # --------------------------------------------------------------------------
