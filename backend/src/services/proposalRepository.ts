@@ -31,6 +31,7 @@ export interface StoredProposal {
   briefText: string;
   proposal: Proposal;
   degraded: boolean;
+  pinned?: boolean;
   evaluation?: unknown; // ConfidenceGridResult, stored opaque to avoid a hard dep
   workflow?: ProposalWorkflow; // sequential approval state (see above)
   createdAt: string;
@@ -43,10 +44,22 @@ export interface ProposalRepository {
   listByUser(userId: string): Promise<StoredProposal[]>;
   setEvaluation(proposalId: string, evaluation: unknown): Promise<StoredProposal | null>;
   setWorkflow(proposalId: string, workflow: ProposalWorkflow): Promise<StoredProposal | null>;
+  updateTitle(proposalId: string, title: string): Promise<StoredProposal | null>;
+  togglePin(proposalId: string, pinned?: boolean): Promise<StoredProposal | null>;
 }
+
 
 function deriveTitle(p: Proposal): string {
   return (p.project_summary || 'Untitled project').split('.')[0].slice(0, 80);
+}
+
+function sortProposals(proposals: StoredProposal[]): StoredProposal[] {
+  return [...proposals].sort((a, b) => {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+      return a.pinned ? -1 : 1;
+    }
+    return b.createdAt.localeCompare(a.createdAt);
+  });
 }
 
 // ---------- In-memory ----------
@@ -73,6 +86,7 @@ class InMemoryProposalRepository implements ProposalRepository {
       briefText,
       proposal,
       degraded,
+      pinned: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -83,9 +97,8 @@ class InMemoryProposalRepository implements ProposalRepository {
     return this.store.get(id) ?? null;
   }
   async listByUser(userId: string) {
-    return [...this.store.values()]
-      .filter((p) => p.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const userItems = [...this.store.values()].filter((p) => p.userId === userId);
+    return sortProposals(userItems);
   }
   async setEvaluation(id: string, evaluation: unknown) {
     const sp = this.store.get(id);
@@ -98,6 +111,20 @@ class InMemoryProposalRepository implements ProposalRepository {
     const sp = this.store.get(id);
     if (!sp) return null;
     sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    return sp;
+  }
+  async updateTitle(id: string, title: string) {
+    const sp = this.store.get(id);
+    if (!sp) return null;
+    sp.title = title.trim();
+    sp.updatedAt = new Date().toISOString();
+    return sp;
+  }
+  async togglePin(id: string, pinned?: boolean) {
+    const sp = this.store.get(id);
+    if (!sp) return null;
+    sp.pinned = typeof pinned === 'boolean' ? pinned : !sp.pinned;
     sp.updatedAt = new Date().toISOString();
     return sp;
   }
@@ -117,6 +144,7 @@ class DynamoDbProposalRepository implements ProposalRepository {
       briefText,
       proposal,
       degraded,
+      pinned: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -143,7 +171,8 @@ class DynamoDbProposalRepository implements ProposalRepository {
         ScanIndexForward: false, // newest first
       }),
     );
-    return (res.Items as StoredProposal[]) ?? [];
+    const items = (res.Items as StoredProposal[]) ?? [];
+    return sortProposals(items);
   }
   async setEvaluation(id: string, evaluation: unknown) {
     const sp = await this.get(id);
@@ -159,6 +188,26 @@ class DynamoDbProposalRepository implements ProposalRepository {
     const sp = await this.get(id);
     if (!sp) return null;
     sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    await ddb.send(new PutCommand({ TableName: table('proposals'), Item: sp }));
+    return sp;
+  }
+  async updateTitle(id: string, title: string) {
+    const sp = await this.get(id);
+    if (!sp) return null;
+    sp.title = title.trim();
+    sp.updatedAt = new Date().toISOString();
+    const { ddb, table } = await import('../config/aws.js');
+    const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    await ddb.send(new PutCommand({ TableName: table('proposals'), Item: sp }));
+    return sp;
+  }
+  async togglePin(id: string, pinned?: boolean) {
+    const sp = await this.get(id);
+    if (!sp) return null;
+    sp.pinned = typeof pinned === 'boolean' ? pinned : !sp.pinned;
     sp.updatedAt = new Date().toISOString();
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -217,6 +266,7 @@ class FileProposalRepository implements ProposalRepository {
       briefText,
       proposal,
       degraded,
+      pinned: false,
       createdAt: now,
       updatedAt: now,
     };
@@ -232,9 +282,8 @@ class FileProposalRepository implements ProposalRepository {
 
   async listByUser(userId: string) {
     const list = await this.load();
-    return list
-      .filter((p) => p.userId === userId)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const items = list.filter((p) => p.userId === userId);
+    return sortProposals(items);
   }
 
   async setEvaluation(id: string, evaluation: unknown) {
@@ -252,6 +301,26 @@ class FileProposalRepository implements ProposalRepository {
     const sp = list.find((p) => p.proposalId === id);
     if (!sp) return null;
     sp.workflow = workflow;
+    sp.updatedAt = new Date().toISOString();
+    await this.persist();
+    return sp;
+  }
+
+  async updateTitle(id: string, title: string) {
+    const list = await this.load();
+    const sp = list.find((p) => p.proposalId === id);
+    if (!sp) return null;
+    sp.title = title.trim();
+    sp.updatedAt = new Date().toISOString();
+    await this.persist();
+    return sp;
+  }
+
+  async togglePin(id: string, pinned?: boolean) {
+    const list = await this.load();
+    const sp = list.find((p) => p.proposalId === id);
+    if (!sp) return null;
+    sp.pinned = typeof pinned === 'boolean' ? pinned : !sp.pinned;
     sp.updatedAt = new Date().toISOString();
     await this.persist();
     return sp;
