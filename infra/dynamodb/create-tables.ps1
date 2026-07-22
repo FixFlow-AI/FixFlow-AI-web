@@ -23,7 +23,7 @@
   ./create-tables.ps1 -Endpoint http://localhost:8000   # DynamoDB Local
 #>
 param(
-  [string]$Region = $(if ($env:AWS_REGION) { $env:AWS_REGION } else { "us-east-1" }),
+  [string]$Region = $(if ($env:AWS_REGION) { $env:AWS_REGION } else { $cfgRegion = (aws configure get region 2>$null); if ($cfgRegion) { $cfgRegion } else { "ap-south-1" } }),
   [string]$Prefix = $(if ($env:DDB_TABLE_PREFIX) { $env:DDB_TABLE_PREFIX } else { "fixflow" }),
   [string]$Endpoint = ""
 )
@@ -247,7 +247,7 @@ $tables = @{
   "BillingMode": "PAY_PER_REQUEST"
 }
 '@
-'growth_plans" = @'
+  "growth_plans" = @'
 {
   "AttributeDefinitions": [
     { "AttributeName": "planId", "AttributeType": "S" },
@@ -399,7 +399,7 @@ $order = @(
   "users", "freelancers", "proposals", "milestones", "audit_blocks",
   "opportunities", "raw_posts",
   "github_scan_jobs", "freelancer_skills", "freelancer_projects",
-  "profile_confidence", "growth_plans",
+  "profile_confidence", "profile_snapshots", "growth_plans",
   "dev_projects", "dev_tasks", "dev_project_members",
   "interview_question_sets", "job_applications", "interview_sessions", "interview_events"
 )
@@ -416,11 +416,12 @@ foreach ($suffix in $order) {
   $tableName = "${Prefix}_${suffix}"
 
   # Skip if it already exists (idempotent re-runs).
-  $exists = $true
-  try {
-    aws dynamodb describe-table --table-name $tableName --region $Region @endpointArg *> $null
-    if ($LASTEXITCODE -ne 0) { $exists = $false }
-  } catch { $exists = $false }
+  $exists = $false
+  $oldEAP = $ErrorActionPreference
+  $ErrorActionPreference = "SilentlyContinue"
+  aws dynamodb describe-table --table-name $tableName --region $Region @endpointArg *> $null
+  if ($LASTEXITCODE -eq 0) { $exists = $true }
+  $ErrorActionPreference = $oldEAP
 
   if ($exists) {
     Write-Host "[skip]   $tableName already exists"
