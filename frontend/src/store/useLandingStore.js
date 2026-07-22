@@ -526,9 +526,27 @@ export const useLandingStore = create((set) => ({
         confidenceSource: storedProposal.evaluation ? "api" : null,
         // Restore the persisted sequential approval state (null for older proposals).
         proposalWorkflow: storedProposal.workflow || null,
+        // Reset downstream matches and AI artifacts so they re-calculate for the selected proposal
+        matchResults: null,
+        matchError: null,
+        interviewQuestions: null,
+        contractExtensions: null,
+        isNewProposalMode: false,
       };
     }),
+  selectProposalById: async (proposalId) => {
+    if (!proposalId) return;
+    try {
+      const fullProposal = await api.getProposal(proposalId);
+      if (fullProposal) {
+        useLandingStore.getState().hydrateLatestProposal(fullProposal);
+      }
+    } catch (err) {
+      console.error("Failed to select active proposal:", err);
+    }
+  },
   startNewProposal: () =>
+
     set({
       rawBriefText: "",
       isBriefParsed: false,
