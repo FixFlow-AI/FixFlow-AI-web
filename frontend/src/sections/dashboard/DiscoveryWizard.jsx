@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { api } from "../../lib/api";
-import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText } from "lucide-react";
+import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText, RotateCcw } from "lucide-react";
+
 
 /**
  * Requirement Discovery Agent UI (Talent section only).
@@ -15,6 +16,8 @@ import { Sparkles, ArrowRight, Check, RefreshCw, MessageSquareText } from "lucid
  *   - initialRequest: string  (the client's initial idea text)
  *   - onBriefReady: (briefText: string, brief: object) => void
  */
+const DISCOVERY_STORAGE_KEY = "ff_discovery_session_v1";
+
 export function DiscoveryWizard({ initialRequest, onBriefReady }) {
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,6 +26,51 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
   const [turn, setTurn] = useState(null); // latest DiscoveryTurn from the server
   const [customText, setCustomText] = useState("");
   const [done, setDone] = useState(false);
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+
+  // Restore saved session on mount if available
+  useEffect(() => {
+    try {
+      const savedRaw = localStorage.getItem(DISCOVERY_STORAGE_KEY);
+      if (savedRaw) {
+        const saved = JSON.parse(savedRaw);
+        if (saved && Array.isArray(saved.answers) && saved.turn) {
+          setAnswers(saved.answers);
+          setTurn(saved.turn);
+          setDone(Boolean(saved.done));
+          setStarted(true);
+          setHasSavedDraft(true);
+        }
+      }
+    } catch {
+      /* ignore storage parse errors */
+    }
+  }, []);
+
+  const saveSession = useCallback((nextAnswers, nextTurn, isDone) => {
+    try {
+      localStorage.setItem(
+        DISCOVERY_STORAGE_KEY,
+        JSON.stringify({
+          initialRequest,
+          answers: nextAnswers,
+          turn: nextTurn,
+          done: isDone,
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+    } catch {
+      /* ignore storage quota errors */
+    }
+  }, [initialRequest]);
+
+  const clearSession = useCallback(() => {
+    try {
+      localStorage.removeItem(DISCOVERY_STORAGE_KEY);
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
 
   const question = turn?.status === "questioning" ? turn.next_question : null;
   const confidence = turn?.confidence ?? 0;
@@ -34,7 +82,10 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
       try {
         const res = await api.discoveryNext(initialRequest, nextAnswers);
         setTurn(res);
-        if (res.status === "complete" && res.brief) {
+        const isComplete = res.status === "complete" && Boolean(res.brief);
+        saveSession(nextAnswers, res, isComplete);
+
+        if (isComplete) {
           setDone(true);
           onBriefReady?.(briefToText(initialRequest, res.brief), res.brief);
         }
@@ -48,14 +99,25 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
         setLoading(false);
       }
     },
-    [initialRequest, onBriefReady],
+    [initialRequest, onBriefReady, saveSession],
   );
 
   const start = () => {
+    clearSession();
     setStarted(true);
     setAnswers([]);
     setDone(false);
+    setHasSavedDraft(false);
     requestTurn([]);
+  };
+
+  const resetSession = () => {
+    clearSession();
+    setStarted(false);
+    setAnswers([]);
+    setTurn(null);
+    setDone(false);
+    setHasSavedDraft(false);
   };
 
   const submitAnswer = (answerText) => {
@@ -99,13 +161,31 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
     <div>
       {/* Confidence progress */}
       <div style={{ marginBottom: 14 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginBottom: 4 }}>
-          <span>{done ? "Discovery complete" : `Question ${answers.length + 1}`}</span>
-          <span style={{ fontWeight: 700, color: confidence >= 90 ? "#16a34a" : "#2563eb" }}>
-            {confidence}% ready
-          </span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", marginBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>{done ? "Discovery complete" : `Question ${answers.length + 1}`}</span>
+            {hasSavedDraft && (
+              <span style={{ fontSize: 10, background: "#eff6ff", color: "#2563eb", padding: "1px 6px", borderRadius: 4, fontWeight: 600 }}>
+                Restored draft
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontWeight: 700, color: confidence >= 90 ? "#16a34a" : "#2563eb" }}>
+              {confidence}% ready
+            </span>
+            <button
+              type="button"
+              onClick={resetSession}
+              title="Reset discovery session"
+              style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
+            >
+              <RotateCcw size={12} />
+            </button>
+          </div>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden" }}>
+
           <div
             style={{
               height: "100%",
