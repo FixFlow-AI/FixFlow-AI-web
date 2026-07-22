@@ -213,8 +213,8 @@ async def skills_agent(agg: Dict[str, Any]) -> Tuple[List[VerifiedSkill], Segmen
         for t in (r.get("topics") or []):
             topic_repos.setdefault(t.lower(), []).append(r["name"])
 
-    candidate_names = [s.name for s in det]
-    topics = agg.get("domainTopics", [])
+    candidate_names = list(dict.fromkeys(s.name for s in det))
+    topics = list(dict.fromkeys(agg.get("domainTopics", [])))
     if not topics and not candidate_names:
         return det, "fallback"
 
@@ -222,6 +222,7 @@ async def skills_agent(agg: Dict[str, Any]) -> Tuple[List[VerifiedSkill], Segmen
         f"Candidate skill names: {json.dumps(candidate_names)}\n"
         f"Repository topics: {json.dumps(topics)}"
     )
+
     try:
         out: SkillNormalizationOutput = await generate_structured(
             system_instruction=_SKILL_NORM_PROMPT,
