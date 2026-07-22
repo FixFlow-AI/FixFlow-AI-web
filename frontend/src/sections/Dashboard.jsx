@@ -40,16 +40,14 @@ import { getRefreshToken, getUser, clearSession } from "../lib/auth";
    —————————————————————————————————————————— */
 const menuItems = [
   { id: "overview", label: "Overview", icon: Home },
-  // Analytics is freelancer-only (their profile is derived from their code).
-  { id: "analytics", label: "Analytics", icon: LineChart, roles: ["freelancer"] },
-  { id: "brief-intelligence", label: "Brief", icon: FileText },
-  { id: "evidence-confidence", label: "Evidence", icon: BadgeCheck },
-  // Client-only: this tab owns invitations and selection decisions.
-  { id: "matching", label: "Matches", icon: Users, roles: ["client"] },
-  { id: "proposal-generator", label: "Talent", icon: Sparkles },
+  { id: "proposal-generator", label: "AI Builder", icon: Sparkles },
+  { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText },
+  { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck },
+  { id: "matching", label: "Talent Matches", icon: Users, roles: ["client"] },
+  { id: "analytics", label: "Code Analytics", icon: LineChart, roles: ["freelancer"] },
   { id: "agreement-composer", label: "Agreement", icon: Handshake },
-  { id: "delivery-control", label: "Delivery", icon: PackageCheck },
-  { id: "milestone-funds", label: "Funds", icon: Wallet },
+  { id: "delivery-control", label: "Delivery Control", icon: PackageCheck },
+  { id: "milestone-funds", label: "Escrow Funds", icon: Wallet },
   { id: "outcome-evidence", label: "Outcomes", icon: BarChart3 },
 ];
 
@@ -66,6 +64,7 @@ const tabMap = {
   "outcome-evidence": OutcomeEvidence,
   "role-onboarding": RoleOnboarding,
 };
+
 
 export function Dashboard() {
   const { user, parsedProposal, isNewProposalMode, dashboardTab, setDashboardTab, logout, hydrateLatestProposal, setProposalHistory } =
