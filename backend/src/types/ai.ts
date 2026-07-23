@@ -117,16 +117,27 @@ export interface Proposal {
 
 // ---- Confidence Grid (AI-002) ----
 
+// AIE-09: each grid factor is a deterministic base + bounded LLM modifier,
+// with evidence. The headline confidenceIndex is a weighted blend of these.
+export interface FactorScore {
+  name: string;
+  score: number; // final = clamp(deterministic_base + llm_modifier)
+  deterministic_base: number;
+  llm_modifier: number;
+  evidence: string[];
+}
+
 export interface AuditorEvaluation {
-  budget_alignment_score: number;
-  deliverable_coverage_score: number;
+  // null when the brief states no budget (factor excluded, not guessed).
+  budget_alignment: FactorScore | null;
+  deliverable_coverage: FactorScore;
   issues: string[];
   findings: string;
 }
 
 export interface FeasibilityEvaluation {
-  technical_feasibility_score: number;
-  timeline_realism_score: number;
+  technical_feasibility: FactorScore;
+  timeline_realism: FactorScore;
   issues: string[];
   findings: string;
 }
