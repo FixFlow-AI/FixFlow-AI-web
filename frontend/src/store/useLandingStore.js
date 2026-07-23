@@ -460,13 +460,27 @@ export const useLandingStore = create((set) => ({
 
   // Contract & Escrow
   isAgreementSigned: { client: false, freelancer: false },
+  agreementStatus: "draft", // "draft" | "sent" | "approved"
+  agreementActivity: [],
+  setAgreementStatus: (agreementStatus) => set({ agreementStatus }),
+  addAgreementActivity: (activity) =>
+    set((state) => ({
+      agreementActivity: [
+        {
+          id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          ...activity,
+        },
+        ...state.agreementActivity,
+      ],
+    })),
   escrowState: "CREATED",
   milestones: initialMilestones,
   changeRequests: [],
   signAgreement: (party) =>
     set((state) => {
       const updatedSigned = { ...state.isAgreementSigned, [party]: true };
-      return { isAgreementSigned: updatedSigned };
+      return { isAgreementSigned: updatedSigned, agreementStatus: "sent" };
     }),
   fundMilestone: (id) =>
     set((state) => {
@@ -648,6 +662,8 @@ export const useLandingStore = create((set) => ({
       matchResults: null,
       matchError: null,
       isAgreementSigned: { client: false, freelancer: false },
+      agreementStatus: "draft",
+      agreementActivity: [],
       escrowState: "CREATED",
       milestones: [],
       changeRequests: [],
@@ -657,6 +673,8 @@ export const useLandingStore = create((set) => ({
   resetMockData: () =>
     set({
       isAgreementSigned: { client: false, freelancer: false },
+      agreementStatus: "draft",
+      agreementActivity: [],
       escrowState: "CREATED",
       milestones: [],
       changeRequests: [],
