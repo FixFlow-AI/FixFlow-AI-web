@@ -28,7 +28,11 @@ function scoreColor(score) {
   return "orange";
 }
 
-function ScoreBar({ label, score }) {
+// AIE-09: `factor` is a FactorScore { score, deterministic_base, llm_modifier,
+// evidence }. Evidence is surfaced so the number is auditable/explainable.
+function ScoreBar({ label, factor }) {
+  if (!factor) return null;
+  const { score, deterministic_base, llm_modifier, evidence } = factor;
   const color = scoreColor(score);
   const stroke =
     color === "green" ? "#16a34a" : color === "blue" ? "#2563eb" : "#ea580c";
@@ -58,6 +62,27 @@ function ScoreBar({ label, score }) {
           }}
         />
       </div>
+      {(deterministic_base !== undefined || llm_modifier) && (
+        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+          base {deterministic_base}
+          {llm_modifier ? ` · LLM ${llm_modifier > 0 ? "+" : ""}${llm_modifier}` : ""}
+        </div>
+      )}
+      {evidence?.length > 0 && (
+        <ul
+          style={{
+            margin: "6px 0 0",
+            paddingLeft: 16,
+            fontSize: 11,
+            color: "#64748b",
+            listStyle: "disc",
+          }}
+        >
+          {evidence.map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -343,21 +368,22 @@ export function EvidenceConfidence() {
                 )}
               </div>
 
+              {/* Budget is omitted when the brief states no budget (factor excluded). */}
               <ScoreBar
                 label="Budget alignment"
-                score={liveResult.auditor.budget_alignment_score}
+                factor={liveResult.auditor.budget_alignment}
               />
               <ScoreBar
                 label="Deliverable coverage"
-                score={liveResult.auditor.deliverable_coverage_score}
+                factor={liveResult.auditor.deliverable_coverage}
               />
               <ScoreBar
                 label="Technical feasibility"
-                score={liveResult.feasibility.technical_feasibility_score}
+                factor={liveResult.feasibility.technical_feasibility}
               />
               <ScoreBar
                 label="Timeline realism"
-                score={liveResult.feasibility.timeline_realism_score}
+                factor={liveResult.feasibility.timeline_realism}
               />
             </>
           ) : (
