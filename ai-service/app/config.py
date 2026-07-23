@@ -30,6 +30,17 @@ class Settings:
     PROPOSAL_MODEL: str = "gemini-3.5-flash"
     DEFAULT_FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
 
+    # AIE-09 — Confidence Grid factor weights. The headline index is a weighted
+    # blend of the four grounded factors; budget is excluded (weights
+    # renormalised) when the brief states no budget. Kept explicit and tunable,
+    # mirroring ``opportunity.score_opportunity``'s weight table.
+    CONFIDENCE_WEIGHTS: dict[str, float] = {
+        "deliverable_coverage": 0.30,
+        "timeline_realism": 0.25,
+        "technical_feasibility": 0.25,
+        "budget_alignment": 0.20,
+    }
+
     def __init__(self) -> None:
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
         self.gemini_model: str = os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL).strip()
@@ -54,6 +65,10 @@ class Settings:
         self.max_correction_cycles: int = int(os.getenv("MAX_CORRECTION_CYCLES", "1"))
         # The minimum score delta required for each optimization step to be accepted (per-step threshold)
         self.confidence_min_improvement: int = int(os.getenv("CONFIDENCE_MIN_IMPROVEMENT", "1"))
+        # AIE-09 — max points the LLM may nudge a deterministic factor base (±).
+        self.confidence_llm_modifier_limit: int = int(
+            os.getenv("CONFIDENCE_LLM_MODIFIER_LIMIT", "15")
+        )
         self.ai_service_token: str = os.getenv("AI_SERVICE_TOKEN", "").strip()
 
         # ── GitHub onboarding (roles/01, 01a) ──────────────────────────────
