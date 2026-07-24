@@ -1,0 +1,49 @@
+name: Keep Render services awake
+
+# Render free web services spin down after ~15 minutes of no inbound HTTP
+# traffic. This scheduled workflow pings their health endpoints every ~10
+# minutes so the idle timer never reaches 15 min — keeping the backend (and its
+# /sync WebSocket) and the AI service warm at zero cost.
+#
+# Configure the URLs (once your Render services exist) as Repository Variables:
+#   Settings → Secrets and variables → Actions → Variables tab
+#     RENDER_BACKEND_URL     = https://fixflowai-backend.onrender.com
+#     RENDER_AI_SERVICE_URL  = https://fixflowai-ai-service.onrender.com
+# If unset, the defaults below are used.
+
+on:
+  schedule:
+    # Every 10 minutes. GitHub's minimum is 5 min and runs can be delayed a few
+    # minutes under load — 10 min stays comfortably under Render's 15 min sleep.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # allow manual "Run workflow" from the Actions tab
+
+# Avoid piling up overlapping runs if a ping is slow (cold start).
+concurrency:
+  group: render-keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend + AI service health endpoints
+        env:
+          BACKEND_URL: ${{ vars.RENDER_BACKEND_URL || 'https://fixflowai-backend.onrender.com' }}
+          AI_SERVICE_URL: ${{ vars.RENDER_AI_SERVICE_URL || 'https://fixflowai-ai-service.onrender.com' }}
+        run: |
+          set -u
+          # A slow first response (cold start) is fine — we only need the request
+          # to hit Render and reset the idle timer. Never fail the job on a miss.
+          echo "→ Pinging backend: ${BACKEND_URL}/api/health"
+          curl -fsS --retry 2 --max-time 90 "${BACKEND_URL}/api/health" \
+            && echo "  backend OK" \
+            || echo "  backend ping did not return 2xx (likely cold-starting) — timer still reset"
+
+          echo "→ Pinging AI service: ${AI_SERVICE_URL}/health"
+          curl -fsS --retry 2 --max-time 90 "${AI_SERVICE_URL}/health" \
+            && echo "  ai-service OK" \
+            || echo "  ai-service ping did not return 2xx (likely cold-starting) — timer still reset"
+
+          echo "Keep-alive ping cycle complete."
