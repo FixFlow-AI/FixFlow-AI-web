@@ -3,7 +3,7 @@ import 'dotenv/config';
 // Boot-time check for Razorpay webhook secret (BUG-04)
 const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 if (!webhookSecret) {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PAYMENT_SIMULATION !== 'true') {
     console.error('CRITICAL ERROR: RAZORPAY_WEBHOOK_SECRET is not configured in production. Process exiting.');
     process.exit(1);
   } else {
@@ -13,10 +13,16 @@ if (!webhookSecret) {
 
 // STORY-18: In production, live Razorpay credentials are mandatory — the app
 // must never fall back to simulated payments. Fail fast at boot if missing.
-if (process.env.NODE_ENV === 'production') {
+// Exception: a non-payment demo can set ALLOW_PAYMENT_SIMULATION=true to run in
+// production (e.g. Render seed demo) without real Razorpay keys.
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.ALLOW_PAYMENT_SIMULATION !== 'true'
+) {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     console.error(
-      'CRITICAL ERROR: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production (simulation mode is disabled). Process exiting.',
+      'CRITICAL ERROR: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production (simulation mode is disabled). ' +
+        'Set ALLOW_PAYMENT_SIMULATION=true if this deploy intentionally runs without live payments. Process exiting.',
     );
     process.exit(1);
   }
