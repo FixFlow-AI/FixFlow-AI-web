@@ -106,3 +106,46 @@ export async function getAuditChain(
   const blocks = await getMilestoneRepository().getAuditBlocks(id);
   return { blocks, valid: verifyAuditChain(blocks) };
 }
+
+export interface AuditScanResult {
+  scannedAt: string;
+  totalMilestones: number;
+  validChains: number;
+  invalidChains: number;
+  tampered: Array<{ milestoneId: string; blocks: number }>;
+}
+
+/**
+ * STORY-21: Verifies the SHA-256 audit chain of every persisted milestone and
+ * reports any tampering. Intended to run on a schedule (cron / EventBridge) or
+ * on-demand via an admin route. Emits a CRITICAL log for each mismatch so
+ * external alerting (e.g. CloudWatch metric filter) can page an operator.
+ */
+export async function scanAllAuditChains(): Promise<AuditScanResult> {
+  const repo = getMilestoneRepository();
+  const milestones = await repo.list();
+  const tampered: Array<{ milestoneId: string; blocks: number }> = [];
+
+  for (const m of milestones) {
+    const blocks = await repo.getAuditBlocks(m.id);
+    if (!verifyAuditChain(blocks)) {
+      tampered.push({ milestoneId: m.id, blocks: blocks.length });
+      console.error(
+        `[AUDIT-SCAN][CRITICAL] Tampered or broken audit chain detected for milestone [${m.id}] (${blocks.length} blocks). Investigate immediately.`,
+      );
+    }
+  }
+
+  const result: AuditScanResult = {
+    scannedAt: new Date().toISOString(),
+    totalMilestones: milestones.length,
+    validChains: milestones.length - tampered.length,
+    invalidChains: tampered.length,
+    tampered,
+  };
+
+  console.log(
+    `[AUDIT-SCAN] Completed: ${result.validChains}/${result.totalMilestones} chains valid, ${result.invalidChains} tampered.`,
+  );
+  return result;
+}
