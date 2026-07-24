@@ -362,6 +362,7 @@ async function runTests() {
     const mfaUser = await userRepo.upsertFromGoogleProfile({
       googleSub: 'test-mfa-user-sub-12345',
       email: 'mfa-test-user@example.com',
+      emailVerified: true,
       name: 'MFA Test User'
     });
     mfaUser.otpSecret = 'JBSWY3DPEHPK3PXP';
