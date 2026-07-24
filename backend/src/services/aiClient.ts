@@ -36,6 +36,31 @@ export class AiServiceError extends Error {
   }
 }
 
+async function fetchWithRetry(url: string, options: RequestInit, retries = 4, delayMs = 2500): Promise<Response> {
+  let lastErr: unknown;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      // If 502/503/504 (e.g. Render container cold start / spin-down waking up), retry
+      if ([502, 503, 504].includes(res.status) && i < retries - 1) {
+        console.warn(`[AIClient] Upstream returned ${res.status}. Cold start warming up (${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (i < retries - 1) {
+        console.warn(`[AIClient] Fetch error: ${err instanceof Error ? err.message : String(err)}. Retrying (${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error(`Fetch to ${url} failed after ${retries} retries.`);
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   if (!AI_SERVICE_URL) {
     throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
@@ -46,7 +71,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
   let res: Response;
   try {
-    res = await fetch(`${AI_SERVICE_URL}${path}`, {
+    res = await fetchWithRetry(`${AI_SERVICE_URL}${path}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -155,7 +180,7 @@ export async function openGithubScanStream(body: GithubScanRequestBody): Promise
 
   let res: Response;
   try {
-    res = await fetch(`${AI_SERVICE_URL}/ai/github/scan/stream`, {
+    res = await fetchWithRetry(`${AI_SERVICE_URL}/ai/github/scan/stream`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
