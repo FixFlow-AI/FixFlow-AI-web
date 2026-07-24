@@ -12,7 +12,7 @@ if [[ -n "${DDB_ENDPOINT:-}" ]]; then
   ENDPOINT_ARG=(--endpoint-url "${DDB_ENDPOINT}")
 fi
 
-SUFFIXES=(users freelancers proposals milestones audit_blocks opportunities raw_posts)
+SUFFIXES=(users freelancers proposals milestones audit_blocks processed_events opportunities raw_posts)
 
 echo "About to DELETE these tables in region ${REGION}:"
 for s in "${SUFFIXES[@]}"; do echo "  ${PREFIX}_${s}"; done

@@ -98,6 +98,22 @@ create audit_blocks '{
     {"AttributeName":"blockIndex","KeyType":"RANGE"}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
+# Webhook idempotency ledger (STORY-02). TTL enabled below so rows self-prune.
+create processed_events '{
+  "AttributeDefinitions":[{"AttributeName":"eventId","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"eventId","KeyType":"HASH"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# Enable TTL on the `ttl` attribute (epoch seconds) for processed_events.
+if aws dynamodb update-time-to-live \
+    --table-name "${PREFIX}_processed_events" \
+    --time-to-live-specification "Enabled=true,AttributeName=ttl" \
+    --region "${REGION}" "${ENDPOINT_ARG[@]}" >/dev/null 2>&1; then
+  echo "[ttl]    ${PREFIX}_processed_events TTL enabled on 'ttl'"
+else
+  echo "[warn]   Could not enable TTL on ${PREFIX}_processed_events (enable manually: attribute 'ttl')."
+fi
+
 create opportunities '{
   "AttributeDefinitions":[
     {"AttributeName":"opportunityId","AttributeType":"S"},

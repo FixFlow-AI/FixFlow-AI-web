@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $endpointArg = @()
 if ($Endpoint -ne "") { $endpointArg = @("--endpoint-url", $Endpoint) }
 
-$suffixes = @("users", "freelancers", "proposals", "milestones", "audit_blocks", "opportunities", "raw_posts")
+$suffixes = @("users", "freelancers", "proposals", "milestones", "audit_blocks", "processed_events", "opportunities", "raw_posts")
 
 Write-Host "About to DELETE these tables in region $Region:" -ForegroundColor Yellow
 $suffixes | ForEach-Object { Write-Host "  ${Prefix}_$_" }

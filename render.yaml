@@ -71,10 +71,26 @@ services:
         sync: false
       - key: GITHUB_OAUTH_CALLBACK_URL
         sync: false                 # e.g. https://fixflowai-frontend.onrender.com/
-      - key: FREELANCER_PROVIDER
-        value: seed
+      # --- Persistence: DynamoDB (parity with local; data survives restarts) ---
+      - key: PERSISTENCE_PROVIDER
+        value: dynamodb
       - key: USER_PROVIDER
-        value: seed
+        value: dynamodb
+      - key: FREELANCER_PROVIDER
+        value: dynamodb
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: DDB_TABLE_PREFIX
+        value: fixflow
+      - key: S3_UPLOAD_BUCKET
+        value: fixflowai-uploads-019711413699
+      - key: S3_PRESIGN_EXPIRY
+        value: "900"
+      # Render has no `aws configure` — DynamoDB/S3 need explicit credentials.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
       # --- CORS: allow the deployed frontend + your domain (comma separated) ---
       - key: FRONTEND_ORIGINS
         value: https://fixflowai-frontend.onrender.com,https://fixflowai.xyz,https://www.fixflowai.xyz
@@ -101,10 +117,25 @@ services:
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     envVars:
+      # NOTE: all VITE_* vars are baked in at BUILD time. After changing any of
+      # them, trigger "Clear cache & deploy" so the new value is compiled in.
+      #
       # The browser calls the backend directly, so this must be the backend's
       # PUBLIC URL. Enter it after the backend is live, then redeploy the site.
       - key: VITE_API_BASE_URL
         sync: false                 # e.g. https://fixflowai-backend.onrender.com
+      # Google OAuth Web Client ID — same value as backend GOOGLE_OAUTH_CLIENT_ID.
+      - key: VITE_GOOGLE_CLIENT_ID
+        sync: false
+      # GitHub OAuth Client ID — same app as backend GITHUB_OAUTH_CLIENT_ID.
+      - key: VITE_GITHUB_CLIENT_ID
+        sync: false
+      # Must equal the GitHub app's callback + backend GITHUB_OAUTH_CALLBACK_URL.
+      - key: VITE_GITHUB_REDIRECT_URI
+        sync: false                 # e.g. https://fixflowai-frontend.onrender.com/
+      # Optional: Razorpay Key ID for client checkout (public rzp_... key).
+      - key: VITE_RAZORPAY_KEY_ID
+        sync: false
     # The app uses hash routing (#/dashboard), so no SPA rewrite is required.
     # If you switch to path routing later, add:
     # routes:

@@ -136,6 +136,20 @@ $tables = @{
 }
 '@
 
+  # 5b) Processed events — webhook idempotency ledger (STORY-02). PK is the
+  #     Razorpay event id. A `ttl` epoch-seconds attribute (set by the app to
+  #     now + 30 days) lets DynamoDB TTL auto-prune old rows. TTL is enabled
+  #     after creation (see the update-time-to-live call in the loop below).
+  "processed_events" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "eventId", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "eventId", "KeyType": "HASH" } ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
   # 6) Opportunities — AI-005 scored leads. Query by id; dedupe lookups via urlHash GSI.
   "opportunities" = @'
 {
@@ -397,6 +411,7 @@ $tables = @{
 # Deterministic order so dependent reads are predictable in logs.
 $order = @(
   "users", "freelancers", "proposals", "milestones", "audit_blocks",
+  "processed_events",
   "opportunities", "raw_posts",
   "github_scan_jobs", "freelancer_skills", "freelancer_projects",
   "profile_confidence", "profile_snapshots", "growth_plans",
@@ -447,6 +462,21 @@ foreach ($suffix in $order) {
   # Wait until ACTIVE before moving on.
   aws dynamodb wait table-exists --table-name $tableName --region $Region @endpointArg
   Write-Host "[ready]  $tableName"
+
+  # Enable TTL on the webhook idempotency ledger so old dedupe rows self-prune
+  # after ~30 days (the app writes a `ttl` epoch-seconds attribute).
+  if ($suffix -eq "processed_events") {
+    aws dynamodb update-time-to-live `
+      --table-name $tableName `
+      --time-to-live-specification "Enabled=true,AttributeName=ttl" `
+      --region $Region `
+      @endpointArg | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "[ttl]    $tableName TTL enabled on 'ttl'"
+    } else {
+      Write-Warning "Could not enable TTL on $tableName (enable it manually: attribute 'ttl')."
+    }
+  }
 }
 
 Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
