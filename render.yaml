@@ -20,7 +20,7 @@ services:
   - type: web
     name: fixflowai-ai-service
     runtime: python
-    branch: buildX
+    branch: buildx
     rootDir: ai-service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -44,7 +44,7 @@ services:
   - type: web
     name: fixflowai-backend
     runtime: node
-    branch: buildX
+    branch: buildx
     rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm start
@@ -96,7 +96,7 @@ services:
   - type: web
     name: fixflowai-frontend
     runtime: static
-    branch: buildX
+    branch: buildx
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
