@@ -436,10 +436,11 @@ class DynamoDbUserRepository implements UserRepository {
         IndexName: 'GoogleSubIndex',
         KeyConditionExpression: 'googleSub = :g',
         ExpressionAttributeValues: { ':g': googleSub },
-        Limit: 1,
       }),
     );
-    return res.Items?.[0] ? migrateUserRecord(res.Items[0]) : null;
+    if (!res.Items || res.Items.length === 0) return null;
+    const items = res.Items.map(migrateUserRecord).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return items[0];
   }
 
   async findByGithubUserId(githubUserId: string): Promise<User | null> {
@@ -451,10 +452,11 @@ class DynamoDbUserRepository implements UserRepository {
         IndexName: 'GithubUserIndex',
         KeyConditionExpression: 'githubUserId = :g',
         ExpressionAttributeValues: { ':g': githubUserId },
-        Limit: 1,
       }),
     );
-    return res.Items?.[0] ? migrateUserRecord(res.Items[0]) : null;
+    if (!res.Items || res.Items.length === 0) return null;
+    const items = res.Items.map(migrateUserRecord).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return items[0];
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -470,10 +472,11 @@ class DynamoDbUserRepository implements UserRepository {
           ':e': cleanEmail,
           ':rawE': email,
         },
-        Limit: 1,
       }),
     );
-    return scanRes.Items?.[0] ? migrateUserRecord(scanRes.Items[0]) : null;
+    if (!scanRes.Items || scanRes.Items.length === 0) return null;
+    const items = scanRes.Items.map(migrateUserRecord).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return items[0];
   }
 
   async findById(id: string): Promise<User | null> {
