@@ -11,9 +11,13 @@ const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
  * silently "succeeding" with fake payments.
  */
 function assertSimulationAllowed(operation: string): void {
-  if (process.env.NODE_ENV === 'production') {
+  // Simulation is blocked in production UNLESS explicitly opted in via
+  // ALLOW_PAYMENT_SIMULATION=true (e.g. a Render demo that doesn't use real
+  // payments). Without that opt-in, a production deploy must have live keys.
+  const allowSim = process.env.ALLOW_PAYMENT_SIMULATION === 'true';
+  if (process.env.NODE_ENV === 'production' && !allowSim) {
     throw new Error(
-      `Payment simulation mode is disabled in production. Refusing to ${operation} without live Razorpay credentials (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET).`,
+      `Payment simulation mode is disabled in production. Refusing to ${operation} without live Razorpay credentials (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET). Set ALLOW_PAYMENT_SIMULATION=true to permit simulated payments in a non-payment demo.`,
     );
   }
 }
