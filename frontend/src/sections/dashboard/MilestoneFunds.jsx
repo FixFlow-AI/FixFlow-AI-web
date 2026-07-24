@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
+import { MFAModal } from "../../components/MFAModal";
+import { DisputeModal } from "../../components/DisputeModal";
+import { AuditTrailViewer } from "../../components/AuditTrailViewer";
 
 const whatChanges = [
   {
@@ -50,6 +53,15 @@ export function MilestoneFunds() {
   const [breakdown, setBreakdown] = useState(null);
   const [fundingLoading, setFundingLoading] = useState(false);
   const [paymentLoadingMessage, setPaymentLoadingMessage] = useState("");
+
+  // STORY-08/09/10/11: release (MFA), dispute, and audit trail action state.
+  const [mfaTarget, setMfaTarget] = useState(null); // milestone pending release
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState("");
+  const [disputeTarget, setDisputeTarget] = useState(null);
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [disputeError, setDisputeError] = useState("");
+  const [auditTarget, setAuditTarget] = useState(null);
 
   const loadMilestones = async () => {
     if (!parsedProposalId) return;
@@ -177,6 +189,42 @@ export function MilestoneFunds() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not initiate payment.");
       setPaymentLoadingMessage("");
+    }
+  };
+
+  // STORY-08 + STORY-11: release escrowed funds, gated by an MFA OTP prompt.
+  const submitRelease = async (mfaToken) => {
+    if (!mfaTarget) return;
+    setMfaLoading(true);
+    setMfaError("");
+    try {
+      await api.releaseMilestone(mfaTarget.id, {
+        mfaToken,
+        platformPlan: "FREE",
+        taxCountryCode: "IN",
+      });
+      setMfaTarget(null);
+      loadMilestones();
+    } catch (err) {
+      setMfaError(err instanceof ApiError ? err.message : "Fund release failed.");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  // STORY-09: file a dispute against an active milestone.
+  const submitDispute = async ({ reason, evidenceUrls }) => {
+    if (!disputeTarget) return;
+    setDisputeLoading(true);
+    setDisputeError("");
+    try {
+      await api.disputeMilestone(disputeTarget.id, { reason, evidenceUrls });
+      setDisputeTarget(null);
+      loadMilestones();
+    } catch (err) {
+      setDisputeError(err instanceof ApiError ? err.message : "Could not file dispute.");
+    } finally {
+      setDisputeLoading(false);
     }
   };
 
@@ -340,12 +388,43 @@ export function MilestoneFunds() {
                     >
                       Fund
                     </button>
+                  ) : ms.rawState === "Approved" ? (
+                    <button
+                      type="button"
+                      className="panel-btn"
+                      style={{ padding: "4px 10px", minHeight: 0, fontSize: 12, borderRadius: 6, width: "100%", background: "#16a34a" }}
+                      onClick={() => { setMfaError(""); setMfaTarget(ms); }}
+                    >
+                      Release Funds
+                    </button>
                   ) : (
                     <span className={`panel-badge ${ms.status === "Released" ? "panel-badge--green" : ms.status === "Work in progress" || ms.status === "Active" ? "panel-badge--blue" : "panel-badge--gray"}`}>
                       {ms.status}
                     </span>
                   )}
                   <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{ms.statusTime}</div>
+                  {!ms.id.startsWith("dummy_") && (
+                    <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                      {["Active", "In_Review", "Revision_Requested"].includes(ms.rawState) && (
+                        <button
+                          type="button"
+                          onClick={() => { setDisputeError(""); setDisputeTarget(ms); }}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#ea580c", fontSize: 11, fontWeight: 600 }}
+                        >
+                          Raise Dispute
+                        </button>
+                      )}
+                      {ms.rawState !== "Draft" && (
+                        <button
+                          type="button"
+                          onClick={() => setAuditTarget(ms)}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#2563eb", fontSize: 11, fontWeight: 600 }}
+                        >
+                          Audit Trail
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -494,6 +573,35 @@ export function MilestoneFunds() {
           </div>
         </div>
       )}
+
+      {/* STORY-11: MFA prompt for fund release */}
+      <MFAModal
+        open={Boolean(mfaTarget)}
+        title="Release Escrowed Funds"
+        description={`Enter your 6-digit authenticator code to release funds for "${mfaTarget?.title ?? ""}" to the freelancer.`}
+        loading={mfaLoading}
+        error={mfaError}
+        onSubmit={submitRelease}
+        onClose={() => { if (!mfaLoading) setMfaTarget(null); }}
+      />
+
+      {/* STORY-09: dispute filing modal */}
+      <DisputeModal
+        open={Boolean(disputeTarget)}
+        milestoneTitle={disputeTarget?.title ?? ""}
+        loading={disputeLoading}
+        error={disputeError}
+        onSubmit={submitDispute}
+        onClose={() => { if (!disputeLoading) setDisputeTarget(null); }}
+      />
+
+      {/* STORY-10: cryptographic audit trail drawer */}
+      <AuditTrailViewer
+        open={Boolean(auditTarget)}
+        milestoneId={auditTarget?.id}
+        milestoneTitle={auditTarget?.title ?? ""}
+        onClose={() => setAuditTarget(null)}
+      />
     </div>
   );
 }
