@@ -11,9 +11,21 @@ if (!webhookSecret) {
   }
 }
 
+// STORY-18: In production, live Razorpay credentials are mandatory — the app
+// must never fall back to simulated payments. Fail fast at boot if missing.
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error(
+      'CRITICAL ERROR: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are required in production (simulation mode is disabled). Process exiting.',
+    );
+    process.exit(1);
+  }
+}
+
 import { createServer } from 'http';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import {
@@ -56,6 +68,7 @@ import {
   listMilestones,
   applyTransition,
   getAuditChain,
+  scanAllAuditChains,
 } from './services/escrowService.js';
 import {
   InvalidTransitionError,
@@ -77,8 +90,46 @@ import { randomUUID } from 'crypto';
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 
-app.use(cors());
+// Trust the reverse proxy (needed for correct client IPs behind CloudFront/ALB,
+// which the rate limiter keys on).
+app.set('trust proxy', 1);
+
+// STORY-19: Strict CORS. Allowed origins come from FRONTEND_ORIGINS (comma
+// separated); defaults cover local dev and the production domain. Requests with
+// no Origin header (server-to-server, curl, Razorpay webhooks) are allowed.
+const ALLOWED_ORIGINS = (
+  process.env.FRONTEND_ORIGINS ||
+  'http://localhost:5173,http://localhost:3000,https://fixflowai.xyz,https://www.fixflowai.xyz'
+)
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`Origin [${origin}] is not allowed by CORS policy.`));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: '2mb' }));
+
+// STORY-16: Rate limit escrow + payment endpoints to blunt brute-force and
+// abuse. 10 requests/minute per IP. The webhook route lives under /api/webhooks
+// (not /api/escrow), so Razorpay retries are never throttled here.
+const escrowLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again in a minute.', code: 'RATE_LIMITED' },
+});
+app.use('/api/escrow', escrowLimiter);
 
 // Mount authentication routes. They live at /api/auth/* and are intentionally
 // public — they're the entry point that issues access tokens to the rest of
@@ -654,24 +705,79 @@ app.get(
 // Escrow State Machine (milestones + cryptographic audit trail)
 // ==========================================
 
+// STORY-17: Strict Zod schemas for escrow/payment request bodies. Amounts are
+// bounded to ₹100–₹50,00,000 to reject nonsensical or abusive values.
+const MILESTONE_STATES = [
+  'Draft',
+  'Pending_Deposit',
+  'Active',
+  'In_Review',
+  'Revision_Requested',
+  'Approved',
+  'Funds_Released',
+  'Dispute',
+] as const;
+
+const AmountSchema = z
+  .number({ invalid_type_error: 'amount must be a number.' })
+  .finite()
+  .min(100, 'amount must be at least ₹100.')
+  .max(5_000_000, 'amount must not exceed ₹50,00,000.');
+
+const CreateMilestoneSchema = z.object({
+  proposalId: z.string().trim().min(1, 'proposalId is required.'),
+  title: z.string().trim().min(1, 'title is required.'),
+  amount: AmountSchema,
+});
+
+const TransitionSchema = z.object({
+  toState: z.enum(MILESTONE_STATES),
+  triggerUserId: z.string().trim().min(1, 'triggerUserId is required.'),
+  triggerUserRole: z.enum(['Freelancer', 'Client', 'Arbitrator', 'System']).optional(),
+  expectedVersion: z.number().int().nonnegative(),
+  metadata: z.string().max(2000).optional(),
+  mfaToken: z.string().trim().optional(),
+});
+
+const VerifyPaymentSchema = z.object({
+  razorpayPaymentId: z.string().trim().min(1, 'razorpayPaymentId is required.'),
+  razorpayOrderId: z.string().trim().min(1, 'razorpayOrderId is required.'),
+  razorpaySignature: z.string().trim().min(1, 'razorpaySignature is required.'),
+});
+
+const ReleaseSchema = z.object({
+  mfaToken: z.string().trim().min(1, 'mfaToken is required to release funds.'),
+  freelancerAccountId: z.string().trim().optional(),
+  platformPlan: z.string().trim().optional(),
+  taxCountryCode: z.string().trim().optional(),
+});
+
+/**
+ * Validates a request body against a Zod schema. On failure it writes a 400
+ * with the first validation issue and returns null; on success returns the
+ * parsed, typed data.
+ */
+function parseBody<T>(schema: z.ZodSchema<T>, req: Request, res: Response): T | null {
+  const result = schema.safeParse(req.body ?? {});
+  if (!result.success) {
+    const first = result.error.issues[0];
+    res.status(400).json({
+      error: first?.message || 'Invalid request body.',
+      code: 'VALIDATION_ERROR',
+      field: first?.path?.join('.') || undefined,
+    });
+    return null;
+  }
+  return result.data;
+}
+
 app.post(
   '/api/escrow/milestones',
   requireAuth,
   asyncRoute(async (req, res) => {
-    const { proposalId, title, amount } = req.body ?? {};
-    if (typeof proposalId !== 'string' || !proposalId.trim()) {
-      res.status(400).json({ error: 'proposalId is required.' });
-      return;
-    }
-    if (typeof title !== 'string' || !title.trim()) {
-      res.status(400).json({ error: 'title is required.' });
-      return;
-    }
-    if (typeof amount !== 'number' || amount < 0) {
-      res.status(400).json({ error: 'amount is required and must be a non-negative number.' });
-      return;
-    }
-    res.status(201).json(await createMilestone({ proposalId, title, amount }));
+    const data = parseBody(CreateMilestoneSchema, req, res);
+    if (!data) return;
+    res.status(201).json(await createMilestone(data));
   }),
 );
 
@@ -709,31 +815,25 @@ app.get(
   }),
 );
 
+// STORY-21: On-demand integrity scan across all milestone audit chains.
+// Restricted to the developer/admin role; also intended to be invoked on a
+// schedule by an external trigger.
+app.get(
+  '/api/escrow/audit/scan',
+  requireAuth,
+  requireRole('developer'),
+  asyncRoute(async (_req, res) => {
+    res.json(await scanAllAuditChains());
+  }),
+);
+
 app.post(
   '/api/escrow/milestones/:id/transition',
   requireAuth,
   asyncRoute(async (req, res) => {
-    const {
-      toState,
-      triggerUserId,
-      triggerUserRole,
-      expectedVersion,
-      metadata,
-      mfaToken,
-    } = req.body ?? {};
-
-    if (typeof toState !== 'string') {
-      res.status(400).json({ error: 'toState is required.' });
-      return;
-    }
-    if (typeof triggerUserId !== 'string' || !triggerUserId.trim()) {
-      res.status(400).json({ error: 'triggerUserId is required.' });
-      return;
-    }
-    if (typeof expectedVersion !== 'number') {
-      res.status(400).json({ error: 'expectedVersion (number) is required for concurrency control.' });
-      return;
-    }
+    const data = parseBody(TransitionSchema, req, res);
+    if (!data) return;
+    const { toState, triggerUserId, triggerUserRole, expectedVersion, metadata, mfaToken } = data;
 
     try {
       const result = await applyTransition(req.params.id, {
@@ -815,11 +915,9 @@ app.post(
   '/api/escrow/milestones/:id/verify-payment',
   requireAuth,
   asyncRoute(async (req, res) => {
-    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body ?? {};
-    if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
-      res.status(400).json({ error: 'razorpayPaymentId, razorpayOrderId, and razorpaySignature are required.' });
-      return;
-    }
+    const data = parseBody(VerifyPaymentSchema, req, res);
+    if (!data) return;
+    const { razorpayPaymentId, razorpayOrderId, razorpaySignature } = data;
 
     const milestone = await getMilestone(req.params.id);
     if (!milestone) {
@@ -861,12 +959,9 @@ app.post(
   '/api/escrow/milestones/:id/release',
   requireAuth,
   asyncRoute(async (req, res) => {
-    const { mfaToken, freelancerAccountId, platformPlan, taxCountryCode } = req.body ?? {};
-
-    if (typeof mfaToken !== 'string' || !mfaToken.trim()) {
-      res.status(400).json({ error: 'mfaToken is required to release funds.', code: 'MFA_REQUIRED' });
-      return;
-    }
+    const data = parseBody(ReleaseSchema, req, res);
+    if (!data) return;
+    const { mfaToken, freelancerAccountId, platformPlan, taxCountryCode } = data;
 
     const milestone = await getMilestone(req.params.id);
     if (!milestone) {
@@ -1126,7 +1221,7 @@ app.post(
       `${(req.body?.event ?? 'unknown')}:${req.body?.payload?.payment?.entity?.id ?? randomUUID()}`;
     if (await eventRepo.hasProcessed(eventId)) {
       console.log(`[Webhook] Duplicate event ${eventId} ignored (already processed).`);
-      res.json({ status: 'ok', duplicate: true });
+      res.json({ status: 'ok', deduplicated: true });
       return;
     }
 
@@ -1155,6 +1250,45 @@ app.post(
         };
         await repo.save(updated);
       }
+    } else if (event === 'payment.failed') {
+      // STORY-05: A failed payment leaves the milestone in Pending_Deposit so
+      // the client can retry funding. We only log and annotate — no transition.
+      const payment = payload?.payment?.entity;
+      const orderId = payment?.order_id;
+      const repo = getMilestoneRepository();
+      const milestone = (await repo.list()).find((m) => m.razorpayOrderId === orderId);
+      console.warn(
+        `[Webhook] payment.failed for order ${orderId}` +
+          (milestone ? ` (milestone ${milestone.id}, kept in ${milestone.state})` : ' (no matching milestone)') +
+          `. Reason: ${payment?.error_description ?? 'unknown'}`,
+      );
+    } else if (event === 'refund.processed') {
+      // STORY-05: Confirm a refund we initiated (dispute resolved in client's
+      // favor) actually settled, and stamp the refund id on the milestone.
+      const refund = payload?.refund?.entity;
+      const paymentId = refund?.payment_id;
+      const repo = getMilestoneRepository();
+      const milestone = (await repo.list()).find((m) => m.razorpayPaymentId === paymentId);
+      if (milestone) {
+        console.log(`[Webhook] refund.processed for milestone ${milestone.id} (refund ${refund?.id}).`);
+        await repo.save({ ...milestone, razorpayRefundId: refund?.id });
+      } else {
+        console.warn(`[Webhook] refund.processed for payment ${paymentId} — no matching milestone.`);
+      }
+    } else if (event === 'transfer.processed') {
+      // STORY-05: Confirm a Route payout to a freelancer settled.
+      const transfer = payload?.transfer?.entity;
+      const transferId = transfer?.id;
+      const repo = getMilestoneRepository();
+      const milestone = (await repo.list()).find((m) => m.razorpayTransferId === transferId);
+      if (milestone) {
+        console.log(`[Webhook] transfer.processed confirmed for milestone ${milestone.id} (transfer ${transferId}).`);
+      } else {
+        console.warn(`[Webhook] transfer.processed for transfer ${transferId} — no matching milestone.`);
+      }
+    } else {
+      // STORY-05: Structured log for any event type we do not explicitly handle.
+      console.log(`[Webhook] Unhandled event type received and acknowledged: ${event}`);
     }
 
     // Record the event only after successful handling so a transient failure
