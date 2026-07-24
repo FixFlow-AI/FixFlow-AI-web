@@ -79,6 +79,7 @@ export interface UpsertGithubProfileInput {
 export interface UserRepository {
   findByGoogleSub(googleSub: string): Promise<User | null>;
   findByGithubUserId(githubUserId: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User>;
   upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User>;
@@ -128,6 +129,12 @@ class SeedFileUserRepository implements UserRepository {
     return users.find((u) => u.githubUserId === githubUserId) ?? null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const users = await this.load();
+    const clean = (email || '').trim().toLowerCase();
+    return users.find((u) => u.email.trim().toLowerCase() === clean) ?? null;
+  }
+
   async findById(id: string): Promise<User | null> {
     const users = await this.load();
     return users.find((u) => u.id === id) ?? null;
@@ -135,9 +142,14 @@ class SeedFileUserRepository implements UserRepository {
 
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
     const users = await this.load();
-    const existing = users.find((u) => u.googleSub === input.googleSub);
+    let existing = users.find((u) => u.googleSub === input.googleSub);
+    if (!existing && input.email) {
+      const cleanEmail = input.email.trim().toLowerCase();
+      existing = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
+    }
     const now = new Date().toISOString();
     if (existing) {
+      existing.googleSub = input.googleSub;
       existing.email = input.email;
       existing.emailVerified = input.emailVerified;
       existing.name = input.name;
@@ -166,9 +178,14 @@ class SeedFileUserRepository implements UserRepository {
 
   async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
     const users = await this.load();
-    const existing = users.find((u) => u.githubUserId === input.githubUserId);
+    let existing = users.find((u) => u.githubUserId === input.githubUserId);
+    if (!existing && input.email) {
+      const cleanEmail = input.email.trim().toLowerCase();
+      existing = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
+    }
     const now = new Date().toISOString();
     if (existing) {
+      existing.githubUserId = input.githubUserId;
       existing.email = input.email;
       existing.emailVerified = input.emailVerified;
       existing.name = input.name;
@@ -268,6 +285,9 @@ class HttpUserRepository implements UserRepository {
   }
   findByGithubUserId(githubUserId: string) {
     return this.req<User>(`/by-github/${encodeURIComponent(githubUserId)}`);
+  }
+  findByEmail(email: string) {
+    return this.req<User>(`/by-email/${encodeURIComponent(email)}`);
   }
   findById(id: string) {
     return this.req<User>(`/${encodeURIComponent(id)}`);
@@ -437,6 +457,25 @@ class DynamoDbUserRepository implements UserRepository {
     return res.Items?.[0] ? migrateUserRecord(res.Items[0]) : null;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const { ddb, table } = await import('../config/aws.js');
+    const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const scanRes = await ddb.send(
+      new ScanCommand({
+        TableName: table('users'),
+        FilterExpression: 'lower(#e) = :e OR #e = :rawE',
+        ExpressionAttributeNames: { '#e': 'email' },
+        ExpressionAttributeValues: {
+          ':e': cleanEmail,
+          ':rawE': email,
+        },
+        Limit: 1,
+      }),
+    );
+    return scanRes.Items?.[0] ? migrateUserRecord(scanRes.Items[0]) : null;
+  }
+
   async findById(id: string): Promise<User | null> {
     const { ddb, table } = await import('../config/aws.js');
     const { GetCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -447,7 +486,10 @@ class DynamoDbUserRepository implements UserRepository {
   }
 
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
-    const existing = await this.findByGoogleSub(input.googleSub);
+    let existing = await this.findByGoogleSub(input.googleSub);
+    if (!existing && input.email) {
+      existing = await this.findByEmail(input.email);
+    }
     const now = new Date().toISOString();
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -455,6 +497,7 @@ class DynamoDbUserRepository implements UserRepository {
     if (existing) {
       const updated: User = {
         ...existing,
+        googleSub: input.googleSub,
         email: input.email,
         emailVerified: input.emailVerified,
         name: input.name,
@@ -483,7 +526,10 @@ class DynamoDbUserRepository implements UserRepository {
   }
 
   async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
-    const existing = await this.findByGithubUserId(input.githubUserId);
+    let existing = await this.findByGithubUserId(input.githubUserId);
+    if (!existing && input.email) {
+      existing = await this.findByEmail(input.email);
+    }
     const now = new Date().toISOString();
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
@@ -491,11 +537,12 @@ class DynamoDbUserRepository implements UserRepository {
     if (existing) {
       const updated: User = {
         ...existing,
+        githubUserId: input.githubUserId,
+        githubUsername: input.githubUsername,
         email: input.email,
         emailVerified: input.emailVerified,
         name: input.name,
         picture: input.picture,
-        githubUsername: input.githubUsername,
         githubAccessToken: input.githubAccessToken ?? existing.githubAccessToken,
         updatedAt: now,
       };
