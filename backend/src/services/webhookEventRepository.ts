@@ -92,10 +92,13 @@ class DynamoDbWebhookEventRepository implements WebhookEventRepository {
   async markProcessed(eventId: string) {
     const { ddb, table } = await import('../config/aws.js');
     const { PutCommand } = await import('@aws-sdk/lib-dynamodb');
+    // 30-day TTL (epoch seconds) so the dedup ledger self-prunes. The table's
+    // TTL attribute must be configured as `ttl` in the IaC template.
+    const ttl = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
     await ddb.send(
       new PutCommand({
         TableName: table('processed_events'),
-        Item: { eventId, processedAt: new Date().toISOString() },
+        Item: { eventId, processedAt: new Date().toISOString(), ttl },
         // Only write if it does not already exist (atomic guard against races).
         ConditionExpression: 'attribute_not_exists(eventId)',
       }),
