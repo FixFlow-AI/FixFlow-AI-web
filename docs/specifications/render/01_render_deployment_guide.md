@@ -1,38 +1,49 @@
-# 01 — Render Deployment Guide (from the `testing` branch)
+# 01 — Render Deployment Guide (from the `buildX` branch)
 
-> Step-by-step to get **both FixFlowAI services live on Render**, deployed from the **`testing`** branch, with the WebSocket sync server working and AI features enabled. Uses **seed + in-memory** persistence so **no external database is required**.
+> Step-by-step to get **all three FixFlowAI services live on Render**, deployed from the **`buildX`** branch, with the WebSocket sync server working, AI features enabled, and the escrow/payment endpoints ready. Uses **seed + in-memory** persistence so **no external database is required**. Payments run in **simulated mode** by default; flip to live Razorpay whenever you're ready.
 
 ---
 
 ## 0. Prerequisites
 
-- A **Render account** (free tier + the BuildX $50 credits).
+- A **Render account** (free tier + the BuildX credits).
 - The FixFlowAI repo on **GitHub/GitLab** (Render deploys from a connected git repo).
 - A **Google Gemini API key** (for AI features).
-- A **Google OAuth 2.0 Web Client ID** (for sign-in) — optional for a pure API demo, required for real login.
+- A **Google OAuth 2.0 Web Client ID** + **GitHub OAuth App** (for sign-in) — optional for a pure API demo, required for real login.
+- (Optional, only for live payments) **Razorpay** Key ID / Key Secret / Webhook Secret.
 
 ```mermaid
 flowchart LR
-    DEV["Your machine"] -->|git push| REPO["GitHub repo<br/>branch: testing"]
+    DEV["Your machine"] -->|git push| REPO["GitHub repo<br/>branch: buildX"]
     REPO -->|connected| RENDER["Render"]
     RENDER --> S1["ai-service (Python)"]
     RENDER --> S2["backend (Node)"]
-    SEC["Secrets: GEMINI_API_KEY,<br/>JWT_SECRET, GOOGLE_OAUTH_CLIENT_ID"] --> RENDER
+    RENDER --> S3["frontend (Static Site)"]
+    SEC["Secrets: GEMINI_API_KEY, JWT_SECRET,<br/>OAuth IDs, (Razorpay)"] --> RENDER
 ```
+
+> ⚠️ **Secrets safety:** the repo `.gitignore` already excludes `secrets/`, `.env`, and `*.seed.json`. Never commit real keys — enter them in the Render dashboard (they map to `sync:false` vars in `render.yaml`).
 
 ---
 
-## 1. Prepare the `testing` branch
+## 1. Prepare the `buildX` branch
 
-Render deploys a specific branch. Create/prepare `testing`:
+Render deploys a specific branch. Create/prepare `buildX`:
 
 ```bash
 # from repo root
-git checkout -b testing        # or: git checkout testing
-git push -u origin testing
+git checkout -b buildX        # or: git checkout buildX
+git push -u origin buildX
 ```
 
-> Keep `main` as your AWS/production line. `testing` is what Render watches. (See branching model in [doc 03](./03_configuration_and_blueprint_reference.md#5-branching--deploy-model).)
+> Keep `main` as your AWS/production line. `buildX` is what Render watches. (See branching model in [doc 03](./03_configuration_and_blueprint_reference.md#5-branching--deploy-model).)
+
+**Seed data note:** `data/` and `*.seed.json` are gitignored. Because the demo uses `USER_PROVIDER=seed` / `FREELANCER_PROVIDER=seed`, make sure the seed files are actually in the branch Render builds. If a fresh clone is missing them, force-add once:
+
+```bash
+git add -f backend/data/users.seed.json backend/data/freelancers.seed.json
+git commit -m "chore: include seed data for Render demo"
+```
 
 ---
 
@@ -41,7 +52,7 @@ git push -u origin testing
 It only needs `GEMINI_API_KEY`, so get it green before the backend.
 
 ### 2.1 Create the service
-Render Dashboard → **New → Web Service** → connect the repo → select branch **`testing`**.
+Render Dashboard → **New → Web Service** → connect the repo → select branch **`buildX`**.
 
 | Setting | Value |
 |---|---|
@@ -52,39 +63,31 @@ Render Dashboard → **New → Web Service** → connect the repo → select bra
 | **Start Command** | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | **Instance type** | Free (or Starter) |
 
-> ⚠️ **Must use `--port $PORT`.** Render injects `PORT`; your `config.py` `PORT` value is not what uvicorn binds to unless you pass it. Binding to `0.0.0.0` is required so Render can route to it.
+> ⚠️ **Must use `--port $PORT`.** Render injects `PORT`; binding to `0.0.0.0` is required so Render can route to it.
 
 ### 2.2 Environment variables
-Add these under the service's **Environment**:
 
 | Key | Value | Notes |
 |---|---|---|
 | `GEMINI_API_KEY` | *your key* | **Secret** — required |
-| `GEMINI_MODEL` | `gemini-3.5-flash` | default model (fallback `gemini-3.1-flash-lite`) |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | default model |
 | `AI_SERVICE_TOKEN` | *a random string* | shared secret; must match backend |
 | `CONFIDENCE_THRESHOLD` | `75` | optional |
 | `MAX_CORRECTION_CYCLES` | `1` | optional |
 
-> Generate `AI_SERVICE_TOKEN` once: `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"` and reuse the same value in the backend.
-
 ### 2.3 Verify
-After deploy, open `https://fixflowai-ai-service.onrender.com/health` — expect:
-```json
-{ "status": "ok", "aiEnabled": true, "model": "gemini-3.5-flash" }
-```
-If `aiEnabled: false` → `GEMINI_API_KEY` isn't set. Interactive docs live at `/docs`.
+Open `https://fixflowai-ai-service.onrender.com/health` — expect `{ "status": "ok", "aiEnabled": true, ... }`. Docs at `/docs`.
 
 ---
 
-## 3. Deploy the backend (Node / Express + WebSocket)
+## 3. Deploy the backend (Node / Express + WebSocket + escrow)
 
 ### 3.1 Create the service
-**New → Web Service** → same repo → branch **`testing`**.
+**New → Web Service** → same repo → branch **`buildX`**.
 
 | Setting | Value |
 |---|---|
 | **Name** | `fixflowai-backend` |
-| **Language / Runtime** | Node |
 | **Root Directory** | `backend` |
 | **Build Command** | `npm install && npm run build` |
 | **Start Command** | `npm start` |
@@ -96,97 +99,103 @@ If `aiEnabled: false` → `GEMINI_API_KEY` isn't set. Interactive docs live at `
 
 | Key | Value | Notes |
 |---|---|---|
-| `AI_SERVICE_URL` | `https://fixflowai-ai-service.onrender.com` | point at the AI service from step 2 (or its **internal** URL — see below) |
+| `AI_SERVICE_URL` | AI service URL | public `https://…onrender.com` or private `host:port` |
 | `AI_SERVICE_TOKEN` | *same string as AI service* | must match |
 | `JWT_SECRET` | *32+ byte random* | **Secret, required** — `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
-| `GOOGLE_OAUTH_CLIENT_ID` | *your web client id* | required for Google sign-in |
+| `GOOGLE_OAUTH_CLIENT_ID` | *your web client id* | Google sign-in |
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | *your GitHub OAuth app* | freelancer sign-in |
+| `GITHUB_OAUTH_CALLBACK_URL` | `https://fixflowai-frontend.onrender.com/` | must match GitHub app + frontend URL |
 | `FREELANCER_PROVIDER` | `seed` | uses `data/freelancers.seed.json` — no DB |
 | `USER_PROVIDER` | `seed` | uses `data/users.seed.json` — no DB |
+| `FRONTEND_ORIGINS` | `https://fixflowai-frontend.onrender.com,https://fixflowai.xyz` | **CORS allow-list** (comma separated) |
+| `ALLOW_PAYMENT_SIMULATION` | `true` | lets simulated payments run under `NODE_ENV=production` |
 | `PORT` | *(leave unset)* | Render sets it automatically |
 
-**Do NOT set** `PERSISTENCE_PROVIDER=dynamodb` for the Render demo → leaving it unset uses the **in-memory** proposal store (no AWS needed). Razorpay/AWS/DynamoDB vars stay blank unless you want those flows.
+**Persistence:** leave `PERSISTENCE_PROVIDER` unset for the demo (proposals in-memory; milestone + webbook-dedup stores use an ephemeral file on Render that resets on redeploy — fine for a demo). Do **not** set `dynamodb` unless you're wiring real AWS.
 
-### 3.3 Service-to-service networking (recommended)
-Render services in the same account can talk over a **private internal URL** (no public round-trip, no egress). In the backend set:
-```
-AI_SERVICE_URL = http://fixflowai-ai-service:10000   # internal host:port
-```
-…or just use the public `https://…onrender.com` URL for simplicity. Both work; private is faster and doesn't consume public bandwidth.
+**Live payments (optional):** set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, and change `ALLOW_PAYMENT_SIMULATION` to `false`. Then register the webhook URL `https://fixflowai-backend.onrender.com/api/webhooks/razorpay` in the Razorpay dashboard.
 
-### 3.4 Verify
-- `https://fixflowai-backend.onrender.com/api/health` → should report status + `aiEnabled` (proxied from the AI service).
-- Test a real AI call once both are up (see §5).
+### 3.3 Verify
+- `https://fixflowai-backend.onrender.com/api/health` → status + `aiEnabled` (proxied from the AI service).
 
 ---
 
-## 4. WebSocket (real-time sync) on Render
+## 4. Deploy the frontend (Vite React — Static Site)
 
-Your `/sync` WebSocket shares the backend's HTTP server and port. **Render web services support WebSockets natively** — nothing extra to configure. Clients connect to:
-```
-wss://fixflowai-backend.onrender.com/sync
-```
+### 4.1 Create the static site
+**New → Static Site** → same repo → branch **`buildX`**.
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant BE as Render Web Service (backend)
-    C->>BE: HTTPS GET /api/...
-    C->>BE: WSS upgrade /sync
-    BE-->>C: 101 Switching Protocols (WebSocket)
-    Note over C,BE: same service, same port — SyncServer handles 'upgrade' on /sync
-```
+| Setting | Value |
+|---|---|
+| **Name** | `fixflowai-frontend` |
+| **Root Directory** | `frontend` |
+| **Build Command** | `npm install && npm run build` |
+| **Publish Directory** | `dist` |
 
-> On the **free instance type**, services **sleep after inactivity** and cold-start on the next request — fine for a demo, but a sleeping service drops WebSocket connections. Use a **paid instance** (or a keep-alive ping) for a live judged demo.
+### 4.2 Environment variables
+
+| Key | Value | Notes |
+|---|---|---|
+| `VITE_API_BASE_URL` | `https://fixflowai-backend.onrender.com` | the **public** backend URL — the browser calls it directly |
+
+> `VITE_API_BASE_URL` is baked in at **build time**, so set it before the build (or set it and trigger a redeploy once the backend URL is known). The app uses **hash routing** (`#/dashboard`), so no SPA rewrite rule is needed.
+
+### 4.3 Wire the pieces together
+1. Set the backend's `FRONTEND_ORIGINS` to include the static site URL (`https://fixflowai-frontend.onrender.com`) so CORS allows it.
+2. In your **Google OAuth** credentials, add the frontend origin as an authorized JavaScript origin.
+3. In your **GitHub OAuth app**, set the callback to the frontend URL and match `GITHUB_OAUTH_CALLBACK_URL`.
 
 ---
 
-## 5. End-to-end verification
+## 5. WebSocket (real-time sync) on Render
 
-```mermaid
-flowchart TD
-    H1["GET ai-service /health → aiEnabled:true"] --> H2["GET backend /api/health → ok"]
-    H2 --> P["POST /api/proposals/parse (with a brief) → structured proposal"]
-    P --> E["POST /api/proposals/evaluate → confidence grid result"]
-    E --> M["POST /api/leads/match → shortlist (seed roster)"]
-    M --> W["Open 2 clients on wss /sync → edits propagate"]
-```
+Your `/sync` WebSocket shares the backend's HTTP server and port. **Render web services support WebSockets natively.** Clients connect to `wss://fixflowai-backend.onrender.com/sync`.
 
-Minimal smoke test (replace host + a valid access token where auth is required):
-```bash
-curl https://fixflowai-ai-service.onrender.com/health
-curl https://fixflowai-backend.onrender.com/api/health
-```
+> On the **free instance type**, services sleep after inactivity and cold-start on the next request — a sleeping service drops WebSocket connections. Use a **Starter** instance (or a keep-alive ping) for a live judged demo.
 
 ---
 
 ## 6. One-click alternative: deploy via Blueprint
 
-Instead of clicking through both services, commit a **`render.yaml`** at the repo root and use **New → Blueprint**. Render reads it and creates both services at once. Full file in [doc 03](./03_configuration_and_blueprint_reference.md#2-full-renderyaml).
+A **`render.yaml`** already lives at the repo root. Push the `buildX` branch, then **Render → New → Blueprint** → pick the repo/branch. Render creates all three services and prompts for the `sync:false` secrets. Full file + notes in [doc 03](./03_configuration_and_blueprint_reference.md#2-full-renderyaml).
 
 ```mermaid
 flowchart LR
-    Y["render.yaml (repo root, branch: testing)"] --> BP["Render Blueprint"]
+    Y["render.yaml (repo root, branch: buildX)"] --> BP["Render Blueprint"]
     BP --> S1["ai-service"]
     BP --> S2["backend"]
-    BP -.->|"prompts for secrets"| SEC["GEMINI_API_KEY, JWT_SECRET, ..."]
+    BP --> S3["frontend (static)"]
+    BP -.->|"prompts for secrets"| SEC["GEMINI_API_KEY, OAuth IDs, (Razorpay)"]
 ```
 
 ---
 
-## 7. Troubleshooting
+## 7. End-to-end verification
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| AI service `aiEnabled:false` | No `GEMINI_API_KEY` | Set it; redeploy |
-| Backend AI calls return 502/timeout | Wrong `AI_SERVICE_URL` or AI service asleep | Check URL; wake/upgrade AI service |
-| `401` from AI service | Token mismatch | `AI_SERVICE_TOKEN` must be identical on both |
-| Backend build fails | TS build error | Run `npm run build` locally; fix, push |
-| uvicorn "port already in use" / not reachable | Missing `--host 0.0.0.0 --port $PORT` | Use the exact start command in §2.1 |
-| WebSocket drops after idle | Free instance sleeping | Paid instance or keep-alive ping |
-| `JWT_SECRET ... shorter than 32` on boot | Secret missing/short | Set a 32+ byte value |
+```bash
+curl https://fixflowai-ai-service.onrender.com/health      # aiEnabled:true
+curl https://fixflowai-backend.onrender.com/api/health     # ok
+```
+
+Then in the browser: open the frontend URL, sign in, parse a brief, create + fund a milestone (simulated checkout auto-confirms), then approve + release (MFA modal), and open the Audit Trail drawer.
 
 ---
 
-## 8. What's next
+## 8. Troubleshooting
 
-Both services live? Proceed to **[02 — Render Workflows Guide](./02_render_workflows_guide.md)** to convert the Confidence Grid into a durable workflow for the "Best Use of Render Workflow" track.
+| Symptom | Cause | Fix |
+|---|---|---|
+| Backend exits on boot with "RAZORPAY_… required in production" | `NODE_ENV=production` (Render default) + no keys | Set `ALLOW_PAYMENT_SIMULATION=true` (demo) or add live keys |
+| Frontend calls fail / CORS error | `VITE_API_BASE_URL` unset or origin not allowed | Set the build var + add the site to `FRONTEND_ORIGINS`, redeploy |
+| AI service `aiEnabled:false` | No `GEMINI_API_KEY` | Set it; redeploy |
+| Backend AI calls 502/timeout | Wrong `AI_SERVICE_URL` or AI service asleep | Check URL; wake/upgrade AI service |
+| `401` from AI service | Token mismatch | `AI_SERVICE_TOKEN` must be identical on both |
+| Empty roster / login fails | Seed files not in branch | `git add -f` the seed files (see §1) |
+| WebSocket drops after idle | Free instance sleeping | Starter instance or keep-alive ping |
+| Rate limited (429) on escrow calls | STORY-16 limiter (10/min/IP) | Expected under load; slow down or raise the limit |
+
+---
+
+## 9. What's next
+
+All services live? Proceed to **[02 — Render Workflows Guide](./02_render_workflows_guide.md)** to convert the Confidence Grid into a durable workflow for the "Best Use of Render Workflow" track.
