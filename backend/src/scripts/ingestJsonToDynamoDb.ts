@@ -220,7 +220,7 @@ async function main() {
         rosterMap.set(uId, {
           freelancerId: uId,
           id: uId,
-          name: u.name || u.githubUsername || 'Suvam Paul',
+          name: u.name || u.githubUsername || 'Lead Developer',
           title: userSnap?.bio || 'Backend Developer | AWS | Open Source contributor',
           skills: userSkills.length > 0 ? userSkills : ['Express', 'Node.js', 'FastAPI', 'Django', 'React', 'PostgreSQL', 'AWS Lambda', 'Docker'],
           githubLanguages: Object.keys(userLangs).length > 0 ? Object.keys(userLangs) : ['Python', 'TypeScript', 'JavaScript', 'HTML'],
@@ -231,7 +231,7 @@ async function main() {
           available: true,
           activeEscrows: 0,
           sbtCount: 1,
-          githubUsername: u.githubUsername || 'Suvam-paul145',
+          githubUsername: u.githubUsername || 'dev-profile',
           email: u.email,
         });
       }
