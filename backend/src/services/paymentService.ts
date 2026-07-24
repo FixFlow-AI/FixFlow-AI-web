@@ -4,6 +4,20 @@ import crypto from 'crypto';
 const KEY_ID = process.env.RAZORPAY_KEY_ID || '';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
 
+/**
+ * STORY-18: Simulation mode must never run in production. Every code path that
+ * would otherwise fall back to a mock (no live Razorpay client) calls this
+ * guard first, so a misconfigured production deploy fails loudly instead of
+ * silently "succeeding" with fake payments.
+ */
+function assertSimulationAllowed(operation: string): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      `Payment simulation mode is disabled in production. Refusing to ${operation} without live Razorpay credentials (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET).`,
+    );
+  }
+}
+
 let razorpayClient: any = null;
 
 if (KEY_ID && KEY_SECRET) {
@@ -36,6 +50,7 @@ export async function createRazorpayOrder(
   const amountInPaise = Math.round(amountInInr * 100);
 
   if (!razorpayClient) {
+    assertSimulationAllowed('create an order');
     console.log(`[SIMULATION] Generating mock Razorpay order for Milestone: ${milestoneId}, Amount: ${amountInInr} INR`);
     return {
       id: `order_mock_${crypto.randomBytes(8).toString('hex')}`,
@@ -113,6 +128,7 @@ export async function transferFundsToFreelancer(
   freelancerAccountId: string
 ): Promise<{ success: boolean; transferId?: string; isSimulated: boolean }> {
   if (!razorpayClient) {
+    assertSimulationAllowed('transfer funds');
     console.log(`[SIMULATION] Transferring ${amountInInr} INR to Freelancer Account: ${freelancerAccountId}`);
     return { success: true, transferId: `tr_mock_${crypto.randomBytes(8).toString('hex')}`, isSimulated: true };
   }
@@ -148,6 +164,7 @@ export async function refundPayment(
   amountInInr?: number
 ): Promise<RefundOutput> {
   if (!razorpayClient || !paymentId || paymentId.startsWith('pay_mock_')) {
+    assertSimulationAllowed('issue a refund');
     console.log(
       `[SIMULATION] Refunding ${amountInInr ?? 'full'} INR against payment: ${paymentId || 'n/a'}`
     );
@@ -195,6 +212,7 @@ export async function createLinkedAccount(
   input: LinkedAccountInput
 ): Promise<LinkedAccountOutput> {
   if (!razorpayClient) {
+    assertSimulationAllowed('create a linked account');
     console.log(`[SIMULATION] Creating mock Razorpay linked account for: ${input.email}`);
     return {
       success: true,
