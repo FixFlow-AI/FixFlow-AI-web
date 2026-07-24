@@ -1,0 +1,113 @@
+# render.yaml — FixFlowAI Blueprint (buildX branch)
+# ---------------------------------------------------------------------------
+# Deploys THREE services from the `buildX` branch:
+#   1. fixflowai-ai-service  — Python / FastAPI + Gemini
+#   2. fixflowai-backend     — Node / Express + WebSocket /sync
+#   3. fixflowai-frontend    — Vite static site (React)
+#
+# Persistence: seed + in-memory (no external DB required for the demo).
+# Payments: simulated by default (ALLOW_PAYMENT_SIMULATION=true). Set real
+# RAZORPAY_* secrets + flip that to false to run live payments.
+#
+# Secrets (sync:false) must be entered in the Render dashboard after the first
+# blueprint sync. Values marked generateValue are created by Render.
+# ---------------------------------------------------------------------------
+
+services:
+  # ---------------------------------------------------------------
+  # 1) Python AI service (FastAPI + Gemini) — deploy this first
+  # ---------------------------------------------------------------
+  - type: web
+    name: fixflowai-ai-service
+    runtime: python
+    branch: buildX
+    rootDir: ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free                      # use 'starter' for a stable judged demo
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false                 # secret — enter in dashboard
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: CONFIDENCE_THRESHOLD
+        value: "75"
+      - key: MAX_CORRECTION_CYCLES
+        value: "1"
+      - key: AI_SERVICE_TOKEN
+        generateValue: true         # Render generates a shared secret
+
+  # ---------------------------------------------------------------
+  # 2) TypeScript backend (Express + WebSocket sync + escrow/payments)
+  # ---------------------------------------------------------------
+  - type: web
+    name: fixflowai-backend
+    runtime: node
+    branch: buildX
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free                      # 'starter' keeps WebSockets alive (no sleep)
+    healthCheckPath: /api/health
+    envVars:
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: fixflowai-ai-service
+          property: hostport        # private internal address (host:port)
+      - key: AI_SERVICE_TOKEN
+        fromService:
+          type: web
+          name: fixflowai-ai-service
+          envVarKey: AI_SERVICE_TOKEN
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false                 # required for Google sign-in
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false                 # required for freelancer GitHub sign-in
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_OAUTH_CALLBACK_URL
+        sync: false                 # e.g. https://fixflowai-frontend.onrender.com/
+      - key: FREELANCER_PROVIDER
+        value: seed
+      - key: USER_PROVIDER
+        value: seed
+      # --- CORS: allow the deployed frontend + your domain (comma separated) ---
+      - key: FRONTEND_ORIGINS
+        value: https://fixflowai-frontend.onrender.com,https://fixflowai.xyz,https://www.fixflowai.xyz
+      # --- Payments (Razorpay) ---
+      # Demo default: simulated payments allowed even under NODE_ENV=production.
+      # For LIVE payments: set ALLOW_PAYMENT_SIMULATION=false and fill the keys.
+      - key: ALLOW_PAYMENT_SIMULATION
+        value: "true"
+      - key: RAZORPAY_KEY_ID
+        sync: false                 # optional — only for live payments
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+  # ---------------------------------------------------------------
+  # 3) Frontend (Vite React) — static site
+  # ---------------------------------------------------------------
+  - type: web
+    name: fixflowai-frontend
+    runtime: static
+    branch: buildX
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # The browser calls the backend directly, so this must be the backend's
+      # PUBLIC URL. Enter it after the backend is live, then redeploy the site.
+      - key: VITE_API_BASE_URL
+        sync: false                 # e.g. https://fixflowai-backend.onrender.com
+    # The app uses hash routing (#/dashboard), so no SPA rewrite is required.
+    # If you switch to path routing later, add:
+    # routes:
+    #   - type: rewrite
+    #     source: /*
+    #     destination: /index.html
