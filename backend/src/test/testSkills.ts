@@ -614,6 +614,81 @@ async function runTests() {
     passed = false;
   }
 
+  // ----------------------------------------------------
+  // TEST 14: Earnings Calculator — All Tiers (STORY-24)
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 14] Verifying earnings across all platform tiers + TDS + premium...');
+    const cases = [
+      { plan: 'FREE', rate: 0.10 },
+      { plan: 'SOLO', rate: 0.05 },
+      { plan: 'PRO', rate: 0.03 },
+      { plan: 'AGENCY', rate: 0.02 },
+    ];
+    for (const c of cases) {
+      const gross = 20000;
+      const b = calculateEarningsBreakdown(gross, c.plan, 'IN');
+      const expectedPlatform = Math.round(gross * c.rate * 100) / 100;
+      if (b.platformFee !== expectedPlatform) {
+        throw new Error(`${c.plan} platform fee wrong: got ${b.platformFee}, expected ${expectedPlatform}`);
+      }
+      const expectedGateway = Math.round((gross * 0.02 + 3) * 100) / 100;
+      if (b.paymentGatewayFee !== expectedGateway) throw new Error(`${c.plan} gateway fee wrong`);
+      if (b.withholdingTax !== Math.round(gross * 0.01 * 100) / 100) throw new Error(`${c.plan} TDS wrong`);
+      if (b.totalClientCheckout !== gross + Math.round(gross * 0.015 * 100) / 100) throw new Error(`${c.plan} client premium wrong`);
+    }
+    // Non-India → no TDS.
+    const intl = calculateEarningsBreakdown(20000, 'FREE', 'US');
+    if (intl.withholdingTax !== 0) throw new Error('Non-India TDS should be zero');
+    console.log('  -> PASSED: All tier commissions, TDS, and client premium verified.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 15: End-to-End Escrow Pipeline (STORY-25)
+  // Create → Fund(order) → Verify → Submit → Approve(MFA) → Release(MFA)
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 15] Verifying end-to-end escrow pipeline...');
+    const { createMilestone, getAuditChain } = await import('../services/escrowService.js');
+    const { generateHotp } = await import('../auth/otpVerifier.js');
+    // Seeded user with a known TOTP secret (also used by Test 10).
+    const clientUserId = '1c813e5f-e04a-48cf-bebe-a89d4c528037';
+    const otpSecret = 'JBSWY3DPEHPK3PXP';
+    const mfa = () => generateHotp(otpSecret, Math.floor(Date.now() / 30000));
+
+    const ms = await createMilestone({ proposalId: 'prop-e2e', title: 'E2E milestone', amount: 10000 });
+    if (ms.state !== 'Draft' || ms.version !== 0) throw new Error('Milestone did not initialize in Draft/v0');
+
+    // Draft → Pending_Deposit (order created)
+    let r = await applyTransition(ms.id, { toState: 'Pending_Deposit', triggerUserId: clientUserId, triggerUserRole: 'Client', expectedVersion: 0, metadata: 'order created' });
+    // Pending_Deposit → Active (payment verified)
+    r = await applyTransition(ms.id, { toState: 'Active', triggerUserId: 'system', triggerUserRole: 'System', expectedVersion: r.milestone.version, metadata: 'payment verified' });
+    // Active → In_Review (freelancer submits)
+    r = await applyTransition(ms.id, { toState: 'In_Review', triggerUserId: 'freelancer-e2e', triggerUserRole: 'Freelancer', expectedVersion: r.milestone.version, metadata: 'evidence submitted' });
+    // In_Review → Approved (client approves, MFA)
+    r = await applyTransition(ms.id, { toState: 'Approved', triggerUserId: clientUserId, triggerUserRole: 'Client', expectedVersion: r.milestone.version, mfaToken: mfa() });
+    // Approved → Funds_Released (client releases, MFA)
+    r = await applyTransition(ms.id, { toState: 'Funds_Released', triggerUserId: clientUserId, triggerUserRole: 'Client', expectedVersion: r.milestone.version, mfaToken: mfa() });
+
+    if (r.milestone.state !== 'Funds_Released') throw new Error(`Pipeline ended in ${r.milestone.state}, expected Funds_Released`);
+
+    const audit = await getAuditChain(ms.id);
+    if (!audit.valid) throw new Error('E2E audit chain failed verification');
+    if (audit.blocks.length !== 5) throw new Error(`Expected 5 audit blocks, found ${audit.blocks.length}`);
+
+    // Payout amount is computed from the earnings engine (not client input).
+    const payout = calculateEarningsBreakdown(ms.amount, 'FREE', 'IN');
+    if (payout.netFreelancerEarnings !== 10000 - 1000 - 203 - 100) throw new Error('Net payout mismatch in pipeline');
+
+    console.log('  -> PASSED: Full create→fund→verify→approve→release pipeline verified with intact audit chain.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
   console.log('\n==========================================');
   if (passed) {
     console.log('ALL VERIFICATION TESTS COMPLETED SUCCESSFULLY!');
