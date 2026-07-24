@@ -50,6 +50,12 @@ export interface User {
   updatedAt: string;
   refreshTokens: RefreshTokenRecord[];
   otpSecret?: string;
+  /**
+   * Razorpay Route linked account id (acc_xxxx) for freelancers. Set during
+   * payout onboarding so milestone releases can route funds to their bank
+   * account. Never issued to a client; only the owning freelancer reads it.
+   */
+  razorpayAccountId?: string;
 }
 
 export interface UpsertGoogleProfileInput {
@@ -80,6 +86,7 @@ export interface UserRepository {
   removeRefreshTokenHash(userId: string, hash: string): Promise<void>;
   clearRefreshTokens(userId: string): Promise<void>;
   updateRole(userId: string, role: UserRole): Promise<User | null>;
+  setRazorpayAccountId(userId: string, accountId: string): Promise<User | null>;
 }
 
 // ---------- Seed (file-backed) provider ----------
@@ -228,6 +235,16 @@ class SeedFileUserRepository implements UserRepository {
     await this.persist();
     return u;
   }
+
+  async setRazorpayAccountId(userId: string, accountId: string): Promise<User | null> {
+    const users = await this.load();
+    const u = users.find((x) => x.id === userId);
+    if (!u) return null;
+    u.razorpayAccountId = accountId;
+    u.updatedAt = new Date().toISOString();
+    await this.persist();
+    return u;
+  }
 }
 
 // ---------- HTTP provider (delegates to your own API/gateway) ----------
@@ -292,6 +309,12 @@ class HttpUserRepository implements UserRepository {
     return this.req<User>(`/${encodeURIComponent(userId)}/role`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),
+    });
+  }
+  async setRazorpayAccountId(userId: string, accountId: string) {
+    return this.req<User>(`/${encodeURIComponent(userId)}/razorpay-account`, {
+      method: 'PATCH',
+      body: JSON.stringify({ razorpayAccountId: accountId }),
     });
   }
 }
@@ -528,6 +551,11 @@ class DynamoDbUserRepository implements UserRepository {
   async updateRole(userId: string, role: UserRole): Promise<User | null> {
     return this.mutate(userId, (u) => {
       u.role = role;
+    });
+  }
+  async setRazorpayAccountId(userId: string, accountId: string): Promise<User | null> {
+    return this.mutate(userId, (u) => {
+      u.razorpayAccountId = accountId;
     });
   }
 }

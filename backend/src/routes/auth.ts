@@ -390,6 +390,7 @@ function publicUser(u: User) {
     role: u.role,
     authProvider: u.authProvider,
     githubUsername: u.githubUsername,
+    razorpayAccountId: u.razorpayAccountId,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };

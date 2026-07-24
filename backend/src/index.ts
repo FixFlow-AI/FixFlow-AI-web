@@ -67,7 +67,12 @@ import {
   createRazorpayOrder,
   verifyPaymentSignature,
   verifyWebhookSignature,
+  transferFundsToFreelancer,
+  refundPayment,
 } from './services/paymentService.js';
+import { getWebhookEventRepository } from './services/webhookEventRepository.js';
+import { getUserRepository } from './services/userRepository.js';
+import { randomUUID } from 'crypto';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -853,6 +858,254 @@ app.post(
 );
 
 app.post(
+  '/api/escrow/milestones/:id/release',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { mfaToken, freelancerAccountId, platformPlan, taxCountryCode } = req.body ?? {};
+
+    if (typeof mfaToken !== 'string' || !mfaToken.trim()) {
+      res.status(400).json({ error: 'mfaToken is required to release funds.', code: 'MFA_REQUIRED' });
+      return;
+    }
+
+    const milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+    if (milestone.state !== 'Approved') {
+      res.status(400).json({
+        error: `Cannot release funds for milestone in state [${milestone.state}]. Milestone must be Approved.`,
+      });
+      return;
+    }
+
+    // Resolve the payout destination: explicit body value wins, else the value
+    // already stored on the milestone. In live mode a destination is mandatory.
+    const payoutAccountId =
+      (typeof freelancerAccountId === 'string' && freelancerAccountId.trim()) ||
+      milestone.freelancerAccountId ||
+      '';
+
+    // Compute the exact fee breakdown so the payout matches the earnings engine.
+    const breakdown = calculateEarningsBreakdown(
+      milestone.amount,
+      typeof platformPlan === 'string' ? platformPlan : 'FREE',
+      typeof taxCountryCode === 'string' ? taxCountryCode : 'IN',
+    );
+
+    // 1. Advance the FSM (enforces MFA + optimistic concurrency + audit block).
+    let released;
+    try {
+      released = await applyTransition(milestone.id, {
+        toState: 'Funds_Released',
+        triggerUserId: req.auth!.sub,
+        triggerUserRole: (req.auth!.role as any) || 'Client',
+        expectedVersion: milestone.version,
+        metadata: `Funds released. Net payout ₹${breakdown.netFreelancerEarnings} to ${payoutAccountId || 'freelancer'}.`,
+        mfaToken,
+      });
+    } catch (err) {
+      if (err instanceof VersionMismatchError) {
+        res.status(409).json({ error: err.message, code: 'VERSION_MISMATCH' });
+        return;
+      }
+      if (err instanceof InvalidTransitionError) {
+        res.status(422).json({ error: err.message, code: 'INVALID_TRANSITION' });
+        return;
+      }
+      if (err instanceof MFARequiredError) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      if (err instanceof Error && err.message.startsWith('MFA Verification Failed')) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      throw err;
+    }
+
+    // 2. Route the net earnings to the freelancer via Razorpay Route.
+    const transfer = await transferFundsToFreelancer(
+      breakdown.netFreelancerEarnings,
+      payoutAccountId,
+    );
+
+    // 3. Persist the payout reference on the milestone (best-effort side data).
+    const updated = {
+      ...released.milestone,
+      freelancerAccountId: payoutAccountId || released.milestone.freelancerAccountId,
+      razorpayTransferId: transfer.transferId,
+    };
+    await getMilestoneRepository().save(updated);
+
+    res.json({
+      milestone: updated,
+      transfer: { success: transfer.success, transferId: transfer.transferId },
+      breakdown,
+    });
+  }),
+);
+
+app.post(
+  '/api/escrow/milestones/:id/dispute',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { reason, evidenceUrls } = req.body ?? {};
+    if (typeof reason !== 'string' || !reason.trim()) {
+      res.status(400).json({ error: 'reason is required to raise a dispute.' });
+      return;
+    }
+    const urls = Array.isArray(evidenceUrls)
+      ? evidenceUrls.filter((u): u is string => typeof u === 'string')
+      : [];
+
+    const milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+
+    const disputeId = randomUUID();
+
+    let result;
+    try {
+      result = await applyTransition(milestone.id, {
+        toState: 'Dispute',
+        triggerUserId: req.auth!.sub,
+        triggerUserRole: (req.auth!.role as any) || 'Client',
+        expectedVersion: milestone.version,
+        metadata: `Dispute [${disputeId}] raised: ${reason.slice(0, 200)}`,
+      });
+    } catch (err) {
+      if (err instanceof VersionMismatchError) {
+        res.status(409).json({ error: err.message, code: 'VERSION_MISMATCH' });
+        return;
+      }
+      if (err instanceof InvalidTransitionError) {
+        res.status(422).json({
+          error: err.message,
+          code: 'INVALID_TRANSITION',
+          hint: 'Disputes can only be raised from Active, In_Review, or Revision_Requested states.',
+        });
+        return;
+      }
+      throw err;
+    }
+
+    const updated = {
+      ...result.milestone,
+      disputeId,
+      disputeReason: reason,
+      disputeEvidenceUrls: urls,
+      disputeStatus: 'open' as const,
+    };
+    await getMilestoneRepository().save(updated);
+
+    res.status(201).json({ milestone: updated, disputeId });
+  }),
+);
+
+app.post(
+  '/api/escrow/milestones/:id/resolve-dispute',
+  requireAuth,
+  // NOTE: In production this route should be gated to a dedicated Arbitrator
+  // role. The current auth model has no such role, so it is authenticated-only
+  // and the FSM records the trigger as 'Arbitrator' for the audit trail.
+  asyncRoute(async (req, res) => {
+    const { resolution, resolvedState, refundAmount, mfaToken } = req.body ?? {};
+
+    const validResolutions = ['freelancer_payout', 'client_refund', 'split'];
+    if (typeof resolution !== 'string' || !validResolutions.includes(resolution)) {
+      res.status(400).json({ error: `resolution must be one of: ${validResolutions.join(', ')}.` });
+      return;
+    }
+    const validStates = ['Approved', 'Funds_Released', 'Draft', 'Pending_Deposit'];
+    if (typeof resolvedState !== 'string' || !validStates.includes(resolvedState)) {
+      res.status(400).json({ error: `resolvedState must be one of: ${validStates.join(', ')}.` });
+      return;
+    }
+
+    const milestone = await getMilestone(req.params.id);
+    if (!milestone) {
+      res.status(404).json({ error: 'Milestone not found.' });
+      return;
+    }
+    if (milestone.state !== 'Dispute') {
+      res.status(400).json({ error: `Milestone is not under dispute (current state [${milestone.state}]).` });
+      return;
+    }
+
+    // MFA-gated resolutions (payout / approval) require a token, mirroring the
+    // FSM's high-value transition rules.
+    const requiresMfa = resolvedState === 'Approved' || resolvedState === 'Funds_Released';
+    if (requiresMfa && (typeof mfaToken !== 'string' || !mfaToken.trim())) {
+      res.status(400).json({ error: `mfaToken is required to resolve a dispute into [${resolvedState}].`, code: 'MFA_REQUIRED' });
+      return;
+    }
+
+    let result;
+    try {
+      result = await applyTransition(milestone.id, {
+        toState: resolvedState as any,
+        triggerUserId: req.auth!.sub,
+        triggerUserRole: 'Arbitrator',
+        expectedVersion: milestone.version,
+        metadata: `Dispute resolved [${resolution}] → ${resolvedState}.`,
+        mfaToken: requiresMfa ? mfaToken : undefined,
+      });
+    } catch (err) {
+      if (err instanceof VersionMismatchError) {
+        res.status(409).json({ error: err.message, code: 'VERSION_MISMATCH' });
+        return;
+      }
+      if (err instanceof InvalidTransitionError) {
+        res.status(422).json({ error: err.message, code: 'INVALID_TRANSITION' });
+        return;
+      }
+      if (err instanceof MFARequiredError) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      if (err instanceof Error && err.message.startsWith('MFA Verification Failed')) {
+        res.status(401).json({ error: err.message, code: 'MFA_REQUIRED' });
+        return;
+      }
+      throw err;
+    }
+
+    // Trigger the money movement implied by the resolution.
+    let transfer: { success: boolean; transferId?: string } | undefined;
+    let refund: { success: boolean; refundId?: string } | undefined;
+
+    if (resolution === 'client_refund') {
+      const amount =
+        typeof refundAmount === 'number' && refundAmount > 0 ? refundAmount : milestone.amount;
+      const r = await refundPayment(milestone.razorpayPaymentId || '', amount);
+      refund = { success: r.success, refundId: r.refundId };
+      result.milestone.razorpayRefundId = r.refundId;
+    } else if (resolution === 'freelancer_payout' && resolvedState === 'Funds_Released') {
+      const breakdown = calculateEarningsBreakdown(milestone.amount, 'FREE', 'IN');
+      const t = await transferFundsToFreelancer(
+        breakdown.netFreelancerEarnings,
+        milestone.freelancerAccountId || '',
+      );
+      transfer = { success: t.success, transferId: t.transferId };
+      result.milestone.razorpayTransferId = t.transferId;
+    } else if (resolution === 'split' && typeof refundAmount === 'number' && refundAmount > 0) {
+      const r = await refundPayment(milestone.razorpayPaymentId || '', refundAmount);
+      refund = { success: r.success, refundId: r.refundId };
+      result.milestone.razorpayRefundId = r.refundId;
+    }
+
+    const updated = { ...result.milestone, disputeStatus: 'resolved' as const };
+    await getMilestoneRepository().save(updated);
+
+    res.json({ milestone: updated, auditBlock: result.block, transfer, refund });
+  }),
+);
+
+app.post(
   '/api/webhooks/razorpay',
   asyncRoute(async (req, res) => {
     const signature = req.headers['x-razorpay-signature'] as string;
@@ -862,6 +1115,18 @@ app.post(
     const isValid = verifyWebhookSignature(body, signature, webhookSecret);
     if (!isValid) {
       res.status(400).json({ error: 'Invalid webhook signature.' });
+      return;
+    }
+
+    // Idempotency guard: Razorpay retries webhooks until it gets a 2xx, so the
+    // same event can arrive many times. Skip anything we've already processed.
+    const eventRepo = getWebhookEventRepository();
+    const eventId =
+      (req.headers['x-razorpay-event-id'] as string) ||
+      `${(req.body?.event ?? 'unknown')}:${req.body?.payload?.payment?.entity?.id ?? randomUUID()}`;
+    if (await eventRepo.hasProcessed(eventId)) {
+      console.log(`[Webhook] Duplicate event ${eventId} ignored (already processed).`);
+      res.json({ status: 'ok', duplicate: true });
       return;
     }
 
@@ -891,6 +1156,10 @@ app.post(
         await repo.save(updated);
       }
     }
+
+    // Record the event only after successful handling so a transient failure
+    // (which returns 5xx below via the error middleware) is retried by Razorpay.
+    await eventRepo.markProcessed(eventId);
 
     res.json({ status: 'ok' });
   })

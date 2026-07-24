@@ -27,6 +27,17 @@ export interface Milestone {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
+  /** Razorpay Route transfer id assigned when funds are released to the freelancer. */
+  razorpayTransferId?: string;
+  /** Razorpay refund id assigned when capital is returned to the client. */
+  razorpayRefundId?: string;
+  /** Razorpay Route linked account (acc_xxxx) the payout was routed to. */
+  freelancerAccountId?: string;
+  /** Dispute metadata — populated when a milestone enters the Dispute state. */
+  disputeId?: string;
+  disputeReason?: string;
+  disputeEvidenceUrls?: string[];
+  disputeStatus?: 'open' | 'resolved';
 }
 
 export interface AuditTrailBlock {

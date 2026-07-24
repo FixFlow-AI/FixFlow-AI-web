@@ -283,4 +283,37 @@ export const api = {
       body: payload,
       signal,
     }),
+
+  // Release escrowed funds to the freelancer (Approved → Funds_Released).
+  // Requires an MFA token; freelancerAccountId is optional if already stored.
+  releaseMilestone: (id, { mfaToken, freelancerAccountId, platformPlan, taxCountryCode }, signal) =>
+    request(`/escrow/milestones/${id}/release`, {
+      method: "POST",
+      body: { mfaToken, freelancerAccountId, platformPlan, taxCountryCode },
+      signal,
+    }),
+
+  // Raise a dispute against a milestone (Active/In_Review/Revision_Requested → Dispute).
+  disputeMilestone: (id, { reason, evidenceUrls }, signal) =>
+    request(`/escrow/milestones/${id}/dispute`, {
+      method: "POST",
+      body: { reason, evidenceUrls },
+      signal,
+    }),
+
+  // Resolve an active dispute (arbitrator action).
+  resolveDispute: (id, { resolution, resolvedState, refundAmount, mfaToken }, signal) =>
+    request(`/escrow/milestones/${id}/resolve-dispute`, {
+      method: "POST",
+      body: { resolution, resolvedState, refundAmount, mfaToken },
+      signal,
+    }),
+
+  // Freelancer Razorpay Route payout onboarding — create a linked account.
+  createRazorpayAccount: (payload, signal) =>
+    request("/freelancer/razorpay-account", {
+      method: "POST",
+      body: payload,
+      signal,
+    }),
 };

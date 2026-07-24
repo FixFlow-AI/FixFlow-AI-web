@@ -14,6 +14,9 @@ import {
   createRazorpayOrder,
   verifyPaymentSignature,
   verifyWebhookSignature,
+  transferFundsToFreelancer,
+  refundPayment,
+  createLinkedAccount,
 } from '../services/paymentService.js';
 import { getMilestoneRepository } from '../services/milestoneRepository.js';
 import { applyTransition } from '../services/escrowService.js';
@@ -355,11 +358,19 @@ async function runTests() {
 
     await repo.create(testMilestone);
 
+    const userRepo = (await import('../services/userRepository.js')).getUserRepository();
+    const mfaUser = await userRepo.upsertFromGoogleProfile({
+      googleSub: '1c813e5f-e04a-48cf-bebe-a89d4c528037',
+      email: 'suvampaul982@gmail.com',
+      name: 'Suvam Paul'
+    });
+    mfaUser.otpSecret = 'JBSWY3DPEHPK3PXP';
+
     // 1. Verify that applyTransition fails if MFA token is missing or incorrect
     try {
       await applyTransition(testMilestone.id, {
         toState: 'Approved',
-        triggerUserId: '1c813e5f-e04a-48cf-bebe-a89d4c528037', // suvampaul982@gmail.com with otpSecret JBSWY3DPEHPK3PXP
+        triggerUserId: mfaUser.id,
         triggerUserRole: 'Client',
         expectedVersion: 1,
         mfaToken: '111111' // Incorrect token
@@ -379,7 +390,7 @@ async function runTests() {
 
     const transitionRes = await applyTransition(testMilestone.id, {
       toState: 'Approved',
-      triggerUserId: '1c813e5f-e04a-48cf-bebe-a89d4c528037',
+      triggerUserId: mfaUser.id,
       triggerUserRole: 'Client',
       expectedVersion: 1,
       mfaToken: validToken
@@ -533,6 +544,70 @@ async function runTests() {
       throw new Error('Versioned client-match DynamoDB condition is malformed');
     }
     console.log('  -> PASSED: Client hiring-match state transitions, OCC, and audit chain verified.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 12: Payout, Refund & Linked Account (Simulated Mode)
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 12] Verifying payout, refund, and Razorpay Route linked-account services...');
+
+    const payout = await transferFundsToFreelancer(8697, 'acc_mock_freelancer');
+    if (!payout.success || !payout.transferId) {
+      throw new Error(`Payout transfer failed in simulated mode: ${JSON.stringify(payout)}`);
+    }
+
+    const fullRefund = await refundPayment('pay_mock_abc123');
+    if (!fullRefund.success || !fullRefund.refundId) {
+      throw new Error(`Full refund failed in simulated mode: ${JSON.stringify(fullRefund)}`);
+    }
+
+    const partialRefund = await refundPayment('pay_mock_abc123', 2500);
+    if (!partialRefund.success || !partialRefund.refundId) {
+      throw new Error(`Partial refund failed in simulated mode: ${JSON.stringify(partialRefund)}`);
+    }
+
+    const linked = await createLinkedAccount({
+      email: 'freelancer@example.com',
+      name: 'Test Freelancer',
+      legalBusinessName: 'Test Freelancer Studio',
+    });
+    if (!linked.success || !linked.accountId || !linked.accountId.startsWith('acc_')) {
+      throw new Error(`Linked account creation failed in simulated mode: ${JSON.stringify(linked)}`);
+    }
+    console.log('  -> PASSED: Payout, refund, and linked-account services verified.');
+  } catch (error: any) {
+    console.error('  -> FAILED:', error.message);
+    passed = false;
+  }
+
+  // ----------------------------------------------------
+  // TEST 13: Webhook Idempotency Store
+  // ----------------------------------------------------
+  try {
+    console.log('[Test 13] Verifying webhook idempotency store...');
+    // Force the in-memory provider so the test is hermetic and side-effect free.
+    const prevProvider = process.env.PERSISTENCE_PROVIDER;
+    process.env.PERSISTENCE_PROVIDER = 'memory';
+    // Import fresh so the factory picks up the memory provider.
+    const { getWebhookEventRepository } = await import('../services/webhookEventRepository.js');
+    const repo = getWebhookEventRepository();
+
+    const eventId = 'evt_test_' + crypto.randomBytes(4).toString('hex');
+    if (await repo.hasProcessed(eventId)) {
+      throw new Error('Fresh event id was unexpectedly reported as processed');
+    }
+    await repo.markProcessed(eventId);
+    if (!(await repo.hasProcessed(eventId))) {
+      throw new Error('Event id was not recorded as processed after markProcessed');
+    }
+    // Restore prior provider setting.
+    if (prevProvider === undefined) delete process.env.PERSISTENCE_PROVIDER;
+    else process.env.PERSISTENCE_PROVIDER = prevProvider;
+    console.log('  -> PASSED: Webhook idempotency store correctly tracks processed events.');
   } catch (error: any) {
     console.error('  -> FAILED:', error.message);
     passed = false;

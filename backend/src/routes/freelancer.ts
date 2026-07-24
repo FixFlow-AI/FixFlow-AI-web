@@ -6,6 +6,7 @@ import { getGithubScanRepository } from '../services/githubScanRepository.js';
 import { enqueueGithubScan, subscribeToScan } from '../services/githubScanService.js';
 import { isAiServiceConfigured } from '../services/aiClient.js';
 import { getUserRepository } from '../services/userRepository.js';
+import { createLinkedAccount } from '../services/paymentService.js';
 import type { SegmentStatus } from '../types/github.js';
 
 /**
@@ -77,6 +78,78 @@ freelancerRouter.post(
       user.githubAccessToken,
     );
     res.json({ scanJobId: jobId, githubUsername: user.githubUsername });
+  }),
+);
+
+/**
+ * Razorpay Route payout onboarding.
+ *   POST /api/freelancer/razorpay-account  — create/link a Razorpay Route
+ *   linked account (acc_xxxx) so milestone releases can be routed to the
+ *   freelancer's bank account. Returns the (non-secret) account id.
+ *
+ * Bank details are forwarded to Razorpay and never persisted in our store —
+ * only the resulting linked-account id is saved on the user record.
+ */
+freelancerRouter.post(
+  '/razorpay-account',
+  requireAuth,
+  requireRole('freelancer'),
+  asyncRoute(async (req, res) => {
+    const repo = getUserRepository();
+    const user = await repo.findById(req.auth!.sub);
+    if (!user) {
+      res.status(404).json({ error: 'User not found.' });
+      return;
+    }
+    if (user.razorpayAccountId) {
+      res.status(200).json({
+        accountId: user.razorpayAccountId,
+        alreadyLinked: true,
+      });
+      return;
+    }
+
+    const {
+      legalBusinessName,
+      ifscCode,
+      accountNumber,
+      beneficiaryName,
+      contactName,
+      phone,
+    } = req.body ?? {};
+
+    if (typeof legalBusinessName !== 'string' || !legalBusinessName.trim()) {
+      res.status(400).json({ error: 'legalBusinessName is required.' });
+      return;
+    }
+
+    const result = await createLinkedAccount({
+      email: user.email,
+      name: user.name,
+      legalBusinessName,
+      ifscCode: typeof ifscCode === 'string' ? ifscCode : undefined,
+      accountNumber: typeof accountNumber === 'string' ? accountNumber : undefined,
+      beneficiaryName: typeof beneficiaryName === 'string' ? beneficiaryName : undefined,
+      contactName: typeof contactName === 'string' ? contactName : undefined,
+      phone: typeof phone === 'string' ? phone : undefined,
+    });
+
+    if (!result.success || !result.accountId) {
+      res.status(502).json({
+        error: 'Failed to create Razorpay linked account.',
+        detail: result.error,
+      });
+      return;
+    }
+
+    const updated = await repo.setRazorpayAccountId(user.id, result.accountId);
+    res.status(201).json({
+      accountId: result.accountId,
+      isSimulated: result.isSimulated,
+      user: updated
+        ? { id: updated.id, razorpayAccountId: updated.razorpayAccountId }
+        : undefined,
+    });
   }),
 );
 

@@ -129,3 +129,94 @@ export async function transferFundsToFreelancer(
     return { success: false, isSimulated: false };
   }
 }
+
+export interface RefundOutput {
+  success: boolean;
+  refundId?: string;
+  isSimulated: boolean;
+  error?: string;
+}
+
+/**
+ * Issues a Razorpay refund against a captured payment. When `amountInInr` is
+ * omitted the full captured amount is refunded; otherwise a partial refund is
+ * requested. In simulated mode (no live keys / mock payment) a mock refund id
+ * is returned so the escrow flow can be exercised end-to-end locally.
+ */
+export async function refundPayment(
+  paymentId: string,
+  amountInInr?: number
+): Promise<RefundOutput> {
+  if (!razorpayClient || !paymentId || paymentId.startsWith('pay_mock_')) {
+    console.log(
+      `[SIMULATION] Refunding ${amountInInr ?? 'full'} INR against payment: ${paymentId || 'n/a'}`
+    );
+    return { success: true, refundId: `rfnd_mock_${crypto.randomBytes(8).toString('hex')}`, isSimulated: true };
+  }
+
+  try {
+    const options =
+      typeof amountInInr === 'number' ? { amount: Math.round(amountInInr * 100) } : {};
+    const refund = await razorpayClient.payments.refund(paymentId, options);
+    return { success: true, refundId: refund.id, isSimulated: false };
+  } catch (err) {
+    console.error('Razorpay refund failed:', err);
+    return { success: false, isSimulated: false, error: (err as Error).message };
+  }
+}
+
+export interface LinkedAccountInput {
+  email: string;
+  name: string;
+  /** Legal business/individual name shown to Razorpay. */
+  legalBusinessName: string;
+  /** ifsc + account number for the freelancer's bank account. */
+  ifscCode?: string;
+  accountNumber?: string;
+  beneficiaryName?: string;
+  contactName?: string;
+  phone?: string;
+}
+
+export interface LinkedAccountOutput {
+  success: boolean;
+  accountId?: string;
+  isSimulated: boolean;
+  error?: string;
+}
+
+/**
+ * Creates a Razorpay Route linked account (acc_xxxx) for a freelancer so future
+ * milestone payouts can be routed to their bank account. Uses the Razorpay
+ * `accounts` API when live keys are present; otherwise returns a deterministic
+ * mock account id for local development.
+ */
+export async function createLinkedAccount(
+  input: LinkedAccountInput
+): Promise<LinkedAccountOutput> {
+  if (!razorpayClient) {
+    console.log(`[SIMULATION] Creating mock Razorpay linked account for: ${input.email}`);
+    return {
+      success: true,
+      accountId: `acc_mock_${crypto.randomBytes(8).toString('hex')}`,
+      isSimulated: true,
+    };
+  }
+
+  try {
+    // Razorpay Route onboarding (Accounts API v2).
+    const account = await razorpayClient.accounts.create({
+      email: input.email,
+      phone: input.phone,
+      type: 'route',
+      legal_business_name: input.legalBusinessName,
+      business_type: 'individual',
+      contact_name: input.contactName || input.name,
+      profile: { category: 'others' },
+    });
+    return { success: true, accountId: account.id, isSimulated: false };
+  } catch (err) {
+    console.error('Razorpay linked account creation failed:', err);
+    return { success: false, isSimulated: false, error: (err as Error).message };
+  }
+}
