@@ -1,22 +1,38 @@
 import type { Milestone } from '../skills/escrowStateMachine.js';
+import {
+  type WelcomeData,
+  type InvitationData,
+  type GithubScanCompleteData,
+  type InterviewScheduledData,
+  type InterviewCompletedData,
+  type ProposalEvaluatedData,
+  type MilestoneEmailEvent,
+  welcomeFreelancerTemplate,
+  welcomeClientTemplate,
+  githubScanCompleteTemplate,
+  projectInvitationTemplate,
+  interviewScheduledTemplate,
+  interviewCompletedTemplate,
+  proposalEvaluatedTemplate,
+  buildMilestoneEmail,
+} from './emailTemplates.js';
 
 /**
  * Email notifications via AWS SES (STORY-36).
  *
  * Config (env):
- *   SES_FROM_EMAIL   — a *verified* SES sender/identity, e.g. "FixFlowAI <no-reply@fixflowai.xyz>"
- *   SES_REPLY_TO     — optional reply-to address
+ *   SES_FROM_EMAIL   — a *verified* SES sender/identity, e.g. "FixFlowAI <info@fixflowai.xyz>"
  *   AWS_REGION       — reused from the shared AWS config
  *   EMAIL_ENABLED    — set "false" to hard-disable even if SES_FROM_EMAIL is set
  *
- * If SES_FROM_EMAIL is missing (or EMAIL_ENABLED=false), the service runs in a
- * no-op "simulated" mode: it logs what it would have sent and returns. This
- * keeps local dev and no-email demos working without AWS. Sending is always
- * fire-and-forget from callers — a mail failure never blocks an escrow action.
+ * All emails are sent as no-reply from info@fixflowai.xyz. If SES_FROM_EMAIL is
+ * missing (or EMAIL_ENABLED=false), the service runs in a no-op "simulated" mode:
+ * it logs what it would have sent and returns. This keeps local dev and no-email
+ * demos working without AWS. Sending is always fire-and-forget from callers — a
+ * mail failure never blocks a business action.
  */
 
 const FROM = process.env.SES_FROM_EMAIL || '';
-const REPLY_TO = process.env.SES_REPLY_TO || '';
 const ENABLED = process.env.EMAIL_ENABLED !== 'false' && Boolean(FROM);
 
 let sesClientPromise: Promise<any> | null = null;
@@ -55,7 +71,6 @@ export async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean;
       new SendEmailCommand({
         FromEmailAddress: FROM,
         Destination: { ToAddresses: recipients },
-        ...(REPLY_TO ? { ReplyToAddresses: [REPLY_TO] } : {}),
         Content: {
           Simple: {
             Subject: { Data: input.subject, Charset: 'UTF-8' },
@@ -75,87 +90,107 @@ export async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean;
   }
 }
 
-// ---------- Templates ----------
+// ─────────────────────────── Fire-and-forget notifiers ────────────────
+// Each function is safe to call without awaiting. Failures are logged, never thrown.
 
-const BRAND = 'FixFlowAI';
-const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-
-function layout(title: string, body: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;color:#0f172a">
-  <div style="max-width:520px;margin:0 auto;padding:24px">
-    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-      <div style="background:#2563eb;color:#fff;padding:16px 24px;font-weight:700;font-size:16px">${BRAND}</div>
-      <div style="padding:24px">
-        <h1 style="font-size:18px;margin:0 0 12px">${title}</h1>
-        ${body}
-      </div>
-      <div style="padding:16px 24px;border-top:1px solid #f1f5f9;font-size:12px;color:#94a3b8">
-        You're receiving this because you have an active project on ${BRAND}.
-      </div>
-    </div>
-  </div></body></html>`;
+function fireAndForget(to: string | string[], subject: string, html: string, text: string): void {
+  void sendEmail({ to, subject, html, text }).catch(() => {});
 }
 
-export type MilestoneEmailEvent =
-  | 'funded'
-  | 'submitted'
-  | 'approved'
-  | 'revision_requested'
-  | 'released'
-  | 'dispute_raised'
-  | 'dispute_resolved'
-  | 'refunded';
+/**
+ * Send a role-appropriate welcome email to a new user.
+ */
+export function notifyWelcome(data: WelcomeData, to: string): void {
+  const template = data.role === 'freelancer'
+    ? welcomeFreelancerTemplate
+    : welcomeClientTemplate;
+  fireAndForget(to, template.subject(data), template.html(data), template.text(data));
+}
 
-const COPY: Record<MilestoneEmailEvent, { subject: (m: Milestone) => string; line: (m: Milestone) => string }> = {
-  funded: {
-    subject: (m) => `Milestone funded: ${m.title}`,
-    line: (m) => `Funds of ${inr(m.amount)} for <strong>${m.title}</strong> are now secured in escrow. Work can begin.`,
-  },
-  submitted: {
-    subject: (m) => `Deliverable submitted for review: ${m.title}`,
-    line: (m) => `The freelancer submitted work for <strong>${m.title}</strong>. Please review and approve or request changes.`,
-  },
-  approved: {
-    subject: (m) => `Milestone approved: ${m.title}`,
-    line: (m) => `<strong>${m.title}</strong> was approved. Funds are ready to be released to the freelancer.`,
-  },
-  revision_requested: {
-    subject: (m) => `Revision requested: ${m.title}`,
-    line: (m) => `The client requested changes on <strong>${m.title}</strong>. Please review the feedback and resubmit.`,
-  },
-  released: {
-    subject: (m) => `Funds released: ${m.title}`,
-    line: (m) => `Escrow funds for <strong>${m.title}</strong> have been released to the freelancer's account.`,
-  },
-  dispute_raised: {
-    subject: (m) => `Dispute opened: ${m.title}`,
-    line: (m) => `A dispute was raised on <strong>${m.title}</strong>. Funds remain locked in escrow pending resolution.`,
-  },
-  dispute_resolved: {
-    subject: (m) => `Dispute resolved: ${m.title}`,
-    line: (m) => `The dispute on <strong>${m.title}</strong> has been resolved.`,
-  },
-  refunded: {
-    subject: (m) => `Refund issued: ${m.title}`,
-    line: (m) => `A refund for <strong>${m.title}</strong> has been issued to the client's original payment method.`,
-  },
-};
+/**
+ * Notify a freelancer that a client has invited them to a project.
+ */
+export function notifyProjectInvitation(data: InvitationData, to: string): void {
+  fireAndForget(
+    to,
+    projectInvitationTemplate.subject(data),
+    projectInvitationTemplate.html(data),
+    projectInvitationTemplate.text(data),
+  );
+}
+
+/**
+ * Notify a freelancer that their GitHub profile scan is complete.
+ */
+export function notifyGithubScanComplete(data: GithubScanCompleteData, to: string): void {
+  fireAndForget(
+    to,
+    githubScanCompleteTemplate.subject(data),
+    githubScanCompleteTemplate.html(data),
+    githubScanCompleteTemplate.text(data),
+  );
+}
+
+/**
+ * Notify a freelancer that a screening interview has been scheduled.
+ */
+export function notifyInterviewScheduled(data: InterviewScheduledData, to: string): void {
+  fireAndForget(
+    to,
+    interviewScheduledTemplate.subject(data),
+    interviewScheduledTemplate.html(data),
+    interviewScheduledTemplate.text(data),
+  );
+}
+
+/**
+ * Notify a client that a candidate has completed their interview.
+ */
+export function notifyInterviewCompleted(data: InterviewCompletedData, to: string): void {
+  fireAndForget(
+    to,
+    interviewCompletedTemplate.subject(data),
+    interviewCompletedTemplate.html(data),
+    interviewCompletedTemplate.text(data),
+  );
+}
+
+/**
+ * Notify a client that their proposal has been evaluated by the confidence grid.
+ */
+export function notifyProposalEvaluated(data: ProposalEvaluatedData, to: string): void {
+  fireAndForget(
+    to,
+    proposalEvaluatedTemplate.subject(data),
+    proposalEvaluatedTemplate.html(data),
+    proposalEvaluatedTemplate.text(data),
+  );
+}
 
 /**
  * Fire-and-forget milestone notification. Never throws; logs failures. Safe to
  * call without awaiting inside a route handler.
+ *
+ * Signature preserved from the original for backward compatibility with existing
+ * call sites in index.ts.
  */
 export function notifyMilestoneEvent(
   event: MilestoneEmailEvent,
   milestone: Milestone,
   to: string | string[],
 ): void {
-  const copy = COPY[event];
-  if (!copy) return;
-  const subject = copy.subject(milestone);
-  const body = `<p style="font-size:14px;line-height:1.6;color:#334155;margin:0 0 16px">${copy.line(milestone)}</p>
-    <p style="font-size:13px;color:#64748b;margin:0">Milestone status: <strong>${milestone.state}</strong> · Amount: ${inr(milestone.amount)}</p>`;
-  const text = `${subject}\n\n${copy.line(milestone).replace(/<[^>]+>/g, '')}\nStatus: ${milestone.state} · Amount: ${inr(milestone.amount)}`;
-
-  void sendEmail({ to, subject, html: layout(subject, body), text }).catch(() => {});
+  const email = buildMilestoneEmail(event, milestone);
+  if (!email) return;
+  fireAndForget(to, email.subject, email.html, email.text);
 }
+
+// Re-export types for consumers
+export type {
+  WelcomeData,
+  InvitationData,
+  GithubScanCompleteData,
+  InterviewScheduledData,
+  InterviewCompletedData,
+  ProposalEvaluatedData,
+  MilestoneEmailEvent,
+};
