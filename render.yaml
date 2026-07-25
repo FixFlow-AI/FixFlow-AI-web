@@ -105,6 +105,14 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
+      # --- Email notifications (AWS SES, STORY-36) ---
+      # SES_FROM_EMAIL must be a verified SES identity. Blank = log-only mode.
+      - key: SES_FROM_EMAIL
+        sync: false
+      - key: SES_REPLY_TO
+        sync: false
+      - key: EMAIL_ENABLED
+        value: "true"
 
   # ---------------------------------------------------------------
   # 3) Frontend (Vite React) — static site

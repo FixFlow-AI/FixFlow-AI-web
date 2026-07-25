@@ -91,6 +91,7 @@ import {
 } from './services/paymentService.js';
 import { getWebhookEventRepository } from './services/webhookEventRepository.js';
 import { getUserRepository } from './services/userRepository.js';
+import { notifyMilestoneEvent } from './services/emailService.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
@@ -904,6 +905,15 @@ app.post(
         metadata,
         mfaToken,
       });
+      // STORY-36: notify on the meaningful lifecycle transitions.
+      const evtMap: Record<string, any> = {
+        In_Review: 'submitted',
+        Approved: 'approved',
+        Revision_Requested: 'revision_requested',
+      };
+      if (evtMap[toState] && req.auth?.email) {
+        notifyMilestoneEvent(evtMap[toState], result.milestone, req.auth.email);
+      }
       res.json(result);
     } catch (err) {
       if (err instanceof VersionMismatchError) {
@@ -1006,6 +1016,7 @@ app.post(
         razorpaySignature
       };
       await getMilestoneRepository().save(updated);
+      if (req.auth?.email) notifyMilestoneEvent('funded', updated, req.auth.email);
       res.json({ milestone: updated });
     } else if (milestone.state === 'Active') {
       res.json({ milestone });
@@ -1093,6 +1104,7 @@ app.post(
       razorpayTransferId: transfer.transferId,
     };
     await getMilestoneRepository().save(updated);
+    if (req.auth?.email) notifyMilestoneEvent('released', updated, req.auth.email);
 
     res.json({
       milestone: updated,
@@ -1156,6 +1168,7 @@ app.post(
       disputeStatus: 'open' as const,
     };
     await getMilestoneRepository().save(updated);
+    if (req.auth?.email) notifyMilestoneEvent('dispute_raised', updated, req.auth.email);
 
     res.status(201).json({ milestone: updated, disputeId });
   }),
@@ -1255,6 +1268,9 @@ app.post(
 
     const updated = { ...result.milestone, disputeStatus: 'resolved' as const };
     await getMilestoneRepository().save(updated);
+    if (req.auth?.email) {
+      notifyMilestoneEvent(refund ? 'refunded' : 'dispute_resolved', updated, req.auth.email);
+    }
 
     res.json({ milestone: updated, auditBlock: result.block, transfer, refund });
   }),
