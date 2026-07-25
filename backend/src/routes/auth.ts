@@ -19,6 +19,7 @@ import {
   type User,
   type UserRepository,
 } from '../services/userRepository.js';
+import { notifyWelcome } from '../services/emailService.js';
 
 /**
  * Authentication routes.
@@ -132,7 +133,11 @@ authRouter.post(
     const isNewUser = !existing;
     const user = await repo.upsertFromGoogleProfile(profile);
     console.log('[AuthRoute]   ✅ User upserted from Google. userId:', user.id, '| role:', user.role);
-    res.json(await issueSession(repo, user, intendedRole, GOOGLE_ROLES, isNewUser));
+    const session = await issueSession(repo, user, intendedRole, GOOGLE_ROLES, isNewUser);
+    if (isNewUser && user.email) {
+      notifyWelcome({ name: session.user.name, role: session.user.role as UserRole, email: user.email }, user.email);
+    }
+    res.json(session);
   }),
 );
 
@@ -192,6 +197,11 @@ authRouter.post(
     );
 
     const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES, isNewUser);
+
+    // Fire-and-forget welcome email for brand-new users.
+    if (isNewUser && user.email) {
+      notifyWelcome({ name: session.user.name, role: session.user.role as UserRole, email: user.email }, user.email);
+    }
 
     // Token hand-off: a deep GitHub scan is enqueued ONLY for a brand-new
     // freelancer account. The access token is used only server-side and is never
