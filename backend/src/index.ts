@@ -93,7 +93,9 @@ import {
 } from './services/paymentService.js';
 import { getWebhookEventRepository } from './services/webhookEventRepository.js';
 import { getUserRepository } from './services/userRepository.js';
-import { notifyMilestoneEvent } from './services/emailService.js';
+import { notifyMilestoneEvent, notifyProjectInvitation, notifyProposalEvaluated } from './services/emailService.js';
+import { getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
+import { fireMilestoneNotifications, listAutomations, createConnectLink } from './services/fixbotAgent.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
@@ -126,7 +128,27 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json({ limit: '2mb' }));
+// JSON body parsing for all routes EXCEPT the Corsair handler path, which needs
+// the raw request body for Hub delivery + signature-verified webhooks.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/corsair')) return next();
+  return express.json({ limit: '2mb' })(req, res, next);
+});
+
+// Corsair track: mount the integration-layer handler at /api/corsair (Hub
+// delivery, management API, and signature-verified webhooks). Lazily resolved
+// per request so the backend boots even when Corsair isn't installed/configured.
+app.all('/api/corsair/*', (req: Request, res: Response, next: NextFunction) => {
+  getCorsairNodeHandler()
+    .then((handler) => {
+      if (!handler) {
+        res.status(503).json({ error: 'Corsair is not configured on this server.', code: 'CORSAIR_DISABLED' });
+        return;
+      }
+      return handler(req, res);
+    })
+    .catch(next);
+});
 
 // STORY-16: Rate limit escrow + payment endpoints to blunt brute-force and
 // abuse. 10 requests/minute per IP. The webhook route lives under /api/webhooks
@@ -416,6 +438,17 @@ app.post(
     if (typeof proposalId === 'string' && proposalId) {
       await getProposalRepository().setEvaluation(proposalId, result);
     }
+
+    // Fire-and-forget: notify the client that their proposal has been evaluated.
+    if (req.auth?.email && result && typeof result === 'object' && 'confidenceIndex' in (result as any)) {
+      const score = (result as any).confidenceIndex ?? 0;
+      const projTitle = typeof proposal?.title === 'string' ? proposal.title : 'Your Project';
+      notifyProposalEvaluated(
+        { clientName: req.auth.name || 'there', projectTitle: projTitle, confidenceScore: Math.round(score) },
+        req.auth.email,
+      );
+    }
+
     res.json(result);
   })
 );
@@ -615,6 +648,34 @@ app.patch(
       workflow,
       proposal.clientMatchWorkflow.version,
     );
+
+    // Fire-and-forget: when a client invites a freelancer, email them.
+    if (parsed.data.action === 'invite') {
+      const candidate = workflow.candidates.find((c) => c.freelancerId === req.params.freelancerId);
+      if (candidate) {
+        // Look up the freelancer's email from the user repository.
+        void (async () => {
+          try {
+            const userRepo = getUserRepository();
+            const freelancerUser = await userRepo.findById(req.params.freelancerId);
+            if (freelancerUser?.email) {
+              notifyProjectInvitation(
+                {
+                  freelancerName: candidate.name,
+                  clientName: req.auth!.name || 'A client',
+                  projectTitle: proposal.title || 'A new project',
+                  projectBrief: proposal.briefText?.slice(0, 500) || '',
+                  skills: (proposal.proposal?.features || []).map((f: any) => f.area || f.title || '').filter(Boolean).slice(0, 10),
+                },
+                freelancerUser.email,
+              );
+            }
+          } catch (err) {
+            console.error('[EMAIL] Failed to send invitation email:', (err as Error).message);
+          }
+        })();
+      }
+    }
 
     res.json({ workflow: updated?.clientMatchWorkflow ?? workflow });
   }),
@@ -890,6 +951,37 @@ app.get(
   }),
 );
 
+// ==========================================
+// Corsair track — FixBot agent automations
+// ==========================================
+
+// List recent agent actions (optionally scoped to a proposal/tenant).
+app.get(
+  '/api/automations',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const tenantId = typeof req.query.proposalId === 'string' ? req.query.proposalId : undefined;
+    res.json({ configured: isCorsairConfigured(), automations: listAutomations(tenantId) });
+  }),
+);
+
+// Mint a Corsair Hub connect link so the user can authorize an integration
+// (slack / github / gmail) for their workspace/tenant.
+app.post(
+  '/api/automations/connect',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const { plugin, proposalId } = req.body ?? {};
+    if (typeof plugin !== 'string' || !plugin.trim()) {
+      res.status(400).json({ error: 'plugin is required (e.g. "slack", "github", "gmail").' });
+      return;
+    }
+    const tenantId = typeof proposalId === 'string' && proposalId.trim() ? proposalId : req.auth!.sub;
+    const result = await createConnectLink(tenantId, plugin.trim());
+    res.json(result);
+  }),
+);
+
 app.post(
   '/api/escrow/milestones/:id/transition',
   requireAuth,
@@ -1019,6 +1111,12 @@ app.post(
       };
       await getMilestoneRepository().save(updated);
       if (req.auth?.email) notifyMilestoneEvent('funded', updated, req.auth.email);
+      // Corsair FixBot: post to the project's Slack channel (permission-gated).
+      fireMilestoneNotifications({
+        tenantId: updated.proposalId,
+        event: 'funded',
+        milestoneTitle: updated.title,
+      });
       res.json({ milestone: updated });
     } else if (milestone.state === 'Active') {
       res.json({ milestone });
@@ -1107,6 +1205,13 @@ app.post(
     };
     await getMilestoneRepository().save(updated);
     if (req.auth?.email) notifyMilestoneEvent('released', updated, req.auth.email);
+    // Corsair FixBot: Slack ping + approval-gated payout email to the freelancer.
+    fireMilestoneNotifications({
+      tenantId: updated.proposalId,
+      event: 'released',
+      milestoneTitle: updated.title,
+      counterpartyEmail: req.auth?.email,
+    });
 
     res.json({
       milestone: updated,
