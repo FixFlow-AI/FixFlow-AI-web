@@ -833,6 +833,60 @@ app.get(
   }),
 );
 
+// STORY-07: Payment history — a per-user financial ledger derived from the
+// user's proposals + their milestones, with the full fee breakdown for each.
+app.get(
+  '/api/payments/history',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const userId = req.auth!.sub;
+    const proposals = await getProposalRepository().listByUser(userId);
+
+    const transactions: any[] = [];
+    for (const p of proposals) {
+      const milestones = await listMilestones(p.proposalId);
+      for (const m of milestones) {
+        const breakdown = calculateEarningsBreakdown(m.amount, 'FREE', 'IN');
+        transactions.push({
+          milestoneId: m.id,
+          proposalId: m.proposalId,
+          projectTitle: p.title,
+          title: m.title,
+          state: m.state,
+          amount: m.amount,
+          funded: m.state !== 'Draft' && m.state !== 'Pending_Deposit',
+          released: m.state === 'Funds_Released',
+          razorpayOrderId: m.razorpayOrderId,
+          razorpayPaymentId: m.razorpayPaymentId,
+          razorpayTransferId: m.razorpayTransferId,
+          razorpayRefundId: m.razorpayRefundId,
+          disputeStatus: m.disputeStatus,
+          grossAmount: breakdown.grossAmount,
+          platformFee: breakdown.platformFee,
+          paymentGatewayFee: breakdown.paymentGatewayFee,
+          withholdingTax: breakdown.withholdingTax,
+          netFreelancerEarnings: breakdown.netFreelancerEarnings,
+          totalClientCheckout: breakdown.totalClientCheckout,
+        });
+      }
+    }
+
+    const summary = {
+      total: transactions.length,
+      funded: transactions.filter((t) => t.funded).length,
+      released: transactions.filter((t) => t.released).length,
+      totalInEscrow: transactions
+        .filter((t) => t.funded && !t.released)
+        .reduce((s, t) => s + t.amount, 0),
+      totalReleased: transactions
+        .filter((t) => t.released)
+        .reduce((s, t) => s + t.netFreelancerEarnings, 0),
+    };
+
+    res.json({ transactions, summary });
+  }),
+);
+
 app.post(
   '/api/escrow/milestones/:id/transition',
   requireAuth,

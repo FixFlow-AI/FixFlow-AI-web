@@ -316,4 +316,7 @@ export const api = {
       body: payload,
       signal,
     }),
+
+  // STORY-07: Payment history — user's deposits/escrow/payouts ledger.
+  paymentHistory: (signal) => request("/payments/history", { signal }),
 };
