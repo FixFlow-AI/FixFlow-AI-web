@@ -94,7 +94,7 @@ import {
 import { getWebhookEventRepository } from './services/webhookEventRepository.js';
 import { getUserRepository } from './services/userRepository.js';
 import { notifyMilestoneEvent, notifyProjectInvitation, notifyProposalEvaluated } from './services/emailService.js';
-import { getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
+import { getCorsair, getCorsairError, getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
 import { fireMilestoneNotifications, listAutomations, createConnectLink } from './services/fixbotAgent.js';
 import { randomUUID } from 'crypto';
 
@@ -961,7 +961,17 @@ app.get(
   requireAuth,
   asyncRoute(async (req, res) => {
     const tenantId = typeof req.query.proposalId === 'string' ? req.query.proposalId : undefined;
-    res.json({ configured: isCorsairConfigured(), automations: listAutomations(tenantId) });
+    // `configured` = env vars present. `ready` = the SDK actually initialized
+    // (packages installed + init succeeded). These are DIFFERENT states — the
+    // UI must key off `ready`, not `configured`, or it shows "connected" while
+    // Corsair is actually dead. `reason` explains why it isn't ready.
+    const ready = Boolean(await getCorsair());
+    res.json({
+      configured: isCorsairConfigured(),
+      ready,
+      reason: ready ? null : getCorsairError(),
+      automations: listAutomations(tenantId),
+    });
   }),
 );
 

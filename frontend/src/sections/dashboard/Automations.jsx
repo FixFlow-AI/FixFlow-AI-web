@@ -23,6 +23,8 @@ const STATUS_STYLE = {
 export function Automations() {
   const { parsedProposalId } = useLandingStore();
   const [configured, setConfigured] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [reason, setReason] = useState("");
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,11 +37,30 @@ export function Automations() {
       .listAutomations(parsedProposalId)
       .then((res) => {
         setConfigured(Boolean(res.configured));
+        setReady(Boolean(res.ready));
+        setReason(res.reason || "");
         setRows(res.automations || []);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "Could not load automations."))
       .finally(() => setLoading(false));
   };
+
+  // One coherent status: ready (live) → configured-but-not-ready (action
+  // needed) → not configured (simulated). Never "connected" while the SDK
+  // failed to initialize.
+  const statusMode = ready ? "live" : configured ? "action" : "simulated";
+  const STATUS = {
+    live: { bg: "#f0fdf4", border: "#bbf7d0", color: "#166534", text: "Corsair is connected. Agent writes are permission-gated with human approval." },
+    action: {
+      bg: "#fffbeb",
+      border: "#fde68a",
+      color: "#b45309",
+      text:
+        (reason || "Corsair is configured but not ready on the server.") +
+        " Run: npm install corsair @corsair-dev/slack @corsair-dev/github @corsair-dev/gmail better-sqlite3 — then redeploy.",
+    },
+    simulated: { bg: "#eff6ff", border: "#bfdbfe", color: "#1e40af", text: "Corsair runs in simulated mode (log-only). Set CORSAIR_* env vars on the server to go live." },
+  }[statusMode];
 
   useEffect(() => {
     load();
@@ -82,19 +103,17 @@ export function Automations() {
         </div>
       </div>
 
-      {/* Corsair status banner */}
+      {/* Corsair status banner — single source of truth (ready state) */}
       <div
         style={{
           display: "flex", alignItems: "center", gap: 10, marginBottom: 20, padding: "10px 14px", borderRadius: 8, fontSize: 13,
-          background: configured ? "#f0fdf4" : "#eff6ff",
-          border: `1px solid ${configured ? "#bbf7d0" : "#bfdbfe"}`,
-          color: configured ? "#166534" : "#1e40af",
+          background: STATUS.bg,
+          border: `1px solid ${STATUS.border}`,
+          color: STATUS.color,
         }}
       >
-        <ShieldCheck size={16} />
-        {configured
-          ? "Corsair is connected. Agent writes are permission-gated with human approval."
-          : "Corsair runs in simulated mode (log-only). Configure CORSAIR_* on the server to go live."}
+        {statusMode === "action" ? <AlertTriangle size={16} /> : <ShieldCheck size={16} />}
+        {STATUS.text}
       </div>
 
       {error && (
