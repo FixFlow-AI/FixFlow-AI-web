@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Check,
   AlertTriangle,
@@ -14,9 +15,23 @@ import {
   ToggleLeft,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
+import { api } from "../../lib/api";
 
 export function OutcomeEvidence() {
-  const { user, parsedProposal } = useLandingStore();
+  const { user, userRole, parsedProposal, parsedProposalId, setDashboardTab } = useLandingStore();
+
+  // STORY-14: live milestones awaiting review / accepted, from the backend.
+  const [liveMilestones, setLiveMilestones] = useState([]);
+  useEffect(() => {
+    if (!parsedProposalId) return;
+    api
+      .listMilestones(parsedProposalId)
+      .then((r) => setLiveMilestones(r.milestones || []))
+      .catch(() => {});
+  }, [parsedProposalId]);
+
+  const inReview = liveMilestones.filter((m) => m.state === "In_Review");
+  const accepted = liveMilestones.filter((m) => m.state === "Approved" || m.state === "Funds_Released");
 
   if (!parsedProposal) {
     return (
@@ -53,6 +68,52 @@ export function OutcomeEvidence() {
           {projectTitle} · <span style={{ color: "#2563eb", fontWeight: 600 }}>Awaiting execution evidence</span>
         </p>
       </div>
+
+      {/* STORY-14: Live evidence awaiting review + accepted outcomes */}
+      {(inReview.length > 0 || accepted.length > 0) && (
+        <div className="panel-card" style={{ marginBottom: 20, padding: 0 }}>
+          <div className="panel-card-header" style={{ padding: "14px 20px" }}>
+            <h2 className="panel-card-title">Deliverables awaiting your review</h2>
+            <button type="button" className="panel-link" onClick={() => setDashboardTab("milestone-funds")}>
+              Review in Escrow Funds <ArrowRight size={13} />
+            </button>
+          </div>
+          {inReview.length === 0 && (
+            <p style={{ fontSize: 13, color: "#64748b", padding: "0 20px 14px" }}>
+              Nothing awaiting review right now. Accepted outcomes are listed below.
+            </p>
+          )}
+          {inReview.map((m) => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px", borderTop: "1px solid #f1f5f9" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{m.title}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>${Number(m.amount).toLocaleString()} · Submitted for review</div>
+              </div>
+              {userRole === "client" ? (
+                <button
+                  type="button"
+                  className="panel-btn"
+                  style={{ fontSize: 12, padding: "6px 12px", minHeight: 0 }}
+                  onClick={() => setDashboardTab("milestone-funds")}
+                >
+                  <Shield size={13} /> Approve (MFA)
+                </button>
+              ) : (
+                <span className="panel-badge panel-badge--blue">In review</span>
+              )}
+            </div>
+          ))}
+          {accepted.map((m) => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px", borderTop: "1px solid #f1f5f9" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{m.title}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>${Number(m.amount).toLocaleString()} · {m.state === "Funds_Released" ? "Released" : "Approved"}</div>
+              </div>
+              <span className="panel-badge panel-badge--green"><Check size={11} /> {m.state === "Funds_Released" ? "Released" : "Approved"}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Three-column grid */}
       <div className="panel-grid panel-grid--3">
