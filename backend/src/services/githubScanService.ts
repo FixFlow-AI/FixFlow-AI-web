@@ -2,6 +2,8 @@ import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import { openGithubScanStream } from './aiClient.js';
 import { getGithubScanRepository } from './githubScanRepository.js';
+import { notifyGithubScanComplete } from './emailService.js';
+import { getUserRepository } from './userRepository.js';
 import type {
   ExperienceSignals,
   ProfileConfidence,
@@ -205,6 +207,28 @@ async function runScan(
         if (typeof (repo as any).syncFreelancerRoster === 'function') {
           await (repo as any).syncFreelancerRoster(freelancerId);
         }
+
+        // Fire-and-forget: notify the freelancer that their scan is complete.
+        void (async () => {
+          try {
+            const freelancerUser = await getUserRepository().findById(freelancerId);
+            if (freelancerUser?.email) {
+              const profile = await repo.getProfile(freelancerId);
+              const topSkills = (profile.skills || []).slice(0, 8).map((s: any) => s.name || String(s));
+              notifyGithubScanComplete(
+                {
+                  name: freelancerUser.name || 'there',
+                  topSkills,
+                  confidence: confidence?.score ?? 0,
+                  repoCount: data.reposAnalyzed ?? 0,
+                },
+                freelancerUser.email,
+              );
+            }
+          } catch (emailErr) {
+            console.error('[githubScan] Failed to send scan-complete email:', (emailErr as Error).message);
+          }
+        })();
 
         publish(event, data);
         return;
