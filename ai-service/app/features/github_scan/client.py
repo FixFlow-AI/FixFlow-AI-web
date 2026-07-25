@@ -259,13 +259,13 @@ async def _fetch_contributor_stats(
         "Accept": "application/vnd.github+json",
         "User-Agent": "FixFlowAI",
     }
-    for _ in range(3):
+    for _ in range(2):
         try:
             resp = await client.get(url, headers=headers)
         except httpx.HTTPError:
             return None
         if resp.status_code == 202:  # stats still being computed
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(0.8)
             continue
         if resp.status_code != 200:
             return None
@@ -537,9 +537,12 @@ async def fetch_profile_repos(
             )
             repos = repos[: max(1, top_n)]
 
-            await _enrich_manifests(client, token, repos, concurrency)
-            await _enrich_contributor_stats(
-                client, token, repos, username, settings.github_stats_top_n
+            await asyncio.gather(
+                _enrich_manifests(client, token, repos, concurrency),
+                _enrich_contributor_stats(
+                    client, token, repos, username, settings.github_stats_top_n
+                ),
+                return_exceptions=True,
             )
 
         logger.info(

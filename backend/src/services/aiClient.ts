@@ -36,7 +36,7 @@ export class AiServiceError extends Error {
   }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 4, delayMs = 2500): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 6, delayMs = 1200): Promise<Response> {
   let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
     try {
@@ -45,7 +45,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 4, de
       // If 502/503/504 (e.g. Render container cold start / spin-down waking up), retry
       if ([502, 503, 504].includes(res.status) && i < retries - 1) {
         console.warn(`[AIClient] Upstream returned ${res.status}. Cold start warming up (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+        await new Promise((r) => setTimeout(r, Math.min(4000, delayMs * (1 + i * 0.5))));
         continue;
       }
       return res;
@@ -53,7 +53,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 4, de
       lastErr = err;
       if (i < retries - 1) {
         console.warn(`[AIClient] Fetch error: ${err instanceof Error ? err.message : String(err)}. Retrying (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+        await new Promise((r) => setTimeout(r, Math.min(4000, delayMs * (1 + i * 0.5))));
       }
     }
   }
