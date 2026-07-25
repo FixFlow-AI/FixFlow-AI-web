@@ -12,6 +12,7 @@ import { RoleOnboarding } from "./dashboard/RoleOnboarding";
 import { MatchResults } from "./dashboard/MatchResults";
 import { FreelancerAnalytics } from "./dashboard/FreelancerAnalytics";
 import { PaymentHistory } from "./dashboard/PaymentHistory";
+import { Automations } from "./dashboard/Automations";
 
 import {
   Home,
@@ -31,6 +32,7 @@ import {
   UserCircle2,
   Sparkles,
   Users,
+  Bot,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getRefreshToken, getUser, clearSession } from "../lib/auth";
@@ -53,6 +55,7 @@ const menuItems = [
   { id: "delivery-control", label: "Delivery Control", icon: PackageCheck },
   { id: "milestone-funds", label: "Escrow Funds", icon: Wallet },
   { id: "payment-history", label: "Payments", icon: BarChart3 },
+  { id: "automations", label: "Automations", icon: Bot },
   { id: "outcome-evidence", label: "Outcomes", icon: BarChart3 },
 ];
 
@@ -75,6 +78,7 @@ const tabMap = {
   "delivery-control": DeliveryControl,
   "milestone-funds": MilestoneFunds,
   "payment-history": PaymentHistory,
+  automations: Automations,
   "outcome-evidence": OutcomeEvidence,
   "role-onboarding": RoleOnboarding,
 };

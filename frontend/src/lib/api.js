@@ -319,4 +319,17 @@ export const api = {
 
   // STORY-07: Payment history — user's deposits/escrow/payouts ledger.
   paymentHistory: (signal) => request("/payments/history", { signal }),
+
+  // Corsair track — FixBot agent automations.
+  listAutomations: (proposalId, signal) =>
+    request(
+      `/automations${proposalId ? `?proposalId=${encodeURIComponent(proposalId)}` : ""}`,
+      { signal },
+    ),
+  corsairConnect: (plugin, proposalId, signal) =>
+    request("/automations/connect", {
+      method: "POST",
+      body: { plugin, proposalId },
+      signal,
+    }),
 };
