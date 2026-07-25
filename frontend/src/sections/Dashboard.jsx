@@ -11,6 +11,7 @@ import { OutcomeEvidence } from "./dashboard/OutcomeEvidence";
 import { RoleOnboarding } from "./dashboard/RoleOnboarding";
 import { MatchResults } from "./dashboard/MatchResults";
 import { FreelancerAnalytics } from "./dashboard/FreelancerAnalytics";
+import { PaymentHistory } from "./dashboard/PaymentHistory";
 
 import {
   Home,
@@ -51,6 +52,7 @@ const menuItems = [
   { id: "agreement-composer", label: "Agreement", icon: Handshake },
   { id: "delivery-control", label: "Delivery Control", icon: PackageCheck },
   { id: "milestone-funds", label: "Escrow Funds", icon: Wallet },
+  { id: "payment-history", label: "Payments", icon: BarChart3 },
   { id: "outcome-evidence", label: "Outcomes", icon: BarChart3 },
 ];
 
@@ -72,6 +74,7 @@ const tabMap = {
   "agreement-composer": AgreementComposer,
   "delivery-control": DeliveryControl,
   "milestone-funds": MilestoneFunds,
+  "payment-history": PaymentHistory,
   "outcome-evidence": OutcomeEvidence,
   "role-onboarding": RoleOnboarding,
 };
