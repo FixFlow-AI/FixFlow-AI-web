@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
 import { getInterviewRepository } from './interviewRepository.js';
 import { getProposalRepository } from './proposalRepository.js';
+import { notifyInterviewCompleted } from './emailService.js';
+import { getUserRepository } from './userRepository.js';
 import type {
   InterviewQuestionSet,
   InterviewQuestionSpec,
@@ -491,6 +493,28 @@ export async function submitInterview(
     latestSessionId: sessionId,
     submittedAt: passed ? now : undefined,
   }))!;
+
+  // Fire-and-forget: notify the client that a candidate completed the interview.
+  void (async () => {
+    try {
+      const clientUser = await getUserRepository().findById(set.clientId);
+      const freelancerUser = await getUserRepository().findById(freelancerId);
+      if (clientUser?.email) {
+        notifyInterviewCompleted(
+          {
+            clientName: clientUser.name || 'there',
+            freelancerName: freelancerUser?.name || 'A candidate',
+            projectTitle: set.title || 'Screening Interview',
+            score: scorePct,
+            passed,
+          },
+          clientUser.email,
+        );
+      }
+    } catch (emailErr) {
+      console.error('[Interview] Failed to send interview-completed email:', (emailErr as Error).message);
+    }
+  })();
 
   return { session: updatedSession, application, passed, score: totalScore, maxScore, scorePct };
 }
