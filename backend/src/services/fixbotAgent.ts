@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { getCorsair, getCorsairForTenant, isCorsairConfigured } from './corsairClient.js';
+import { getCorsair, getCorsairForTenant, isCorsairConfigured, getCorsairError } from './corsairClient.js';
 
 /**
  * FixBot — the trust-first project agent (Corsair track).
@@ -105,12 +105,14 @@ export async function createConnectLink(
   plugin: string,
 ): Promise<{ connectUrl: string | null; simulated: boolean; error?: string }> {
   if (!isCorsairConfigured()) {
-    return { connectUrl: null, simulated: true, error: 'Corsair environment variables (CORSAIR_KEK / CORSAIR_PROD_API_KEY) are missing on the production server.' };
+    const err = getCorsairError() || 'Corsair environment variables (CORSAIR_KEK / CORSAIR_PROD_API_KEY) are missing on the server.';
+    return { connectUrl: null, simulated: true, error: err };
   }
   try {
     const c = await getCorsair();
     if (!c?.manage?.connect?.createLink) {
-      return { connectUrl: null, simulated: true, error: 'Corsair SDK packages (corsair, better-sqlite3) are not installed on the server yet.' };
+      const err = getCorsairError() || 'Corsair SDK packages (corsair, better-sqlite3) failed to initialize on the server.';
+      return { connectUrl: null, simulated: true, error: err };
     }
     const res = await c.manage.connect.createLink({ plugin, tenantId });
     return { connectUrl: res?.connectUrl ?? null, simulated: false };

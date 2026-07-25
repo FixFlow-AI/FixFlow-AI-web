@@ -22,10 +22,19 @@
  *   4. Set env: CORSAIR_KEK, CORSAIR_DEV_API_KEY, CORSAIR_DEV_SIGNING_SECRET, APP_URL, CORSAIR_ENABLED=true
  */
 
+import os from 'os';
+import path from 'path';
+
 const KEK = process.env.CORSAIR_KEK || '';
 const API_KEY = process.env.CORSAIR_PROD_API_KEY || process.env.CORSAIR_DEV_API_KEY || '';
 const SIGNING_SECRET = process.env.CORSAIR_PROD_SIGNING_SECRET || process.env.CORSAIR_DEV_SIGNING_SECRET || '';
-const DB_FILE = process.env.CORSAIR_DB_FILE || 'corsair.db';
+const DB_FILE = process.env.CORSAIR_DB_FILE || path.join(os.tmpdir(), 'corsair.db');
+
+let corsairLastError: string | null = null;
+
+export function getCorsairError(): string | null {
+  return corsairLastError;
+}
 
 /** Corsair is considered configured when the KEK + Hub keys are all present. */
 export function isCorsairConfigured(): boolean {
@@ -43,7 +52,8 @@ async function optionalImport(pkg: string): Promise<any | null> {
   try {
     const name = pkg; // non-literal → tsc treats the module as `any`, no resolution error
     return await import(name);
-  } catch {
+  } catch (err) {
+    console.warn(`[Corsair] optionalImport('${pkg}') failed:`, (err as Error).message);
     return null;
   }
 }
@@ -61,14 +71,19 @@ export async function getCorsair(): Promise<any | null> {
   initTried = true;
 
   if (!isCorsairConfigured()) {
-    console.warn('[Corsair] Not configured (missing CORSAIR_KEK / Hub keys). Agent integrations run in simulated mode.');
+    corsairLastError = 'Missing CORSAIR_KEK or Hub API keys (CORSAIR_PROD_API_KEY / CORSAIR_DEV_API_KEY) in environment.';
+    console.warn(`[Corsair] ${corsairLastError}`);
     return null;
   }
 
   const corsairMod = await optionalImport('corsair');
   const sqliteMod = await optionalImport('better-sqlite3');
   if (!corsairMod?.createCorsair || !sqliteMod?.default) {
-    console.warn('[Corsair] Packages not installed (corsair / better-sqlite3). Run npm install to activate. Simulated mode.');
+    const missing = [];
+    if (!corsairMod?.createCorsair) missing.push('corsair');
+    if (!sqliteMod?.default) missing.push('better-sqlite3');
+    corsairLastError = `Packages missing or failed to import on server: ${missing.join(', ')}.`;
+    console.warn(`[Corsair] ${corsairLastError}`);
     return null;
   }
 
@@ -82,7 +97,8 @@ export async function getCorsair(): Promise<any | null> {
   if (gmailMod?.gmail) plugins.push(gmailMod.gmail());
 
   if (plugins.length === 0) {
-    console.warn('[Corsair] No @corsair-dev/* plugin packages installed. Simulated mode.');
+    corsairLastError = 'No @corsair-dev/* plugin packages (@corsair-dev/slack, @corsair-dev/github, @corsair-dev/gmail) available.';
+    console.warn(`[Corsair] ${corsairLastError}`);
     return null;
   }
 
@@ -97,10 +113,12 @@ export async function getCorsair(): Promise<any | null> {
       // Multi-tenancy: each proposal/workspace gets isolated credentials + perms.
       multiTenancy: true,
     });
-    console.log(`[Corsair] Initialized with ${plugins.length} plugin(s).`);
+    console.log(`[Corsair] Initialized with ${plugins.length} plugin(s) at DB path: ${DB_FILE}`);
+    corsairLastError = null;
     return cached;
   } catch (err) {
-    console.error('[Corsair] Initialization failed; simulated mode:', (err as Error).message);
+    corsairLastError = `Corsair init failed: ${(err as Error).message}`;
+    console.error(`[Corsair] ${corsairLastError}`);
     cached = null;
     return null;
   }
