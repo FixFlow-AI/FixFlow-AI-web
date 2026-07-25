@@ -15,6 +15,7 @@ import { api, ApiError } from "../../lib/api";
 import { MFAModal } from "../../components/MFAModal";
 import { DisputeModal } from "../../components/DisputeModal";
 import { AuditTrailViewer } from "../../components/AuditTrailViewer";
+import { PayoutOnboarding } from "../../components/PayoutOnboarding";
 
 const whatChanges = [
   {
@@ -44,7 +45,7 @@ const whatChanges = [
 ];
 
 export function MilestoneFunds() {
-  const { user, userRole, parsedProposal, parsedProposalId } = useLandingStore();
+  const { user, userRole, parsedProposal, parsedProposalId, setDashboardTab } = useLandingStore();
   const [milestones, setMilestones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -192,21 +193,59 @@ export function MilestoneFunds() {
     }
   };
 
-  // STORY-08 + STORY-11: release escrowed funds, gated by an MFA OTP prompt.
-  const submitRelease = async (mfaToken) => {
+  // Map the app's user role to the FSM trigger role for the audit trail.
+  const fsmRole =
+    userRole === "client" ? "Client" : userRole === "freelancer" ? "Freelancer" : "System";
+
+  // STORY-08: non-MFA FSM transitions (submit, request revision, resubmit).
+  const [txLoadingId, setTxLoadingId] = useState(null);
+  const runTransition = async (ms, toState, metadata) => {
+    setTxLoadingId(ms.id);
+    setError("");
+    try {
+      await api.transitionMilestone(ms.id, {
+        toState,
+        triggerUserId: user?.id || "system",
+        triggerUserRole: fsmRole,
+        expectedVersion: ms.rawVersion ?? 0,
+        metadata,
+      });
+      loadMilestones();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : `Could not move milestone to ${toState}.`);
+    } finally {
+      setTxLoadingId(null);
+    }
+  };
+
+  // STORY-08 + STORY-11: MFA-gated actions — Approve (In_Review→Approved) and
+  // Release (Approved→Funds_Released). mfaTarget carries { ...ms, action }.
+  const submitMfa = async (mfaToken) => {
     if (!mfaTarget) return;
     setMfaLoading(true);
     setMfaError("");
     try {
-      await api.releaseMilestone(mfaTarget.id, {
-        mfaToken,
-        platformPlan: "FREE",
-        taxCountryCode: "IN",
-      });
+      if (mfaTarget.action === "release") {
+        await api.releaseMilestone(mfaTarget.id, {
+          mfaToken,
+          platformPlan: "FREE",
+          taxCountryCode: "IN",
+        });
+      } else {
+        // Approve
+        await api.transitionMilestone(mfaTarget.id, {
+          toState: "Approved",
+          triggerUserId: user?.id || "system",
+          triggerUserRole: fsmRole,
+          expectedVersion: mfaTarget.rawVersion ?? 0,
+          mfaToken,
+          metadata: "Deliverable approved by client",
+        });
+      }
       setMfaTarget(null);
       loadMilestones();
     } catch (err) {
-      setMfaError(err instanceof ApiError ? err.message : "Fund release failed.");
+      setMfaError(err instanceof ApiError ? err.message : "Verification / action failed.");
     } finally {
       setMfaLoading(false);
     }
@@ -272,6 +311,7 @@ export function MilestoneFunds() {
         progressColor: ms.state === "Funds_Released" ? "#16a34a" : "#2563eb",
         rawAmount: ms.amount,
         rawState: ms.state,
+        rawVersion: ms.version,
       }))
     : parsedProposal.timeline?.map((phase, idx) => ({
         id: `dummy_${idx}`,
@@ -388,12 +428,12 @@ export function MilestoneFunds() {
                     >
                       Fund
                     </button>
-                  ) : ms.rawState === "Approved" ? (
+                  ) : ms.rawState === "Approved" && userRole === "client" ? (
                     <button
                       type="button"
                       className="panel-btn"
                       style={{ padding: "4px 10px", minHeight: 0, fontSize: 12, borderRadius: 6, width: "100%", background: "#16a34a" }}
-                      onClick={() => { setMfaError(""); setMfaTarget(ms); }}
+                      onClick={() => { setMfaError(""); setMfaTarget({ ...ms, action: "release" }); }}
                     >
                       Release Funds
                     </button>
@@ -404,7 +444,39 @@ export function MilestoneFunds() {
                   )}
                   <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{ms.statusTime}</div>
                   {!ms.id.startsWith("dummy_") && (
-                    <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 6 }}>
+                      {/* Freelancer: submit / resubmit work for review */}
+                      {userRole === "freelancer" &&
+                        (ms.rawState === "Active" || ms.rawState === "Revision_Requested") && (
+                          <button
+                            type="button"
+                            disabled={txLoadingId === ms.id}
+                            onClick={() => runTransition(ms, "In_Review", "Evidence submitted for review")}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#16a34a", fontSize: 11, fontWeight: 600 }}
+                          >
+                            {txLoadingId === ms.id ? "Submitting…" : ms.rawState === "Revision_Requested" ? "Resubmit" : "Submit for Review"}
+                          </button>
+                        )}
+                      {/* Client: approve (MFA) or request revision on In_Review */}
+                      {userRole === "client" && ms.rawState === "In_Review" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => { setMfaError(""); setMfaTarget({ ...ms, action: "approve" }); }}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#16a34a", fontSize: 11, fontWeight: 600 }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            disabled={txLoadingId === ms.id}
+                            onClick={() => runTransition(ms, "Revision_Requested", "Client requested changes")}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#b45309", fontSize: 11, fontWeight: 600 }}
+                          >
+                            {txLoadingId === ms.id ? "…" : "Request Revision"}
+                          </button>
+                        </>
+                      )}
                       {["Active", "In_Review", "Revision_Requested"].includes(ms.rawState) && (
                         <button
                           type="button"
@@ -468,6 +540,8 @@ export function MilestoneFunds() {
           </div>
         </div>
 
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {userRole === "freelancer" && <PayoutOnboarding />}
         <div className="panel-card">
           <div className="panel-card-header"><h2 className="panel-card-title">What changes this state</h2></div>
           {whatChanges.map((item) => {
@@ -485,6 +559,7 @@ export function MilestoneFunds() {
             );
           })}
         </div>
+        </div>
       </div>
 
       <div className="panel-action-bar">
@@ -493,7 +568,7 @@ export function MilestoneFunds() {
           <span style={{ fontSize: 13, color: "#64748b" }}>Funds and delivery state remain linked to the approved agreement.</span>
         </div>
         <div className="panel-action-bar-right">
-          <button type="button" className="panel-link">Go to Delivery <ArrowRight size={14} /></button>
+          <button type="button" className="panel-link" onClick={() => setDashboardTab("delivery-control")}>Go to Delivery <ArrowRight size={14} /></button>
         </div>
       </div>
 
@@ -574,14 +649,18 @@ export function MilestoneFunds() {
         </div>
       )}
 
-      {/* STORY-11: MFA prompt for fund release */}
+      {/* STORY-11: MFA prompt for Approve / Release */}
       <MFAModal
         open={Boolean(mfaTarget)}
-        title="Release Escrowed Funds"
-        description={`Enter your 6-digit authenticator code to release funds for "${mfaTarget?.title ?? ""}" to the freelancer.`}
+        title={mfaTarget?.action === "approve" ? "Approve Deliverable" : "Release Escrowed Funds"}
+        description={
+          mfaTarget?.action === "approve"
+            ? `Enter your 6-digit authenticator code to approve "${mfaTarget?.title ?? ""}".`
+            : `Enter your 6-digit authenticator code to release funds for "${mfaTarget?.title ?? ""}" to the freelancer.`
+        }
         loading={mfaLoading}
         error={mfaError}
-        onSubmit={submitRelease}
+        onSubmit={submitMfa}
         onClose={() => { if (!mfaLoading) setMfaTarget(null); }}
       />
 
