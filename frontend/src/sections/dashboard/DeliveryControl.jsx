@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Check,
   Clock,
@@ -14,17 +15,57 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
+import { api, ApiError } from "../../lib/api";
 
 export function DeliveryControl() {
   const {
     user,
+    userRole,
     parsedProposal,
+    parsedProposalId,
+    setDashboardTab,
     contractExtensions,
     extensionsSource,
     extensionsSuggesting,
     extensionsNotice,
     runExtensionsSuggest,
   } = useLandingStore();
+
+  // STORY-13: live milestones from the backend (replaces the static task array
+  // for real execution state + inline evidence submission).
+  const [liveMilestones, setLiveMilestones] = useState([]);
+  const [submittingId, setSubmittingId] = useState(null);
+  const [deliveryError, setDeliveryError] = useState("");
+
+  const loadLive = () => {
+    if (!parsedProposalId) return;
+    api
+      .listMilestones(parsedProposalId)
+      .then((r) => setLiveMilestones(r.milestones || []))
+      .catch(() => {});
+  };
+  useEffect(() => {
+    loadLive();
+  }, [parsedProposalId]);
+
+  const submitForReview = async (m) => {
+    setSubmittingId(m.id);
+    setDeliveryError("");
+    try {
+      await api.transitionMilestone(m.id, {
+        toState: "In_Review",
+        triggerUserId: user?.id || "system",
+        triggerUserRole: "Freelancer",
+        expectedVersion: m.version,
+        metadata: "Evidence submitted from Delivery Control",
+      });
+      loadLive();
+    } catch (err) {
+      setDeliveryError(err instanceof ApiError ? err.message : "Could not submit for review.");
+    } finally {
+      setSubmittingId(null);
+    }
+  };
   // Use extensionsNotice from the store (survives navigation)
   const extNotice = extensionsNotice;
 
@@ -92,6 +133,46 @@ export function DeliveryControl() {
           </div>
         </div>
       </div>
+
+      {/* STORY-13: Live milestones (real backend state + submit) */}
+      {liveMilestones.length > 0 && (
+        <div className="panel-card" style={{ marginBottom: 20, padding: 0 }}>
+          <div className="panel-card-header" style={{ padding: "14px 20px" }}>
+            <h2 className="panel-card-title">Live milestones</h2>
+            <button type="button" className="panel-link" onClick={() => setDashboardTab("milestone-funds")}>
+              Manage in Escrow Funds <ArrowRight size={13} />
+            </button>
+          </div>
+          {deliveryError && (
+            <div style={{ margin: "0 20px 12px", background: "#fef2f2", border: "1px solid #fee2e2", color: "#991b1b", padding: "8px 12px", borderRadius: 8, fontSize: 13 }}>
+              {deliveryError}
+            </div>
+          )}
+          {liveMilestones.map((m) => (
+            <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px", borderTop: "1px solid #f1f5f9" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{m.title}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8" }}>${Number(m.amount).toLocaleString()} · {m.state}</div>
+              </div>
+              {userRole === "freelancer" && (m.state === "Active" || m.state === "Revision_Requested") ? (
+                <button
+                  type="button"
+                  className="panel-btn"
+                  style={{ fontSize: 12, padding: "6px 12px", minHeight: 0 }}
+                  disabled={submittingId === m.id}
+                  onClick={() => submitForReview(m)}
+                >
+                  <Upload size={13} /> {submittingId === m.id ? "Submitting…" : m.state === "Revision_Requested" ? "Resubmit" : "Submit for Review"}
+                </button>
+              ) : (
+                <span className={`panel-badge ${m.state === "Funds_Released" ? "panel-badge--green" : m.state === "Draft" || m.state === "Pending_Deposit" ? "panel-badge--gray" : "panel-badge--blue"}`}>
+                  {m.state}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Three-column grid */}
       <div className="panel-grid panel-grid--3">
