@@ -34,6 +34,8 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
+import { startKeepAliveService } from './services/keepAliveService.js';
+
 import {
   parseBrief,
   evaluateProposal,
@@ -1473,6 +1475,7 @@ server.listen(PORT, () => {
   console.log(`  REST API   : http://localhost:${PORT}/api`);
   console.log(`  Sync socket: ws://localhost:${PORT}/sync`);
   console.log(`  AI features ${isAiServiceConfigured() ? `ENABLED (proxy → ${process.env.AI_SERVICE_URL})` : 'DISABLED (set AI_SERVICE_URL)'}`);
+  startKeepAliveService();
 });
 
 export { app, server };

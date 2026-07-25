@@ -1,0 +1,71 @@
+import { getAiServiceUrl } from './aiClient.js';
+
+/**
+ * Background Keep-Alive Service.
+ * Runs every 10 minutes (600,000 ms) to keep the Python AI microservice
+ * and Node backend warm on Render Free / Starter instances, preventing
+ * cold starts and spin-down inactivity.
+ */
+let timer: NodeJS.Timeout | null = null;
+const WARMUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+async function pingServices(): Promise<void> {
+  // 1. Ping AI Service /health
+  const aiUrl = getAiServiceUrl();
+  if (aiUrl) {
+    try {
+      const res = await fetch(`${aiUrl}/health`, {
+        headers: { 'User-Agent': 'FixFlowAI-KeepAlive/1.0' },
+      });
+      if (res.ok) {
+        console.log(`[KeepAlive] Warmed up AI service at ${aiUrl}/health (${res.status} OK)`);
+      } else {
+        console.warn(`[KeepAlive] AI service warmup returned status ${res.status}`);
+      }
+    } catch (err) {
+      console.warn(`[KeepAlive] AI service warmup ping failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // 2. Ping Backend Self (if public URL is provided via env var e.g. RENDER_EXTERNAL_URL or BACKEND_SELF_URL)
+  const selfUrl = (process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_SELF_URL || '').trim().replace(/\/+$/, '');
+  if (selfUrl) {
+    try {
+      const res = await fetch(`${selfUrl}/api/health`, {
+        headers: { 'User-Agent': 'FixFlowAI-KeepAlive/1.0' },
+      });
+      if (res.ok) {
+        console.log(`[KeepAlive] Warmed up backend self at ${selfUrl}/api/health (${res.status} OK)`);
+      }
+    } catch (err) {
+      console.warn(`[KeepAlive] Backend self warmup ping failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
+export function startKeepAliveService(): void {
+  if (timer) return; // Already running
+
+  console.log('[KeepAlive] Initializing 10-minute automated warmup timer...');
+
+  // Run an initial ping after a short 10-second delay on boot
+  setTimeout(() => {
+    void pingServices();
+  }, 10000);
+
+  // Schedule recurring ping every 10 minutes
+  timer = setInterval(() => {
+    void pingServices();
+  }, WARMUP_INTERVAL_MS);
+
+  if (timer && typeof timer.unref === 'function') {
+    timer.unref();
+  }
+}
+
+export function stopKeepAliveService(): void {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+}

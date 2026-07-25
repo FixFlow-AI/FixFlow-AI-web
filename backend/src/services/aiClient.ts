@@ -20,12 +20,20 @@ import type {
 } from '../types/ai.js';
 import type { GithubScanResult } from '../types/github.js';
 
-const AI_SERVICE_URL = (process.env.AI_SERVICE_URL || '').replace(/\/+$/, '');
+export function getAiServiceUrl(): string {
+  let raw = (process.env.AI_SERVICE_URL || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `http://${raw}`;
+  }
+  return raw;
+}
+
 const AI_SERVICE_TOKEN = process.env.AI_SERVICE_TOKEN || '';
 
 /** True when the AI service base URL is configured. */
 export function isAiServiceConfigured(): boolean {
-  return Boolean(AI_SERVICE_URL);
+  return Boolean(getAiServiceUrl());
 }
 
 /** Error carrying the upstream HTTP status so routes can propagate it. */
@@ -62,7 +70,8 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 6, de
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  if (!AI_SERVICE_URL) {
+  const aiUrl = getAiServiceUrl();
+  if (!aiUrl) {
     throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
   }
 
@@ -71,7 +80,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
   let res: Response;
   try {
-    res = await fetchWithRetry(`${AI_SERVICE_URL}${path}`, {
+    res = await fetchWithRetry(`${aiUrl}${path}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -79,7 +88,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   } catch (err) {
     throw new AiServiceError(
       502,
-      `AI service is unreachable at ${AI_SERVICE_URL}: ${err instanceof Error ? err.message : String(err)}`,
+      `AI service is unreachable at ${aiUrl}: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
@@ -172,7 +181,8 @@ export async function scanGithub(body: GithubScanRequestBody): Promise<GithubSca
  * segment as it arrives. The GitHub access token is used only here.
  */
 export async function openGithubScanStream(body: GithubScanRequestBody): Promise<Response> {
-  if (!AI_SERVICE_URL) {
+  const aiUrl = getAiServiceUrl();
+  if (!aiUrl) {
     throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
   }
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -180,7 +190,7 @@ export async function openGithubScanStream(body: GithubScanRequestBody): Promise
 
   let res: Response;
   try {
-    res = await fetchWithRetry(`${AI_SERVICE_URL}/ai/github/scan/stream`, {
+    res = await fetchWithRetry(`${aiUrl}/ai/github/scan/stream`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -188,7 +198,7 @@ export async function openGithubScanStream(body: GithubScanRequestBody): Promise
   } catch (err) {
     throw new AiServiceError(
       502,
-      `AI service is unreachable at ${AI_SERVICE_URL}: ${err instanceof Error ? err.message : String(err)}`,
+      `AI service is unreachable at ${aiUrl}: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
   if (!res.ok || !res.body) {
