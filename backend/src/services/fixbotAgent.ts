@@ -105,11 +105,13 @@ export async function createConnectLink(
   plugin: string,
 ): Promise<{ connectUrl: string | null; simulated: boolean; error?: string }> {
   if (!isCorsairConfigured()) {
-    return { connectUrl: null, simulated: true };
+    return { connectUrl: null, simulated: true, error: 'Corsair environment variables (CORSAIR_KEK / CORSAIR_PROD_API_KEY) are missing on the production server.' };
   }
   try {
     const c = await getCorsair();
-    if (!c?.manage?.connect?.createLink) return { connectUrl: null, simulated: true };
+    if (!c?.manage?.connect?.createLink) {
+      return { connectUrl: null, simulated: true, error: 'Corsair SDK packages (corsair, better-sqlite3) are not installed on the server yet.' };
+    }
     const res = await c.manage.connect.createLink({ plugin, tenantId });
     return { connectUrl: res?.connectUrl ?? null, simulated: false };
   } catch (err) {

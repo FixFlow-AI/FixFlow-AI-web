@@ -82,15 +82,23 @@ export function Hero() {
 
   return (
     <section className="hero section-grid" id="top">
+      {/* Premium ambient backdrop (aurora glow + fine grid) */}
+      <div className="hero-aurora" aria-hidden="true" />
+
       {/* Left: Copy */}
       <div className="hero-copy">
+        <div className="hero-eyebrow">
+          <span className="hero-eyebrow-dot" aria-hidden="true" />
+          Trust-first freelance workspace
+        </div>
         <RevealText as="h1" className="hero-title">
           Work moves when trust is{" "}
-          <span style={{ color: "var(--brand)" }}>already built.</span>
+          <span className="hero-accent">already built.</span>
         </RevealText>
         <p className="hero-description">
           FixFlowAI turns messy briefs, verified skills, scoped proposals, and
-          milestone payments into one shared operating layer.
+          milestone-escrow payments into one shared operating layer — so hiring
+          starts with proof, not promises.
         </p>
         <div className="hero-actions">
           <a className="button" href="#/signup">
@@ -110,6 +118,23 @@ export function Hero() {
             {demoRunning ? "Pause system" : "Watch the system think"}
           </button>
         </div>
+
+        {/* Hard-proof differentiators */}
+        <div className="hero-stats" aria-label="Why FixFlowAI">
+          <div className="hero-stat">
+            <strong>&lt;60s</strong>
+            <span>to a verified match</span>
+          </div>
+          <div className="hero-stat">
+            <strong>100%</strong>
+            <span>milestone-escrow protected</span>
+          </div>
+          <div className="hero-stat">
+            <strong>Zero</strong>
+            <span>proposal spam</span>
+          </div>
+        </div>
+
         <ul className="hero-trust" aria-label="What to expect">
           {heroTrustMarkers.map((marker) => (
             <li key={marker}>
@@ -132,8 +157,9 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Right: Floating system cards */}
+      {/* Right: Floating system cards on a premium glass stage */}
       <div className="hero-system hero-system--cards">
+        <div className="hero-stage" aria-hidden="true" />
         {systemCards.map((card, idx) => (
           <motion.div
             key={card.label}

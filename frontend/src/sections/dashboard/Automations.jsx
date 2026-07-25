@@ -52,10 +52,10 @@ export function Automations() {
       const res = await api.corsairConnect(plugin, parsedProposalId);
       if (res.connectUrl) {
         window.open(res.connectUrl, "_blank", "noopener");
-      } else if (res.simulated) {
-        setError("Corsair isn't configured on the server yet — connect links are simulated. Set CORSAIR_* env vars to enable.");
       } else if (res.error) {
         setError(res.error);
+      } else if (res.simulated) {
+        setError("Corsair isn't configured on the server yet — connect links are simulated. Set CORSAIR_* env vars to enable.");
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create connect link.");
