@@ -332,4 +332,42 @@ export const api = {
       body: { plugin, proposalId },
       signal,
     }),
+
+  // AI-008 — deep proposal plan (v2 execution plan).
+  getExecutionPlan: (proposalId, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan`, { signal }),
+  generateExecutionPlan: (proposalId, opts = {}, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan/generate`, {
+      method: "POST",
+      body: {
+        scope: opts.scope || "all",
+        preserveClientEdits: opts.preserveClientEdits !== false,
+        confirmOverwrite: opts.confirmOverwrite === true,
+      },
+      signal,
+    }),
+  patchExecutionPlan: (proposalId, { baseRevision, operationId, operations, summary }, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan`, {
+      method: "PATCH",
+      body: { baseRevision, operationId, operations, summary },
+      signal,
+    }),
+  listPlanRevisions: (proposalId, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan/revisions`, { signal }),
+  restorePlanRevision: (proposalId, revision, { baseRevision, operationId }, signal) =>
+    request(
+      `/proposals/${encodeURIComponent(proposalId)}/plan/revisions/${revision}/restore`,
+      { method: "POST", body: { baseRevision, operationId }, signal },
+    ),
+  approveExecutionPlan: (proposalId, expectedRevision, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan/approve`, {
+      method: "POST",
+      body: { expectedRevision },
+      signal,
+    }),
+  reopenExecutionPlan: (proposalId, signal) =>
+    request(`/proposals/${encodeURIComponent(proposalId)}/plan/reopen`, {
+      method: "POST",
+      signal,
+    }),
 };
