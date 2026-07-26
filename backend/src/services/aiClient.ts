@@ -136,11 +136,197 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
+function getFallbackProposal(briefText: string): Proposal {
+  return {
+    project_summary: briefText.trim() || 'Custom Technical Project Proposal',
+    features: [
+      {
+        title: 'Core Module Deployment',
+        description: 'Primary system features and architectural components based on your project description.',
+        technical_approach: 'Implement modular TypeScript/Node.js microservices with clean API boundaries.',
+        complexity: 'Medium',
+        confidence: 'High',
+        confidence_pct: 85,
+        area: 'Engineering',
+      },
+      {
+        title: 'Security & Access Control',
+        description: 'Authentication, role-based authorization, and token verification.',
+        technical_approach: 'Configure OAuth 2.0 / JWT session verification with input sanitization.',
+        complexity: 'Low',
+        confidence: 'High',
+        confidence_pct: 90,
+        area: 'Security Operations',
+      },
+      {
+        title: 'Integration & Testing',
+        description: 'End-to-end testing, API integration verification, and deployment pipeline.',
+        technical_approach: 'Automated test suites with continuous integration checks before release.',
+        complexity: 'Medium',
+        confidence: 'High',
+        confidence_pct: 80,
+        area: 'Quality Assurance',
+      },
+    ],
+    risks: [
+      {
+        label: 'Under-specified API edge cases',
+        severity: 45,
+        mitigation: 'Conduct early architecture review and enforce strict schema validation.',
+        category: 'Scope Management',
+      },
+      {
+        label: 'Upstream service latency',
+        severity: 40,
+        mitigation: 'Implement exponential backoff retries and circuit-breaker fallbacks.',
+        category: 'Technical Integration',
+      },
+    ],
+    timeline: [
+      {
+        phase: 'Phase 1: Architecture & Setup',
+        duration: '1 Week',
+        tasks: ['Establish codebase structure', 'Configure database schemas', 'Verify API contracts'],
+        dependencies: [],
+      },
+      {
+        phase: 'Phase 2: Core Development',
+        duration: '2 Weeks',
+        tasks: ['Build feature handlers', 'Implement state machines', 'Connect UI components'],
+        dependencies: ['Phase 1'],
+      },
+      {
+        phase: 'Phase 3: QA & Final Delivery',
+        duration: '1 Week',
+        tasks: ['Execute integration test suite', 'Security audit', 'Production deployment'],
+        dependencies: ['Phase 2'],
+      },
+    ],
+    delivery_plan: {
+      mode: 'weekly',
+      generatedFrom: 'derived',
+      weeks: [
+        {
+          id: 'week-1',
+          label: 'Week 1: Setup & Core',
+          startWeek: 1,
+          endWeek: 1,
+          sourcePhase: 'Phase 1',
+          goals: ['Initial system setup and schema verification'],
+          tasks: [
+            {
+              id: 'task-1',
+              title: 'Establish repository structure and environment variables',
+              owner: 'team',
+              status: 'planned',
+              notify: false,
+            },
+          ],
+          deliverables: ['Configured environment', 'Verified backend endpoints'],
+          dependencies: [],
+        },
+        {
+          id: 'week-2',
+          label: 'Week 2-3: Development',
+          startWeek: 2,
+          endWeek: 3,
+          sourcePhase: 'Phase 2',
+          goals: ['Feature implementation and UI connection'],
+          tasks: [
+            {
+              id: 'task-2',
+              title: 'Develop core API routes and database models',
+              owner: 'team',
+              status: 'planned',
+              notify: false,
+            },
+          ],
+          deliverables: ['Working feature endpoints', 'Connected React dashboard'],
+          dependencies: ['week-1'],
+        },
+        {
+          id: 'week-4',
+          label: 'Week 4: Delivery',
+          startWeek: 4,
+          endWeek: 4,
+          sourcePhase: 'Phase 3',
+          goals: ['Final testing and launch'],
+          tasks: [
+            {
+              id: 'task-3',
+              title: 'Perform end-to-end verification and deployment',
+              owner: 'team',
+              status: 'planned',
+              notify: false,
+            },
+          ],
+          deliverables: ['Deploys live in production', 'Passing test suite'],
+          dependencies: ['week-2'],
+        },
+      ],
+      roadmap: [
+        {
+          id: 'rm-1',
+          title: 'MVP Release',
+          targetWeek: 4,
+          sourceWeekIds: ['week-4'],
+          status: 'planned',
+        },
+      ],
+      backlog: [],
+      notificationDefaults: {
+        enabled: true,
+        channels: ['in_app'],
+        events: ['goal_completed'],
+      },
+    },
+    effort: [
+      {
+        label: 'Development & Testing',
+        percentage: 70,
+        timeframe: '3 Weeks',
+        description: 'Full stack development, unit testing, and component integration.',
+      },
+      {
+        label: 'Architecture & Ops',
+        percentage: 30,
+        timeframe: '1 Week',
+        description: 'System design, security verification, and deployment configuration.',
+      },
+    ],
+    market: [
+      {
+        title: 'Modern Architecture Best Practices',
+        description: 'Alignment with modern event-driven serverless & API-first standards.',
+        trend: 'up',
+        relevance: 90,
+      },
+    ],
+    impact: [
+      {
+        title: 'Workflow Automation',
+        description: 'Reduces manual overhead and speeds up overall time-to-market.',
+        impact_score: 85,
+        category: 'Operational Efficiency',
+      },
+    ],
+  };
+}
+
 /** AI-001 — parse an unstructured brief into a structured proposal. */
 export async function parseBrief(
   briefText: string,
 ): Promise<ParseBriefResponse> {
-  return postJson<ParseBriefResponse>('/ai/brief/parse', { briefText });
+  try {
+    return await postJson<ParseBriefResponse>('/ai/brief/parse', { briefText });
+  } catch (err) {
+    console.warn('[AIClient] parseBrief call failed, using safe proposal fallback:', (err as Error).message);
+    return {
+      proposal: getFallbackProposal(briefText),
+      source: 'fallback',
+      degradedReason: 'ai_service_unreachable',
+    };
+  }
 }
 
 /** AI-002 — multi-agent evaluation + self-correction. */
