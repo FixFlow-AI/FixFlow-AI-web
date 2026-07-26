@@ -64,15 +64,15 @@ async def add_telemetry_and_request_id(request: Request, call_next):
 settings = get_settings()
 
 if not settings.model_valid:
-    raise RuntimeError(f"Invalid GEMINI_MODEL: {settings.gemini_model}")
+    logging.warning("Invalid GEMINI_MODEL '%s'. Falling back to '%s'", settings.gemini_model, settings.DEFAULT_MODEL)
 
 if not settings.fallback_model_valid:
-    raise RuntimeError(f"Invalid GEMINI_FALLBACK_MODEL: {settings.gemini_fallback_model}")
+    logging.warning("Invalid GEMINI_FALLBACK_MODEL '%s'. Falling back to '%s'", settings.gemini_fallback_model, settings.DEFAULT_FALLBACK_MODEL)
 
 logging.info(
     "FixFlowAI AI Service starting up. Primary model: %s, Fallback model: %s",
-    settings.gemini_model,
-    settings.gemini_fallback_model
+    settings.gemini_model if settings.model_valid else settings.DEFAULT_MODEL,
+    settings.gemini_fallback_model if settings.fallback_model_valid else settings.DEFAULT_FALLBACK_MODEL
 )
 
 if not settings.ai_service_token:
