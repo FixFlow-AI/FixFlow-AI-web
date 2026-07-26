@@ -252,6 +252,55 @@ create interview_events '{
     {"AttributeName":"eventSeq","KeyType":"RANGE"}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
+# ── BuildX prize tracks — Corsair (agent integrations) + Bindu (agent identity) ──
+
+# Automations (CORSAIR) — durable FixBot cross-app action log + permission status.
+create automations '{
+  "AttributeDefinitions":[
+    {"AttributeName":"automationId","AttributeType":"S"},
+    {"AttributeName":"tenantId","AttributeType":"S"},
+    {"AttributeName":"createdAt","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"automationId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{
+    "IndexName":"TenantAutomationsIndex",
+    "KeySchema":[
+      {"AttributeName":"tenantId","KeyType":"HASH"},
+      {"AttributeName":"createdAt","KeyType":"RANGE"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# Agent identities (BINDU) — DID registry for the Confidence-Grid A2A agents.
+create agent_identities '{
+  "AttributeDefinitions":[
+    {"AttributeName":"agentId","AttributeType":"S"},
+    {"AttributeName":"did","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"agentId","KeyType":"HASH"}],
+  "GlobalSecondaryIndexes":[{
+    "IndexName":"DidIndex",
+    "KeySchema":[{"AttributeName":"did","KeyType":"HASH"}],
+    "Projection":{"ProjectionType":"ALL"}}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# A2A messages (BINDU) — append-only verifiable message trace per evaluation.
+create a2a_messages '{
+  "AttributeDefinitions":[
+    {"AttributeName":"evaluationId","AttributeType":"S"},
+    {"AttributeName":"messageSeq","AttributeType":"N"}],
+  "KeySchema":[
+    {"AttributeName":"evaluationId","KeyType":"HASH"},
+    {"AttributeName":"messageSeq","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# Agent skills (BINDU) — capabilities each agent advertises via Bindu's skills system.
+create agent_skills '{
+  "AttributeDefinitions":[
+    {"AttributeName":"agentId","AttributeType":"S"},
+    {"AttributeName":"skillName","AttributeType":"S"}],
+  "KeySchema":[
+    {"AttributeName":"agentId","KeyType":"HASH"},
+    {"AttributeName":"skillName","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
 echo
 echo "Done. Set these in backend/.env:"
 echo "  AWS_REGION=${REGION}"
