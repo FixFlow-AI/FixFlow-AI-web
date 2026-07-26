@@ -13,6 +13,7 @@ import { MatchResults } from "./dashboard/MatchResults";
 import { FreelancerAnalytics } from "./dashboard/FreelancerAnalytics";
 import { PaymentHistory } from "./dashboard/PaymentHistory";
 import { Automations } from "./dashboard/Automations";
+import { ExecutionPlanPanel } from "./dashboard/ExecutionPlanPanel";
 
 import {
   Home,
@@ -33,6 +34,7 @@ import {
   Sparkles,
   Users,
   Bot,
+  CalendarRange,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getRefreshToken, getUser, clearSession } from "../lib/auth";
@@ -47,6 +49,7 @@ const menuItems = [
   // permission matrix (docs/specifications/roles/00), freelancers cannot post
   // briefs or run shortlists, so these panels are client-only.
   { id: "proposal-generator", label: "AI Builder", icon: Sparkles, roles: ["client"] },
+  { id: "project-plan", label: "Project Plan", icon: CalendarRange, roles: ["client"] },
   { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText, roles: ["client"] },
   { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck, roles: ["client"] },
   { id: "matching", label: "Talent Matches", icon: Users, roles: ["client"] },
@@ -74,6 +77,7 @@ const tabMap = {
   "evidence-confidence": EvidenceConfidence,
   matching: MatchResults,
   "proposal-generator": ProposalGenerator,
+  "project-plan": ExecutionPlanPanel,
   "agreement-composer": AgreementComposer,
   "delivery-control": DeliveryControl,
   "milestone-funds": MilestoneFunds,
