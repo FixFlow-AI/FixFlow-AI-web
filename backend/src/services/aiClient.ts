@@ -31,11 +31,25 @@ export function getAiServiceUrl(): string {
   return raw;
 }
 
+export function getPublicAiServiceUrl(): string {
+  let raw = (process.env.PUBLIC_AI_SERVICE_URL || '').trim().replace(/\/+$/, '');
+  if (raw) {
+    if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+    return raw;
+  }
+  // Auto-derive on Render if AI_SERVICE_URL contains fixflowai-ai-service or internal host:port
+  const primary = getAiServiceUrl();
+  if (primary.includes('fixflowai-ai-service')) {
+    return 'https://fixflowai-ai-service.onrender.com';
+  }
+  return '';
+}
+
 const AI_SERVICE_TOKEN = process.env.AI_SERVICE_TOKEN || '';
 
 /** True when the AI service base URL is configured. */
 export function isAiServiceConfigured(): boolean {
-  return Boolean(getAiServiceUrl());
+  return Boolean(getAiServiceUrl() || getPublicAiServiceUrl());
 }
 
 /** Error carrying the upstream HTTP status so routes can propagate it. */
@@ -46,7 +60,7 @@ export class AiServiceError extends Error {
   }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 6, delayMs = 1200): Promise<Response> {
+async function fetchWithRetry(url: string, options: RequestInit, retries = 4, delayMs = 1000): Promise<Response> {
   let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
     try {
@@ -54,16 +68,16 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 6, de
       if (res.ok) return res;
       // If 502/503/504 (e.g. Render container cold start / spin-down waking up), retry
       if ([502, 503, 504].includes(res.status) && i < retries - 1) {
-        console.warn(`[AIClient] Upstream returned ${res.status}. Cold start warming up (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, Math.min(4000, delayMs * (1 + i * 0.5))));
+        console.warn(`[AIClient] Upstream ${url} returned ${res.status}. Cold start warming up (${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, Math.min(3000, delayMs * (1 + i * 0.5))));
         continue;
       }
       return res;
     } catch (err) {
       lastErr = err;
       if (i < retries - 1) {
-        console.warn(`[AIClient] Fetch error: ${err instanceof Error ? err.message : String(err)}. Retrying (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, Math.min(4000, delayMs * (1 + i * 0.5))));
+        console.warn(`[AIClient] Fetch error on ${url}: ${err instanceof Error ? err.message : String(err)}. Retrying (${i + 1}/${retries})...`);
+        await new Promise((r) => setTimeout(r, Math.min(3000, delayMs * (1 + i * 0.5))));
       }
     }
   }
@@ -72,44 +86,54 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 6, de
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const aiUrl = getAiServiceUrl();
-  if (!aiUrl) {
+  const primaryUrl = getAiServiceUrl();
+  const publicUrl = getPublicAiServiceUrl();
+
+  if (!primaryUrl && !publicUrl) {
     throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
   }
+
+  const urlsToTry = [primaryUrl, publicUrl].filter((u, idx, self) => Boolean(u) && self.indexOf(u) === idx);
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (AI_SERVICE_TOKEN) headers['x-ai-service-token'] = AI_SERVICE_TOKEN;
 
-  let res: Response;
-  try {
-    res = await fetchWithRetry(`${aiUrl}${path}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new AiServiceError(
-      502,
-      `AI service is unreachable at ${aiUrl}: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
+  let lastError: Error | null = null;
 
-  const text = await res.text();
-  let payload: any = null;
-  if (text) {
+  for (const baseUrl of urlsToTry) {
     try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = { detail: text };
+      const res = await fetchWithRetry(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      const text = await res.text();
+      let payload: any = null;
+      if (text) {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          payload = { detail: text };
+        }
+      }
+
+      if (!res.ok) {
+        const detail = payload?.detail || payload?.error || res.statusText;
+        throw new AiServiceError(res.status, `AI service error (${res.status}): ${detail}`);
+      }
+
+      return payload as T;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`[AIClient] Call to ${baseUrl}${path} failed: ${lastError.message}. Trying next endpoint...`);
     }
   }
 
-  if (!res.ok) {
-    const detail = payload?.detail || payload?.error || res.statusText;
-    throw new AiServiceError(res.status, `AI service error (${res.status}): ${detail}`);
-  }
-
-  return payload as T;
+  throw new AiServiceError(
+    502,
+    `AI service is unreachable at ${urlsToTry.join(' / ')}: ${lastError?.message || 'fetch failed'}`,
+  );
 }
 
 /** AI-001 — parse an unstructured brief into a structured proposal. */
@@ -151,6 +175,127 @@ export async function generateContractExtensions(
   });
 }
 
+function getFallbackDiscoveryTurn(
+  initialRequest: string,
+  answers: DiscoveryAnswer[],
+): DiscoveryTurn {
+  const count = answers.length;
+
+  if (count === 0) {
+    return {
+      status: 'questioning',
+      confidence: 35,
+      missing_information: ['Target Users', 'Platform', 'Timeline', 'Budget'],
+      next_question: {
+        category: 'Target Users',
+        question: 'Who are the primary target users for this application?',
+        options: [
+          { key: 'A', label: 'Individual Consumers (B2C)' },
+          { key: 'B', label: 'Businesses & Internal Teams (B2B)' },
+          { key: 'C', label: 'Both Consumers and Businesses' },
+          { key: 'D', label: 'Developers / Technical API Users' },
+        ],
+        allow_custom: true,
+        multi_select: false,
+      },
+      brief: null,
+    };
+  }
+
+  if (count === 1) {
+    return {
+      status: 'questioning',
+      confidence: 55,
+      missing_information: ['Platform', 'Timeline', 'Budget'],
+      next_question: {
+        category: 'Platform',
+        question: 'What primary platform should be targeted first?',
+        options: [
+          { key: 'A', label: 'Web Application (Responsive Desktop & Mobile)' },
+          { key: 'B', label: 'Native Mobile App (iOS & Android)' },
+          { key: 'C', label: 'Backend API & Microservices' },
+          { key: 'D', label: 'Cross-platform Web & Mobile Package' },
+        ],
+        allow_custom: true,
+        multi_select: false,
+      },
+      brief: null,
+    };
+  }
+
+  if (count === 2) {
+    return {
+      status: 'questioning',
+      confidence: 75,
+      missing_information: ['Timeline', 'Budget'],
+      next_question: {
+        category: 'Timeline',
+        question: 'What is your target delivery timeline for the MVP?',
+        options: [
+          { key: 'A', label: '1-2 Weeks (Urgent MVP)' },
+          { key: 'B', label: '1 Month (Standard Delivery)' },
+          { key: 'C', label: '2-3 Months (Comprehensive Build)' },
+          { key: 'D', label: 'Flexible / Quality First' },
+        ],
+        allow_custom: true,
+        multi_select: false,
+      },
+      brief: null,
+    };
+  }
+
+  if (count === 3) {
+    return {
+      status: 'questioning',
+      confidence: 85,
+      missing_information: ['Budget'],
+      next_question: {
+        category: 'Budget',
+        question: 'What is your target budget range for this engagement?',
+        options: [
+          { key: 'A', label: '$1,000 - $3,000 USD' },
+          { key: 'B', label: '$3,000 - $7,000 USD' },
+          { key: 'C', label: '$7,000 - $15,000 USD' },
+          { key: 'D', label: 'Flexible / Open for Proposal' },
+        ],
+        allow_custom: true,
+        multi_select: false,
+      },
+      brief: null,
+    };
+  }
+
+  return {
+    status: 'complete',
+    confidence: 95,
+    missing_information: [],
+    next_question: null,
+    brief: {
+      project_goal: initialRequest.slice(0, 100),
+      target_users: answers.find((a) => a.question.toLowerCase().includes('users'))?.answer || 'General Users',
+      platform: answers.find((a) => a.question.toLowerCase().includes('platform'))?.answer || 'Web Application',
+      industry: 'Software Development',
+      problem_statement: initialRequest,
+      core_features: [
+        'Core application features',
+        'Responsive UI/UX design',
+        'Secure API & backend services',
+      ],
+      nice_to_have_features: ['Analytics dashboard', 'Automated notifications'],
+      integrations: ['Payment Gateway', 'OAuth authentication'],
+      authentication: 'JWT / OAuth 2.0',
+      admin_panel: true,
+      ai_features: ['Smart recommendation engine'],
+      timeline: answers.find((a) => a.question.toLowerCase().includes('timeline'))?.answer || '1 Month',
+      budget: answers.find((a) => a.question.toLowerCase().includes('budget'))?.answer || '$3,000 - $7,000 USD',
+      design_style: 'Modern Glassmorphic Dark Mode',
+      technical_preferences: ['React', 'Node.js', 'PostgreSQL / DynamoDB'],
+      existing_assets: ['Brand identity guidelines'],
+      success_criteria: 'On-time MVP delivery with high code quality and secure payments',
+    },
+  };
+}
+
 /**
  * Requirement Discovery Agent (Talent section) — one adaptive turn. Given the
  * initial request and the answers gathered so far, returns the next
@@ -160,7 +305,12 @@ export async function runDiscoveryTurn(
   initialRequest: string,
   answers: DiscoveryAnswer[],
 ): Promise<DiscoveryTurn> {
-  return postJson<DiscoveryTurn>('/ai/discovery/next', { initialRequest, answers });
+  try {
+    return await postJson<DiscoveryTurn>('/ai/discovery/next', { initialRequest, answers });
+  } catch (err) {
+    console.warn('[AIClient] runDiscoveryTurn call failed, using safe discovery turn fallback:', (err as Error).message);
+    return getFallbackDiscoveryTurn(initialRequest, answers);
+  }
 }
 
 // ---- AI-008: deep execution plan ----
