@@ -1274,6 +1274,20 @@ app.post(
   }),
 );
 
+// Mount Corsair handler for Hub self-registration, OAuth callbacks, and webhooks
+app.use('/api/corsair', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const handler = await getCorsairNodeHandler();
+    if (handler) {
+      return (handler as any)(req, res, next);
+    }
+  } catch (err) {
+    console.error('[Corsair Route Handler Error]:', err);
+  }
+  next();
+});
+
+
 // ==========================================
 // Bindu track — verifiable agent marketplace (DID registry + A2A trace)
 // ==========================================

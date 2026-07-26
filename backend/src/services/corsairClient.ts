@@ -229,21 +229,19 @@ export async function getCorsairForTenant(tenantId: string): Promise<any | null>
   }
 }
 
-/**
- * Attempts to expose the Corsair request handler for Express. Corsair follows
- * the better-auth pattern; depending on SDK version this is `toNodeHandler`.
- * Returns null if unavailable (route simply isn't mounted).
- */
 export async function getCorsairNodeHandler(): Promise<any | null> {
   const c = await getCorsair();
   if (!c) return null;
   const mod = await optionalImport('corsair');
-  if (mod?.toNodeHandler) {
+  const factory = mod?.toExpressHandler || mod?.toNodeHandler;
+  if (factory) {
     try {
-      return mod.toNodeHandler(c, { basePath: '/api/corsair' });
-    } catch {
+      return factory(c, { basePath: '/api/corsair' });
+    } catch (err) {
+      console.warn('[Corsair] Failed to create express handler:', (err as Error).message);
       return null;
     }
   }
   return null;
 }
+
