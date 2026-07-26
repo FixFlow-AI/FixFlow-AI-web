@@ -17,6 +17,8 @@ import type {
   ParseBriefResponse,
   DiscoveryTurn,
   DiscoveryAnswer,
+  ExecutionPlan,
+  PlanDiagnostics,
 } from '../types/ai.js';
 import type { GithubScanResult } from '../types/github.js';
 
@@ -159,6 +161,35 @@ export async function runDiscoveryTurn(
   answers: DiscoveryAnswer[],
 ): Promise<DiscoveryTurn> {
   return postJson<DiscoveryTurn>('/ai/discovery/next', { initialRequest, answers });
+}
+
+// ---- AI-008: deep execution plan ----
+
+export interface GeneratePlanResponse {
+  executionPlan: ExecutionPlan;
+  diagnostics: PlanDiagnostics;
+}
+
+/** AI-008 — build (or regenerate a section of) a deep v2 execution plan. */
+export async function generateExecutionPlan(body: {
+  proposal: Proposal;
+  briefText?: string;
+  scope?: 'all' | 'architecture' | 'timeline';
+  existingPlan?: ExecutionPlan | null;
+  preserveClientEdits?: boolean;
+}): Promise<GeneratePlanResponse> {
+  return postJson<GeneratePlanResponse>('/ai/plan/generate', {
+    proposal: body.proposal,
+    briefText: body.briefText ?? null,
+    scope: body.scope ?? 'all',
+    existingPlan: body.existingPlan ?? null,
+    preserveClientEdits: body.preserveClientEdits ?? true,
+  });
+}
+
+/** AI-008 — recompute deterministic diagnostics for a plan (validate-on-write). */
+export async function validateExecutionPlan(executionPlan: ExecutionPlan): Promise<PlanDiagnostics> {
+  return postJson<PlanDiagnostics>('/ai/plan/validate', { executionPlan });
 }
 
 export interface GithubScanRequestBody {
