@@ -113,6 +113,239 @@ export interface Proposal {
   effort: Effort[];
   market: MarketItem[];
   impact: ImpactItem[];
+  /**
+   * AI-008 (v2): optional deep, editable execution plan. Absent on every v1
+   * proposal — the gateway keeps reading `timeline`/`delivery_plan` unchanged.
+   */
+  executionPlan?: ExecutionPlan;
+}
+
+// ---- AI-008: v2 Execution Plan (deep proposal / editable timeline) ----
+// Mirrors ai-service/app/schemas/execution_plan.py. Every cross-reference is a
+// stable ID. Deterministic fields (diagnostics, capacity, coverage, severity)
+// are computed/validated by the backend + AI service, never authored by the LLM.
+
+export type PlanPriority = 'must' | 'should' | 'could';
+export type PlanTaskStatus = 'planned' | 'in_progress' | 'blocked' | 'done' | 'backlog';
+export type CheckpointType =
+  | 'design_review'
+  | 'demo'
+  | 'client_approval'
+  | 'security_review'
+  | 'release_readiness';
+export type CheckpointStatus = 'planned' | 'ready_for_review' | 'approved' | 'changes_requested';
+export type DiagnosticSeverity = 'error' | 'warning' | 'info';
+
+export interface Assumption {
+  id: string;
+  statement: string;
+  impact?: string | null;
+  category?: string | null;
+}
+
+export interface OpenQuestion {
+  id: string;
+  question: string;
+  blocking: boolean;
+  relatedRequirementIds: string[];
+}
+
+export interface Requirement {
+  id: string;
+  statement: string;
+  source: 'brief' | 'discovery' | 'client' | 'inferred';
+  priority: PlanPriority;
+}
+
+export interface ScopeModule {
+  id: string;
+  name: string;
+  businessObjective: string;
+  actors: string[];
+  inScope: string[];
+  outOfScope: string[];
+  acceptanceCriteria: string[];
+  requirementIds: string[];
+  dependencyModuleIds: string[];
+  assumptionIds: string[];
+  openQuestionIds: string[];
+  dataEntities: string[];
+  integrations: string[];
+  securityControls: string[];
+  componentIds: string[];
+  complexity: 'High' | 'Medium' | 'Low';
+}
+
+export interface ArchitectureComponent {
+  id: string;
+  name: string;
+  responsibility: string;
+  moduleIds: string[];
+  runtime?: string | null;
+  technology?: string | null;
+  dataBoundary: string;
+  interfaces: string[];
+  errorHandling: string;
+  observability?: string | null;
+  security?: string | null;
+  scaling?: string | null;
+  dependencyComponentIds: string[];
+  failureImpact?: string | null;
+  decisions: string[];
+  openDecisions: string[];
+}
+
+export interface ArchitectureEdge {
+  fromComponentId: string;
+  toComponentId: string;
+  label?: string | null;
+  kind?: 'sync' | 'async' | 'data' | 'event' | null;
+}
+
+export interface ArchitectureDocument {
+  summary: string;
+  components: ArchitectureComponent[];
+  edges: ArchitectureEdge[];
+}
+
+export interface Workstream {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface TeamCapacity {
+  roleId: string;
+  roleName: string;
+  hoursPerWeek?: number | null;
+}
+
+export interface Deliverable {
+  id: string;
+  title: string;
+  moduleId?: string | null;
+}
+
+export interface ClientAction {
+  id: string;
+  description: string;
+  weekNumber: number;
+  required: boolean;
+}
+
+export interface PlanTask {
+  id: string;
+  title: string;
+  description: string;
+  moduleId: string;
+  workstreamId: string;
+  ownerRoleId: string;
+  estimateHours: number;
+  startWeek: number;
+  endWeek: number;
+  dependencyTaskIds: string[];
+  acceptanceCriteria: string[];
+  evidenceRequired: string[];
+  status: PlanTaskStatus;
+  priority: PlanPriority;
+}
+
+export interface Checkpoint {
+  id: string;
+  title: string;
+  type: CheckpointType;
+  weekNumber: number;
+  ownerRoleId: string;
+  blocking: boolean;
+  exitCriteria: string[];
+  evidenceRequired: string[];
+  linkedTaskIds: string[];
+  status: CheckpointStatus;
+}
+
+export interface PlanWeek {
+  id: string;
+  weekNumber: number;
+  label: string;
+  objective: string;
+  workstreamIds: string[];
+  taskIds: string[];
+  deliverableIds: string[];
+  checkpointIds: string[];
+  dependencyWeekIds: string[];
+  clientActions: ClientAction[];
+}
+
+export interface PlanRiskLink {
+  id: string;
+  label: string;
+  severity: number;
+  category: string;
+  affectedModuleIds: string[];
+  affectedWeekNumbers: number[];
+  mitigationTaskIds: string[];
+  mitigationCheckpointIds: string[];
+  status: 'open' | 'mitigated' | 'accepted';
+}
+
+export interface DiagnosticIssue {
+  code: string;
+  severity: DiagnosticSeverity;
+  message: string;
+  path?: string | null;
+  suggestion?: string | null;
+}
+
+export interface CapacityCell {
+  roleId: string;
+  weekNumber: number;
+  plannedHours: number;
+  capacityHours?: number | null;
+  utilizationPct?: number | null;
+  state: 'ok' | 'warning' | 'over' | 'unknown';
+}
+
+export interface ScopeCoverage {
+  requirementId: string;
+  covered: boolean;
+  moduleIds: string[];
+  taskIds: string[];
+  checkpointIds: string[];
+}
+
+export interface PlanDiagnostics {
+  valid: boolean;
+  computedAt?: string | null;
+  issues: DiagnosticIssue[];
+  capacity: CapacityCell[];
+  scopeCoverage: ScopeCoverage[];
+  coveredRequirementCount: number;
+  totalRequirementCount: number;
+  unresolvedQuestionCount: number;
+  weekCount: number;
+  taskCount: number;
+  errorCount: number;
+  warningCount: number;
+}
+
+export interface ExecutionPlan {
+  schemaVersion: 2;
+  projectStartDate?: string | null;
+  degraded: boolean;
+  degradedReason?: string | null;
+  planningAssumptions: Assumption[];
+  openQuestions: OpenQuestion[];
+  requirements: Requirement[];
+  scopeModules: ScopeModule[];
+  architecture?: ArchitectureDocument | null;
+  workstreams: Workstream[];
+  teamCapacity: TeamCapacity[];
+  deliverables: Deliverable[];
+  tasks: PlanTask[];
+  weeks: PlanWeek[];
+  checkpoints: Checkpoint[];
+  risks: PlanRiskLink[];
+  diagnostics?: PlanDiagnostics | null;
 }
 
 // ---- Confidence Grid (AI-002) ----
