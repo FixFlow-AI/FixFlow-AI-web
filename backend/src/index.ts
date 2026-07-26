@@ -96,6 +96,7 @@ import { getUserRepository } from './services/userRepository.js';
 import { notifyMilestoneEvent, notifyProjectInvitation, notifyProposalEvaluated } from './services/emailService.js';
 import { getCorsair, getCorsairError, getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
 import { fireMilestoneNotifications, listAutomations, createConnectLink } from './services/fixbotAgent.js';
+import { getAgentDirectory, getEvaluationMessages, recordEvaluationExchange } from './services/agentRegistry.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
@@ -449,7 +450,15 @@ app.post(
       );
     }
 
-    res.json(result);
+    // Bindu track: record the verifiable Agent-to-Agent message trace for this
+    // evaluation (Auditor → Optimizer, Feasibility → Optimizer, decision). The
+    // correlating evaluationId is returned so the UI can fetch the trace.
+    const evaluationId = await recordEvaluationExchange(
+      result,
+      typeof proposalId === 'string' && proposalId ? proposalId : undefined,
+    );
+
+    res.json({ ...result, evaluationId });
   })
 );
 
@@ -970,7 +979,7 @@ app.get(
       configured: isCorsairConfigured(),
       ready,
       reason: ready ? null : getCorsairError(),
-      automations: listAutomations(tenantId),
+      automations: await listAutomations(tenantId),
     });
   }),
 );
@@ -989,6 +998,35 @@ app.post(
     const tenantId = typeof proposalId === 'string' && proposalId.trim() ? proposalId : req.auth!.sub;
     const result = await createConnectLink(tenantId, plugin.trim());
     res.json(result);
+  }),
+);
+
+// ==========================================
+// Bindu track — verifiable agent marketplace (DID registry + A2A trace)
+// ==========================================
+
+// The DID registry: identity-verified Confidence-Grid agents + advertised
+// (Bindu) skills. Powers the "marketplace of verifiable agents" story.
+app.get(
+  '/api/agents',
+  requireAuth,
+  asyncRoute(async (_req, res) => {
+    res.json(await getAgentDirectory());
+  }),
+);
+
+// The ordered, signature-verified A2A message trace for one proposal
+// evaluation (correlate via the evaluationId returned by /api/proposals/evaluate).
+app.get(
+  '/api/agents/messages',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const evaluationId = typeof req.query.evaluationId === 'string' ? req.query.evaluationId : '';
+    if (!evaluationId) {
+      res.status(400).json({ error: 'evaluationId query parameter is required.' });
+      return;
+    }
+    res.json({ evaluationId, messages: await getEvaluationMessages(evaluationId) });
   }),
 );
 
