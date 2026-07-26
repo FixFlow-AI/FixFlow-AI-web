@@ -287,14 +287,29 @@ section {
   z-index: 100;
   height: var(--header-height);
   border-bottom: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.9);
+  /* Frosted glass: content scrolls cleanly *behind* the bar instead of
+     ghosting through a flat semi-transparent white (was rgba(...,0.9), which
+     let dark section headings bleed through on scroll). */
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
 .site-header.is-scrolled {
   border-bottom-color: var(--line);
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+/* Graceful fallback: browsers without backdrop-filter get a near-opaque bar. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header {
+    background: rgba(255, 255, 255, 0.96);
+  }
+  .site-header.is-scrolled {
+    background: #fff;
+  }
 }
 
 .nav-shell {
@@ -4855,4 +4870,114 @@ body::before {
   .hero-stage { inset: 0; }
   .hero-stats { margin-top: 24px; }
   .hero-stat strong { font-size: 22px; }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Final CTA / Get Started — responsive two-column layout.
+   Previously the copy + form used an inline `1fr 1fr` grid with an
+   80px gap and NO breakpoint, so both columns were crushed on
+   tablet/mobile. This collapses to a single column below 999px.
+   ───────────────────────────────────────────────────────────── */
+.final-cta-section {
+  padding: 120px 0 80px;
+  border-top: 1px solid var(--line);
+}
+.final-cta-layout {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 72px;
+  align-items: start;
+}
+@media (max-width: 999px) {
+  .final-cta-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .final-cta-section {
+    padding: 88px 0 64px;
+  }
+}
+@media (max-width: 767px) {
+  .final-cta-section {
+    padding: 64px 0 48px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Pricing — give the non-featured plan CTAs ("Start free",
+   "Talk to us") a clearly-clickable outlined button, so all three
+   cards read as actionable. Previously the quiet variant rendered
+   almost borderless on the white card and looked like plain text.
+   Scoped to pricing so the hero's intentionally-subtle quiet button
+   is untouched.
+   ───────────────────────────────────────────────────────────── */
+.pricing-card .pricing-cta.button--quiet {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+.pricing-card .pricing-cta.button--quiet:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: #fff;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive grid utilities for landing sections.
+   Several sections defined their grids with INLINE gridTemplateColumns,
+   which CSS media queries cannot override — so the page was fixed-width
+   and broke on tablet/phone (e.g. a 6-column pipeline on a 375px screen).
+   These classes provide the columns (responsive); sections keep their
+   own inline gap / alignment (non-conflicting properties).
+   ───────────────────────────────────────────────────────────── */
+.ff-split-1-2 { display: grid; grid-template-columns: 1fr 2fr; }
+.ff-split-1-15 { display: grid; grid-template-columns: 1fr 1.5fr; }
+.ff-split-1-3 { display: grid; grid-template-columns: 1fr 3fr; }
+.ff-2col { display: grid; grid-template-columns: 1fr 1fr; }
+.ff-3col { display: grid; grid-template-columns: repeat(3, 1fr); }
+.ff-4col { display: grid; grid-template-columns: repeat(4, 1fr); }
+.ff-6flow { display: grid; grid-template-columns: repeat(6, 1fr); }
+
+@media (max-width: 999px) {
+  .ff-split-1-2,
+  .ff-split-1-15,
+  .ff-split-1-3 { grid-template-columns: 1fr; }
+  .ff-6flow { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 767px) {
+  .ff-2col { grid-template-columns: 1fr; }
+  .ff-3col { grid-template-columns: 1fr; }
+  .ff-4col { grid-template-columns: repeat(2, 1fr); }
+  .ff-6flow { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 460px) {
+  .ff-4col { grid-template-columns: 1fr; }
+  .ff-6flow { grid-template-columns: 1fr; }
+}
+
+/* Wide data tables (Workflow matrix, Automation ledger) scroll horizontally
+   on small screens instead of crushing their columns. */
+.ff-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ff-scroll-x > * {
+  min-width: 640px;
+}
+
+/* Automation "rule (example)" layout: 4 columns on desktop, stacked below. */
+.ff-rule-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+@media (max-width: 899px) {
+  .ff-rule-grid {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 20px !important;
+  }
+}
+@media (max-width: 560px) {
+  .ff-rule-grid {
+    grid-template-columns: 1fr;
+  }
 }

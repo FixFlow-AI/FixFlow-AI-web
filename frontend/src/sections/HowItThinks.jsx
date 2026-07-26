@@ -80,13 +80,7 @@ export function HowItThinks() {
         </div>
 
         {/* Pipeline steps */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(6, 1fr)",
-            gap: 0,
-          }}
-        >
+        <div className="ff-6flow" style={{ gap: 0, rowGap: 28 }}>
           {steps.map((step, idx) => {
             const Icon = step.icon;
             return (

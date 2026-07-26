@@ -9,14 +9,7 @@ export function SystemIntelligence() {
     <section id="intelligence" style={{ padding: "120px 0 80px" }}>
       <div className="section-shell">
         {/* Header + System visualization */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 2fr",
-            gap: 64,
-            alignItems: "start",
-          }}
-        >
+        <div className="ff-split-1-2" style={{ gap: 64, alignItems: "start" }}>
           {/* Left: Copy + pipeline stages */}
           <div>
             <span className="panel-label" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
@@ -78,7 +71,7 @@ export function SystemIntelligence() {
           {/* Right: System visualization cards */}
           <div>
             {/* Row 1: Raw brief + Parsed intelligence */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+            <div className="ff-2col" style={{ gap: 20, marginBottom: 20 }}>
               {/* Raw brief card */}
               <div>
                 <span className="panel-label" style={{ marginBottom: 8, display: "block" }}>Raw Brief</span>

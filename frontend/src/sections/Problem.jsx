@@ -35,14 +35,7 @@ export function Problem() {
     >
       <div className="section-shell">
         {/* Layout: title left, audience columns right */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 2fr",
-            gap: 64,
-            alignItems: "start",
-          }}
-        >
+        <div className="ff-split-1-2" style={{ gap: 64, alignItems: "start" }}>
           {/* Left: Headline */}
           <div>
             <RevealText
@@ -55,13 +48,7 @@ export function Problem() {
           </div>
 
           {/* Right: Audience columns */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 32,
-            }}
-          >
+          <div className="ff-4col" style={{ gap: 32 }}>
             {audiences.map((aud, idx) => {
               const detail = audienceDetails[aud.id];
               const Icon = aud.icon;

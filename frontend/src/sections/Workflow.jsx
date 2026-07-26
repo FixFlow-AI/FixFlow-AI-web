@@ -39,7 +39,7 @@ export function Workflow() {
     <section className="section-band" id="workflow" style={{ padding: "120px 0 80px" }}>
       <div className="section-shell">
         {/* Header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 64, marginBottom: 48, alignItems: "start" }}>
+        <div className="ff-split-1-3" style={{ gap: 64, marginBottom: 48, alignItems: "start" }}>
           <div>
             <span className="panel-label" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, color: "#2563eb" }}>
               Workflow Visualization
@@ -53,7 +53,8 @@ export function Workflow() {
             </p>
           </div>
 
-          {/* Swimlane visualization */}
+          {/* Swimlane visualization (scrolls horizontally on small screens) */}
+          <div className="ff-scroll-x">
           <div
             style={{
               border: "1px solid var(--line)",
@@ -192,6 +193,7 @@ export function Workflow() {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </div>
 

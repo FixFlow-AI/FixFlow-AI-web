@@ -2,12 +2,10 @@ import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, Lock, Play } from "lucide-react";
 import { RevealText } from "../components/RevealText";
-import { audiences, roleMessages } from "../data/landing";
 import { useLandingStore } from "../store/useLandingStore";
 
 export function FinalCta() {
   const audience = useLandingStore((state) => state.audience);
-  const setAudience = useLandingStore((state) => state.setAudience);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [source, setSource] = useState("");
@@ -21,16 +19,9 @@ export function FinalCta() {
   };
 
   return (
-    <section id="early-access" style={{ padding: "120px 0 80px", borderTop: "1px solid var(--line)" }}>
+    <section id="early-access" className="final-cta-section">
       <div className="section-shell">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 80,
-            alignItems: "start",
-          }}
-        >
+        <div className="final-cta-layout">
           {/* Left: Copy */}
           <div>
             <span className="panel-label" style={{ display: "block", marginBottom: 12, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8" }}>

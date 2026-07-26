@@ -54,7 +54,7 @@ export function Trust() {
   return (
     <section className="section-band" id="trust" style={{ padding: "120px 0 80px" }}>
       <div className="section-shell">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 64, alignItems: "start" }}>
+        <div className="ff-split-1-15" style={{ gap: 64, alignItems: "start" }}>
           {/* Left: Copy */}
           <div>
             <span className="panel-label" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, color: "#94a3b8", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>
@@ -69,13 +69,7 @@ export function Trust() {
             </p>
 
             {/* Four pillars */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: 20,
-              }}
-            >
+            <div className="ff-4col" style={{ gap: 20 }}>
               {trustPillars.map((pillar, idx) => {
                 const Icon = pillar.icon;
                 return (

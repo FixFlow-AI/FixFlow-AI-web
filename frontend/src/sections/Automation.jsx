@@ -92,7 +92,7 @@ export function Automation() {
     >
       <div className="section-shell">
         {/* Header */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 64, marginBottom: 48, alignItems: "start" }}>
+        <div className="ff-split-1-3" style={{ gap: 64, marginBottom: 48, alignItems: "start" }}>
           <div>
             <span className="panel-label" style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, color: "#2563eb" }}>
               Automation Showcase
@@ -120,13 +120,7 @@ export function Automation() {
           </div>
 
           {/* Showcase panels */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 16,
-            }}
-          >
+          <div className="ff-3col" style={{ gap: 16 }}>
             {showcasePanels.map((panel) => {
               const Icon = panel.icon;
               return (
@@ -179,14 +173,7 @@ export function Automation() {
           <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>
             Automation rule (example)
           </h3>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 1fr 1fr",
-              gap: 24,
-              alignItems: "start",
-            }}
-          >
+          <div className="ff-rule-grid" style={{ gap: 24, alignItems: "start" }}>
             {/* Rule */}
             <div style={{ fontFamily: "'SF Mono', 'Fira Code', monospace", fontSize: 13, lineHeight: 1.8, color: "#475569" }}>
               <div><span style={{ color: "#94a3b8", fontWeight: 700 }}>IF</span>    all( code_pushed, checks_passed, client_review_requested )</div>
