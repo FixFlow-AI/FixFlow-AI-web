@@ -58,6 +58,78 @@ async function optionalImport(pkg: string): Promise<any | null> {
   }
 }
 
+/**
+ * Corsair's SQLite schema. The `corsair` package uses Kysely over
+ * better-sqlite3 but ships NO production migrator — `setupCorsair()` only
+ * *warns* when tables are missing, so an empty DB file yields runtime errors
+ * like "no such table: corsair_integrations". We create the schema ourselves
+ * (idempotent, IF NOT EXISTS) before handing the DB to createCorsair.
+ *
+ * These four DDLs mirror the library's own test harness
+ * (corsair/dist/tests.js → createTestDatabase); `corsair_permissions` is the
+ * fifth table Corsair queries for the approval gate (cautious/strict modes) —
+ * its columns match the library's permission insert (id, token, plugin,
+ * endpoint, args, tenant_id, status, expires_at, created_at, updated_at).
+ */
+const CORSAIR_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS corsair_integrations (
+  id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  config TEXT NOT NULL,
+  dek TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS corsair_accounts (
+  id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  tenant_id TEXT NOT NULL,
+  integration_id TEXT NOT NULL,
+  config TEXT NOT NULL,
+  dek TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS corsair_entities (
+  id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  account_id TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  version TEXT NOT NULL,
+  data TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS corsair_events (
+  id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  account_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  status TEXT
+);
+CREATE TABLE IF NOT EXISTS corsair_permissions (
+  id TEXT PRIMARY KEY,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  token TEXT NOT NULL,
+  plugin TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  args TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  expires_at INTEGER NULL
+);
+`;
+
+/**
+ * Idempotently create Corsair's tables on a better-sqlite3 Database instance.
+ * Safe to run on every boot; existing tables are left untouched.
+ */
+function ensureCorsairSchema(db: any): void {
+  db.exec(CORSAIR_SCHEMA_SQL);
+}
+
 let cached: any | null = null;
 let initTried = false;
 
@@ -105,6 +177,9 @@ export async function getCorsair(): Promise<any | null> {
   try {
     const Database = sqliteMod.default;
     const db = new Database(DB_FILE);
+    // Create Corsair's schema before use — the package has no runtime migrator,
+    // so without this the first query fails with "no such table: corsair_*".
+    ensureCorsairSchema(db);
     cached = corsairMod.createCorsair({
       plugins,
       database: db,
