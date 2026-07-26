@@ -10,6 +10,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from .execution_plan import ExecutionPlan
+
 Complexity = Literal["High", "Medium", "Low"]
 Confidence = Literal["High", "Medium", "Low"]
 
@@ -128,6 +130,9 @@ class Proposal(BaseModel):
     effort: List[Effort] = Field(min_length=1)
     market: List[MarketItem]
     impact: List[ImpactItem]
+    # AI-008 (v2): optional deep execution plan. Absent on every existing v1
+    # proposal, so historical JSON continues to parse unchanged.
+    executionPlan: Optional[ExecutionPlan] = None
 
 
 class ParseBriefResponse(BaseModel):
