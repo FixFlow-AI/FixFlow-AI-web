@@ -493,6 +493,39 @@ $tables = @{
   "BillingMode": "PAY_PER_REQUEST"
 }
 '@
+
+  # ────────────────────────────────────────────────────────────────────────
+  # AI-008 — Deep proposal plan (v2 execution plan) + revision audit chain
+  # ────────────────────────────────────────────────────────────────────────
+
+  # 24) Proposal plans — one editable execution-plan document per proposal
+  #     (current + generated baseline, status, monotonically increasing
+  #     currentRevision for optimistic concurrency).
+  "proposal_plans" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "proposalId", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "proposalId", "KeyType": "HASH" } ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 25) Proposal plan revisions — append-only, SHA-256 chained edit history.
+  #     Composite key returns a proposal's revisions in order with one Query.
+  "proposal_plan_revisions" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "proposalId", "AttributeType": "S" },
+    { "AttributeName": "revision", "AttributeType": "N" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "proposalId", "KeyType": "HASH" },
+    { "AttributeName": "revision", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
 }
 
 # Deterministic order so dependent reads are predictable in logs.
@@ -505,7 +538,8 @@ $order = @(
   "dev_projects", "dev_tasks", "dev_project_members",
   "interview_question_sets", "job_applications", "interview_sessions", "interview_events",
   "automations",
-  "agent_identities", "a2a_messages", "agent_skills"
+  "agent_identities", "a2a_messages", "agent_skills",
+  "proposal_plans", "proposal_plan_revisions"
 )
 
 Write-Host "Region : $Region"
