@@ -406,6 +406,93 @@ $tables = @{
   "BillingMode": "PAY_PER_REQUEST"
 }
 '@
+
+  # ────────────────────────────────────────────────────────────────────────
+  # BUILDX PRIZE TRACKS — Corsair (agent integrations) + Bindu (agent identity)
+  # See docs/specifications/buildx-prize-tracks/plans/.
+  # ────────────────────────────────────────────────────────────────────────
+
+  # 20) Automations — CORSAIR track. Durable log of FixBot's cross-app agent
+  #     actions (Slack/Gmail/GitHub) + their permission status (sent /
+  #     pending_approval / simulated / failed) and any Corsair approval link.
+  #     Query by id (PK); list a tenant's (proposal's) automations newest-first
+  #     via the GSI so the dashboard "Automations" card survives restarts.
+  "automations" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "automationId", "AttributeType": "S" },
+    { "AttributeName": "tenantId", "AttributeType": "S" },
+    { "AttributeName": "createdAt", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "automationId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "TenantAutomationsIndex",
+      "KeySchema": [
+        { "AttributeName": "tenantId", "KeyType": "HASH" },
+        { "AttributeName": "createdAt", "KeyType": "RANGE" }
+      ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 21) Agent identities — BINDU track. DID registry for the Confidence-Grid
+  #     personas turned into identity-verified A2A agents (auditor, feasibility,
+  #     optimizer, matching). Query by agentId (PK); resolve by DID via GSI.
+  "agent_identities" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "agentId", "AttributeType": "S" },
+    { "AttributeName": "did", "AttributeType": "S" }
+  ],
+  "KeySchema": [ { "AttributeName": "agentId", "KeyType": "HASH" } ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "DidIndex",
+      "KeySchema": [ { "AttributeName": "did", "KeyType": "HASH" } ],
+      "Projection": { "ProjectionType": "ALL" }
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 22) A2A messages — BINDU track. Append-only, verifiable Agent-to-Agent
+  #     message trace per proposal evaluation. Composite key returns the whole
+  #     exchange in order with one Query (evaluationId + monotonic messageSeq).
+  "a2a_messages" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "evaluationId", "AttributeType": "S" },
+    { "AttributeName": "messageSeq", "AttributeType": "N" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "evaluationId", "KeyType": "HASH" },
+    { "AttributeName": "messageSeq", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
+
+  # 23) Agent skills — BINDU track. Skills each agent advertises via Bindu's
+  #     skills system (discoverable/invokable capabilities). Composite key
+  #     returns all of an agent's skills in one Query.
+  "agent_skills" = @'
+{
+  "AttributeDefinitions": [
+    { "AttributeName": "agentId", "AttributeType": "S" },
+    { "AttributeName": "skillName", "AttributeType": "S" }
+  ],
+  "KeySchema": [
+    { "AttributeName": "agentId", "KeyType": "HASH" },
+    { "AttributeName": "skillName", "KeyType": "RANGE" }
+  ],
+  "BillingMode": "PAY_PER_REQUEST"
+}
+'@
 }
 
 # Deterministic order so dependent reads are predictable in logs.
@@ -416,7 +503,9 @@ $order = @(
   "github_scan_jobs", "freelancer_skills", "freelancer_projects",
   "profile_confidence", "profile_snapshots", "growth_plans",
   "dev_projects", "dev_tasks", "dev_project_members",
-  "interview_question_sets", "job_applications", "interview_sessions", "interview_events"
+  "interview_question_sets", "job_applications", "interview_sessions", "interview_events",
+  "automations",
+  "agent_identities", "a2a_messages", "agent_skills"
 )
 
 Write-Host "Region : $Region"
