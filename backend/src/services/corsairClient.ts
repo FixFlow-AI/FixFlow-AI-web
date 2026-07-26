@@ -160,13 +160,29 @@ export async function getCorsair(): Promise<any | null> {
   }
 
   // Load whichever plugin packages are installed; each is optional.
+  //
+  // IMPORTANT: every plugin MUST be given an explicit `authType`. Corsair's
+  // connect/status resolver reads the auth type ONLY from `options.authType`
+  // and does NOT fall back to the plugin's built-in default — a plugin created
+  // without one is silently skipped, surfacing as
+  // "Plugin '<id>' is not configured on this Corsair instance".
+  //
+  // Supported auth types per plugin (from @corsair-dev/*):
+  //   github → api_key | oauth_2 | managed   (managed = Hub-brokered, zero BYO setup)
+  //   slack  → api_key | oauth_2             (no managed; oauth_2 needs a BYO Slack app)
+  //   gmail  → oauth_2                        (needs a BYO Google OAuth app)
+  // Overridable via env for flexibility (e.g. SLACK → api_key to paste a bot token).
+  const githubAuth = process.env.CORSAIR_GITHUB_AUTH || 'managed';
+  const slackAuth = process.env.CORSAIR_SLACK_AUTH || 'oauth_2';
+  const gmailAuth = process.env.CORSAIR_GMAIL_AUTH || 'oauth_2';
+
   const plugins: any[] = [];
   const slackMod = await optionalImport('@corsair-dev/slack');
-  if (slackMod?.slack) plugins.push(slackMod.slack());
+  if (slackMod?.slack) plugins.push(slackMod.slack({ authType: slackAuth }));
   const githubMod = await optionalImport('@corsair-dev/github');
-  if (githubMod?.github) plugins.push(githubMod.github({ authType: 'managed' }));
+  if (githubMod?.github) plugins.push(githubMod.github({ authType: githubAuth }));
   const gmailMod = await optionalImport('@corsair-dev/gmail');
-  if (gmailMod?.gmail) plugins.push(gmailMod.gmail());
+  if (gmailMod?.gmail) plugins.push(gmailMod.gmail({ authType: gmailAuth }));
 
   if (plugins.length === 0) {
     corsairLastError = 'No @corsair-dev/* plugin packages (@corsair-dev/slack, @corsair-dev/github, @corsair-dev/gmail) available.';

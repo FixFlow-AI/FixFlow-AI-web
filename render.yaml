@@ -128,6 +128,17 @@ services:
         sync: false
       - key: CORSAIR_DEV_SIGNING_SECRET
         sync: false
+      # Per-plugin auth mode. Every plugin MUST have an explicit authType or
+      # Corsair reports "Plugin '<id>' is not configured". Defaults set in code.
+      #   github: managed (Hub-brokered OAuth, zero BYO setup) | oauth_2 | api_key
+      #   slack : oauth_2 (needs a BYO Slack OAuth app) | api_key (bot token)
+      #   gmail : oauth_2 (needs a BYO Google OAuth app)
+      - key: CORSAIR_GITHUB_AUTH
+        value: "managed"
+      - key: CORSAIR_SLACK_AUTH
+        value: "oauth_2"
+      - key: CORSAIR_GMAIL_AUTH
+        value: "oauth_2"
 
   # ---------------------------------------------------------------
   # 3) Frontend (Vite React) — static site
