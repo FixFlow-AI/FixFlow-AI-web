@@ -97,6 +97,21 @@ import { notifyMilestoneEvent, notifyProjectInvitation, notifyProposalEvaluated 
 import { getCorsair, getCorsairError, getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
 import { fireMilestoneNotifications, listAutomations, createConnectLink } from './services/fixbotAgent.js';
 import { getAgentDirectory, getEvaluationMessages, recordEvaluationExchange } from './services/agentRegistry.js';
+import {
+  generatePlan,
+  getPlan,
+  listPlanRevisions,
+  patchPlan,
+  restoreRevision,
+  approvePlan,
+  reopenPlan,
+  PlanNotFoundError,
+  PlanValidationError,
+  PlanPatchError,
+  PlanConflictError,
+  PlanStateError,
+} from './services/proposalPlanService.js';
+import { PlanRevisionConflictError } from './services/proposalPlanRepository.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
@@ -460,6 +475,264 @@ app.post(
 
     res.json({ ...result, evaluationId });
   })
+);
+
+// ==========================================
+// AI-008 — Deep proposal plan (v2 execution plan) API
+// All endpoints: authenticated + proposal-owner only. Planning state is fully
+// isolated from escrow/payments — none of these call any escrow/order/release.
+// ==========================================
+
+// Load a proposal and enforce owner-only access. Returns null (and responds)
+// when missing/forbidden so the caller can early-return.
+async function loadOwnedProposal(req: Request, res: Response) {
+  const sp = await getProposalRepository().get(req.params.id);
+  if (!sp) {
+    res.status(404).json({ error: 'Proposal not found.' });
+    return null;
+  }
+  if (sp.userId !== req.auth?.sub) {
+    res.status(403).json({ error: 'You do not have access to this proposal.' });
+    return null;
+  }
+  return sp;
+}
+
+// Map plan-service errors to precise HTTP responses. Returns true if handled.
+function handlePlanError(err: unknown, res: Response): boolean {
+  if (err instanceof PlanNotFoundError) {
+    res.status(404).json({ error: err.message });
+    return true;
+  }
+  if (err instanceof PlanValidationError) {
+    res.status(422).json({ error: err.message, diagnostics: err.diagnostics });
+    return true;
+  }
+  if (err instanceof PlanPatchError) {
+    res.status(422).json({ error: err.message, path: err.path });
+    return true;
+  }
+  if (err instanceof PlanConflictError) {
+    res.status(409).json({
+      error: err.message,
+      baseRevision: err.baseRevision,
+      currentRevision: err.currentRevision,
+      conflictingScopes: err.conflictingScopes,
+    });
+    return true;
+  }
+  if (err instanceof PlanRevisionConflictError) {
+    res.status(409).json({ error: err.message, expected: err.expected, currentRevision: err.actual });
+    return true;
+  }
+  if (err instanceof PlanStateError) {
+    res.status(409).json({ error: err.message });
+    return true;
+  }
+  if (err instanceof AiServiceError) {
+    res.status(err.status >= 400 && err.status < 600 ? err.status : 502).json({ error: err.message });
+    return true;
+  }
+  return false;
+}
+
+// Create or regenerate (a section of) the plan.
+app.post(
+  '/api/proposals/:id/plan/generate',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    if (!requireAiService(res)) return;
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const { scope, preserveClientEdits, confirmOverwrite } = req.body ?? {};
+    if (scope !== undefined && !['all', 'architecture', 'timeline'].includes(scope)) {
+      res.status(400).json({ error: "scope must be 'all', 'architecture', or 'timeline'." });
+      return;
+    }
+    try {
+      const { document, diagnostics } = await generatePlan({
+        proposalId: sp.proposalId,
+        proposal: sp.proposal,
+        briefText: sp.briefText,
+        scope,
+        preserveClientEdits: preserveClientEdits !== false,
+        confirmOverwrite: confirmOverwrite === true,
+        actorUserId: req.auth!.sub,
+      });
+      res.json({ plan: document.currentPlan, currentRevision: document.currentRevision, status: document.status, diagnostics });
+    } catch (err) {
+      if (!handlePlanError(err, res)) throw err;
+    }
+  }),
+);
+
+// Read the current plan + metadata.
+app.get(
+  '/api/proposals/:id/plan',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const doc = await getPlan(sp.proposalId);
+    if (!doc) {
+      res.status(404).json({ error: 'No plan generated for this proposal yet.', code: 'PLAN_NOT_GENERATED' });
+      return;
+    }
+    res.setHeader('ETag', `W/"plan-${doc.currentRevision}"`);
+    res.json({
+      plan: doc.currentPlan,
+      diagnostics: doc.currentPlan.diagnostics ?? null,
+      currentRevision: doc.currentRevision,
+      approvedRevision: doc.approvedRevision ?? null,
+      status: doc.status,
+      degraded: Boolean(doc.currentPlan.degraded),
+      updatedAt: doc.updatedAt,
+    });
+  }),
+);
+
+// Apply field-level edits (idempotent, conflict-safe, validated).
+app.patch(
+  '/api/proposals/:id/plan',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    if (!requireAiService(res)) return;
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const { baseRevision, operationId, operations, summary } = req.body ?? {};
+    if (typeof baseRevision !== 'number' || !Number.isInteger(baseRevision) || baseRevision < 0) {
+      res.status(400).json({ error: 'baseRevision (non-negative integer) is required.' });
+      return;
+    }
+    if (typeof operationId !== 'string' || !operationId.trim()) {
+      res.status(400).json({ error: 'operationId (UUID string) is required.' });
+      return;
+    }
+    if (!Array.isArray(operations) || operations.length === 0) {
+      res.status(400).json({ error: 'operations must be a non-empty JSON Patch array.' });
+      return;
+    }
+    try {
+      const result = await patchPlan({
+        proposalId: sp.proposalId,
+        baseRevision,
+        operationId,
+        operations,
+        actorUserId: req.auth!.sub,
+        summary: typeof summary === 'string' ? summary : undefined,
+      });
+      res.json({
+        plan: result.document.currentPlan,
+        currentRevision: result.document.currentRevision,
+        status: result.document.status,
+        diagnostics: result.diagnostics,
+        merged: result.merged,
+        replayed: result.replayed,
+      });
+    } catch (err) {
+      if (!handlePlanError(err, res)) throw err;
+    }
+  }),
+);
+
+// List revision metadata (lightweight — snapshots omitted).
+app.get(
+  '/api/proposals/:id/plan/revisions',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const revs = await listPlanRevisions(sp.proposalId);
+    res.json({
+      revisions: revs.map((r) => ({
+        revision: r.revision,
+        operationId: r.operationId,
+        actorRole: r.actorRole,
+        occurredAt: r.occurredAt,
+        summary: r.summary,
+        entryHash: r.entryHash,
+        previousHash: r.previousHash,
+        errorCount: r.diagnosticsAfter?.errorCount ?? 0,
+        warningCount: r.diagnosticsAfter?.warningCount ?? 0,
+      })),
+    });
+  }),
+);
+
+// Restore an earlier revision (or baseline 0) as a new revision.
+app.post(
+  '/api/proposals/:id/plan/revisions/:revision/restore',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    if (!requireAiService(res)) return;
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const revision = Number(req.params.revision);
+    const { baseRevision, operationId } = req.body ?? {};
+    if (!Number.isInteger(revision) || revision < 0) {
+      res.status(400).json({ error: 'revision must be a non-negative integer.' });
+      return;
+    }
+    if (typeof baseRevision !== 'number' || typeof operationId !== 'string' || !operationId.trim()) {
+      res.status(400).json({ error: 'baseRevision (number) and operationId (string) are required.' });
+      return;
+    }
+    try {
+      const result = await restoreRevision({
+        proposalId: sp.proposalId,
+        revision,
+        baseRevision,
+        operationId,
+        actorUserId: req.auth!.sub,
+      });
+      res.json({
+        plan: result.document.currentPlan,
+        currentRevision: result.document.currentRevision,
+        status: result.document.status,
+        diagnostics: result.diagnostics,
+        replayed: result.replayed,
+      });
+    } catch (err) {
+      if (!handlePlanError(err, res)) throw err;
+    }
+  }),
+);
+
+// Approve (freeze) the current revision.
+app.post(
+  '/api/proposals/:id/plan/approve',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    const { expectedRevision } = req.body ?? {};
+    if (typeof expectedRevision !== 'number' || !Number.isInteger(expectedRevision)) {
+      res.status(400).json({ error: 'expectedRevision (integer) is required.' });
+      return;
+    }
+    try {
+      const doc = await approvePlan({ proposalId: sp.proposalId, expectedRevision, actorUserId: req.auth!.sub });
+      res.json({ status: doc.status, approvedRevision: doc.approvedRevision, currentRevision: doc.currentRevision });
+    } catch (err) {
+      if (!handlePlanError(err, res)) throw err;
+    }
+  }),
+);
+
+// Reopen an approved plan for editing.
+app.post(
+  '/api/proposals/:id/plan/reopen',
+  requireAuth,
+  asyncRoute(async (req, res) => {
+    const sp = await loadOwnedProposal(req, res);
+    if (!sp) return;
+    try {
+      const doc = await reopenPlan({ proposalId: sp.proposalId, actorUserId: req.auth!.sub });
+      res.json({ status: doc.status, currentRevision: doc.currentRevision });
+    } catch (err) {
+      if (!handlePlanError(err, res)) throw err;
+    }
+  }),
 );
 
 // ==========================================
