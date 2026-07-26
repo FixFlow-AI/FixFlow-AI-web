@@ -40,6 +40,9 @@ from .schemas.growth import GrowthPlan, GrowthPlanRequest
 from .features.growth import generate_growth_plan
 from .schemas.discovery import DiscoveryRequest, DiscoveryTurn
 from .features.discovery import run_discovery_turn
+from .schemas.execution_plan import ExecutionPlan, PlanDiagnostics
+from .features.plan_generator import generate_execution_plan
+from .features.timeline_validation import validate_execution_plan
 
 logging.basicConfig(level=logging.INFO)
 
@@ -124,6 +127,24 @@ class InterviewRequest(BaseModel):
 class ExtensionsRequest(BaseModel):
     completedDeliverables: Union[str, list] = ""
     chatSummary: str = ""
+
+
+# AI-008 — deep execution plan
+class PlanGenerateRequest(BaseModel):
+    proposal: Proposal
+    briefText: Optional[str] = None
+    scope: Literal["all", "architecture", "timeline"] = "all"
+    existingPlan: Optional[ExecutionPlan] = None
+    preserveClientEdits: bool = True
+
+
+class PlanValidateRequest(BaseModel):
+    executionPlan: ExecutionPlan
+
+
+class PlanGenerateResponse(BaseModel):
+    executionPlan: ExecutionPlan
+    diagnostics: PlanDiagnostics
 
 
 # --------------------------------------------------------------------------
@@ -300,6 +321,36 @@ async def growth_plan(body: GrowthPlanRequest) -> GrowthPlan:
         body.verified_skills,
         body.experience,
     )
+
+
+@app.post(
+    "/ai/plan/generate",
+    response_model=PlanGenerateResponse,
+    dependencies=[Depends(verify_token)],
+)
+async def plan_generate(body: PlanGenerateRequest) -> PlanGenerateResponse:
+    """AI-008 — build (or regenerate a section of) a deep v2 execution plan from
+    a proposal. Deterministic and always returns a validator-clean plan; the
+    numeric diagnostics are recomputed here, never trusted from any LLM."""
+    plan = generate_execution_plan(
+        body.proposal,
+        scope=body.scope,
+        existing_plan=body.existingPlan,
+        preserve_client_edits=body.preserveClientEdits,
+    )
+    diagnostics = plan.diagnostics or validate_execution_plan(plan)
+    return PlanGenerateResponse(executionPlan=plan, diagnostics=diagnostics)
+
+
+@app.post(
+    "/ai/plan/validate",
+    response_model=PlanDiagnostics,
+    dependencies=[Depends(verify_token)],
+)
+async def plan_validate(body: PlanValidateRequest) -> PlanDiagnostics:
+    """AI-008 — recompute deterministic diagnostics for a plan (called by the
+    backend after every accepted client edit). Pure; no LLM, no side effects."""
+    return validate_execution_plan(body.executionPlan)
 
 
 @app.post(
