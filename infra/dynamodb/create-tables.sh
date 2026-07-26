@@ -301,6 +301,24 @@ create agent_skills '{
     {"AttributeName":"skillName","KeyType":"RANGE"}],
   "BillingMode":"PAY_PER_REQUEST"}'
 
+# ── AI-008 — deep proposal plan (v2 execution plan) + revision audit chain ──
+
+# Proposal plans — one editable execution-plan document per proposal.
+create proposal_plans '{
+  "AttributeDefinitions":[{"AttributeName":"proposalId","AttributeType":"S"}],
+  "KeySchema":[{"AttributeName":"proposalId","KeyType":"HASH"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
+# Proposal plan revisions — append-only, SHA-256 chained edit history.
+create proposal_plan_revisions '{
+  "AttributeDefinitions":[
+    {"AttributeName":"proposalId","AttributeType":"S"},
+    {"AttributeName":"revision","AttributeType":"N"}],
+  "KeySchema":[
+    {"AttributeName":"proposalId","KeyType":"HASH"},
+    {"AttributeName":"revision","KeyType":"RANGE"}],
+  "BillingMode":"PAY_PER_REQUEST"}'
+
 echo
 echo "Done. Set these in backend/.env:"
 echo "  AWS_REGION=${REGION}"
