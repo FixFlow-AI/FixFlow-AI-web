@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getCorsair, getCorsairForTenant, isCorsairConfigured, getCorsairError } from './corsairClient.js';
+import { getAutomationRepository } from './automationRepository.js';
 
 /**
  * FixBot — the trust-first project agent (Corsair track).
@@ -33,10 +34,26 @@ function record(entry: Omit<AutomationRecord, 'id' | 'createdAt'>): AutomationRe
   const rec: AutomationRecord = { id: randomUUID(), createdAt: new Date().toISOString(), ...entry };
   log.unshift(rec);
   if (log.length > MAX_LOG) log.length = MAX_LOG;
+  // Durable persistence (Corsair track): survive restarts so the dashboard
+  // "Automations" card shows real history. Fire-and-forget — never block/throw.
+  void getAutomationRepository()
+    .save(rec)
+    .catch((err) => console.warn('[FixBot] automation persist failed:', (err as Error).message));
   return rec;
 }
 
-export function listAutomations(tenantId?: string): AutomationRecord[] {
+/**
+ * List recent agent actions, newest-first, optionally scoped to a tenant
+ * (proposalId). Reads from the durable store; falls back to the in-memory log
+ * if the store is unavailable so the dashboard never hard-fails.
+ */
+export async function listAutomations(tenantId?: string): Promise<AutomationRecord[]> {
+  try {
+    const rows = await getAutomationRepository().list(tenantId);
+    if (rows.length > 0) return rows;
+  } catch (err) {
+    console.warn('[FixBot] automation list failed, using in-memory log:', (err as Error).message);
+  }
   return tenantId ? log.filter((r) => r.tenantId === tenantId) : log.slice();
 }
 
