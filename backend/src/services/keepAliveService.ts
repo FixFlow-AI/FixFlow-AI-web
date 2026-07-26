@@ -41,6 +41,31 @@ async function pingServices(): Promise<void> {
       console.warn(`[KeepAlive] Backend self warmup ping failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+
+  // 3. Ping the frontend so the whole stack stays warm. A Render static site is
+  //    CDN-served and does not sleep, but if the frontend is ever a web service
+  //    this keeps it awake too. Pings every configured origin (comma-separated
+  //    KEEP_ALIVE_FRONTEND_URL, falling back to PLATFORM_URL).
+  const frontendRaw =
+    process.env.KEEP_ALIVE_FRONTEND_URL || process.env.PLATFORM_URL || '';
+  const frontendUrls = frontendRaw
+    .split(',')
+    .map((u) => u.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  for (const url of frontendUrls) {
+    try {
+      const res = await fetch(`${url}/`, {
+        headers: { 'User-Agent': 'FixFlowAI-KeepAlive/1.0' },
+      });
+      if (res.ok) {
+        console.log(`[KeepAlive] Warmed up frontend at ${url}/ (${res.status} OK)`);
+      } else {
+        console.warn(`[KeepAlive] Frontend warmup at ${url} returned status ${res.status}`);
+      }
+    } catch (err) {
+      console.warn(`[KeepAlive] Frontend warmup ping failed for ${url}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 }
 
 export function startKeepAliveService(): void {

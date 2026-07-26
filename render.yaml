@@ -37,6 +37,12 @@ services:
         value: "1"
       - key: AI_SERVICE_TOKEN
         generateValue: true         # Render generates a shared secret
+      # --- Keep-alive: while awake, ping peers every 10 min so the stack stays
+      #     warm (the GitHub Actions cron is what wakes a sleeping service). ---
+      - key: KEEP_ALIVE_ENABLED
+        value: "true"
+      - key: KEEP_ALIVE_TARGETS
+        value: "https://fixflowai-backend.onrender.com/api/health,https://fixflowai-frontend.onrender.com/,https://fixflowai.xyz/"
 
   # ---------------------------------------------------------------
   # 2) TypeScript backend (Express + WebSocket sync + escrow/payments)
@@ -117,6 +123,12 @@ services:
         value: "true"
       - key: PLATFORM_URL
         value: "https://fixflowai.xyz"
+      # --- Keep-alive: the in-process pinger warms the AI service, this backend
+      #     (via RENDER_EXTERNAL_URL), and the frontend origins below every 10
+      #     min while the backend is awake. The GitHub Actions cron guarantees
+      #     wake-ups even when every service is asleep. ---
+      - key: KEEP_ALIVE_FRONTEND_URL
+        value: "https://fixflowai-frontend.onrender.com,https://fixflowai.xyz"
       # --- Corsair agent integration layer (BuildX Corsair track) ---
       - key: CORSAIR_ENABLED
         value: "true"

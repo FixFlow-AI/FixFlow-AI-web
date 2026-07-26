@@ -43,6 +43,7 @@ from .features.discovery import run_discovery_turn
 from .schemas.execution_plan import ExecutionPlan, PlanDiagnostics
 from .features.plan_generator import generate_execution_plan
 from .features.timeline_validation import validate_execution_plan
+from .keep_alive import start_keep_alive, stop_keep_alive
 
 logging.basicConfig(level=logging.INFO)
 
@@ -80,6 +81,17 @@ if not settings.ai_service_token:
         "AI_SERVICE_TOKEN is not configured: the AI service accepts requests "
         "from anyone who can reach it. Set AI_SERVICE_TOKEN to gate the LLM routes."
     )
+
+
+@app.on_event("startup")
+async def _start_keep_alive() -> None:
+    """Keep the peer services warm every 10 min while this service is awake."""
+    start_keep_alive()
+
+
+@app.on_event("shutdown")
+async def _stop_keep_alive() -> None:
+    stop_keep_alive()
 
 
 # --------------------------------------------------------------------------

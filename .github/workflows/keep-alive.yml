@@ -9,6 +9,7 @@ name: Keep Render services awake
 #   Settings → Secrets and variables → Actions → Variables tab
 #     RENDER_BACKEND_URL     = https://fixflowai-backend.onrender.com
 #     RENDER_AI_SERVICE_URL  = https://fixflowai-ai-service.onrender.com
+#     RENDER_FRONTEND_URL    = https://fixflowai-frontend.onrender.com
 # If unset, the defaults below are used.
 
 on:
@@ -32,6 +33,7 @@ jobs:
         env:
           BACKEND_URL: ${{ vars.RENDER_BACKEND_URL || 'https://fixflowai-backend.onrender.com' }}
           AI_SERVICE_URL: ${{ vars.RENDER_AI_SERVICE_URL || 'https://fixflowai-ai-service.onrender.com' }}
+          FRONTEND_URL: ${{ vars.RENDER_FRONTEND_URL || 'https://fixflowai-frontend.onrender.com' }}
         run: |
           set -u
           # A slow first response (cold start) is fine — we only need the request
@@ -45,5 +47,12 @@ jobs:
           curl -fsS --retry 2 --max-time 90 "${AI_SERVICE_URL}/health" \
             && echo "  ai-service OK" \
             || echo "  ai-service ping did not return 2xx (likely cold-starting) — timer still reset"
+
+          # A Render static site (frontend) is CDN-served and never sleeps, but we
+          # ping its root anyway so all three services are covered by one cron.
+          echo "→ Pinging frontend: ${FRONTEND_URL}/"
+          curl -fsS --retry 2 --max-time 90 "${FRONTEND_URL}/" \
+            && echo "  frontend OK" \
+            || echo "  frontend ping did not return 2xx — timer still reset"
 
           echo "Keep-alive ping cycle complete."
