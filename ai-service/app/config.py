@@ -43,6 +43,8 @@ class Settings:
 
     def __init__(self) -> None:
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
+        self.groq_api_key: str = os.getenv("GROQ_API_KEY", "").strip()
+        self.groq_model:str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.gemini_model: str = os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL).strip()
         self.gemini_proposal_model: str = os.getenv("GEMINI_PROPOSAL_MODEL", self.PROPOSAL_MODEL).strip()
         self.gemini_fallback_model: str = os.getenv(
