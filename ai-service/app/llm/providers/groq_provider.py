@@ -5,17 +5,22 @@ from ...llm.providers.base import BaseLLMProvider
 
 
 class GroqProvider(BaseLLMProvider):
-    
+    """LangChain-backed Groq provider.
 
-    def __init__(self):
+    ``model`` and ``temperature`` are optional overrides; when omitted they fall
+    back to the configured Groq defaults.
+    """
+
+    def __init__(self, model: str | None = None, temperature: float = 0.0):
 
         settings = get_settings()
         self.llm = ChatGroq(
             api_key=settings.groq_api_key,
-            model=settings.groq_model,
-            temperature=0,
+            model=model or settings.groq_model,
+            temperature=temperature,
             timeout=settings.gemini_timeout_sec,
-            max_retries=3,
+            # Retries/backoff are owned by the app-level loop in ``gemini.py``.
+            max_retries=0,
         )
 
 

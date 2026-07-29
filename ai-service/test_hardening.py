@@ -144,8 +144,7 @@ class TestAIServiceHardening(unittest.TestCase):
         self.assertIsNotNone(res2)
         self.assertEqual(res2.project_summary, dummy_prop.project_summary)
 
-    @patch("app.llm.gemini._client")
-    def test_aia_07_circuit_breaker(self, mock_client):
+    def test_aia_07_circuit_breaker(self):
         """Test circuit breaker trips on failures and routes directly to fallback."""
         from app.llm.circuit_breaker import CircuitBreaker
 

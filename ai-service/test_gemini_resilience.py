@@ -1,7 +1,14 @@
-"""AIA-05 — Gemini call resilience tests (timeout / retry / fallback swap).
+"""AIA-05 — LLM call resilience tests (timeout / retry / fallback swap).
 
-Runs without a Gemini key by replacing the module-scope ``genai.Client`` in
-``app.llm.gemini`` with a scripted fake, so no network calls are made. Covers:
+Runs without any provider API key by replacing the provider-construction seam
+``app.llm.gemini._build_llm`` with a scripted fake, so no network calls are
+made. Since the refactor to the LangChain provider abstraction, ``gemini.py``
+no longer talks to the ``google-genai`` SDK directly: it obtains a LangChain
+chat model from ``LLMFactory`` (via ``_build_llm``), calls
+``with_structured_output(schema, include_raw=True)`` on it, and awaits
+``ainvoke(messages)`` which yields ``{"parsed", "raw", "parsing_error"}``.
+
+Covered behaviors (unchanged in intent from the google-genai era):
 
   - success on the first attempt (no retries, no fallback)
   - transient error retried, then success (model swaps to the fallback)
@@ -24,7 +31,6 @@ import asyncio
 import time
 from contextlib import contextmanager
 
-from google.genai.errors import APIError
 from pydantic import BaseModel, ValidationError
 
 import app.llm.gemini as g
@@ -43,54 +49,80 @@ class Strict(BaseModel):
     value: int
 
 
-class _Resp:
-    """Minimal stand-in for a google-genai response object."""
+class _StatusError(Exception):
+    """Stand-in for a provider SDK error carrying an HTTP status code, the way
+    LangChain integrations surface transient (429/5xx) vs permanent (4xx)
+    conditions via a ``status_code`` attribute."""
 
-    def __init__(self, parsed=None, text: str = "") -> None:
-        self.parsed = parsed
-        self.text = text
-
-
-def _api_error(code: int) -> APIError:
-    """Build an ``APIError`` with a given status code without invoking the
-    SDK constructor (which couples to response shapes we don't need here)."""
-    err = APIError.__new__(APIError)
-    err.code = code
-    err.message = f"simulated {code}"
-    return err
+    def __init__(self, status_code: int) -> None:
+        super().__init__(f"simulated {status_code}")
+        self.status_code = status_code
 
 
-class _FakeModels:
-    """Scripted ``client.aio.models`` stand-in.
+def _status_error(code: int) -> _StatusError:
+    return _StatusError(code)
+
+
+class _FakeRaw:
+    """Minimal stand-in for a LangChain ``AIMessage`` (the ``raw`` field)."""
+
+    def __init__(self, content: str = "", usage=None) -> None:
+        self.content = content
+        self.usage_metadata = usage or {"input_tokens": 1, "output_tokens": 2}
+
+
+class _FakeStructured:
+    """Stand-in for ``llm.with_structured_output(...)``; scripts one ``ainvoke``.
+
+    ``step`` is a ``(kind, payload)`` tuple:
+      - ("ok",    parsed)   -> return {"parsed": parsed, "raw": _FakeRaw(), ...}
+      - ("dict",  result)   -> return ``result`` verbatim (for parse-error paths)
+      - ("raise", exc)      -> raise ``exc``
+      - ("hang",  secs)     -> ``await asyncio.sleep(secs)`` (to trip the timeout)
+    """
+
+    def __init__(self, step: tuple[str, object]) -> None:
+        self.step = step
+
+    async def ainvoke(self, messages):
+        kind, payload = self.step
+        if kind == "hang":
+            await asyncio.sleep(float(payload))  # type: ignore[arg-type]
+            return {"parsed": Out(), "raw": _FakeRaw(), "parsing_error": None}
+        if kind == "raise":
+            raise payload  # type: ignore[misc]
+        if kind == "dict":
+            return payload  # type: ignore[return-value]
+        # "ok"
+        return {"parsed": payload, "raw": _FakeRaw(), "parsing_error": None}
+
+
+class _FakeLLM:
+    def __init__(self, step: tuple[str, object]) -> None:
+        self.step = step
+
+    def with_structured_output(self, schema, include_raw: bool = False):
+        return _FakeStructured(self.step)
+
+
+class _FakeBuilder:
+    """Scripted ``_build_llm`` stand-in.
 
     ``steps`` is a list of ``(kind, payload)`` applied per call (the last entry
-    repeats once exhausted):
-      - ("ok",    resp) -> return ``resp``
-      - ("raise", exc)  -> raise ``exc``
-      - ("hang",  secs) -> ``await asyncio.sleep(secs)`` (to trip the timeout)
-    Every call's ``model`` name is recorded in ``self.calls``.
+    repeats once exhausted). Every call's requested ``model`` is recorded in
+    ``self.calls`` so tests can assert primary/fallback routing.
     """
 
     def __init__(self, steps: list[tuple[str, object]]) -> None:
         self.steps = steps
-        self.calls: list[str] = []
+        self.calls: list[str | None] = []
         self._i = 0
 
-    async def generate_content(self, *, model, contents, config):
+    def build(self, provider, model, temperature):
         self.calls.append(model)
-        kind, payload = self.steps[min(self._i, len(self.steps) - 1)]
+        step = self.steps[min(self._i, len(self.steps) - 1)]
         self._i += 1
-        if kind == "hang":
-            await asyncio.sleep(float(payload))  # type: ignore[arg-type]
-            return _Resp(parsed=Out())
-        if kind == "raise":
-            raise payload  # type: ignore[misc]
-        return payload
-
-
-class _FakeClient:
-    def __init__(self, models: _FakeModels) -> None:
-        self.aio = type("Aio", (), {"models": models})()
+        return _FakeLLM(step)
 
 
 @contextmanager
@@ -102,10 +134,10 @@ def _patched(
     base_delay: float = 0.001,
     max_delay: float = 0.005,
 ):
-    """Install the fake client + fast, deterministic resilience policy."""
+    """Install the fake provider builder + fast, deterministic resilience policy."""
     settings = get_settings()
-    fake = _FakeModels(steps)
-    saved_client = g._client
+    fake = _FakeBuilder(steps)
+    saved_build = g._build_llm
     saved = (
         settings.gemini_max_retries,
         settings.gemini_timeout_sec,
@@ -121,11 +153,11 @@ def _patched(
     breaker.failure_count = 0
     breaker.last_state_change = time.time()
     # The in-memory response cache is also a module-global. A cache hit would
-    # short-circuit generate_structured before the fake client is ever called,
+    # short-circuit generate_structured before the fake builder is ever called,
     # so start every test from an empty cache for deterministic routing.
     saved_cache = dict(cache_mod._local_cache)
     cache_mod._local_cache.clear()
-    g._client = _FakeClient(fake)  # type: ignore[assignment]
+    g._build_llm = fake.build  # type: ignore[assignment]
     settings.gemini_max_retries = max_retries
     settings.gemini_timeout_sec = timeout
     settings.gemini_retry_base_delay_sec = base_delay
@@ -133,7 +165,7 @@ def _patched(
     try:
         yield fake
     finally:
-        g._client = saved_client
+        g._build_llm = saved_build  # type: ignore[assignment]
         (
             settings.gemini_max_retries,
             settings.gemini_timeout_sec,
@@ -145,7 +177,7 @@ def _patched(
         cache_mod._local_cache.update(saved_cache)
 
 
-def _run(fake_ctx_kwargs=None, **call_kwargs):
+def _run(**call_kwargs):
     """Helper: run ``generate_structured`` with default args."""
     return asyncio.run(
         g.generate_structured(
@@ -167,7 +199,7 @@ def _models():
 def test_success_first_attempt():
     """One successful call: no retries, no fallback swap."""
     primary, _ = _models()
-    with _patched([("ok", _Resp(parsed=Out()))]) as fake:
+    with _patched([("ok", Out())]) as fake:
         result = _run()
     assert result.ok is True
     assert fake.calls == [primary]
@@ -177,7 +209,7 @@ def test_success_first_attempt():
 def test_transient_then_success_swaps_to_fallback():
     """A transient failure retries and swaps to the fallback model."""
     primary, fallback = _models()
-    steps = [("raise", asyncio.TimeoutError()), ("ok", _Resp(parsed=Out()))]
+    steps = [("raise", asyncio.TimeoutError()), ("ok", Out())]
     with _patched(steps, max_retries=3) as fake:
         result = _run()
     assert result.ok is True
@@ -204,7 +236,7 @@ def test_timeout_is_bounded_and_retried():
     """A hung call is cut off by the per-call timeout and retried (transient)."""
     primary, fallback = _models()
     # First call hangs 5s but timeout is 50ms -> TimeoutError -> retry succeeds.
-    steps = [("hang", 5.0), ("ok", _Resp(parsed=Out()))]
+    steps = [("hang", 5.0), ("ok", Out())]
     with _patched(steps, max_retries=3, timeout=0.05) as fake:
         result = _run()
     assert result.ok is True
@@ -212,21 +244,21 @@ def test_timeout_is_bounded_and_retried():
     print("  [ok] hung call bounded by timeout -> retried on fallback")
 
 
-def test_permanent_apierror_fails_fast():
-    """A 4xx APIError is permanent: one attempt, no retry, no fallback."""
+def test_permanent_status_error_fails_fast():
+    """A 4xx provider error is permanent: one attempt, no retry, no fallback."""
     primary, _ = _models()
-    with _patched([("raise", _api_error(400))], max_retries=3) as fake:
+    with _patched([("raise", _status_error(400))], max_retries=3) as fake:
         raised_code = None
         try:
             _run()
-        except APIError as e:
-            raised_code = e.code
+        except _StatusError as e:
+            raised_code = e.status_code
     assert raised_code == 400
     assert fake.calls == [primary]
     print("  [ok] permanent 400 -> fails fast, single call")
 
 
-def test_non_apierror_fails_fast():
+def test_non_status_error_fails_fast():
     """An arbitrary error (e.g. ValueError) is permanent: one attempt only."""
     primary, _ = _models()
     with _patched([("raise", ValueError("boom"))], max_retries=3) as fake:
@@ -237,13 +269,13 @@ def test_non_apierror_fails_fast():
             raised = True
     assert raised is True
     assert fake.calls == [primary]
-    print("  [ok] non-APIError -> fails fast, single call")
+    print("  [ok] non-status error -> fails fast, single call")
 
 
-def test_transient_apierror_503_is_retried():
-    """A 503 APIError is transient and retried on the fallback model."""
+def test_transient_status_503_is_retried():
+    """A 503 provider error is transient and retried on the fallback model."""
     primary, fallback = _models()
-    steps = [("raise", _api_error(503)), ("ok", _Resp(parsed=Out()))]
+    steps = [("raise", _status_error(503)), ("ok", Out())]
     with _patched(steps, max_retries=3) as fake:
         result = _run()
     assert result.ok is True
@@ -305,10 +337,11 @@ def test_schema_violation_raises_validation_error_with_raw_payload():
 
     Regression guard for BUG-10.
     """
-    # `.parsed` is None (SDK didn't populate it) but `.text` is valid JSON that
-    # violates the schema: "abc" cannot be coerced to the required int `value`.
+    # `parsed` is None (structured parsing didn't populate it) but `raw.content`
+    # is valid JSON that violates the schema: "abc" can't coerce to int `value`.
     bad_json = '{"value": "abc"}'
-    with _patched([("ok", _Resp(parsed=None, text=bad_json))]):
+    result = {"parsed": None, "raw": _FakeRaw(content=bad_json), "parsing_error": None}
+    with _patched([("dict", result)]):
         raised: Exception | None = None
         try:
             asyncio.run(
@@ -332,13 +365,13 @@ def test_is_transient_classification():
     assert g._is_transient(asyncio.TimeoutError()) is True
     assert g._is_transient(TimeoutError()) is True
     assert g._is_transient(ConnectionError()) is True
-    assert g._is_transient(_api_error(429)) is True
-    assert g._is_transient(_api_error(500)) is True
-    assert g._is_transient(_api_error(503)) is True
-    assert g._is_transient(_api_error(504)) is True
-    assert g._is_transient(_api_error(400)) is False
-    assert g._is_transient(_api_error(401)) is False
-    assert g._is_transient(_api_error(404)) is False
+    assert g._is_transient(_status_error(429)) is True
+    assert g._is_transient(_status_error(500)) is True
+    assert g._is_transient(_status_error(503)) is True
+    assert g._is_transient(_status_error(504)) is True
+    assert g._is_transient(_status_error(400)) is False
+    assert g._is_transient(_status_error(401)) is False
+    assert g._is_transient(_status_error(404)) is False
     assert g._is_transient(ValueError("x")) is False
     print("  [ok] _is_transient classifies transient vs permanent")
 
@@ -356,18 +389,18 @@ def test_backoff_delay_bounds():
 
 
 if __name__ == "__main__":
-    print("AIA-05 Gemini resilience tests")
+    print("AIA-05 LLM resilience tests")
     test_success_first_attempt()
     test_transient_then_success_swaps_to_fallback()
     test_all_transient_exhausts_retries()
     test_timeout_is_bounded_and_retried()
-    test_permanent_apierror_fails_fast()
-    test_non_apierror_fails_fast()
-    test_transient_apierror_503_is_retried()
+    test_permanent_status_error_fails_fast()
+    test_non_status_error_fails_fast()
+    test_transient_status_503_is_retried()
     test_retry_count_respects_max_retries()
     test_pinned_model_is_never_swapped()
     test_backoff_applied_between_retries()
     test_schema_violation_raises_validation_error_with_raw_payload()
     test_is_transient_classification()
     test_backoff_delay_bounds()
-    print("ALL GEMINI RESILIENCE TESTS PASSED")
+    print("ALL LLM RESILIENCE TESTS PASSED")

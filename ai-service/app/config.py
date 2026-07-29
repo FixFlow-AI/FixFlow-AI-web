@@ -45,6 +45,10 @@ class Settings:
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "").strip()
         self.groq_api_key: str = os.getenv("GROQ_API_KEY", "").strip()
         self.groq_model:str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        # Active LLM provider ("gemini" | "groq"). Switching providers is a
+        # single env change; the factory (app.llm.factory) resolves the concrete
+        # LangChain client, so no feature code needs to change.
+        self.llm_provider: str = os.getenv("LLM_PROVIDER", "groq").strip().lower()
         self.gemini_model: str = os.getenv("GEMINI_MODEL", self.DEFAULT_MODEL).strip()
         self.gemini_proposal_model: str = os.getenv("GEMINI_PROPOSAL_MODEL", self.PROPOSAL_MODEL).strip()
         self.gemini_fallback_model: str = os.getenv(

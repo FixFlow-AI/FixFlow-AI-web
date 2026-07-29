@@ -4,17 +4,26 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 class GeminiProvider(BaseLLMProvider):
-    
+    """LangChain-backed Google Gemini provider.
 
-    def __init__(self):
+    ``model`` and ``temperature`` are optional overrides; when omitted they fall
+    back to the configured defaults. This lets callers pin a specific model
+    (e.g. the proposal model) or nudge temperature per call without bypassing
+    the provider abstraction.
+    """
+
+    def __init__(self, model: str | None = None, temperature: float = 0.0):
 
         settings = get_settings()
         self.llm = ChatGoogleGenerativeAI(
             api_key=settings.gemini_api_key,
-            model=settings.gemini_model,
-            temperature=0,
+            model=model or settings.gemini_model,
+            temperature=temperature,
             timeout=settings.gemini_timeout_sec,
-            max_retries=3,
+            # Retries/backoff are owned by the app-level loop in ``gemini.py``
+            # (circuit breaker + telemetry + model fallback); disable the
+            # LangChain-internal retry so attempts aren't multiplied.
+            max_retries=0,
         )
 
 
