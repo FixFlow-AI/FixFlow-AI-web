@@ -133,6 +133,7 @@ def _patched(
     timeout: float = 5.0,
     base_delay: float = 0.001,
     max_delay: float = 0.005,
+    provider: str = "gemini",
 ):
     """Install the fake provider builder + fast, deterministic resilience policy."""
     settings = get_settings()
@@ -144,6 +145,11 @@ def _patched(
         settings.gemini_retry_base_delay_sec,
         settings.gemini_retry_max_delay_sec,
     )
+    # These tests exercise Gemini-specific routing (allowlist + same-provider
+    # model fallback), so pin the provider rather than depend on the ambient
+    # LLM_PROVIDER env (which may be set to groq in a dev .env).
+    saved_provider = settings.llm_provider
+    settings.llm_provider = provider
     # The primary circuit breaker is a module-global singleton whose state would
     # otherwise leak across tests (accumulated failures would trip it Open and
     # change routing). Snapshot and reset it to a clean Closed state per test.
@@ -166,6 +172,7 @@ def _patched(
         yield fake
     finally:
         g._build_llm = saved_build  # type: ignore[assignment]
+        settings.llm_provider = saved_provider
         (
             settings.gemini_max_retries,
             settings.gemini_timeout_sec,
@@ -307,6 +314,23 @@ def test_pinned_model_is_never_swapped():
     print("  [ok] pinned model -> no fallback swap")
 
 
+def test_pinned_gemini_model_ignored_on_non_gemini_provider():
+    """A caller-pinned Gemini model must NOT leak to a non-Gemini provider.
+
+    Regression guard: with LLM_PROVIDER=groq, brief_parser still pins the
+    Gemini proposal model. Forwarding that name to Groq produced a live 404
+    ``model_not_found``. The active provider must fall back to its own default
+    model (recorded here as ``None`` -> provider default), and never swap.
+    """
+    with _patched([("ok", Out())], provider="groq") as fake:
+        result = _run(model="gemini-3.5-flash")
+    assert result.ok is True
+    # None => the provider uses its configured default (e.g. groq_model),
+    # and there is exactly one attempt (no Gemini-style fallback swap).
+    assert fake.calls == [None]
+    print("  [ok] pinned gemini model ignored on groq provider -> uses default")
+
+
 def test_backoff_applied_between_retries():
     """Backoff runs exactly (attempts - 1) times, with 0-indexed attempts."""
     seen: list[int] = []
@@ -399,6 +423,7 @@ if __name__ == "__main__":
     test_transient_status_503_is_retried()
     test_retry_count_respects_max_retries()
     test_pinned_model_is_never_swapped()
+    test_pinned_gemini_model_ignored_on_non_gemini_provider()
     test_backoff_applied_between_retries()
     test_schema_violation_raises_validation_error_with_raw_payload()
     test_is_transient_classification()

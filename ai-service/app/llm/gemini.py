@@ -107,7 +107,12 @@ async def generate_structured(
         fallback_model = settings.gemini_fallback_model
         fallback_eligible = model is None and primary_model != fallback_model
     else:
-        primary_model = model  # None => provider default (e.g. groq_model)
+        # The ``model`` override is a Gemini-specific allowlisted name (e.g. the
+        # proposal or lite model) and is meaningless for other providers.
+        # Ignore it so the provider uses its own configured default (e.g.
+        # ``groq_model``); forwarding a Gemini name to Groq yields a 404
+        # model_not_found.
+        primary_model = None
         fallback_model = None
         fallback_eligible = False
 
