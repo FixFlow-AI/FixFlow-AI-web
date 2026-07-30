@@ -1,8 +1,8 @@
 """AIA-05 — LLM call resilience tests (timeout / retry / fallback swap).
 
 Runs without any provider API key by replacing the provider-construction seam
-``app.llm.gemini._build_llm`` with a scripted fake, so no network calls are
-made. Since the refactor to the LangChain provider abstraction, ``gemini.py``
+``app.llm.client._build_llm`` with a scripted fake, so no network calls are
+made. Since the refactor to the LangChain provider abstraction, ``client.py``
 no longer talks to the ``google-genai`` SDK directly: it obtains a LangChain
 chat model from ``LLMFactory`` (via ``_build_llm``), calls
 ``with_structured_output(schema, include_raw=True)`` on it, and awaits
@@ -15,7 +15,7 @@ Covered behaviors (unchanged in intent from the google-genai era):
   - all-transient exhausts the retry budget and re-raises
   - a hung call is bounded by the per-call timeout and treated as transient
   - permanent errors fail fast on the first attempt (no retry, no fallback)
-  - retry count honors GEMINI_MAX_RETRIES
+  - retry count honors LLM_MAX_RETRIES
   - a caller-pinned model is never swapped
   - backoff is applied between retries (attempts-1 times)
 
@@ -33,7 +33,7 @@ from contextlib import contextmanager
 
 from pydantic import BaseModel, ValidationError
 
-import app.llm.gemini as g
+import app.llm.client as g
 import app.llm.cache as cache_mod
 from app.config import get_settings
 
@@ -140,10 +140,10 @@ def _patched(
     fake = _FakeBuilder(steps)
     saved_build = g._build_llm
     saved = (
-        settings.gemini_max_retries,
-        settings.gemini_timeout_sec,
-        settings.gemini_retry_base_delay_sec,
-        settings.gemini_retry_max_delay_sec,
+        settings.llm_max_retries,
+        settings.llm_timeout_sec,
+        settings.llm_retry_base_delay_sec,
+        settings.llm_retry_max_delay_sec,
     )
     # These tests exercise Gemini-specific routing (allowlist + same-provider
     # model fallback), so pin the provider rather than depend on the ambient
@@ -164,20 +164,20 @@ def _patched(
     saved_cache = dict(cache_mod._local_cache)
     cache_mod._local_cache.clear()
     g._build_llm = fake.build  # type: ignore[assignment]
-    settings.gemini_max_retries = max_retries
-    settings.gemini_timeout_sec = timeout
-    settings.gemini_retry_base_delay_sec = base_delay
-    settings.gemini_retry_max_delay_sec = max_delay
+    settings.llm_max_retries = max_retries
+    settings.llm_timeout_sec = timeout
+    settings.llm_retry_base_delay_sec = base_delay
+    settings.llm_retry_max_delay_sec = max_delay
     try:
         yield fake
     finally:
         g._build_llm = saved_build  # type: ignore[assignment]
         settings.llm_provider = saved_provider
         (
-            settings.gemini_max_retries,
-            settings.gemini_timeout_sec,
-            settings.gemini_retry_base_delay_sec,
-            settings.gemini_retry_max_delay_sec,
+            settings.llm_max_retries,
+            settings.llm_timeout_sec,
+            settings.llm_retry_base_delay_sec,
+            settings.llm_retry_max_delay_sec,
         ) = saved
         (breaker.state, breaker.failure_count, breaker.last_state_change) = saved_breaker
         cache_mod._local_cache.clear()
@@ -225,7 +225,7 @@ def test_transient_then_success_swaps_to_fallback():
 
 
 def test_all_transient_exhausts_retries():
-    """All attempts fail transiently: re-raises after GEMINI_MAX_RETRIES calls."""
+    """All attempts fail transiently: re-raises after LLM_MAX_RETRIES calls."""
     primary, fallback = _models()
     with _patched([("raise", asyncio.TimeoutError())], max_retries=3) as fake:
         raised = False
@@ -291,7 +291,7 @@ def test_transient_status_503_is_retried():
 
 
 def test_retry_count_respects_max_retries():
-    """The number of attempts equals GEMINI_MAX_RETRIES."""
+    """The number of attempts equals LLM_MAX_RETRIES."""
     for n in (1, 2, 5):
         with _patched([("raise", asyncio.TimeoutError())], max_retries=n) as fake:
             try:
@@ -299,7 +299,7 @@ def test_retry_count_respects_max_retries():
             except asyncio.TimeoutError:
                 pass
         assert len(fake.calls) == n, f"expected {n} attempts, got {len(fake.calls)}"
-    print("  [ok] attempt count honors GEMINI_MAX_RETRIES (1, 2, 5)")
+    print("  [ok] attempt count honors LLM_MAX_RETRIES (1, 2, 5)")
 
 
 def test_pinned_model_is_never_swapped():
@@ -322,13 +322,16 @@ def test_pinned_gemini_model_ignored_on_non_gemini_provider():
     ``model_not_found``. The active provider must fall back to its own default
     model (recorded here as ``None`` -> provider default), and never swap.
     """
+    groq_default = get_settings().groq_model
     with _patched([("ok", Out())], provider="groq") as fake:
         result = _run(model="gemini-3.5-flash")
     assert result.ok is True
-    # None => the provider uses its configured default (e.g. groq_model),
-    # and there is exactly one attempt (no Gemini-style fallback swap).
-    assert fake.calls == [None]
-    print("  [ok] pinned gemini model ignored on groq provider -> uses default")
+    # The Gemini name is rejected and degrades to Groq's configured default;
+    # it must never be forwarded to Groq. A pinned model is never swapped, so
+    # there is exactly one attempt.
+    assert fake.calls == [groq_default], fake.calls
+    assert "gemini-3.5-flash" not in fake.calls
+    print("  [ok] pinned gemini model ignored on groq provider -> uses groq default")
 
 
 def test_backoff_applied_between_retries():

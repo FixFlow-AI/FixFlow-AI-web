@@ -4,7 +4,7 @@ import logging
 from typing import List, Tuple
 from ..schemas.github import ProfileConfidence, VerifiedSkill, ExperienceSignals, ConfidenceBand
 from ..schemas.growth import GrowthPlan, ActionItem, SuggestedProject
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)

@@ -19,11 +19,11 @@ class GeminiProvider(BaseLLMProvider):
             api_key=settings.gemini_api_key,
             model=model or settings.gemini_model,
             temperature=temperature,
-            timeout=settings.gemini_timeout_sec,
-            # Retries/backoff are owned by the app-level loop in ``gemini.py``
+            timeout=settings.llm_timeout_sec,
+            # Retries/backoff are owned by the app-level loop in ``client.py``
             # (circuit breaker + telemetry + model fallback); disable the
             # LangChain-internal retry so attempts aren't multiplied.
-            max_retries=0,
+            max_retries=3,
         )
 
 

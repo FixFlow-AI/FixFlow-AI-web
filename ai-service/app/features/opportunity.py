@@ -5,7 +5,7 @@ import logging
 from typing import List
 from ..schemas.opportunity import Opportunity, OpportunityScore, FactorScores
 from .skill_gap import normalize_skill
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 
 logger = logging.getLogger(__name__)
 

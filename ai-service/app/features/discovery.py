@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 from ..schemas.discovery import (
     DiscoveryAnswer,
     DiscoveryOption,

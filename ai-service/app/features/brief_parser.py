@@ -14,7 +14,7 @@ from pydantic import ValidationError
 
 from google.genai.errors import APIError
 from ..config import get_settings
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 from ..schemas.proposal import Proposal, ParseBriefResponse
 from ..features.fallback_logger import log_fallback
 
@@ -575,7 +575,7 @@ async def parse_brief(brief_text: str) -> ParseBriefResponse:
             contents=contents,
             response_schema=Proposal,
             temperature=0.2,
-            model=get_settings().gemini_proposal_model,
+            model=get_settings().proposal_model,
         )
 
         # Discard the LLM's fabricated numbers; derive them from grounded fields.

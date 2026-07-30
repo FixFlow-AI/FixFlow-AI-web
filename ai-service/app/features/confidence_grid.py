@@ -18,7 +18,7 @@ import logging
 from typing import List
 
 from ..config import get_settings
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 from ..schemas.confidence import (
     AuditorEvaluation,
     AuditorFeedback,

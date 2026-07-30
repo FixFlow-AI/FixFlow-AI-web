@@ -50,8 +50,10 @@ def test_health_and_guards(monkeypatch):
     assert body["status"] == "ok"
     print(f"  [ok] /health -> {body}")
 
-    # With no GEMINI_API_KEY configured, AI routes should 503 (require_ai guard).
+    # With no provider API key configured, AI routes should 503 (require_ai
+    # guard). ai_enabled is provider-aware, so clear every provider's key.
     monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
     from app.config import get_settings
     get_settings.cache_clear()
 

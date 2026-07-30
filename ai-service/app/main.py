@@ -1,8 +1,9 @@
 """FixFlowAI Python AI service (FastAPI).
 
 Owns the four LLM features (AI-001..004). Stateless: it validates input, calls
-Gemini, and returns JSON. It never touches the database or payments — the
-TypeScript backend remains the gateway and system of record.
+the configured LLM provider (Gemini, Groq, ...) via ``app.llm.client``, and
+returns JSON. It never touches the database or payments — the TypeScript
+backend remains the gateway and system of record.
 """
 from __future__ import annotations
 
@@ -63,16 +64,18 @@ async def add_telemetry_and_request_id(request: Request, call_next):
 
 settings = get_settings()
 
-if not settings.model_valid:
-    logging.warning("Invalid GEMINI_MODEL '%s'. Falling back to '%s'", settings.gemini_model, settings.DEFAULT_MODEL)
-
-if not settings.fallback_model_valid:
-    logging.warning("Invalid GEMINI_FALLBACK_MODEL '%s'. Falling back to '%s'", settings.gemini_fallback_model, settings.DEFAULT_FALLBACK_MODEL)
+if not settings.active_model_valid:
+    logging.warning(
+        "Configured model '%s' is not valid for the active provider '%s'.",
+        settings.active_model,
+        settings.llm_provider,
+    )
 
 logging.info(
-    "FixFlowAI AI Service starting up. Primary model: %s, Fallback model: %s",
-    settings.gemini_model if settings.model_valid else settings.DEFAULT_MODEL,
-    settings.gemini_fallback_model if settings.fallback_model_valid else settings.DEFAULT_FALLBACK_MODEL
+    "FixFlowAI AI Service starting up. Provider: %s | Primary model: %s | Fallback model: %s",
+    settings.llm_provider,
+    settings.active_model,
+    settings.active_fallback_model or "(none)",
 )
 
 if not settings.ai_service_token:
@@ -96,10 +99,11 @@ async def verify_token(x_ai_service_token: Optional[str] = Header(default=None))
 
 
 def require_ai() -> None:
-    if not get_settings().ai_enabled:
+    settings = get_settings()
+    if not settings.ai_enabled:
         raise HTTPException(
             status_code=503,
-            detail="GEMINI_API_KEY is not configured on the AI service.",
+            detail=f"No API key configured for the active LLM provider '{settings.llm_provider}'.",
         )
 
 
@@ -156,10 +160,11 @@ async def health() -> dict:
     return {
         "status": "ok",
         "aiEnabled": settings.ai_enabled,
-        "model": settings.gemini_model,
-        "modelValid": settings.model_valid,
-        "fallbackModel": settings.gemini_fallback_model,
-        "fallbackModelValid": settings.fallback_model_valid,
+        "provider": settings.llm_provider,
+        "model": settings.active_model,
+        "modelValid": settings.active_model_valid,
+        "fallbackModel": settings.active_fallback_model,
+        "fallbackModelValid": settings.active_fallback_model_valid,
         "allowedModels": sorted(list(settings.ALLOWED_MODELS)),
         "metrics": get_metrics_summary(),
         "circuitBreaker": {

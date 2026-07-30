@@ -283,12 +283,16 @@ class TestAIServiceHardening(unittest.TestCase):
             )
         )
 
-        # Force AI off to verify deterministic fallback path (required by story and AIE-07)
+        # Force AI off to verify deterministic fallback path (required by story and AIE-07).
+        # ai_enabled is provider-aware, so disable the *active* provider's key.
         from app.config import get_settings
         settings = get_settings()
-        original_ai_enabled = settings.gemini_api_key
-        settings.gemini_api_key = None # Trips settings.ai_enabled to False
-        
+        key_attr = {"gemini": "gemini_api_key", "groq": "groq_api_key"}.get(
+            settings.llm_provider, "gemini_api_key"
+        )
+        original_ai_enabled = getattr(settings, key_attr)
+        setattr(settings, key_attr, "")  # Trips settings.ai_enabled to False
+
         try:
             # We run the async generate_growth_plan using an event loop or simply async run
             import asyncio
@@ -308,7 +312,7 @@ class TestAIServiceHardening(unittest.TestCase):
             self.assertTrue(len(plan.targetSkills) > 0)
             self.assertTrue(len(plan.suggestedProjects) > 0)
         finally:
-            settings.gemini_api_key = original_ai_enabled
+            setattr(settings, key_attr, original_ai_enabled)
 
     def test_imp_01_constant_time_token_verification(self):
         """Test verify_token uses constant-time comparison and preserves disabled behavior."""

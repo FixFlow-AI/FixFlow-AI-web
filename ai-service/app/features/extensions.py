@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Any, List, Union
 
-from ..llm.gemini import generate_structured
+from ..llm.client import generate_structured
 from ..schemas.extensions import ContractExtensionsOutput, ExtensionMilestone
 
 logger = logging.getLogger(__name__)

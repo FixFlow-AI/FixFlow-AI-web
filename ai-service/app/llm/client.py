@@ -24,7 +24,7 @@ from typing import Type, TypeVar
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, ValidationError
 
-from ..config import get_settings, resolve_model
+from ..config import get_settings, resolve_provider_model
 from ..telemetry import get_request_id, record_call
 from .cache import get_cached_response, set_cached_response
 from .circuit_breaker import primary_breaker
@@ -98,23 +98,17 @@ async def generate_structured(
         HumanMessage(content=contents),
     ]
 
-    # Model selection differs per provider. Gemini enforces the allowlist and
-    # supports a same-provider fallback model; other providers use their
-    # configured default and are never swapped.
-    is_gemini = provider == "gemini"
-    if is_gemini:
-        primary_model = resolve_model(model)
-        fallback_model = settings.gemini_fallback_model
-        fallback_eligible = model is None and primary_model != fallback_model
-    else:
-        # The ``model`` override is a Gemini-specific allowlisted name (e.g. the
-        # proposal or lite model) and is meaningless for other providers.
-        # Ignore it so the provider uses its own configured default (e.g.
-        # ``groq_model``); forwarding a Gemini name to Groq yields a 404
-        # model_not_found.
-        primary_model = None
-        fallback_model = None
-        fallback_eligible = False
+    # Model selection is provider-agnostic. ``resolve_provider_model`` honors a
+    # caller-pinned model only if it is valid for the active provider (else it
+    # degrades to the provider default), which prevents a model name from one
+    # provider leaking to another. Each provider may declare a distinct
+    # ``fallback_model`` used on retries; providers without one simply retry the
+    # same default model.
+    primary_model = resolve_provider_model(provider, model)
+    fallback_model = settings.provider_fallback_model(provider)
+    fallback_eligible = (
+        model is None and fallback_model is not None and fallback_model != primary_model
+    )
 
     async def _call(target_model: str | None):
         llm = _build_llm(provider, target_model, temperature)
@@ -124,12 +118,12 @@ async def generate_structured(
         # request on timeout and raises ``asyncio.TimeoutError`` (transient).
         return await asyncio.wait_for(
             structured.ainvoke(messages),
-            timeout=settings.gemini_timeout_sec,
+            timeout=settings.llm_timeout_sec,
         )
 
     # If the primary circuit breaker is open, route straight to the fallback
-    # model (Gemini only) instead of hammering a known-bad primary.
-    use_fallback_directly = is_gemini and fallback_eligible and not primary_breaker.is_allowed()
+    # model (when the provider has one) instead of hammering a known-bad primary.
+    use_fallback_directly = fallback_eligible and not primary_breaker.is_allowed()
     if use_fallback_directly:
         logger.warning(
             "[%s] Primary model circuit breaker is OPEN. Routing directly to fallback model: %s",
@@ -137,11 +131,11 @@ async def generate_structured(
             fallback_model,
         )
 
-    attempts = max(1, settings.gemini_max_retries)
+    attempts = max(1, settings.llm_max_retries)
     result = None
 
     for attempt in range(attempts):
-        if is_gemini and (use_fallback_directly or (attempt > 0 and fallback_eligible)):
+        if use_fallback_directly or (attempt > 0 and fallback_eligible):
             target_model = fallback_model
         else:
             target_model = primary_model
@@ -175,8 +169,8 @@ async def generate_structured(
             await asyncio.sleep(
                 _backoff_delay(
                     attempt,
-                    settings.gemini_retry_base_delay_sec,
-                    settings.gemini_retry_max_delay_sec,
+                    settings.llm_retry_base_delay_sec,
+                    settings.llm_retry_max_delay_sec,
                 )
             )
             continue

@@ -18,9 +18,9 @@ class GroqProvider(BaseLLMProvider):
             api_key=settings.groq_api_key,
             model=model or settings.groq_model,
             temperature=temperature,
-            timeout=settings.gemini_timeout_sec,
-            # Retries/backoff are owned by the app-level loop in ``gemini.py``.
-            max_retries=0,
+            timeout=settings.llm_timeout_sec,
+            # Retries/backoff are owned by the app-level loop in ``client.py``.
+            max_retries=3,
         )
 
 

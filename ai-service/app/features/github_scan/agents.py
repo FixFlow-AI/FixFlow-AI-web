@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 from ...config import get_settings
-from ...llm.gemini import generate_structured
+from ...llm.client import generate_structured
 from ...schemas.github import (
     ConfidenceBand,
     ConfidenceFactorBreakdown,
@@ -59,8 +59,10 @@ Output strict JSON for the requested schema. No markdown, no prose."""
 import math
 
 def _lite_model() -> str:
-    """Force the cheap model for last-mile calls (cost control)."""
-    return get_settings().gemini_fallback_model
+    """Prefer the active provider's cheaper fallback model for last-mile calls
+    (cost control), degrading to its default when no distinct fallback exists."""
+    settings = get_settings()
+    return settings.active_fallback_model or settings.active_model
 
 
 def _parse_iso(value: Any) -> datetime | None:
