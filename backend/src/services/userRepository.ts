@@ -466,7 +466,7 @@ class DynamoDbUserRepository implements UserRepository {
     const scanRes = await ddb.send(
       new ScanCommand({
         TableName: table('users'),
-        FilterExpression: 'lower(#e) = :e OR #e = :rawE',
+        FilterExpression: '#e = :e OR #e = :rawE',
         ExpressionAttributeNames: { '#e': 'email' },
         ExpressionAttributeValues: {
           ':e': cleanEmail,
@@ -475,8 +475,11 @@ class DynamoDbUserRepository implements UserRepository {
       }),
     );
     if (!scanRes.Items || scanRes.Items.length === 0) return null;
-    const items = scanRes.Items.map(migrateUserRecord).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    return items[0];
+    const items = scanRes.Items
+      .map(migrateUserRecord)
+      .filter((u) => u.email && u.email.trim().toLowerCase() === cleanEmail)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return items[0] ?? null;
   }
 
   async findById(id: string): Promise<User | null> {
