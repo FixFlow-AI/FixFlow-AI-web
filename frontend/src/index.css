@@ -5260,3 +5260,42 @@ body::before {
     grid-template-columns: 1fr;
   }
 }
+
+/* Freelancer-only public launch: unfinished workspace tools stay visible but
+   inaccessible, so users can see the roadmap without entering partial flows. */
+.dash-nav-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-nav-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 5px;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.dash-nav-item.is-coming-soon,
+.dash-nav-item.is-coming-soon:hover {
+  background: transparent;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.dash-nav-item.is-coming-soon svg {
+  opacity: 0.72;
+}
+
+.dash-sidebar.is-collapsed .dash-nav-badge {
+  display: none;
+}

@@ -69,6 +69,8 @@ services:
           envVarKey: AI_SERVICE_TOKEN
       - key: JWT_SECRET
         generateValue: true
+      - key: FREELANCER_ONLY_ONBOARDING
+        value: "true"               # authoritative new-account/role-change gate
       - key: GOOGLE_OAUTH_CLIENT_ID
         sync: false                 # required for Google sign-in
       - key: GITHUB_OAUTH_CLIENT_ID
@@ -170,6 +172,8 @@ services:
       # PUBLIC URL. Enter it after the backend is live, then redeploy the site.
       - key: VITE_API_BASE_URL
         sync: false                 # e.g. https://fixflowai-backend.onrender.com
+      - key: VITE_FREELANCER_ONLY_ONBOARDING
+        value: "true"               # set false + rebuild to reopen all signup roles
       # Google OAuth Web Client ID — same value as backend GOOGLE_OAUTH_CLIENT_ID.
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false

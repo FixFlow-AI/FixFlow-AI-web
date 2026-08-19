@@ -45,6 +45,14 @@ const VALID_ROLES: UserRole[] = ['client', 'freelancer', 'agency', 'developer'];
 const GOOGLE_ROLES: UserRole[] = ['client', 'developer', 'agency'];
 const GITHUB_ROLES: UserRole[] = ['freelancer', 'developer'];
 
+/**
+ * Temporary public-launch gate. Existing accounts always retain their stored
+ * role; only genuinely new account creation is restricted. Default-on prevents
+ * an omitted production env var from reopening unfinished onboarding paths.
+ */
+const FREELANCER_ONLY_ONBOARDING =
+  process.env.FREELANCER_ONLY_ONBOARDING !== 'false';
+
 export const authRouter = Router();
 
 /**
@@ -129,10 +137,25 @@ authRouter.post(
     }
 
     const repo = getUserRepository();
-    const existing = await repo.findByGoogleSub(profile.googleSub);
+    // Provider-id lookup is authoritative. Verified-email lookup preserves a
+    // grandfathered account when the same person uses another OAuth provider.
+    const existingByProvider = await repo.findByGoogleSub(profile.googleSub);
+    const existing = existingByProvider ?? await repo.findByEmail(profile.email);
     const isNewUser = !existing;
+
+    if (FREELANCER_ONLY_ONBOARDING && isNewUser) {
+      console.log('[AuthRoute] New Google signup deferred during freelancer-only launch. email:', profile.email);
+      res.status(403).json({
+        error: 'Client, agency, and developer onboarding is coming soon. New accounts can currently join as freelancers with GitHub.',
+        code: 'freelancer_onboarding_only',
+      });
+      return;
+    }
+
     const user = await repo.upsertFromGoogleProfile(profile);
     console.log('[AuthRoute]   ✅ User upserted from Google. userId:', user.id, '| role:', user.role);
+    // Existing users retain their stored role. This branch can create users only
+    // when launch mode is disabled, in which case the original role matrix applies.
     const session = await issueSession(repo, user, intendedRole, GOOGLE_ROLES, isNewUser);
     if (isNewUser && user.email) {
       notifyWelcome({ name: session.user.name, role: session.user.role as UserRole, email: user.email }, user.email);
@@ -174,10 +197,15 @@ authRouter.post(
     const repo = getUserRepository();
     console.log('[AuthRoute]   Upserting user from GitHub profile...');
 
-    // Is this a brand-new account? We only auto-scan on first sign-up; returning
-    // freelancers must trigger a re-analysis manually (Analytics tab) so we don't
-    // burn GitHub API quota on every login.
-    const priorUser = await repo.findByGithubUserId(profile.githubUserId);
+    // Brand-newness must match the repository's verified-email linking rule.
+    // Otherwise an existing cross-provider account could be merged and then
+    // incorrectly treated as new, overwriting its grandfathered role.
+    const existingByProvider = await repo.findByGithubUserId(profile.githubUserId);
+    const existingByVerifiedEmail =
+      !existingByProvider && profile.emailVerified
+        ? await repo.findByEmail(profile.email)
+        : null;
+    const priorUser = existingByProvider ?? existingByVerifiedEmail;
     const isNewUser = !priorUser;
 
     // Note: profile.accessToken is stored server-side ONLY (stripped by
@@ -196,7 +224,16 @@ authRouter.post(
       '| role:', user.role, '| newUser:', isNewUser,
     );
 
-    const session = await issueSession(repo, user, intendedRole, GITHUB_ROLES, isNewUser);
+    // During the public freelancer launch, a genuinely new GitHub account is
+    // always a freelancer regardless of a tampered client-supplied intendedRole.
+    // Existing accounts bypass role mutation inside issueSession.
+    const requestedRole = FREELANCER_ONLY_ONBOARDING && isNewUser
+      ? 'freelancer'
+      : intendedRole;
+    const allowedRoles = FREELANCER_ONLY_ONBOARDING && isNewUser
+      ? (['freelancer'] as UserRole[])
+      : GITHUB_ROLES;
+    const session = await issueSession(repo, user, requestedRole, allowedRoles, isNewUser);
 
     // Fire-and-forget welcome email for brand-new users.
     if (isNewUser && user.email) {
@@ -347,7 +384,30 @@ authRouter.patch(
       res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` });
       return;
     }
-    const updated = await getUserRepository().updateRole(req.auth!.sub, role);
+
+    const repo = getUserRepository();
+    const current = await repo.findById(req.auth!.sub);
+    if (!current) {
+      console.error('[AuthRoute] ❌ Role change: user not found. userId:', req.auth!.sub);
+      res.status(404).json({ error: 'User not found.' });
+      return;
+    }
+
+    if (FREELANCER_ONLY_ONBOARDING) {
+      // No-op requests remain harmless for grandfathered sessions, but role
+      // promotion/demotion is closed so a new freelancer cannot self-promote.
+      if (role === current.role) {
+        res.json({ user: publicUser(current) });
+        return;
+      }
+      res.status(403).json({
+        error: 'Role changes are temporarily unavailable during the freelancer-only launch.',
+        code: 'role_changes_paused',
+      });
+      return;
+    }
+
+    const updated = await repo.updateRole(req.auth!.sub, role);
     if (!updated) {
       console.error('[AuthRoute] ❌ Role change: user not found. userId:', req.auth!.sub);
       res.status(404).json({ error: 'User not found.' });
@@ -361,6 +421,10 @@ authRouter.patch(
 authRouter.post(
   '/dev-login',
   asyncRoute(async (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      res.status(404).json({ error: 'Not found.' });
+      return;
+    }
     console.log('[AuthRoute] POST /api/auth/dev-login — Development bypass login');
     const email = req.body?.email || 'dev-tester@fixflow.ai';
     const name = req.body?.name || 'Dev Tester';

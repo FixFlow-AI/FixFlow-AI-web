@@ -90,12 +90,12 @@ export const useLandingStore = create((set) => ({
     }
   })(),
   userRole: (() => {
-    if (typeof window === "undefined") return "client";
+    if (typeof window === "undefined") return null;
     try {
       const user = JSON.parse(localStorage.getItem("ff_user") || "null");
-      return user?.role || "client";
+      return user?.role || null;
     } catch {
-      return "client";
+      return null;
     }
   })(),
   user: (() => {
@@ -120,7 +120,7 @@ export const useLandingStore = create((set) => ({
       isLoggedIn: true,
       user,
       userEmail: user?.email || "",
-      userRole: user?.role || "client",
+      userRole: user?.role || null,
       page: "dashboard",
     }),
   // Rehydrate auth state from a persisted session on app load.
@@ -129,7 +129,7 @@ export const useLandingStore = create((set) => ({
       isLoggedIn: Boolean(user),
       user: user || null,
       userEmail: user?.email || "",
-      userRole: user?.role || "client",
+      userRole: user?.role || null,
     }),
   logout: () =>
     set({

@@ -38,13 +38,14 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getRefreshToken, getUser, clearSession } from "../lib/auth";
+import { FREELANCER_ONLY_ONBOARDING } from "../config/launchMode";
 
 /* ——————————————————————————————————————————
    Sidebar menu – matches the 7 product screens
    + 2 extra panels (Proposal, Role Setup)
    —————————————————————————————————————————— */
 const menuItems = [
-  { id: "overview", label: "Overview", icon: Home },
+  { id: "overview", label: "Overview", icon: Home, comingSoonFor: ["freelancer"] },
   // Client hiring pipeline (brief → proposal → evaluate → match). Per the role
   // permission matrix (docs/specifications/roles/00), freelancers cannot post
   // briefs or run shortlists, so these panels are client-only.
@@ -54,19 +55,32 @@ const menuItems = [
   { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck, roles: ["client"] },
   { id: "matching", label: "Talent Matches", icon: Users, roles: ["client"] },
   { id: "analytics", label: "Code Analytics", icon: LineChart, roles: ["freelancer"] },
-  { id: "agreement-composer", label: "Agreement", icon: Handshake },
-  { id: "delivery-control", label: "Delivery Control", icon: PackageCheck },
-  { id: "milestone-funds", label: "Escrow Funds", icon: Wallet },
-  { id: "payment-history", label: "Payments", icon: BarChart3 },
-  { id: "automations", label: "Automations", icon: Bot },
-  { id: "outcome-evidence", label: "Outcomes", icon: BarChart3 },
+  { id: "agreement-composer", label: "Agreement", icon: Handshake, comingSoonFor: ["freelancer"] },
+  { id: "delivery-control", label: "Delivery Control", icon: PackageCheck, comingSoonFor: ["freelancer"] },
+  { id: "milestone-funds", label: "Escrow Funds", icon: Wallet, comingSoonFor: ["freelancer"] },
+  { id: "payment-history", label: "Payments", icon: BarChart3, comingSoonFor: ["freelancer"] },
+  { id: "automations", label: "Automations", icon: Bot, comingSoonFor: ["freelancer"] },
+  { id: "outcome-evidence", label: "Outcomes", icon: BarChart3, comingSoonFor: ["freelancer"] },
 ];
 
-/** Tabs a given role is allowed to open (mirrors the nav `roles` gating). */
+function isComingSoonForRole(item, role) {
+  return Boolean(
+    FREELANCER_ONLY_ONBOARDING && item?.comingSoonFor?.includes(role),
+  );
+}
+
+function defaultTabForRole(role) {
+  return FREELANCER_ONLY_ONBOARDING && role === "freelancer"
+    ? "analytics"
+    : "overview";
+}
+
+/** Tabs a given role is allowed to open (mirrors the nav gating). */
 function isTabAllowedForRole(tabId, role) {
   const item = menuItems.find((m) => m.id === tabId);
-  // Panels not in the nav (e.g. role-onboarding) stay reachable.
+  // Panels not in the nav (e.g. first-time role onboarding) stay reachable.
   if (!item) return true;
+  if (isComingSoonForRole(item, role)) return false;
   return !item.roles || item.roles.includes(role);
 }
 
@@ -138,19 +152,24 @@ export function Dashboard() {
     }
   }, [parsedProposal, isNewProposalMode, hydrateLatestProposal, setProposalHistory]);
 
-  // Guard: if a stale URL hash points a freelancer at a client-only panel
-  // (or vice-versa), bounce them back to Overview instead of rendering it.
+  // Guard stale/direct hashes. During the freelancer-only launch, every
+  // freelancer panel except Code Analytics is intentionally inaccessible.
   useEffect(() => {
     if (user?.role && !isTabAllowedForRole(dashboardTab, user.role)) {
-      setDashboardTab("overview");
-      window.location.hash = "#/dashboard/overview";
+      const fallbackTab = defaultTabForRole(user.role);
+      setDashboardTab(fallbackTab);
+      window.location.hash = `#/dashboard/${fallbackTab}`;
     }
   }, [dashboardTab, user?.role, setDashboardTab]);
 
-  const effectiveTab = isTabAllowedForRole(dashboardTab, user?.role) ? dashboardTab : "overview";
-  const ActivePanel = tabMap[effectiveTab] || Overview;
+  const fallbackTab = defaultTabForRole(user?.role);
+  const effectiveTab = isTabAllowedForRole(dashboardTab, user?.role)
+    ? dashboardTab
+    : fallbackTab;
+  const ActivePanel = tabMap[effectiveTab] || tabMap[fallbackTab] || Overview;
 
   const handleTabChange = (tabId) => {
+    if (!isTabAllowedForRole(tabId, user?.role)) return;
     setDashboardTab(tabId);
     window.location.hash = `#/dashboard/${tabId}`;
   };
@@ -186,17 +205,25 @@ export function Dashboard() {
             .filter((item) => !item.roles || item.roles.includes(user?.role))
             .map((item) => {
             const Icon = item.icon;
-            const isActive = dashboardTab === item.id;
+            const isComingSoon = isComingSoonForRole(item, user?.role);
+            const isActive = !isComingSoon && effectiveTab === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`dash-nav-item${isActive ? " is-active" : ""}`}
+                className={`dash-nav-item${isActive ? " is-active" : ""}${isComingSoon ? " is-coming-soon" : ""}`}
                 onClick={() => handleTabChange(item.id)}
-                title={collapsed ? item.label : undefined}
+                disabled={isComingSoon}
+                aria-disabled={isComingSoon}
+                title={collapsed ? `${item.label}${isComingSoon ? " — Coming Soon" : ""}` : undefined}
               >
                 <Icon size={18} strokeWidth={1.8} />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && (
+                  <>
+                    <span className="dash-nav-label">{item.label}</span>
+                    {isComingSoon && <span className="dash-nav-badge">Coming Soon</span>}
+                  </>
+                )}
               </button>
             );
           })}

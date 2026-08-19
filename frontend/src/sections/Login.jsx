@@ -7,6 +7,8 @@ import { GithubSignInButton } from "../components/GithubSignInButton";
 import { api } from "../lib/api";
 import { setSession } from "../lib/auth";
 
+const SHOW_DEV_LOGIN = import.meta.env.DEV;
+
 export function Login() {
   const { setPage, login } = useLandingStore();
   const [devEmail, setDevEmail] = useState("developer@company.com");
@@ -92,9 +94,15 @@ export function Login() {
         }}
       >
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px" }}>Welcome back</h1>
-        <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 28px" }}>
-          Sign in with Google to open your project workspace.
+        <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 18px", lineHeight: 1.55 }}>
+          Existing clients, agencies, developers, and freelancers can continue with their original sign-in method.
         </p>
+
+        {error && (
+          <div style={{ fontSize: 13, color: "#b91c1c", background: "#fef2f2", padding: 10, borderRadius: 8, border: "1px solid #fecaca", marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
 
         <GoogleSignInButton nextHash="#/dashboard/overview" />
 
@@ -111,60 +119,42 @@ export function Login() {
           label="Sign in with GitHub"
         />
 
-        <div style={{ margin: "24px 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-          <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>OR DEV BYPASS</span>
-          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-        </div>
-
-        <form onSubmit={handleDevLogin} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {error && (
-            <div style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", padding: 8, borderRadius: 6, border: "1px solid #fee2e2" }}>
-              {error}
+        {SHOW_DEV_LOGIN && (
+          <>
+            <div style={{ margin: "24px 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+              <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>LOCAL DEVELOPMENT</span>
+              <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
             </div>
-          )}
-          <input
-            type="email"
-            value={devEmail}
-            onChange={(e) => setDevEmail(e.target.value)}
-            placeholder="Email (e.g. developer@company.com)"
-            required
-            style={{
-              padding: "10px 12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: 8,
-              fontSize: 13,
-            }}
-          />
-          <input
-            type="text"
-            value={devName}
-            onChange={(e) => setDevName(e.target.value)}
-            placeholder="Name (e.g. Jane Developer)"
-            required
-            style={{
-              padding: "10px 12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: 8,
-              fontSize: 13,
-            }}
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="panel-btn"
-            style={{
-              width: "100%",
-              background: "#0f172a",
-              color: "#fff",
-              display: "flex",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            <Terminal size={14} /> {loading ? "Signing in..." : "Developer Login"}
-          </button>
-        </form>
+
+            <form onSubmit={handleDevLogin} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input
+                type="email"
+                value={devEmail}
+                onChange={(e) => setDevEmail(e.target.value)}
+                placeholder="Email (e.g. developer@company.com)"
+                required
+                style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}
+              />
+              <input
+                type="text"
+                value={devName}
+                onChange={(e) => setDevName(e.target.value)}
+                placeholder="Name (e.g. Jane Developer)"
+                required
+                style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="panel-btn"
+                style={{ width: "100%", background: "#0f172a", color: "#fff", display: "flex", justifyContent: "center", gap: 8 }}
+              >
+                <Terminal size={14} /> {loading ? "Signing in..." : "Developer Login"}
+              </button>
+            </form>
+          </>
+        )}
 
         <div
           style={{

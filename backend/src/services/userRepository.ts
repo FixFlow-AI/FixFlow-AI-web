@@ -143,7 +143,9 @@ class SeedFileUserRepository implements UserRepository {
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
     const users = await this.load();
     let existing = users.find((u) => u.googleSub === input.googleSub);
-    if (!existing && input.email) {
+    // Cross-provider linking is safe only when the identity provider verified
+    // ownership of the email address.
+    if (!existing && input.email && input.emailVerified) {
       const cleanEmail = input.email.trim().toLowerCase();
       existing = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
     }
@@ -179,7 +181,7 @@ class SeedFileUserRepository implements UserRepository {
   async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
     const users = await this.load();
     let existing = users.find((u) => u.githubUserId === input.githubUserId);
-    if (!existing && input.email) {
+    if (!existing && input.email && input.emailVerified) {
       const cleanEmail = input.email.trim().toLowerCase();
       existing = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
     }
@@ -493,7 +495,7 @@ class DynamoDbUserRepository implements UserRepository {
 
   async upsertFromGoogleProfile(input: UpsertGoogleProfileInput): Promise<User> {
     let existing = await this.findByGoogleSub(input.googleSub);
-    if (!existing && input.email) {
+    if (!existing && input.email && input.emailVerified) {
       existing = await this.findByEmail(input.email);
     }
     const now = new Date().toISOString();
@@ -533,7 +535,7 @@ class DynamoDbUserRepository implements UserRepository {
 
   async upsertFromGithubProfile(input: UpsertGithubProfileInput): Promise<User> {
     let existing = await this.findByGithubUserId(input.githubUserId);
-    if (!existing && input.email) {
+    if (!existing && input.email && input.emailVerified) {
       existing = await this.findByEmail(input.email);
     }
     const now = new Date().toISOString();
