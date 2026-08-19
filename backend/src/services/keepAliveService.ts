@@ -1,4 +1,4 @@
-import { getAiServiceUrl } from './aiClient.js';
+import { getAiServiceUrl, getPublicAiServiceUrl } from './aiClient.js';
 
 /**
  * Background Keep-Alive Service.
@@ -10,20 +10,26 @@ let timer: NodeJS.Timeout | null = null;
 const WARMUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 async function pingServices(): Promise<void> {
-  // 1. Ping AI Service /health
-  const aiUrl = getAiServiceUrl();
-  if (aiUrl) {
+  // 1. Ping AI Service /health. Try the private hostport first (cheap, no
+  //    egress), then fall back to the public HTTPS URL — the private network
+  //    path connects directly to the container and fails outright if it's
+  //    asleep (free-tier spin-down), since it bypasses the public edge that
+  //    would otherwise wake it back up.
+  const aiUrls = [getAiServiceUrl(), getPublicAiServiceUrl()].filter(
+    (u, idx, self) => Boolean(u) && self.indexOf(u) === idx,
+  );
+  for (const aiUrl of aiUrls) {
     try {
       const res = await fetch(`${aiUrl}/health`, {
         headers: { 'User-Agent': 'FixFlowAI-KeepAlive/1.0' },
       });
       if (res.ok) {
         console.log(`[KeepAlive] Warmed up AI service at ${aiUrl}/health (${res.status} OK)`);
-      } else {
-        console.warn(`[KeepAlive] AI service warmup returned status ${res.status}`);
+        break;
       }
+      console.warn(`[KeepAlive] AI service warmup at ${aiUrl} returned status ${res.status}`);
     } catch (err) {
-      console.warn(`[KeepAlive] AI service warmup ping failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(`[KeepAlive] AI service warmup ping failed for ${aiUrl}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

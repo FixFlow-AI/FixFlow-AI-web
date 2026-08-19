@@ -548,28 +548,44 @@ export async function scanGithub(body: GithubScanRequestBody): Promise<GithubSca
  * segment as it arrives. The GitHub access token is used only here.
  */
 export async function openGithubScanStream(body: GithubScanRequestBody): Promise<Response> {
-  const aiUrl = getAiServiceUrl();
-  if (!aiUrl) {
+  // Mirror postJson's dual-URL fallback: on Render, the private hostport
+  // (AI_SERVICE_URL) connects directly to the AI service container and fails
+  // outright if it's asleep (free-tier spin-down), because private networking
+  // bypasses the public edge that would otherwise wake it. The public HTTPS
+  // URL goes through that edge and can wake a sleeping instance, so it must
+  // be tried as a fallback rather than only as a config alternative.
+  const primaryUrl = getAiServiceUrl();
+  const publicUrl = getPublicAiServiceUrl();
+  const urlsToTry = [primaryUrl, publicUrl].filter((u, idx, self) => Boolean(u) && self.indexOf(u) === idx);
+
+  if (urlsToTry.length === 0) {
     throw new AiServiceError(503, 'AI_SERVICE_URL is not configured on the server.');
   }
+
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (AI_SERVICE_TOKEN) headers['x-ai-service-token'] = AI_SERVICE_TOKEN;
 
-  let res: Response;
-  try {
-    res = await fetchWithRetry(`${aiUrl}/ai/github/scan/stream`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new AiServiceError(
-      502,
-      `AI service is unreachable at ${aiUrl}: ${err instanceof Error ? err.message : String(err)}`,
-    );
+  let lastError: Error | null = null;
+
+  for (const baseUrl of urlsToTry) {
+    try {
+      const res = await fetchWithRetry(`${baseUrl}/ai/github/scan/stream`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+      if (!res.ok || !res.body) {
+        throw new AiServiceError(res.status || 502, `AI scan stream failed (${res.status}).`);
+      }
+      return res;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`[AIClient] Scan stream via ${baseUrl} failed: ${lastError.message}. Trying next endpoint...`);
+    }
   }
-  if (!res.ok || !res.body) {
-    throw new AiServiceError(res.status || 502, `AI scan stream failed (${res.status}).`);
-  }
-  return res;
+
+  throw new AiServiceError(
+    502,
+    `AI service is unreachable at ${urlsToTry.join(' / ')}: ${lastError?.message || 'fetch failed'}`,
+  );
 }
