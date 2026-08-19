@@ -60,7 +60,13 @@ export class AiServiceError extends Error {
   }
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 4, delayMs = 1000): Promise<Response> {
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 4,
+  delayMs = 1000,
+  maxDelayMs = 3000,
+): Promise<Response> {
   let lastErr: unknown;
   for (let i = 0; i < retries; i++) {
     try {
@@ -69,7 +75,7 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 4, de
       // If 502/503/504 (e.g. Render container cold start / spin-down waking up), retry
       if ([502, 503, 504].includes(res.status) && i < retries - 1) {
         console.warn(`[AIClient] Upstream ${url} returned ${res.status}. Cold start warming up (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, Math.min(3000, delayMs * (1 + i * 0.5))));
+        await new Promise((r) => setTimeout(r, Math.min(maxDelayMs, delayMs * (1 + i * 0.5))));
         continue;
       }
       return res;
@@ -77,12 +83,31 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 4, de
       lastErr = err;
       if (i < retries - 1) {
         console.warn(`[AIClient] Fetch error on ${url}: ${err instanceof Error ? err.message : String(err)}. Retrying (${i + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, Math.min(3000, delayMs * (1 + i * 0.5))));
+        await new Promise((r) => setTimeout(r, Math.min(maxDelayMs, delayMs * (1 + i * 0.5))));
       }
     }
   }
   if (lastErr) throw lastErr;
   throw new Error(`Fetch to ${url} failed after ${retries} retries.`);
+}
+
+/**
+ * Retry budget for a given attempt index against the ordered list of
+ * candidate base URLs. Render's private network CANNOT deliver inbound
+ * traffic to a free-tier web service at all (confirmed in Render's docs:
+ * "Free web services can send private network requests, but they can't
+ * receive them") — so when `AI_SERVICE_URL` points at a private hostport,
+ * that attempt is not slow, it is guaranteed to fail. We give it a cheap,
+ * fast-fail budget instead of burning real time on it.
+ *
+ * The public HTTPS URL is the only path that can actually wake a sleeping
+ * free instance (it goes through Render's edge). Render's own dashboard
+ * warns free instances "can delay requests by 50 seconds or more" — so the
+ * FINAL candidate in the list gets a retry budget sized to survive that.
+ */
+function retryBudgetFor(index: number, total: number): { retries: number; maxDelayMs: number } {
+  const isFinalCandidate = index === total - 1;
+  return isFinalCandidate ? { retries: 14, maxDelayMs: 6000 } : { retries: 2, maxDelayMs: 1500 };
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -100,13 +125,21 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
   let lastError: Error | null = null;
 
-  for (const baseUrl of urlsToTry) {
+  for (let idx = 0; idx < urlsToTry.length; idx++) {
+    const baseUrl = urlsToTry[idx];
     try {
-      const res = await fetchWithRetry(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      });
+      const { retries, maxDelayMs } = retryBudgetFor(idx, urlsToTry.length);
+      const res = await fetchWithRetry(
+        `${baseUrl}${path}`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        },
+        retries,
+        1000,
+        maxDelayMs,
+      );
 
       const text = await res.text();
       let payload: any = null;
@@ -567,13 +600,21 @@ export async function openGithubScanStream(body: GithubScanRequestBody): Promise
 
   let lastError: Error | null = null;
 
-  for (const baseUrl of urlsToTry) {
+  for (let idx = 0; idx < urlsToTry.length; idx++) {
+    const baseUrl = urlsToTry[idx];
     try {
-      const res = await fetchWithRetry(`${baseUrl}/ai/github/scan/stream`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      });
+      const { retries, maxDelayMs } = retryBudgetFor(idx, urlsToTry.length);
+      const res = await fetchWithRetry(
+        `${baseUrl}/ai/github/scan/stream`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        },
+        retries,
+        1000,
+        maxDelayMs,
+      );
       if (!res.ok || !res.body) {
         throw new AiServiceError(res.status || 502, `AI scan stream failed (${res.status}).`);
       }

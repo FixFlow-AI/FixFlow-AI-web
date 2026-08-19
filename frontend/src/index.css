@@ -465,7 +465,7 @@ section {
   position: relative;
   grid-column: 7 / -1;
   align-self: center;
-  min-height: 510px;
+  width: 100%;
 }
 
 .hero-system--cards {
@@ -475,65 +475,371 @@ section {
   box-shadow: none;
 }
 
+/* Glassmorphic Stage Showcase */
+.hero-stage {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.85) 0%, rgba(240, 246, 255, 0.65) 100%);
+  border: 1px solid rgba(203, 219, 240, 0.8);
+  box-shadow: 0 30px 70px -30px rgba(15, 45, 110, 0.18), 0 10px 25px -10px rgba(0, 0, 0, 0.04);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero-stage-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px 4px;
+  border-bottom: 1px solid rgba(219, 230, 245, 0.7);
+}
+
+.hero-stage-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.hero-stage-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
+  display: inline-block;
+  animation: hero-live-pulse 2s infinite ease-in-out;
+}
+
+@keyframes hero-live-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+.hero-stage-sync {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hero-stage-sync-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--brand);
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.08);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.sync-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  animation: hero-live-pulse 1.2s infinite ease-in-out;
+}
+
+.hero-stage-sync-idle {
+  color: #64748b;
+}
+
+/* 2x2 Clean Responsive Grid (No overlaps) */
+.hero-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .hero-card {
-  position: absolute;
-  width: 240px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--canvas);
-  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
-  padding: 14px 16px;
-  transition: transform 300ms ease, box-shadow 300ms ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 3px 12px -2px rgba(15, 23, 42, 0.05), 0 1px 4px rgba(15, 23, 42, 0.02);
+  padding: 12px 14px;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease, background 220ms ease;
 }
 
 .hero-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
+  border-color: rgba(147, 197, 253, 0.85);
+  box-shadow: 0 10px 24px -6px rgba(37, 99, 235, 0.15), 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
+.hero-card.is-active {
+  border-color: var(--brand);
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25), 0 12px 28px -6px rgba(37, 99, 235, 0.25);
+  transform: translateY(-3px);
+}
+
+/* Card Header */
 .hero-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--ink);
+  margin-bottom: 8px;
 }
 
-.hero-card-icon {
-  font-size: 16px;
+.hero-card-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.hero-card-label {
+.hero-card-title-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   flex: 1;
 }
 
-.hero-card-dots {
-  color: var(--line-strong);
-  font-size: 12px;
-  letter-spacing: 2px;
+.hero-card-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
 }
 
-.hero-card-code {
-  margin: 0;
-  padding: 0;
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 12px;
-  line-height: 1.6;
+.hero-card-sublabel {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-card-status-badge {
+  font-size: 10px;
+  font-weight: 650;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge--blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge--emerald {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge--indigo {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.badge--amber {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Card Body */
+.hero-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* File pill */
+.hero-card-file-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.hero-card-file-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.hero-card-file-name {
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-card-file-tag {
+  margin-left: auto;
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Stat row */
+.hero-card-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.hero-card-stat-primary {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.hero-card-stat-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.tag--blue {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tag--emerald {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.tag--indigo {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.tag--amber {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Meter */
+.hero-card-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hero-card-meter-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  font-weight: 600;
   color: #475569;
-  white-space: pre;
+}
+
+.hero-card-meter-header strong {
+  color: var(--ink);
+}
+
+.hero-card-meter-track {
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 999px;
   overflow: hidden;
 }
 
-.hero-card-code .str {
-  color: #16a34a;
+.hero-card-meter-fill {
+  height: 100%;
+  border-radius: 999px;
 }
 
-.hero-card-dot {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
+.meter--blue {
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+}
+
+.meter--indigo {
+  background: linear-gradient(90deg, #818cf8, #4f46e5);
+}
+
+/* Chips */
+.hero-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hero-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 550;
+  color: #334155;
+}
+
+/* Footer pill */
+.hero-card-footer-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #e2e8f0;
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.hero-card-check {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+/* Stage Bottom Footer */
+.hero-stage-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-top: 6px;
+  border-top: 1px solid rgba(219, 230, 245, 0.7);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+@media (max-width: 640px) {
+  .hero-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-stage-footer {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
 }
 
 .system-topbar,
@@ -4829,32 +5135,6 @@ section {
   color: var(--muted);
 }
 
-/* Premium glass stage behind the floating system cards */
-.hero-stage {
-  position: absolute;
-  inset: 2% 0 6% 6%;
-  z-index: 0;
-  border-radius: 24px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(237, 244, 255, 0.35));
-  border: 1px solid rgba(188, 199, 213, 0.5);
-  box-shadow: 0 40px 80px -50px rgba(23, 62, 165, 0.45);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-
-/* Upgrade the floating cards to premium glass */
-.hero-card {
-  border-radius: 14px;
-  border-color: rgba(217, 224, 232, 0.9);
-  background: rgba(255, 255, 255, 0.82);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 18px 44px -22px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.04);
-}
-.hero-card:hover {
-  box-shadow: 0 26px 60px -22px rgba(37, 99, 235, 0.4);
-}
-
 /* Softly tint the very top of the page so the hero feels lifted */
 body::before {
   content: "";
@@ -4867,7 +5147,6 @@ body::before {
 }
 
 @media (max-width: 899px) {
-  .hero-stage { inset: 0; }
   .hero-stats { margin-top: 24px; }
   .hero-stat strong { font-size: 22px; }
 }

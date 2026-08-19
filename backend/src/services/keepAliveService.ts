@@ -11,10 +11,12 @@ const WARMUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 async function pingServices(): Promise<void> {
   // 1. Ping AI Service /health. Try the private hostport first (cheap, no
-  //    egress), then fall back to the public HTTPS URL — the private network
-  //    path connects directly to the container and fails outright if it's
-  //    asleep (free-tier spin-down), since it bypasses the public edge that
-  //    would otherwise wake it back up.
+  //    egress), then fall back to the public HTTPS URL. Per Render's docs,
+  //    a FREE-TIER web service cannot receive inbound private-network
+  //    traffic at all ("Free web services can send private network
+  //    requests, but they can't receive them") — so the private attempt is
+  //    guaranteed to fail, not just slow, and only the public URL (which
+  //    goes through Render's edge) can actually reach/wake the service.
   const aiUrls = [getAiServiceUrl(), getPublicAiServiceUrl()].filter(
     (u, idx, self) => Boolean(u) && self.indexOf(u) === idx,
   );

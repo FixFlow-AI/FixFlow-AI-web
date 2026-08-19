@@ -1,51 +1,113 @@
 import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Play, Pause, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  Pause,
+  Check,
+  FileText,
+  ShieldCheck,
+  Layers,
+  Lock,
+  Sparkles,
+  GitCommit,
+  CheckCircle2,
+  FileCheck2,
+  BadgeCheck,
+} from "lucide-react";
 import { RevealText } from "../components/RevealText";
 import { audiences, heroSteps, heroTrustMarkers } from "../data/landing";
 import { useLandingStore } from "../store/useLandingStore";
 
-/* Floating code-card data — matches the hero concept image */
+/* Rich visual system cards for non-technical clients & freelancers */
 const systemCards = [
   {
-    label: "Brief",
-    icon: "📄",
-    code: `{
-  "source": "client_brief.pdf",
-  "signals": 28,
-  "clarity": 62
-}`,
-    style: { top: "8%", right: "30%", zIndex: 3 },
+    id: "brief",
+    stepIndex: 0,
+    label: "Smart Brief",
+    sublabel: "AI Requirement Intake",
+    icon: FileText,
+    iconColor: "#2563eb",
+    iconBg: "rgba(37, 99, 235, 0.1)",
+    badgeText: "AI Scanned",
+    badgeType: "blue",
+    file: {
+      name: "client_brief.pdf",
+      time: "0.8s scan",
+    },
+    meter: {
+      label: "Clarity & Structure",
+      value: "96%",
+      percent: 96,
+      color: "blue",
+    },
+    highlight: {
+      icon: Sparkles,
+      text: "28 Key Signals Structured",
+    },
+    footer: "Zero ambiguity before hiring",
   },
   {
-    label: "Proof",
-    icon: "✓",
-    code: `{
-  "match_quality": 0.92,
-  "verified_skills": 14,
-  "fit_reason": "Strong"
-}`,
-    style: { top: "38%", right: "55%", zIndex: 2 },
+    id: "proof",
+    stepIndex: 1,
+    label: "Verified Proof",
+    sublabel: "GitHub & Codebase Match",
+    icon: ShieldCheck,
+    iconColor: "#059669",
+    iconBg: "rgba(5, 150, 105, 0.1)",
+    badgeText: "98% Match",
+    badgeType: "emerald",
+    statRow: {
+      primary: "Strong Engineering Fit",
+      tag: "Top 1% Rank",
+    },
+    chips: [
+      { text: "14 Commits Vetted", icon: GitCommit },
+      { text: "Live Repos", icon: CheckCircle2 },
+    ],
+    footer: "Real code proof, zero spam bids",
   },
   {
-    label: "Scope",
-    icon: "⊕",
-    code: `{
-  "estimate": "120h",
-  "milestones": 6,
-  "confidence": 0.86
-}`,
-    style: { top: "12%", right: "2%", zIndex: 1 },
+    id: "scope",
+    stepIndex: 2,
+    label: "Milestone Scope",
+    sublabel: "Auto-Scoped Roadmap",
+    icon: Layers,
+    iconColor: "#4f46e5",
+    iconBg: "rgba(79, 70, 229, 0.1)",
+    badgeText: "6 Milestones",
+    badgeType: "indigo",
+    statRow: {
+      primary: "6 Phased Milestones",
+      tag: "120h Est.",
+    },
+    meter: {
+      label: "Delivery Predictability",
+      value: "94%",
+      percent: 94,
+      color: "indigo",
+    },
+    footer: "Pre-agreed sign-off criteria",
   },
   {
-    label: "Escrow",
-    icon: "🔒",
-    code: `{
-  "protection": "escrow",
-  "release": "milestone",
-  "status": "secured"
-}`,
-    style: { top: "52%", right: "5%", zIndex: 1 },
+    id: "escrow",
+    stepIndex: 3,
+    label: "Guaranteed Escrow",
+    sublabel: "Milestone Payout Protection",
+    icon: Lock,
+    iconColor: "#d97706",
+    iconBg: "rgba(217, 119, 6, 0.1)",
+    badgeText: "Funds Secured",
+    badgeType: "amber",
+    statRow: {
+      primary: "100% Escrow Protection",
+      tag: "Milestone 1 Funded",
+    },
+    chips: [
+      { text: "Locked in Escrow", icon: Lock },
+      { text: "Paid on Sign-off", icon: BadgeCheck },
+    ],
+    footer: "Safe funds, zero payment disputes",
   },
 ];
 
@@ -63,7 +125,7 @@ export function Hero() {
       const stopTimer = window.setTimeout(() => setDemoRunning(false), 900);
       return () => window.clearTimeout(stopTimer);
     }
-    const timer = window.setTimeout(() => setHeroStep(heroStep + 1), 1050);
+    const timer = window.setTimeout(() => setHeroStep(heroStep + 1), 1200);
     return () => window.clearTimeout(timer);
   }, [demoRunning, heroStep, reducedMotion, setDemoRunning, setHeroStep]);
 
@@ -159,30 +221,137 @@ export function Hero() {
 
       {/* Right: Floating system cards on a premium glass stage */}
       <div className="hero-system hero-system--cards">
-        <div className="hero-stage" aria-hidden="true" />
-        {systemCards.map((card, idx) => (
-          <motion.div
-            key={card.label}
-            className="hero-card"
-            style={card.style}
-            initial={{ opacity: 0, y: reducedMotion ? 0 : 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: reducedMotion ? 0 : 0.6,
-              delay: reducedMotion ? 0 : 0.2 + idx * 0.12,
-            }}
-          >
-            <div className="hero-card-header">
-              <span className="hero-card-icon">{card.icon}</span>
-              <span className="hero-card-label">{card.label}</span>
-              <span className="hero-card-dots">•••</span>
+        <div className="hero-stage">
+          {/* Stage top header bar */}
+          <div className="hero-stage-topbar">
+            <div className="hero-stage-badge">
+              <span className="hero-stage-live-dot" aria-hidden="true" />
+              <span>FixFlow Trust Engine</span>
             </div>
-            <pre className="hero-card-code">{card.code}</pre>
-          </motion.div>
-        ))}
+            <div className="hero-stage-sync">
+              {demoRunning ? (
+                <span className="hero-stage-sync-active">
+                  <span className="sync-pulse-dot" />
+                  Step {heroStep + 1}/4: {heroSteps[heroStep]?.label}
+                </span>
+              ) : (
+                <span className="hero-stage-sync-idle">4-Point Trust Workflow</span>
+              )}
+            </div>
+          </div>
 
-        {/* Connecting dots */}
-        <div className="hero-card-dot" style={{ top: "50%", left: "50%", width: 10, height: 10, background: "var(--brand)" }} />
+          {/* 2x2 Clean Responsive Grid */}
+          <div className="hero-cards-grid">
+            {systemCards.map((card, idx) => {
+              const Icon = card.icon;
+              const isActive = demoRunning && heroStep === card.stepIndex;
+
+              return (
+                <motion.div
+                  key={card.id}
+                  className={`hero-card hero-card--${card.badgeType} ${isActive ? "is-active" : ""}`}
+                  initial={{ opacity: 0, y: reducedMotion ? 0 : 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: reducedMotion ? 0 : 0.5,
+                    delay: reducedMotion ? 0 : 0.12 + idx * 0.08,
+                  }}
+                >
+                  <div className="hero-card-header">
+                    <div
+                      className="hero-card-icon-wrap"
+                      style={{ background: card.iconBg, color: card.iconColor }}
+                    >
+                      <Icon size={16} strokeWidth={2.2} />
+                    </div>
+                    <div className="hero-card-title-group">
+                      <span className="hero-card-label">{card.label}</span>
+                      <span className="hero-card-sublabel">{card.sublabel}</span>
+                    </div>
+                    <span className={`hero-card-status-badge badge--${card.badgeType}`}>
+                      {card.badgeText}
+                    </span>
+                  </div>
+
+                  <div className="hero-card-body">
+                    {/* File Attachment Pill */}
+                    {card.file && (
+                      <div className="hero-card-file-pill">
+                        <FileCheck2 size={13} className="hero-card-file-icon" />
+                        <span className="hero-card-file-name">{card.file.name}</span>
+                        <span className="hero-card-file-tag">{card.file.time}</span>
+                      </div>
+                    )}
+
+                    {/* Stat Highlight Row */}
+                    {card.statRow && (
+                      <div className="hero-card-stat-row">
+                        <span className="hero-card-stat-primary">{card.statRow.primary}</span>
+                        <span className={`hero-card-stat-tag tag--${card.badgeType}`}>
+                          {card.statRow.tag}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Visual Meter Bar */}
+                    {card.meter && (
+                      <div className="hero-card-meter">
+                        <div className="hero-card-meter-header">
+                          <span>{card.meter.label}</span>
+                          <strong>{card.meter.value}</strong>
+                        </div>
+                        <div className="hero-card-meter-track">
+                          <div
+                            className={`hero-card-meter-fill meter--${card.meter.color}`}
+                            style={{ width: `${card.meter.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Highlight Pill */}
+                    {card.highlight && (
+                      <div className="hero-card-chips">
+                        <span className="hero-card-chip">
+                          <card.highlight.icon size={11} />
+                          {card.highlight.text}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Feature Chips */}
+                    {card.chips && (
+                      <div className="hero-card-chips">
+                        {card.chips.map((chip, i) => {
+                          const ChipIcon = chip.icon;
+                          return (
+                            <span key={i} className="hero-card-chip">
+                              <ChipIcon size={11} />
+                              {chip.text}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Card Footer Reassurance */}
+                    <div className="hero-card-footer-pill">
+                      <Check size={11} className="hero-card-check" />
+                      <span>{card.footer}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Stage Bottom Footer */}
+          <div className="hero-stage-footer">
+            <span>● Verified GitHub Proof</span>
+            <span>● Scoped Milestones</span>
+            <span>● 100% Escrow Security</span>
+          </div>
+        </div>
       </div>
 
       {/* Anchor to next section */}
