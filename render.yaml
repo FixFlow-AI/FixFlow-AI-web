@@ -24,7 +24,7 @@ services:
     rootDir: ai-service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
-    plan: free                      # use 'starter' for a stable judged demo
+    plan: starter                   # paid plan: no sleep + can receive private-network traffic
     healthCheckPath: /health
     envVars:
       - key: GEMINI_API_KEY
@@ -54,7 +54,7 @@ services:
     rootDir: backend
     buildCommand: npm install && npm run build
     startCommand: npm start
-    plan: free                      # 'starter' keeps WebSockets alive (no sleep)
+    plan: starter                   # paid plan: no sleep + private networking works both ways
     healthCheckPath: /api/health
     envVars:
       - key: AI_SERVICE_URL
@@ -62,8 +62,6 @@ services:
           type: web
           name: fixflowai-ai-service
           property: hostport        # private internal address (host:port)
-      - key: PUBLIC_AI_SERVICE_URL
-        value: https://fixflowai-ai-service.onrender.com
       - key: AI_SERVICE_TOKEN
         fromService:
           type: web
