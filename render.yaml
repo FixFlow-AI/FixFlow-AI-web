@@ -113,8 +113,16 @@ services:
         sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
-      # --- Email notifications (AWS SES, STORY-36) ---
-      # SES_FROM_EMAIL must be a verified SES identity. All emails are no-reply.
+      # --- Email notifications (Resend, STORY-36) ---
+      # Transactional mail goes out via Resend from the verified fixflowai.xyz
+      # domain. Zoho Mail still owns the info@ inbox for human replies, so the
+      # Zoho MX records must stay untouched.
+      - key: RESEND_API_KEY
+        sync: false                 # secret — enter in dashboard
+      - key: EMAIL_FROM
+        value: "FixFlowAI <info@fixflowai.xyz>"
+      # Legacy SES sender, kept only as a fallback for EMAIL_FROM during the
+      # cutover. Safe to delete once the Resend transport is confirmed live.
       - key: SES_FROM_EMAIL
         value: "FixFlowAI <info@fixflowai.xyz>"
       - key: SES_REPLY_TO

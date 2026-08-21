@@ -62,6 +62,7 @@ import { requireAuth } from './auth/middleware.js';
 import { requireRole } from './auth/roles.js';
 import {
   ClientMatchActionSchema,
+  ClientMatchPermissionError,
   ClientMatchVersionMismatchError,
   InvalidClientMatchTransitionError,
   createClientMatchWorkflow,
@@ -93,7 +94,7 @@ import {
 } from './services/paymentService.js';
 import { getWebhookEventRepository } from './services/webhookEventRepository.js';
 import { getUserRepository } from './services/userRepository.js';
-import { notifyMilestoneEvent, notifyProjectInvitation, notifyProposalEvaluated } from './services/emailService.js';
+import { logEmailTransportStatus, notifyMilestoneEvent, notifyProjectInvitation, notifyInvitationResponse, notifyProposalEvaluated } from './services/emailService.js';
 import { getCorsair, getCorsairError, getCorsairNodeHandler, isCorsairConfigured } from './services/corsairClient.js';
 import { fireMilestoneNotifications, listAutomations, createConnectLink } from './services/fixbotAgent.js';
 import { getAgentDirectory, getEvaluationMessages, recordEvaluationExchange } from './services/agentRegistry.js';
@@ -924,12 +925,15 @@ app.patch(
       return;
     }
 
+    // triggerRole 'client' means accept/decline are rejected here by the
+    // permission matrix — only the invited freelancer can consent.
     const workflow = transitionClientMatch(
       proposal.clientMatchWorkflow,
       req.params.freelancerId,
       parsed.data.action,
       parsed.data.expectedVersion,
       req.auth!.sub,
+      'client',
     );
     const updated = await getProposalRepository().setClientMatchWorkflow(
       proposal.proposalId,
@@ -1906,6 +1910,21 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(409).json({ error: err.message });
     return;
   }
+  if (err instanceof ClientMatchPermissionError) {
+    // 403, not 409: the action is well-formed but belongs to the other party.
+    res.status(403).json({ error: err.message, code: 'match_action_forbidden' });
+    return;
+  }
+  // Client-side request faults raised by middleware (e.g. body-parser's
+  // `entity.parse.failed` for malformed JSON) already carry a 4xx statusCode and
+  // set `expose: true`. Honour it instead of reporting a caller's bad request as
+  // a 500 server error, which hid real client bugs and polluted error logs.
+  const exposed = err as Error & { statusCode?: number; status?: number; expose?: boolean };
+  const exposedStatus = exposed.statusCode ?? exposed.status;
+  if (exposed.expose === true && typeof exposedStatus === 'number' && exposedStatus >= 400 && exposedStatus < 500) {
+    res.status(exposedStatus).json({ error: exposed.message || 'Malformed request.' });
+    return;
+  }
   console.error('Unhandled API error:', err);
   res.status(500).json({
     error: 'We could not complete that request right now. Please try again.',
@@ -1921,6 +1940,7 @@ server.listen(PORT, () => {
   console.log(`  REST API   : http://localhost:${PORT}/api`);
   console.log(`  Sync socket: ws://localhost:${PORT}/sync`);
   console.log(`  AI features ${isAiServiceConfigured() ? `ENABLED (proxy → ${process.env.AI_SERVICE_URL})` : 'DISABLED (set AI_SERVICE_URL)'}`);
+  logEmailTransportStatus();
   startKeepAliveService();
 });
 

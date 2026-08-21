@@ -2,6 +2,7 @@ import type { Milestone } from '../skills/escrowStateMachine.js';
 import {
   type WelcomeData,
   type InvitationData,
+  type InvitationResponseData,
   type GithubScanCompleteData,
   type InterviewScheduledData,
   type InterviewCompletedData,
@@ -11,6 +12,7 @@ import {
   welcomeClientTemplate,
   githubScanCompleteTemplate,
   projectInvitationTemplate,
+  invitationResponseTemplate,
   interviewScheduledTemplate,
   interviewCompletedTemplate,
   proposalEvaluatedTemplate,
@@ -18,34 +20,52 @@ import {
 } from './emailTemplates.js';
 
 /**
- * Email notifications via AWS SES (STORY-36).
+ * Transactional email via Resend (STORY-36).
  *
  * Config (env):
- *   SES_FROM_EMAIL   — a *verified* SES sender/identity, e.g. "FixFlowAI <info@fixflowai.xyz>"
- *   AWS_REGION       — reused from the shared AWS config
- *   EMAIL_ENABLED    — set "false" to hard-disable even if SES_FROM_EMAIL is set
+ *   RESEND_API_KEY — Resend API key for the verified fixflowai.xyz domain
+ *   EMAIL_FROM     — sender identity, e.g. "FixFlowAI <info@fixflowai.xyz>"
+ *                    (falls back to the legacy SES_FROM_EMAIL so an older
+ *                    deployment keeps working during the cutover)
+ *   SES_REPLY_TO   — optional Reply-To. Empty means no-reply.
+ *   EMAIL_ENABLED  — set "false" to hard-disable sending entirely
  *
- * All emails are sent as no-reply from info@fixflowai.xyz. If SES_FROM_EMAIL is
- * missing (or EMAIL_ENABLED=false), the service runs in a no-op "simulated" mode:
- * it logs what it would have sent and returns. This keeps local dev and no-email
- * demos working without AWS. Sending is always fire-and-forget from callers — a
- * mail failure never blocks a business action.
+ * Resend is called over plain HTTPS, so there is no SDK dependency. If the key
+ * or sender is missing (or EMAIL_ENABLED=false) the service runs in a no-op
+ * "simulated" mode: it logs what it would have sent and returns. That keeps
+ * local dev and no-email demos working. Sending is always fire-and-forget from
+ * callers — a mail failure never blocks a business action.
+ *
+ * Zoho Mail still owns the info@ inbox for human replies; Resend only sends
+ * app-generated mail. Their DNS records coexist (Zoho keeps the MX).
  */
 
-const FROM = process.env.SES_FROM_EMAIL || '';
-const ENABLED = process.env.EMAIL_ENABLED !== 'false' && Boolean(FROM);
+const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const SEND_TIMEOUT_MS = 15_000;
 
-let sesClientPromise: Promise<any> | null = null;
+const FROM = process.env.EMAIL_FROM || process.env.SES_FROM_EMAIL || '';
+const API_KEY = process.env.RESEND_API_KEY || '';
+const REPLY_TO = (process.env.SES_REPLY_TO || '').trim();
+const ENABLED =
+  process.env.EMAIL_ENABLED !== 'false' && Boolean(FROM) && Boolean(API_KEY);
 
-async function getClient() {
-  if (!sesClientPromise) {
-    sesClientPromise = (async () => {
-      const { SESv2Client } = await import('@aws-sdk/client-sesv2');
-      const { AWS_REGION } = await import('../config/aws.js');
-      return new SESv2Client({ region: AWS_REGION });
-    })();
+/**
+ * Log the transport decision once at boot. Sends are fire-and-forget, so
+ * without this a misconfigured deployment silently drops every email and
+ * nothing surfaces the problem.
+ */
+export function logEmailTransportStatus(): void {
+  if (ENABLED) {
+    console.log(`[EMAIL] Resend transport ENABLED. from="${FROM}"${REPLY_TO ? ` replyTo="${REPLY_TO}"` : ' (no-reply)'}`);
+    return;
   }
-  return sesClientPromise;
+  const missing: string[] = [];
+  if (!FROM) missing.push('EMAIL_FROM');
+  if (!API_KEY) missing.push('RESEND_API_KEY');
+  if (process.env.EMAIL_ENABLED === 'false') missing.push('EMAIL_ENABLED=false');
+  console.warn(
+    `[EMAIL] SIMULATION MODE — no mail will be delivered. Reason: ${missing.join(', ') || 'unknown'}`,
+  );
 }
 
 export interface SendEmailInput {
@@ -65,27 +85,38 @@ export async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean;
   }
 
   try {
-    const client = await getClient();
-    const { SendEmailCommand } = await import('@aws-sdk/client-sesv2');
-    await client.send(
-      new SendEmailCommand({
-        FromEmailAddress: FROM,
-        Destination: { ToAddresses: recipients },
-        Content: {
-          Simple: {
-            Subject: { Data: input.subject, Charset: 'UTF-8' },
-            Body: {
-              Html: { Data: input.html, Charset: 'UTF-8' },
-              Text: { Data: input.text, Charset: 'UTF-8' },
-            },
-          },
-        },
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM,
+        to: recipients,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
       }),
+      // Never let a hung mail call keep a request handler alive.
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      // Surface Resend's reason (unverified domain, bad key, invalid sender)
+      // rather than a generic failure — these are the usual setup mistakes.
+      const detail = (await res.text().catch(() => '')).slice(0, 300);
+      throw new Error(`Resend responded ${res.status}: ${detail || res.statusText}`);
+    }
+
+    const data = (await res.json().catch(() => ({}))) as { id?: string };
+    console.log(
+      `[EMAIL] Sent "${input.subject}" to ${recipients.join(', ')} (id: ${data.id ?? 'n/a'})`,
     );
-    console.log(`[EMAIL] Sent "${input.subject}" to ${recipients.join(', ')}`);
     return { sent: true, simulated: false };
   } catch (err) {
-    console.error('[EMAIL] SES send failed:', (err as Error).message);
+    console.error('[EMAIL] Resend send failed:', (err as Error).message);
     return { sent: false, simulated: false, error: (err as Error).message };
   }
 }
@@ -116,6 +147,19 @@ export function notifyProjectInvitation(data: InvitationData, to: string): void 
     projectInvitationTemplate.subject(data),
     projectInvitationTemplate.html(data),
     projectInvitationTemplate.text(data),
+  );
+}
+
+/**
+ * Notify a client that the freelancer accepted or declined their invitation.
+ * This closes the second half of the two-sided hiring handshake.
+ */
+export function notifyInvitationResponse(data: InvitationResponseData, to: string): void {
+  fireAndForget(
+    to,
+    invitationResponseTemplate.subject(data),
+    invitationResponseTemplate.html(data),
+    invitationResponseTemplate.text(data),
   );
 }
 
@@ -188,6 +232,7 @@ export function notifyMilestoneEvent(
 export type {
   WelcomeData,
   InvitationData,
+  InvitationResponseData,
   GithubScanCompleteData,
   InterviewScheduledData,
   InterviewCompletedData,

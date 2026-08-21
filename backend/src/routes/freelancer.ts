@@ -7,14 +7,24 @@ import { enqueueGithubScan, subscribeToScan } from '../services/githubScanServic
 import { isAiServiceConfigured } from '../services/aiClient.js';
 import { getUserRepository } from '../services/userRepository.js';
 import { createLinkedAccount } from '../services/paymentService.js';
+import { getProposalRepository, type StoredProposal } from '../services/proposalRepository.js';
+import {
+  transitionClientMatch,
+  verifyClientMatchAudit,
+  type ClientMatchCandidate,
+} from '../services/clientMatchWorkflow.js';
+import { notifyInvitationResponse } from '../services/emailService.js';
 import type { SegmentStatus } from '../types/github.js';
+import { z } from 'zod';
 
 /**
  * Freelancer routes (roles/01).
- *   GET  /api/freelancer/profile               — verified skills/projects/confidence (read-only)
- *   POST /api/freelancer/scan/rescan           — trigger a fresh on-demand GitHub re-analysis
- *   GET  /api/freelancer/scan/:jobId           — scan job status (polling fallback)
- *   GET  /api/freelancer/scan/:jobId/stream    — live SSE of segment reveals
+ *   GET   /api/freelancer/profile               — verified skills/projects/confidence (read-only)
+ *   POST  /api/freelancer/scan/rescan           — trigger a fresh on-demand GitHub re-analysis
+ *   GET   /api/freelancer/scan/:jobId           — scan job status (polling fallback)
+ *   GET   /api/freelancer/scan/:jobId/stream    — live SSE of segment reveals
+ *   GET   /api/freelancer/invitations           — project invitations addressed to me
+ *   PATCH /api/freelancer/invitations/:proposalId — accept or decline one invitation
  *
  * Skills are AI-derived and tamper-proof: there is intentionally NO write
  * endpoint for them. They change only via a re-scan.
@@ -26,6 +36,168 @@ const asyncRoute =
     h(req, res).catch(next);
 
 export const freelancerRouter = Router();
+
+// ─────────────────── Project invitations (two-sided hiring) ───────────
+//
+// A client can only ever OFFER. Moving into the project requires the
+// freelancer's own accept, which is why these two endpoints exist and are
+// guarded by requireRole('freelancer').
+
+const InvitationResponseSchema = z.object({
+  action: z.enum(['accept', 'decline']),
+  expectedVersion: z.number().int().positive(),
+});
+
+/** Statuses a freelancer is allowed to see in their own invitation inbox. */
+const VISIBLE_TO_FREELANCER = new Set([
+  'invited',
+  'accepted',
+  'declined',
+  'interviewing',
+  'selected',
+]);
+
+/**
+ * Redact a proposal down to what an invited freelancer may see.
+ *
+ * Deliberately excludes the full brief, parsed features/timeline/risks, the
+ * confidence evaluation, and every other candidate. An invitation is an
+ * introduction, not disclosure of the client's whole project file.
+ */
+function toInvitationDto(
+  proposal: StoredProposal,
+  candidate: ClientMatchCandidate,
+  clientName: string,
+) {
+  return {
+    proposalId: proposal.proposalId,
+    projectTitle: proposal.title || 'Untitled project',
+    // Short brief only — same 500-char budget as the invitation email.
+    brief: (proposal.briefText || '').slice(0, 500),
+    briefTruncated: (proposal.briefText || '').length > 500,
+    skills: (proposal.proposal?.features || [])
+      .map((f: { area?: string; title?: string }) => f.area || f.title || '')
+      .filter(Boolean)
+      .slice(0, 10),
+    clientName,
+    status: candidate.status,
+    invitedAt: candidate.updatedAt,
+    // The freelancer sees only their OWN match score, never the ranking.
+    matchScore: Math.round(candidate.compositeScore),
+    fitReasons: candidate.fitReasons.slice(0, 3),
+    // Needed so the response PATCH can use optimistic concurrency.
+    expectedVersion: proposal.clientMatchWorkflow!.version,
+  };
+}
+
+/** Every invitation addressed to the authenticated freelancer. */
+freelancerRouter.get(
+  '/invitations',
+  requireAuth,
+  requireRole('freelancer'),
+  asyncRoute(async (req, res) => {
+    const freelancerId = req.auth!.sub;
+    const proposals = await getProposalRepository().listByCandidateFreelancer(freelancerId);
+    const userRepo = getUserRepository();
+
+    const invitations = [];
+    for (const proposal of proposals) {
+      const workflow = proposal.clientMatchWorkflow;
+      if (!workflow) continue;
+      // Never surface a tampered hiring history to either party.
+      if (!verifyClientMatchAudit(workflow)) continue;
+
+      const candidate = workflow.candidates.find((c) => c.freelancerId === freelancerId);
+      if (!candidate || !VISIBLE_TO_FREELANCER.has(candidate.status)) continue;
+
+      const client = await userRepo.findById(proposal.userId);
+      invitations.push(
+        toInvitationDto(proposal, candidate, client?.name || 'A client'),
+      );
+    }
+
+    res.json({ invitations });
+  }),
+);
+
+/**
+ * Accept or decline one invitation. This is the ONLY way a candidate leaves the
+ * `invited` state toward the project, and only the invited freelancer can call it.
+ */
+freelancerRouter.patch(
+  '/invitations/:proposalId',
+  requireAuth,
+  requireRole('freelancer'),
+  asyncRoute(async (req, res) => {
+    const parsed = InvitationResponseSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid invitation response.', details: parsed.error.flatten() });
+      return;
+    }
+
+    const freelancerId = req.auth!.sub;
+    const repo = getProposalRepository();
+    const proposal = await repo.get(req.params.proposalId);
+
+    // Authorization: the invitation must exist AND name this freelancer. A
+    // 404 (not 403) avoids confirming that someone else's project exists.
+    const workflow = proposal?.clientMatchWorkflow;
+    const candidate = workflow?.candidates.find((c) => c.freelancerId === freelancerId);
+    if (!proposal || !workflow || !candidate) {
+      res.status(404).json({ error: 'Invitation not found.' });
+      return;
+    }
+    if (candidate.status !== 'invited') {
+      res.status(409).json({
+        error: `This invitation is already ${candidate.status}.`,
+        status: candidate.status,
+      });
+      return;
+    }
+
+    // The FSM + permission matrix enforce that only a freelancer may do this.
+    const next = transitionClientMatch(
+      workflow,
+      freelancerId,
+      parsed.data.action,
+      parsed.data.expectedVersion,
+      freelancerId,
+      'freelancer',
+    );
+    const updated = await repo.setClientMatchWorkflow(
+      proposal.proposalId,
+      next,
+      workflow.version,
+    );
+
+    // Fire-and-forget: tell the client which way it went. Never blocks the response.
+    void (async () => {
+      try {
+        const userRepo = getUserRepository();
+        const client = await userRepo.findById(proposal.userId);
+        if (client?.email) {
+          notifyInvitationResponse(
+            {
+              clientName: client.name || 'there',
+              freelancerName: candidate.name,
+              projectTitle: proposal.title || 'your project',
+              accepted: parsed.data.action === 'accept',
+            },
+            client.email,
+          );
+        }
+      } catch (err) {
+        console.error('[EMAIL] Failed to send invitation response email:', (err as Error).message);
+      }
+    })();
+
+    const saved = updated?.clientMatchWorkflow ?? next;
+    const savedCandidate = saved.candidates.find((c) => c.freelancerId === freelancerId)!;
+    res.json({
+      invitation: toInvitationDto({ ...proposal, clientMatchWorkflow: saved }, savedCandidate, 'A client'),
+    });
+  }),
+);
 
 freelancerRouter.get(
   '/profile',

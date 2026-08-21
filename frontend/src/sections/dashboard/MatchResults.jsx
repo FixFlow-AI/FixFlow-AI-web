@@ -30,7 +30,9 @@ const FACTOR_LABELS = {
 const STATUS_COPY = {
   suggested: { label: "Suggested", color: "#2563eb", background: "#eff6ff" },
   shortlisted: { label: "Shortlisted", color: "#7c3aed", background: "#f5f3ff" },
-  invited: { label: "Invitation sent", color: "#c2410c", background: "#fff7ed" },
+  invited: { label: "Awaiting their reply", color: "#c2410c", background: "#fff7ed" },
+  accepted: { label: "Accepted your invite", color: "#15803d", background: "#f0fdf4" },
+  declined: { label: "Declined", color: "#b91c1c", background: "#fef2f2" },
   interviewing: { label: "Interviewing", color: "#0369a1", background: "#ecfeff" },
   selected: { label: "Selected", color: "#15803d", background: "#f0fdf4" },
   archived: { label: "Archived", color: "#64748b", background: "#f8fafc" },
@@ -42,10 +44,16 @@ function barColor(value) {
   return "#ea580c";
 }
 
+/**
+ * Hiring is a two-sided handshake: once an invitation is sent, the client has
+ * no available action until the freelancer accepts or declines. `invited`
+ * therefore returns no actions — the backend rejects any attempt to skip it.
+ */
 function actionForStatus(status) {
   if (status === "suggested") return ["shortlist", "invite"];
   if (status === "shortlisted") return ["invite"];
-  if (status === "invited") return ["start_interview"];
+  if (status === "invited") return [];
+  if (status === "accepted") return ["start_interview", "select"];
   if (status === "interviewing") return ["select"];
   return [];
 }
@@ -88,6 +96,8 @@ export function MatchResults() {
       suggested: 0,
       shortlisted: 0,
       invited: 0,
+      accepted: 0,
+      declined: 0,
       interviewing: 0,
       selected: 0,
     };
@@ -251,6 +261,16 @@ export function MatchResults() {
               {actionLabel(action)}
             </button>
           ))}
+          {candidate.status === "invited" && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9a3412" }}>
+              <Send size={13} /> Invitation emailed — waiting for them to accept
+            </span>
+          )}
+          {candidate.status === "declined" && (
+            <span style={{ fontSize: 12, color: "#b91c1c" }}>
+              They declined. You can invite someone else from the shortlist.
+            </span>
+          )}
           {candidate.status === "selected" && (
             <button type="button" className="panel-btn" onClick={continueToAgreement} style={{ fontSize: 12 }}>
               <Check size={13} /> Continue to agreement
@@ -314,6 +334,7 @@ export function MatchResults() {
             ["Suggested", funnel.suggested],
             ["Shortlisted", funnel.shortlisted],
             ["Invited", funnel.invited],
+            ["Accepted", funnel.accepted],
             ["Interviewing", funnel.interviewing],
             ["Selected", funnel.selected],
           ].map(([label, count]) => (

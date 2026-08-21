@@ -166,6 +166,13 @@ export interface InvitationData {
   skills: string[];
 }
 
+export interface InvitationResponseData {
+  clientName: string;
+  freelancerName: string;
+  projectTitle: string;
+  accepted: boolean;
+}
+
 export interface GithubScanCompleteData {
   name: string;
   topSkills: string[];
@@ -384,6 +391,50 @@ export const projectInvitationTemplate: EmailTemplate<InvitationData> = {
     `Brief: ${d.projectBrief.slice(0, 300)}\n` +
     `Skills: ${d.skills.join(', ')}\n\n` +
     `View invitation: ${DASHBOARD_URL}\n\n` +
+    `— ${BRAND} Team`,
+};
+
+// ──────────────── 4b. Invitation Response (freelancer → client) ───────
+
+export const invitationResponseTemplate: EmailTemplate<InvitationResponseData> = {
+  subject: (d) =>
+    d.accepted
+      ? `${escapeHtml(d.freelancerName)} accepted your invitation — ${escapeHtml(d.projectTitle)}`
+      : `${escapeHtml(d.freelancerName)} declined your invitation — ${escapeHtml(d.projectTitle)}`,
+
+  html: (d) => masterLayout(
+    d.accepted
+      ? `${d.freelancerName} accepted your invitation to ${d.projectTitle}.`
+      : `${d.freelancerName} declined your invitation to ${d.projectTitle}.`,
+    d.accepted
+      ? `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:${COLORS.headerBgStart}">Invitation accepted ✅</h1>
+         <p style="margin:0 0 20px;font-size:15px;color:${COLORS.textLight}">Hi ${escapeHtml(d.clientName)}, <strong>${escapeHtml(d.freelancerName)}</strong> has accepted your invitation.</p>
+
+         <div style="padding:20px;background:${COLORS.cardBg};border-radius:12px;border:1px solid ${COLORS.border};margin:16px 0">
+           <h2 style="margin:0 0 8px;font-size:17px;font-weight:700;color:${COLORS.headerBgStart}">${escapeHtml(d.projectTitle)}</h2>
+           <p style="margin:0;font-size:14px;line-height:1.6;color:${COLORS.text}">Both sides have now agreed to talk. You can review their evidence, run a screening interview, or move straight to a working agreement.</p>
+         </div>
+
+         <p style="margin:16px 0 0;font-size:14px;color:${COLORS.text}">Nothing is committed until you approve the agreement and fund the first milestone.</p>
+
+         ${ctaButton('Review and continue', DASHBOARD_URL)}`
+      : `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:${COLORS.headerBgStart}">Invitation declined</h1>
+         <p style="margin:0 0 20px;font-size:15px;color:${COLORS.textLight}">Hi ${escapeHtml(d.clientName)}, <strong>${escapeHtml(d.freelancerName)}</strong> has declined your invitation to <strong>${escapeHtml(d.projectTitle)}</strong>.</p>
+         <p style="margin:0 0 16px;font-size:14px;color:${COLORS.text}">Your shortlist is unchanged, so you can invite another candidate whenever you're ready.</p>
+
+         ${ctaButton('View your shortlist', DASHBOARD_URL)}`,
+    `You're receiving this because you invited a freelancer to a project on ${BRAND}.`,
+  ),
+
+  text: (d) =>
+    (d.accepted
+      ? `${d.freelancerName} ACCEPTED your invitation.\n\n`
+      : `${d.freelancerName} declined your invitation.\n\n`) +
+    `Project: ${d.projectTitle}\n\n` +
+    (d.accepted
+      ? `Both sides have agreed to talk. Next: review evidence, optionally interview, then move to a working agreement. Nothing is committed until you approve the agreement and fund the first milestone.\n\n`
+      : `Your shortlist is unchanged — you can invite another candidate any time.\n\n`) +
+    `Open ${BRAND}: ${DASHBOARD_URL}\n\n` +
     `— ${BRAND} Team`,
 };
 

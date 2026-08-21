@@ -320,6 +320,16 @@ export const api = {
   // STORY-07: Payment history — user's deposits/escrow/payouts ledger.
   paymentHistory: (signal) => request("/payments/history", { signal }),
 
+  // Two-sided hiring: a freelancer's own invitation inbox. A client can only
+  // offer; moving into the project requires the freelancer's accept.
+  listInvitations: (signal) => request("/freelancer/invitations", { signal }),
+  respondToInvitation: (proposalId, action, expectedVersion, signal) =>
+    request(`/freelancer/invitations/${encodeURIComponent(proposalId)}`, {
+      method: "PATCH",
+      body: { action, expectedVersion },
+      signal,
+    }),
+
   // Corsair track — FixBot agent automations.
   listAutomations: (proposalId, signal) =>
     request(

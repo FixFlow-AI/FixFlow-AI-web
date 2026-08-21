@@ -49,6 +49,12 @@ export interface ProposalRepository {
   create(input: { userId: string; briefText: string; proposal: Proposal; degraded: boolean }): Promise<StoredProposal>;
   get(proposalId: string): Promise<StoredProposal | null>;
   listByUser(userId: string): Promise<StoredProposal[]>;
+  /**
+   * Every proposal whose hiring workflow contains this freelancer as a
+   * candidate. Powers the freelancer's own invitation inbox, which cannot use
+   * `listByUser` because that is keyed on the owning *client*.
+   */
+  listByCandidateFreelancer(freelancerId: string): Promise<StoredProposal[]>;
   setEvaluation(proposalId: string, evaluation: unknown): Promise<StoredProposal | null>;
   setWorkflow(proposalId: string, workflow: ProposalWorkflow): Promise<StoredProposal | null>;
   setClientMatchWorkflow(
@@ -91,6 +97,13 @@ export function buildClientMatchWorkflowCondition(
 
 function deriveTitle(p: Proposal): string {
   return (p.project_summary || 'Untitled project').split('.')[0].slice(0, 80);
+}
+
+/** True when the freelancer appears as a candidate in a proposal's hiring workflow. */
+function hasCandidate(proposal: StoredProposal, freelancerId: string): boolean {
+  return Boolean(
+    proposal.clientMatchWorkflow?.candidates?.some((c) => c.freelancerId === freelancerId),
+  );
 }
 
 function sortProposals(proposals: StoredProposal[]): StoredProposal[] {
@@ -139,6 +152,11 @@ class InMemoryProposalRepository implements ProposalRepository {
   async listByUser(userId: string) {
     const userItems = [...this.store.values()].filter((p) => p.userId === userId);
     return sortProposals(userItems);
+  }
+  async listByCandidateFreelancer(freelancerId: string) {
+    return sortProposals(
+      [...this.store.values()].filter((p) => hasCandidate(p, freelancerId)),
+    );
   }
   async setEvaluation(id: string, evaluation: unknown) {
     const sp = this.store.get(id);
@@ -224,6 +242,30 @@ class DynamoDbProposalRepository implements ProposalRepository {
     );
     const items = (res.Items as StoredProposal[]) ?? [];
     return sortProposals(items);
+  }
+  async listByCandidateFreelancer(freelancerId: string) {
+    // DynamoDB cannot filter on membership inside a nested list, so this is a
+    // paginated Scan with the match applied in memory. Acceptable at early-access
+    // volume; if the proposals table grows large, add a GSI keyed on
+    // freelancerId written whenever a candidate is invited.
+    const { ddb, table } = await import('../config/aws.js');
+    const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
+    const found: StoredProposal[] = [];
+    let ExclusiveStartKey: Record<string, unknown> | undefined;
+    do {
+      const res = await ddb.send(
+        new ScanCommand({
+          TableName: table('proposals'),
+          FilterExpression: 'attribute_exists(clientMatchWorkflow)',
+          ExclusiveStartKey,
+        }),
+      );
+      for (const item of (res.Items as StoredProposal[]) ?? []) {
+        if (hasCandidate(item, freelancerId)) found.push(item);
+      }
+      ExclusiveStartKey = res.LastEvaluatedKey as Record<string, unknown> | undefined;
+    } while (ExclusiveStartKey);
+    return sortProposals(found);
   }
   async setEvaluation(id: string, evaluation: unknown) {
     const sp = await this.get(id);
@@ -363,6 +405,11 @@ class FileProposalRepository implements ProposalRepository {
     const list = await this.load();
     const items = list.filter((p) => p.userId === userId);
     return sortProposals(items);
+  }
+
+  async listByCandidateFreelancer(freelancerId: string) {
+    const list = await this.load();
+    return sortProposals(list.filter((p) => hasCandidate(p, freelancerId)));
   }
 
   async setEvaluation(id: string, evaluation: unknown) {

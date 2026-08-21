@@ -21,6 +21,7 @@ import {
 import { getMilestoneRepository } from '../services/milestoneRepository.js';
 import { applyTransition } from '../services/escrowService.js';
 import {
+  ClientMatchPermissionError,
   ClientMatchVersionMismatchError,
   InvalidClientMatchTransitionError,
   createClientMatchWorkflow,
@@ -494,24 +495,75 @@ async function runTests() {
       throw new Error('Initial shortlist did not produce a valid, attributed audit entry');
     }
 
-    workflow = transitionClientMatch(workflow, 'freelancer-1', 'shortlist', workflow.version, 'client-1');
-    workflow = transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1');
-    workflow = transitionClientMatch(workflow, 'freelancer-1', 'start_interview', workflow.version, 'client-1');
-    workflow = transitionClientMatch(workflow, 'freelancer-1', 'select', workflow.version, 'client-1');
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'shortlist', workflow.version, 'client-1', 'client');
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1', 'client');
+
+    // A client must NOT be able to hire someone who never agreed. Both of these
+    // are the consent bypass the two-sided handshake exists to prevent.
+    for (const forbidden of ['start_interview', 'select'] as const) {
+      try {
+        transitionClientMatch(workflow, 'freelancer-1', forbidden, workflow.version, 'client-1', 'client');
+        throw new Error(`Client skipped freelancer consent via "${forbidden}"`);
+      } catch (error) {
+        if (!(error instanceof InvalidClientMatchTransitionError)) throw error;
+      }
+    }
+
+    // A client must not be able to accept on the freelancer's behalf either.
+    try {
+      transitionClientMatch(workflow, 'freelancer-1', 'accept', workflow.version, 'client-1', 'client');
+      throw new Error('Client was allowed to accept its own invitation');
+    } catch (error) {
+      if (!(error instanceof ClientMatchPermissionError)) throw error;
+    }
+
+    // ...and a freelancer must not be able to select themselves.
+    try {
+      transitionClientMatch(workflow, 'freelancer-1', 'select', workflow.version, 'freelancer-1', 'freelancer');
+      throw new Error('Freelancer was allowed to select themselves');
+    } catch (error) {
+      if (!(error instanceof ClientMatchPermissionError)) throw error;
+    }
+
+    // The freelancer consents, and only then can the client proceed.
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'accept', workflow.version, 'freelancer-1', 'freelancer');
+    if (workflow.candidates[0].status !== 'accepted') {
+      throw new Error('Freelancer acceptance did not move the candidate to accepted');
+    }
+    const acceptEntry = workflow.auditTrail[workflow.auditTrail.length - 1];
+    if (acceptEntry.triggerRole !== 'freelancer' || acceptEntry.action !== 'accept') {
+      throw new Error('Acceptance was not attributed to the freelancer in the audit trail');
+    }
+
+    workflow = transitionClientMatch(workflow, 'freelancer-1', 'select', workflow.version, 'client-1', 'client');
     if (workflow.candidates[0].status !== 'selected' || !verifyClientMatchAudit(workflow)) {
       throw new Error('Valid client hiring transitions did not preserve an auditable selected state');
     }
 
     try {
-      transitionClientMatch(workflow, 'freelancer-1', 'archive', workflow.version - 1, 'client-1');
+      transitionClientMatch(workflow, 'freelancer-1', 'archive', workflow.version - 1, 'client-1', 'client');
       throw new Error('Stale client-match version was accepted');
     } catch (error) {
       if (!(error instanceof ClientMatchVersionMismatchError)) throw error;
     }
 
     try {
-      transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1');
+      transitionClientMatch(workflow, 'freelancer-1', 'invite', workflow.version, 'client-1', 'client');
       throw new Error('Terminal selected state accepted an invalid transition');
+    } catch (error) {
+      if (!(error instanceof InvalidClientMatchTransitionError)) throw error;
+    }
+
+    // A declined invitation is terminal apart from the client archiving it.
+    let declinedFlow = createClientMatchWorkflow(shortlist, 'client-1');
+    declinedFlow = transitionClientMatch(declinedFlow, 'freelancer-1', 'invite', declinedFlow.version, 'client-1', 'client');
+    declinedFlow = transitionClientMatch(declinedFlow, 'freelancer-1', 'decline', declinedFlow.version, 'freelancer-1', 'freelancer');
+    if (declinedFlow.candidates[0].status !== 'declined') {
+      throw new Error('Decline did not move the candidate to declined');
+    }
+    try {
+      transitionClientMatch(declinedFlow, 'freelancer-1', 'select', declinedFlow.version, 'client-1', 'client');
+      throw new Error('A declined candidate could still be selected');
     } catch (error) {
       if (!(error instanceof InvalidClientMatchTransitionError)) throw error;
     }

@@ -15,6 +15,8 @@ export const ClientMatchStatusSchema = z.enum([
   'suggested',
   'shortlisted',
   'invited',
+  'accepted',
+  'declined',
   'interviewing',
   'selected',
   'archived',
@@ -23,6 +25,8 @@ export const ClientMatchStatusSchema = z.enum([
 export const ClientMatchActionSchema = z.enum([
   'shortlist',
   'invite',
+  'accept',
+  'decline',
   'start_interview',
   'select',
   'archive',
@@ -62,6 +66,8 @@ export const ClientMatchAuditEntrySchema = z.object({
     'shortlist_refreshed',
     'shortlist',
     'invite',
+    'accept',
+    'decline',
     'start_interview',
     'select',
     'archive',
@@ -70,7 +76,7 @@ export const ClientMatchAuditEntrySchema = z.object({
   fromStatus: ClientMatchStatusSchema.nullable(),
   toStatus: ClientMatchStatusSchema.nullable(),
   triggerUserId: z.string().min(1),
-  triggerRole: z.enum(['client', 'system']),
+  triggerRole: z.enum(['client', 'freelancer', 'system']),
   version: z.number().int().positive(),
   previousHash: z.string(),
   hash: z.string().length(64),
@@ -89,6 +95,7 @@ export const ClientMatchWorkflowSchema = z.object({
 
 export type ClientMatchStatus = z.infer<typeof ClientMatchStatusSchema>;
 export type ClientMatchAction = z.infer<typeof ClientMatchActionSchema>;
+export type ClientMatchTriggerRole = 'client' | 'freelancer' | 'system';
 export type ClientMatchCandidate = z.infer<typeof ClientMatchCandidateSchema>;
 export type ClientMatchWorkflow = z.infer<typeof ClientMatchWorkflowSchema>;
 
@@ -109,17 +116,77 @@ export class InvalidClientMatchTransitionError extends Error {
   }
 }
 
+/** Raised when a role attempts an action reserved for the other party. */
+export class ClientMatchPermissionError extends Error {
+  constructor(role: ClientMatchTriggerRole, action: ClientMatchAction) {
+    super(`A ${role} cannot perform the "${action}" action on a project match.`);
+    this.name = 'ClientMatchPermissionError';
+  }
+}
+
+/**
+ * Hiring is a TWO-SIDED handshake. A client may only *offer* — they can never
+ * move a candidate into the project on their own.
+ *
+ * Deliberate constraint: `invited` does NOT allow `start_interview` or `select`.
+ * The only exits from `invited` are the freelancer's own `accept`/`decline`
+ * (or the client withdrawing via `archive`). That is what stops a client from
+ * hiring someone who never agreed.
+ *
+ *   suggested ──shortlist──> shortlisted ──invite──> invited
+ *                                                      │
+ *                          freelancer decides ─────────┤
+ *                                                      ├─accept──> accepted ──select──> selected
+ *                                                      └─decline─> declined
+ */
 const ACTION_TARGETS: Record<ClientMatchStatus, Partial<Record<ClientMatchAction, ClientMatchStatus>>> = {
   suggested: { shortlist: 'shortlisted', invite: 'invited', archive: 'archived' },
   shortlisted: { invite: 'invited', archive: 'archived' },
-  invited: { start_interview: 'interviewing', archive: 'archived' },
+  // Freelancer-controlled gate. No client action can skip past this.
+  invited: { accept: 'accepted', decline: 'declined', archive: 'archived' },
+  // Consent given: only now may the client interview or select.
+  accepted: { start_interview: 'interviewing', select: 'selected', archive: 'archived' },
   interviewing: { select: 'selected', archive: 'archived' },
+  declined: { archive: 'archived' },
   selected: {},
   archived: {},
 };
 
+/** Which party is allowed to trigger each action. */
+const ACTION_ROLES: Record<ClientMatchAction, ClientMatchTriggerRole[]> = {
+  shortlist: ['client'],
+  invite: ['client'],
+  accept: ['freelancer'],
+  decline: ['freelancer'],
+  start_interview: ['client'],
+  select: ['client'],
+  archive: ['client'],
+};
+
+/**
+ * Deterministic, key-order-independent JSON serialisation.
+ *
+ * The audit chain is hashed, then stored and read back. `JSON.stringify` emits
+ * keys in insertion order, but DynamoDB stores maps UNORDERED — a round-trip
+ * returns the same data with a different key order, which changed the hash and
+ * made every persisted chain fail verification (surfacing as HTTP 409
+ * "Match history integrity check failed"). Sorting keys makes the hash depend
+ * on the data alone, so it survives any storage backend.
+ */
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  const entries = Object.keys(record)
+    .sort()
+    // Mirror JSON.stringify, which omits undefined-valued keys entirely.
+    .filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`);
+  return `{${entries.join(',')}}`;
+}
+
 function auditHash(input: Omit<z.infer<typeof ClientMatchAuditEntrySchema>, 'hash'>): string {
-  return crypto.createHash('sha256').update(JSON.stringify(input)).digest('hex');
+  return crypto.createHash('sha256').update(canonicalJson(input)).digest('hex');
 }
 
 function appendAudit(
@@ -133,7 +200,7 @@ function appendAudit(
     fromStatus: ClientMatchStatus | null;
     toStatus: ClientMatchStatus | null;
     triggerUserId: string;
-    triggerRole: 'client' | 'system';
+    triggerRole: ClientMatchTriggerRole;
     version: number;
     timestamp: string;
   },
@@ -239,16 +306,29 @@ export function refreshClientMatchWorkflow(
   );
 }
 
-/** Apply one client decision using optimistic concurrency and the hiring FSM. */
+/**
+ * Apply one hiring decision using optimistic concurrency, the hiring FSM, and
+ * the per-role permission matrix.
+ *
+ * `triggerRole` is required: the same workflow is now mutated by two different
+ * parties, so the caller must state which side is acting. The FSM alone is not
+ * enough — without this check a client could call `accept` on the freelancer's
+ * behalf, which is exactly the consent bypass this guards against.
+ */
 export function transitionClientMatch(
   workflow: ClientMatchWorkflow,
   freelancerId: string,
   action: ClientMatchAction,
   expectedVersion: number,
   triggerUserId: string,
+  triggerRole: ClientMatchTriggerRole,
 ): ClientMatchWorkflow {
   if (workflow.version !== expectedVersion) {
     throw new ClientMatchVersionMismatchError(expectedVersion, workflow.version);
+  }
+
+  if (!ACTION_ROLES[action].includes(triggerRole)) {
+    throw new ClientMatchPermissionError(triggerRole, action);
   }
 
   const candidate = workflow.candidates.find((item) => item.freelancerId === freelancerId);
@@ -276,7 +356,7 @@ export function transitionClientMatch(
       fromStatus: candidate.status,
       toStatus: nextStatus,
       triggerUserId,
-      triggerRole: 'client',
+      triggerRole,
       version: workflow.version + 1,
     },
   );

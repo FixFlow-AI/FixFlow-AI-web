@@ -14,6 +14,7 @@ import { FreelancerAnalytics } from "./dashboard/FreelancerAnalytics";
 import { PaymentHistory } from "./dashboard/PaymentHistory";
 import { Automations } from "./dashboard/Automations";
 import { ExecutionPlanPanel } from "./dashboard/ExecutionPlanPanel";
+import { FreelancerInvitations } from "./dashboard/FreelancerInvitations";
 
 import {
   Home,
@@ -35,6 +36,7 @@ import {
   Users,
   Bot,
   CalendarRange,
+  Mail,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getRefreshToken, getUser, clearSession } from "../lib/auth";
@@ -70,6 +72,9 @@ const menuItems = [
   // 2. Decide who delivers it.
   { id: "matching", label: "Talent Matches", icon: Users, group: "Find talent", roles: ["client"] },
   { id: "analytics", label: "Code Analytics", icon: LineChart, group: "Find talent", roles: ["freelancer"] },
+  // Freelancer half of the two-sided hiring handshake: clients can only invite,
+  // and nothing proceeds until the freelancer accepts here.
+  { id: "invitations", label: "Invitations", icon: Mail, group: "Find talent", roles: ["freelancer"] },
 
   // 3. Lock scope, protect money, then track delivery against it.
   { id: "agreement-composer", label: "Agreement", icon: Handshake, group: "Execute & protect", comingSoonFor: ["freelancer"] },
@@ -106,6 +111,7 @@ function isTabAllowedForRole(tabId, role) {
 const tabMap = {
   overview: Overview,
   analytics: FreelancerAnalytics,
+  invitations: FreelancerInvitations,
   "brief-intelligence": BriefIntelligence,
   "evidence-confidence": EvidenceConfidence,
   matching: MatchResults,
