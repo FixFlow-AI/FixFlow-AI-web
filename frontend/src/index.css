@@ -5416,6 +5416,33 @@ body::before {
   text-overflow: ellipsis;
 }
 
+/* Sidebar group label — orders the client journey into readable stages. */
+.dash-nav-group {
+  display: block;
+  margin: 14px 0 4px;
+  padding: 0 12px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.dash-sidebar-nav > .dash-nav-group:first-child {
+  margin-top: 2px;
+}
+
+.dash-sidebar.is-collapsed .dash-nav-group {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .dash-nav-group {
+    display: none;
+  }
+}
+
 .dash-nav-badge {
   margin-left: auto;
   flex-shrink: 0;

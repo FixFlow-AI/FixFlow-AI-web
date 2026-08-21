@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useLandingStore } from "../store/useLandingStore";
 import { Overview } from "./dashboard/Overview";
 import { BriefIntelligence } from "./dashboard/BriefIntelligence";
@@ -46,23 +46,40 @@ import "../tour.css";
    Sidebar menu – matches the 7 product screens
    + 2 extra panels (Proposal, Role Setup)
    —————————————————————————————————————————— */
+/**
+ * Sidebar order follows the real client journey, top to bottom, so the nav
+ * itself teaches the workflow:
+ *
+ *   Overview → Brief Intelligence → AI Builder → AI Evaluation → Project Plan
+ *   → Talent Matches → Agreement → Escrow Funds → Delivery Control
+ *   → Payments → Outcomes → Automations
+ *
+ * Groups are labels only; they never change routing or permissions. Per the
+ * role permission matrix (docs/specifications/roles/00) freelancers cannot post
+ * briefs or run shortlists, so the scoping and hiring panels stay client-only.
+ */
 const menuItems = [
-  { id: "overview", label: "Overview", icon: Home, comingSoonFor: ["freelancer"] },
-  // Client hiring pipeline (brief → proposal → evaluate → match). Per the role
-  // permission matrix (docs/specifications/roles/00), freelancers cannot post
-  // briefs or run shortlists, so these panels are client-only.
-  { id: "proposal-generator", label: "AI Builder", icon: Sparkles, roles: ["client"] },
-  { id: "project-plan", label: "Project Plan", icon: CalendarRange, roles: ["client"] },
-  { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText, roles: ["client"] },
-  { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck, roles: ["client"] },
-  { id: "matching", label: "Talent Matches", icon: Users, roles: ["client"] },
-  { id: "analytics", label: "Code Analytics", icon: LineChart, roles: ["freelancer"] },
-  { id: "agreement-composer", label: "Agreement", icon: Handshake, comingSoonFor: ["freelancer"] },
-  { id: "delivery-control", label: "Delivery Control", icon: PackageCheck, comingSoonFor: ["freelancer"] },
-  { id: "milestone-funds", label: "Escrow Funds", icon: Wallet, comingSoonFor: ["freelancer"] },
-  { id: "payment-history", label: "Payments", icon: BarChart3, comingSoonFor: ["freelancer"] },
-  { id: "automations", label: "Automations", icon: Bot, comingSoonFor: ["freelancer"] },
-  { id: "outcome-evidence", label: "Outcomes", icon: BarChart3, comingSoonFor: ["freelancer"] },
+  { id: "overview", label: "Overview", icon: Home, group: "Workspace", comingSoonFor: ["freelancer"] },
+
+  // 1. Scope the work: capture the request, build a proposal, check confidence.
+  { id: "brief-intelligence", label: "Brief Intelligence", icon: FileText, group: "Scope the project", roles: ["client"] },
+  { id: "proposal-generator", label: "AI Builder", icon: Sparkles, group: "Scope the project", roles: ["client"] },
+  { id: "evidence-confidence", label: "AI Evaluation", icon: BadgeCheck, group: "Scope the project", roles: ["client"] },
+  { id: "project-plan", label: "Project Plan", icon: CalendarRange, group: "Scope the project", roles: ["client"] },
+
+  // 2. Decide who delivers it.
+  { id: "matching", label: "Talent Matches", icon: Users, group: "Find talent", roles: ["client"] },
+  { id: "analytics", label: "Code Analytics", icon: LineChart, group: "Find talent", roles: ["freelancer"] },
+
+  // 3. Lock scope, protect money, then track delivery against it.
+  { id: "agreement-composer", label: "Agreement", icon: Handshake, group: "Execute & protect", comingSoonFor: ["freelancer"] },
+  { id: "milestone-funds", label: "Escrow Funds", icon: Wallet, group: "Execute & protect", comingSoonFor: ["freelancer"] },
+  { id: "delivery-control", label: "Delivery Control", icon: PackageCheck, group: "Execute & protect", comingSoonFor: ["freelancer"] },
+
+  // 4. The durable record left behind.
+  { id: "payment-history", label: "Payments", icon: BarChart3, group: "Records", comingSoonFor: ["freelancer"] },
+  { id: "outcome-evidence", label: "Outcomes", icon: BarChart3, group: "Records", comingSoonFor: ["freelancer"] },
+  { id: "automations", label: "Automations", icon: Bot, group: "Records", comingSoonFor: ["freelancer"] },
 ];
 
 function isComingSoonForRole(item, role) {
@@ -170,6 +187,13 @@ export function Dashboard() {
     : fallbackTab;
   const ActivePanel = tabMap[effectiveTab] || tabMap[fallbackTab] || Overview;
 
+  // Role filtering happens once so the group-label lookup can compare against
+  // the previous *visible* item rather than the raw menu.
+  const visibleMenuItems = useMemo(
+    () => menuItems.filter((item) => !item.roles || item.roles.includes(user?.role)),
+    [user?.role],
+  );
+
   const handleTabChange = (tabId) => {
     if (!isTabAllowedForRole(tabId, user?.role)) return;
     setDashboardTab(tabId);
@@ -207,30 +231,41 @@ export function Dashboard() {
           aria-label="Dashboard navigation"
           data-tour="sidebar-nav"
         >
-          {menuItems
-            .filter((item) => !item.roles || item.roles.includes(user?.role))
-            .map((item) => {
+          {visibleMenuItems.map((item, index) => {
             const Icon = item.icon;
             const isComingSoon = isComingSoonForRole(item, user?.role);
             const isActive = !isComingSoon && effectiveTab === item.id;
+            // Print a group label only when the group actually changes, and
+            // never in the icon-only collapsed rail.
+            const startsGroup =
+              !collapsed &&
+              item.group &&
+              item.group !== visibleMenuItems[index - 1]?.group;
             return (
-              <button
-                key={item.id}
-                type="button"
-                className={`dash-nav-item${isActive ? " is-active" : ""}${isComingSoon ? " is-coming-soon" : ""}`}
-                onClick={() => handleTabChange(item.id)}
-                disabled={isComingSoon}
-                aria-disabled={isComingSoon}
-                title={collapsed ? `${item.label}${isComingSoon ? " — Coming Soon" : ""}` : undefined}
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                {!collapsed && (
-                  <>
-                    <span className="dash-nav-label">{item.label}</span>
-                    {isComingSoon && <span className="dash-nav-badge">Coming Soon</span>}
-                  </>
+              <Fragment key={item.id}>
+                {startsGroup && (
+                  <span className="dash-nav-group" aria-hidden="true">
+                    {item.group}
+                  </span>
                 )}
-              </button>
+                <button
+                  type="button"
+                  className={`dash-nav-item${isActive ? " is-active" : ""}${isComingSoon ? " is-coming-soon" : ""}`}
+                  onClick={() => handleTabChange(item.id)}
+                  disabled={isComingSoon}
+                  aria-disabled={isComingSoon}
+                  data-tour={`nav-${item.id}`}
+                  title={collapsed ? `${item.label}${isComingSoon ? " — Coming Soon" : ""}` : undefined}
+                >
+                  <Icon size={18} strokeWidth={1.8} />
+                  {!collapsed && (
+                    <>
+                      <span className="dash-nav-label">{item.label}</span>
+                      {isComingSoon && <span className="dash-nav-badge">Coming Soon</span>}
+                    </>
+                  )}
+                </button>
+              </Fragment>
             );
           })}
         </nav>

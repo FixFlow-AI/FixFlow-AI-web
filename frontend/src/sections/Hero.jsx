@@ -41,7 +41,7 @@ export function Hero() {
           match, protected milestones, and one shared delivery record.
         </p>
         <div className="hero-actions">
-          <a className="button" href="#early-access">Request early access <ArrowRight aria-hidden="true" size={17} /></a>
+          <a className="button" href="#/signup">Request early access <ArrowRight aria-hidden="true" size={17} /></a>
           <button className="button button--quiet" type="button" onClick={toggleDemo}>
             {demoRunning ? <Pause aria-hidden="true" size={16} /> : <Play aria-hidden="true" size={16} />}
             {demoRunning ? "Pause workflow" : "Watch the system think"}

@@ -63,7 +63,9 @@ export function OutcomeEvidence() {
     <div>
       {/* Page header */}
       <div className="panel-page-header">
-        <h1 className="panel-page-title">Verified outcome record</h1>
+        <h1 className="panel-page-title" data-tour="outcomes-header">
+          Verified outcome record
+        </h1>
         <p className="panel-page-subtitle">
           {projectTitle} · <span style={{ color: "#2563eb", fontWeight: 600 }}>Awaiting execution evidence</span>
         </p>

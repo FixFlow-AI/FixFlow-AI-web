@@ -19,9 +19,11 @@ const ROLE_HELP = {
 };
 
 export function Signup() {
-  const { setPage } = useLandingStore();
+  const { setPage, audience } = useLandingStore();
   const [selectedRole, setSelectedRole] = useState(
-    FREELANCER_ONLY_ONBOARDING ? "freelancer" : "client",
+    audience && SIGNUP_ROLE_IDS.includes(audience)
+      ? audience
+      : (FREELANCER_ONLY_ONBOARDING ? "freelancer" : "client"),
   );
 
   const signupRoles = SIGNUP_ROLE_IDS

@@ -12,7 +12,7 @@ export function Footer() {
         <nav className="footer-nav" aria-label="Footer navigation">
           <div><strong>Product</strong><a href="#intelligence">Intelligence</a><a href="#workflow">Workflow</a><a href="#trust">Trust</a></div>
           <div><strong>For teams</strong><a href="#problem">Clients</a><a href="#problem">Freelancers</a><a href="#problem">Agencies</a><a href="#problem">Developers</a></div>
-          <div><strong>Access</strong><a href="#early-access">Request access</a><a href="#/login">Log in</a></div>
+          <div><strong>Access</strong><a href="#/signup">Request access</a><a href="#/login">Log in</a></div>
         </nav>
       </div>
       <div className="section-shell footer-bottom"><span>© {year} FixFlowAI</span><span>Trust-first freelance infrastructure.</span></div>

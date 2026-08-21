@@ -39,8 +39,10 @@ export function Trust() {
             })}
           </ol>
         </div>
+      </div>
 
-        <div className="section-screen section-screen--full" aria-label="Product interface: Verified outcome record">
+      <div className="section-shell">
+        <div className="section-screen" aria-label="Product interface: Verified outcome record">
           <div className="section-screen-bar" aria-hidden="true">
             <span /><span /><span />
           </div>

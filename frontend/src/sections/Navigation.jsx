@@ -62,7 +62,7 @@ export function Navigation() {
           >
             Log in
           </a>
-          <a className="button button--small nav-cta" href="#early-access">
+          <a className="button button--small nav-cta" href="#/signup">
             Request access
             <ArrowRight aria-hidden="true" size={15} strokeWidth={2} />
           </a>
@@ -100,7 +100,7 @@ export function Navigation() {
         </a>
         <a
           className="button"
-          href="#early-access"
+          href="#/signup"
           onClick={() => setMobileOpen(false)}
         >
           Request access
