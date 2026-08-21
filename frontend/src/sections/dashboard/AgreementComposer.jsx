@@ -246,7 +246,9 @@ Milestones: ${(parsedProposal.timeline || []).map((p) => p.phase).join(", ")}`;
       <div className="panel-page-header">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 className="panel-page-title">Working agreement</h1>
+            <h1 className="panel-page-title" data-tour="agreement-header">
+              Working agreement
+            </h1>
             <p className="panel-page-subtitle">
               Scope, acceptance criteria, delivery partner, and milestone funding in one verified contract.
             </p>

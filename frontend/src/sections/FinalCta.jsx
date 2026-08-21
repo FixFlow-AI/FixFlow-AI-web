@@ -53,9 +53,36 @@ export function FinalCta() {
             ))}
           </div>
           <p className="role-message">{roleMessages[role]}</p>
+
+          <div className="section-screen" style={{ marginTop: 32 }} aria-label="Product interface: AI Project Proposal Generator">
+            <div className="section-screen-bar" aria-hidden="true">
+              <span /><span /><span />
+            </div>
+            <img
+              src="/product-screens/project-proposal-generator.png"
+              alt="FixFlowAI AI Project Proposal Generator showing project description input, AI summary with scope, risk analysis, architecture, milestones, and acceptance criteria"
+              loading="lazy"
+              width="1340"
+              height="856"
+            />
+          </div>
         </div>
 
         <div className="access-panel">
+          <div className="cta-screen-preview">
+            <div className="section-screen">
+              <div className="section-screen-bar" aria-hidden="true">
+                <span /><span /><span />
+              </div>
+              <img
+                src="/product-screens/fixflow-role-onboarding-v1.png"
+                alt="FixFlowAI workspace setup showing role-based onboarding with team evidence, roles and assignments, and workspace preview for agencies"
+                loading="lazy"
+                width="1340"
+                height="856"
+              />
+            </div>
+          </div>
           {submitted ? (
             <motion.div
               className="access-success"

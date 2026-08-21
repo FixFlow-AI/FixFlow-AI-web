@@ -139,7 +139,9 @@ export function EvidenceConfidence() {
             ? parsedProposal.project_summary.split(".")[0].slice(0, 80)
             : "No active project brief"}
         </p>
-        <h1 className="panel-page-title">Evidence connected to requirements</h1>
+        <h1 className="panel-page-title" data-tour="evaluation-header">
+          Evidence connected to requirements
+        </h1>
         <p className="panel-page-subtitle">
           {user?.email ? user.email.split("@")[1].split(".")[0].toUpperCase() : "Workspace"} · Review before shortlist
         </p>

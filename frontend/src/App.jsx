@@ -13,6 +13,8 @@ import { Problem } from "./sections/Problem";
 import { SystemIntelligence } from "./sections/SystemIntelligence";
 import { Trust } from "./sections/Trust";
 import { Workflow } from "./sections/Workflow";
+import { ProductShowcase } from "./sections/ProductShowcase";
+import { SkillProfileShowcase } from "./sections/SkillProfileShowcase";
 import "./landing.css";
 
 import { Login } from "./sections/Login";
@@ -148,7 +150,9 @@ export function App() {
       <Navigation />
       <main id="main-content">
         <Hero />
+        <ProductShowcase />
         <Problem />
+        <SkillProfileShowcase />
         <SystemIntelligence />
         <HowItThinks />
         <Workflow />

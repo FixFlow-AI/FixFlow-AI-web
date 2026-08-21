@@ -166,6 +166,7 @@ export function DiscoveryWizard({ initialRequest, onBriefReady }) {
           style={{ width: "100%" }}
           onClick={start}
           disabled={!initialRequest?.trim()}
+          data-tour="discovery-start"
         >
           <Sparkles size={14} /> Start discovery
         </button>

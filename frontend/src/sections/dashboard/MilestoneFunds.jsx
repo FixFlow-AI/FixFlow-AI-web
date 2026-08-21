@@ -358,7 +358,9 @@ export function MilestoneFunds() {
   return (
     <div>
       <div className="panel-page-header">
-        <h1 className="panel-page-title">Protected milestone state</h1>
+        <h1 className="panel-page-title" data-tour="escrow-header">
+          Protected milestone state
+        </h1>
         <p className="panel-page-subtitle">
           {projectTitle} · Agreement v1.0
         </p>

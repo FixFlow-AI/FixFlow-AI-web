@@ -39,6 +39,8 @@ import {
 import { api } from "../lib/api";
 import { getRefreshToken, getUser, clearSession } from "../lib/auth";
 import { FREELANCER_ONLY_ONBOARDING } from "../config/launchMode";
+import { ProductTour, restartClientTour } from "../components/ProductTour";
+import "../tour.css";
 
 /* ——————————————————————————————————————————
    Sidebar menu – matches the 7 product screens
@@ -200,7 +202,11 @@ export function Dashboard() {
         </div>
 
         {/* Nav */}
-        <nav className="dash-sidebar-nav" aria-label="Dashboard navigation">
+        <nav
+          className="dash-sidebar-nav"
+          aria-label="Dashboard navigation"
+          data-tour="sidebar-nav"
+        >
           {menuItems
             .filter((item) => !item.roles || item.roles.includes(user?.role))
             .map((item) => {
@@ -281,7 +287,14 @@ export function Dashboard() {
             <button type="button" className="dash-topbar-icon" aria-label="Notifications">
               <Bell size={18} strokeWidth={1.7} />
             </button>
-            <button type="button" className="dash-topbar-icon" aria-label="Help">
+            <button
+              type="button"
+              className="dash-topbar-icon"
+              aria-label={user?.role === "client" ? "Replay product tour" : "Help"}
+              title={user?.role === "client" ? "Replay product tour" : undefined}
+              data-tour="help-replay"
+              onClick={user?.role === "client" ? restartClientTour : undefined}
+            >
               <CircleHelp size={18} strokeWidth={1.7} />
             </button>
             <div className="dash-topbar-avatar-container">
@@ -372,6 +385,9 @@ export function Dashboard() {
           <ActivePanel />
         </main>
       </div>
+
+      {/* Client-only guided walkthrough. Renders nothing for other roles. */}
+      <ProductTour sidebarCollapsed={collapsed} />
     </div>
   );
 }

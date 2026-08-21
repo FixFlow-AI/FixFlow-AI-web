@@ -61,6 +61,21 @@ export function HowItThinks() {
           <div className="thinking-canvas-footer"><span>Inputs remain attached</span><span>Changes remain reviewable</span><span>Approval stays human</span></div>
         </div>
       </div>
+
+      <div className="section-shell">
+        <div className="section-screen" aria-label="Product interface: Brief intelligence parsing">
+          <div className="section-screen-bar" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <img
+            src="/product-screens/fixflow-brief-intelligence-v1.png"
+            alt="FixFlowAI brief intelligence view showing a raw client request parsed into structured requirements, open decisions, and source attachments"
+            loading="lazy"
+            width="1340"
+            height="856"
+          />
+        </div>
+      </div>
     </section>
   );
 }

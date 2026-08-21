@@ -296,7 +296,9 @@ export function MatchResults() {
         <p style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>
           {parsedProposal?.project_summary ? parsedProposal.project_summary.split(".")[0].slice(0, 80) : "No active project brief"}
         </p>
-        <h1 className="panel-page-title">Client hiring matches</h1>
+        <h1 className="panel-page-title" data-tour="matches-header">
+          Client hiring matches
+        </h1>
         <p className="panel-page-subtitle">A clear shortlist, controlled invitations, and a direct hand-off to agreement.</p>
       </div>
 

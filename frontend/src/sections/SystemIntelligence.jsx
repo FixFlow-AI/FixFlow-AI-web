@@ -66,6 +66,19 @@ export function SystemIntelligence() {
             <div className="human-review"><CheckCircle2 aria-hidden="true" size={16} /><span>Visible for human review before the next stage</span></div>
           </div>
         </motion.div>
+
+        <div className="section-screen" aria-label="Product interface: Evidence confidence view">
+          <div className="section-screen-bar" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <img
+            src="/product-screens/fixflow-evidence-confidence-v1.png"
+            alt="FixFlowAI evidence view showing requirements mapped to evidence relationships with confidence scores — strong evidence, relevant evidence, and open questions"
+            loading="lazy"
+            width="1340"
+            height="856"
+          />
+        </div>
       </div>
     </section>
   );

@@ -600,6 +600,217 @@
 .footer-nav a:hover { color: #fff; }
 .footer-bottom { display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #2a3549; color: #7f8ba0; font-size: 11px; }
 
+/* ───────────────────────────────────────────────
+   Product screenshot showcase styles
+   ─────────────────────────────────────────────── */
+
+/* Hero product showcase — between Hero & Problem */
+.product-hero-showcase {
+  position: relative;
+  padding: 0 0 120px;
+  background: linear-gradient(180deg, #fff 0%, #f0f4fa 60%, var(--landing-soft) 100%);
+  overflow: hidden;
+}
+
+.product-hero-showcase::before {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(31, 94, 255, 0.04) 0%, transparent 100%);
+  content: "";
+  pointer-events: none;
+}
+
+.product-hero-showcase .section-shell {
+  position: relative;
+}
+
+.product-hero-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  color: #68758a;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.product-hero-label::before,
+.product-hero-label::after {
+  flex: 0 0 32px;
+  height: 1px;
+  background: #c4cdd9;
+  content: "";
+}
+
+.product-hero-frame {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #b8c4d4;
+  background: #fff;
+  box-shadow:
+    0 2px 4px rgba(16, 24, 40, 0.03),
+    0 8px 24px rgba(16, 24, 40, 0.06),
+    0 48px 100px rgba(16, 24, 40, 0.12);
+  transform: perspective(2400px) rotateX(2.5deg);
+  transform-origin: center top;
+}
+
+.product-hero-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Chrome dots for frame top bar */
+.product-frame-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e2e7ef;
+}
+
+.product-frame-bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d4dae3;
+}
+
+.product-frame-bar span:first-child { background: #f87171; }
+.product-frame-bar span:nth-child(2) { background: #fbbf24; }
+.product-frame-bar span:nth-child(3) { background: #34d399; }
+
+/* Section-level product screenshots */
+.section-screen {
+  margin-top: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #c4cdd9;
+  background: #fff;
+  box-shadow: 0 8px 40px rgba(16, 24, 40, 0.07);
+}
+
+.section-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.section-screen-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 13px;
+  background: #f7f9fb;
+  border-bottom: 1px solid #e4e9f0;
+}
+
+.section-screen-bar span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d4dae3;
+}
+
+.section-screen-bar span:first-child { background: #f87171; }
+.section-screen-bar span:nth-child(2) { background: #fbbf24; }
+.section-screen-bar span:nth-child(3) { background: #34d399; }
+
+.section-screen-caption {
+  margin: 16px 0 0;
+  color: #68758a;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+/* Side-by-side screenshot pair */
+.section-screen-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.section-screen-pair .section-screen {
+  margin-top: 0;
+}
+
+/* Full-width screen within a split layout (e.g. Trust section) */
+.section-screen--full {
+  grid-column: 1 / -1;
+}
+
+/* Skill-profile showcase (between Problem & Intelligence) */
+.skill-profile-showcase {
+  padding: 80px 0 96px;
+  background: #fff;
+  border-top: 1px solid var(--landing-rule);
+  overflow: hidden;
+}
+
+.skill-profile-showcase .section-shell {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.55fr) minmax(0, 1.45fr);
+  gap: 56px;
+  align-items: center;
+}
+
+.skill-profile-copy .landing-index {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.skill-profile-copy .section-title {
+  font-size: clamp(1.8rem, 2.5vw, 2.2rem);
+  letter-spacing: -0.03em;
+}
+
+.skill-profile-copy .section-copy {
+  margin-top: 14px;
+  color: var(--landing-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.skill-profile-showcase .section-screen {
+  margin-top: 0;
+}
+
+/* CTA section screenshot (beside the form) */
+.cta-screen-preview {
+  margin-bottom: 28px;
+}
+
+.cta-screen-preview .section-screen {
+  margin-top: 0;
+  border-color: #384962;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+}
+
+.cta-screen-preview .section-screen-bar {
+  background: #1d2a3e;
+  border-bottom-color: #2a3a52;
+}
+
+.cta-screen-preview .section-screen-bar span {
+  background: #3a4b63;
+}
+
+.cta-screen-preview .section-screen-bar span:first-child { background: #ef4444; }
+.cta-screen-preview .section-screen-bar span:nth-child(2) { background: #f59e0b; }
+.cta-screen-preview .section-screen-bar span:nth-child(3) { background: #10b981; }
+
+.cta-screen-preview .section-screen-caption {
+  color: #8899ae;
+}
+
 @media (max-width: 1100px) {
   .landing-page .hero { grid-template-rows: auto 64px; padding-top: calc(var(--header-height) + 70px); }
   .landing-page .hero-copy { grid-column: 1 / span 6; }
@@ -611,6 +822,8 @@
   .workflow-detail { grid-template-columns: 44px 1fr; }
   .workflow-detail dl { grid-column: 2; border: 0; }
   .final-cta-layout { gap: 55px; }
+  .product-hero-showcase { padding-bottom: 80px; }
+  .skill-profile-showcase .section-shell { gap: 36px; }
 }
 
 @media (max-width: 860px) {
@@ -645,6 +858,10 @@
   .thinking-tabs button.is-active { padding-left: 10px; box-shadow: inset 0 -3px 0 var(--landing-blue); }
   .final-cta-layout { gap: 48px; }
   .footer-layout { grid-template-columns: 1fr; gap: 44px; }
+  .product-hero-showcase { padding-bottom: 64px; }
+  .product-hero-frame { transform: none; }
+  .skill-profile-showcase .section-shell { grid-template-columns: 1fr; gap: 28px; }
+  .section-screen-pair { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -695,6 +912,9 @@
   .access-success { padding: 24px; }
   .footer-nav { grid-template-columns: repeat(2, 1fr); }
   .footer-bottom { display: grid; gap: 5px; }
+  .product-hero-showcase { padding-bottom: 48px; }
+  .product-hero-label { margin-bottom: 20px; }
+  .section-screen { margin-top: 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

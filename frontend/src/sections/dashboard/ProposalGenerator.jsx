@@ -1134,6 +1134,7 @@ export function ProposalGenerator() {
 
           <textarea
             data-lenis-prevent="true"
+            data-tour="idea-input"
             value={ideaText}
             onChange={(e) => setIdeaText(e.target.value)}
             rows={6}

@@ -14,5 +14,8 @@ References/buildX prize track
 secrets
 backend/data/
 data/
+# `data/` above is a broad match intended for runtime/seed data. The frontend
+# keeps static content modules in src/data, which are source code and must ship.
+!frontend/src/data/
 *.seed.json
 Presentation timeline infornt investors.txt

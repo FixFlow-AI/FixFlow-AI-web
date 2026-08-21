@@ -39,6 +39,19 @@ export function Trust() {
             })}
           </ol>
         </div>
+
+        <div className="section-screen section-screen--full" aria-label="Product interface: Verified outcome record">
+          <div className="section-screen-bar" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <img
+            src="/product-screens/fixflow-outcome-evidence-v1.png"
+            alt="FixFlowAI verified outcome record showing accepted deliverables, evidence timeline from requirement capture through acceptance, source connections, and reputation reuse controls"
+            loading="lazy"
+            width="1340"
+            height="856"
+          />
+        </div>
       </div>
     </section>
   );

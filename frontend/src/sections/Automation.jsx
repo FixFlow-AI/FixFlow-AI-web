@@ -37,6 +37,19 @@ export function Automation() {
             </tbody>
           </table>
         </div>
+
+        <div className="section-screen" aria-label="Product interface: Protected milestone funds">
+          <div className="section-screen-bar" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+          <img
+            src="/product-screens/fixflow-milestone-funds-v1.png"
+            alt="FixFlowAI protected milestone state showing funded escrow amounts, work progress, acceptance criteria tracking, and release status for a $45,000 agreement"
+            loading="lazy"
+            width="1340"
+            height="856"
+          />
+        </div>
       </div>
     </section>
   );

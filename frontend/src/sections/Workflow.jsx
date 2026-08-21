@@ -79,6 +79,33 @@ export function Workflow() {
             <dl><div><dt>Status</dt><dd>{active.status}</dd></div><div><dt>Owner</dt><dd>{active.owner}</dd></div><div><dt>Evidence</dt><dd>{active.evidence}</dd></div></dl>
           </motion.div>
         </AnimatePresence>
+
+        <div className="section-screen-pair" aria-label="Product interfaces: Agreement and delivery views">
+          <div className="section-screen">
+            <div className="section-screen-bar" aria-hidden="true">
+              <span /><span /><span />
+            </div>
+            <img
+              src="/product-screens/fixflow-agreement-composer-v1.png"
+              alt="FixFlowAI working agreement showing scope, acceptance criteria, milestone definitions, assumptions, and agreement check sidebar"
+              loading="lazy"
+              width="1340"
+              height="856"
+            />
+          </div>
+          <div className="section-screen">
+            <div className="section-screen-bar" aria-hidden="true">
+              <span /><span /><span />
+            </div>
+            <img
+              src="/product-screens/fixflow-delivery-change-control-v1.png"
+              alt="FixFlowAI milestone delivery view with task progress, delivery timeline, acceptance summary, and change control panel"
+              loading="lazy"
+              width="1340"
+              height="856"
+            />
+          </div>
+        </div>
       </div>
     </section>
   );

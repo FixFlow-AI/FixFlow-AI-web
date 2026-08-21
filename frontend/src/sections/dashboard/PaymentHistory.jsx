@@ -39,7 +39,9 @@ export function PaymentHistory() {
       <div className="panel-page-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h1 className="panel-page-title">Payment history</h1>
+            <h1 className="panel-page-title" data-tour="payments-header">
+              Payment history
+            </h1>
             <p className="panel-page-subtitle">Deposits, escrow holdings, and payouts across your projects.</p>
           </div>
           <button type="button" className="panel-btn panel-btn--ghost" onClick={load} disabled={loading}>

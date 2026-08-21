@@ -435,7 +435,7 @@ export function RoleOnboarding() {
       return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Organization Details */}
-          <div className="panel-card">
+          <div className="panel-card" data-tour="client-profile-card">
             <div className="panel-card-header">
               <h2 className="panel-card-title">Client Profile Settings</h2>
             </div>
@@ -647,7 +647,7 @@ export function RoleOnboarding() {
   };
 
   return (
-    <div>
+    <div data-tour="role-onboarding-panel">
       {/* Page header */}
       <div className="panel-page-header">
         <h1 className="panel-page-title">Set up your FixFlowAI workspace</h1>

@@ -377,7 +377,11 @@ export function BriefIntelligence() {
         {/* Center: Parsed requirements */}
         <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
           <div className="panel-card-header" style={{ marginBottom: 8 }}>
-            <h2 className="panel-card-title" style={{ display: "flex", alignItems: "center" }}>
+            <h2
+              className="panel-card-title"
+              style={{ display: "flex", alignItems: "center" }}
+              data-tour="parsed-requirements"
+            >
               Parsed requirements
               <InfoTooltip text="AI-extracted deliverables, constraints, and scope items from your brief." />
             </h2>
@@ -555,7 +559,11 @@ export function BriefIntelligence() {
         {/* Right: Needs a decision */}
         <div className="panel-card" style={{ display: "flex", flexDirection: "column" }}>
           <div className="panel-card-header" style={{ marginBottom: 8 }}>
-            <h2 className="panel-card-title" style={{ display: "flex", alignItems: "center" }}>
+            <h2
+              className="panel-card-title"
+              style={{ display: "flex", alignItems: "center" }}
+              data-tour="brief-decisions"
+            >
               Needs a decision
               <InfoTooltip text="Open questions or risks flagged by the AI that need your input before proceeding." />
             </h2>

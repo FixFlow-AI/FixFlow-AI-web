@@ -235,7 +235,11 @@ export function ExecutionPlanPanel() {
       <div className="panel-page-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 className="panel-page-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h1
+              className="panel-page-title"
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+              data-tour="plan-header"
+            >
               <CalendarRange size={22} style={{ color: "#2563eb" }} /> Project plan
             </h1>
             <p className="panel-page-subtitle">
