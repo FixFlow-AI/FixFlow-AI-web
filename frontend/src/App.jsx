@@ -24,7 +24,6 @@ import { Faq } from "./sections/Faq";
 import { SystemIntelligence } from "./sections/SystemIntelligence";
 import { Trust } from "./sections/Trust";
 import { Workflow } from "./sections/Workflow";
-import { ComparisonMatrix } from "./sections/ComparisonMatrix";
 
 import { Login } from "./sections/Login";
 import { Signup } from "./sections/Signup";
@@ -162,7 +161,6 @@ export function App() {
         <SocialProof />
         <ProductOverviewMoment />
         <Problem />
-        <ComparisonMatrix />
         <IntelligenceProductMoments />
         <SystemIntelligence />
         <HowItThinks />
