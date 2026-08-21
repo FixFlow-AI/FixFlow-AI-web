@@ -43,6 +43,10 @@ const MatchResultSchema = z.object({
   riskFlags: z.array(z.string()),
   matchType: z.enum(['primary', 'supplementary']).optional(),
   coversSkills: z.array(z.string()).optional(),
+  // Provenance of the candidate. 'platform' members have a real account and can
+  // accept an invitation; 'sample' profiles are seeded demo data and cannot.
+  // Optional so shortlists persisted before this field remain parseable.
+  source: z.enum(['platform', 'sample']).optional(),
 });
 
 const CoverageSchema = z.object({

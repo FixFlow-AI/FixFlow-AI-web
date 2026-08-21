@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Award,
+  BadgeCheck,
   Check,
   Eye,
+  Info,
   Layers,
   RefreshCw,
   Send,
@@ -190,6 +192,45 @@ export function MatchResults() {
               >
                 {status.label}
               </span>
+              {/* Provenance: a sample profile has no account, so it can never
+                  reply to an invitation. Say so before the client spends one. */}
+              {candidate.source === "platform" ? (
+                <span
+                  title="Registered member — can receive and accept your invitation"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "3px 7px",
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#15803d",
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                  }}
+                >
+                  <BadgeCheck size={11} /> Platform member
+                </span>
+              ) : (
+                <span
+                  title="Sample profile with no account — it cannot reply to an invitation"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "3px 7px",
+                    borderRadius: 999,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#92400e",
+                    background: "#fffbeb",
+                    border: "1px solid #fde68a",
+                  }}
+                >
+                  <Info size={11} /> Sample profile
+                </span>
+              )}
             </div>
             <div style={{ fontSize: 12, color: "#64748b" }}>{candidate.title}</div>
           </div>
@@ -263,7 +304,10 @@ export function MatchResults() {
           ))}
           {candidate.status === "invited" && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9a3412" }}>
-              <Send size={13} /> Invitation emailed — waiting for them to accept
+              <Send size={13} />
+              {candidate.source === "platform"
+                ? "Invitation emailed — waiting for them to accept"
+                : "Sample profile — no account to email, so no reply will arrive"}
             </span>
           )}
           {candidate.status === "declined" && (

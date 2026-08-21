@@ -21,6 +21,15 @@ export interface FreelancerProfile {
   available: boolean;
   activeEscrows: number;
   sbtCount: number;
+  /**
+   * Where the profile came from:
+   *   'platform' — a real registered freelancer. `id` is their userId, so they
+   *                can receive an invitation email and accept it.
+   *   'sample'   — seeded demo profile with no user account. Useful to keep the
+   *                shortlist populated, but it can never reply to an invitation.
+   * Undefined is treated as 'sample' (safer default for legacy rows).
+   */
+  source?: 'platform' | 'sample';
 }
 
 export interface MatchResult {
@@ -36,6 +45,8 @@ export interface MatchResult {
   matchType?: 'primary' | 'supplementary';
   /** For supplementary picks: which otherwise-uncovered required skills they cover. */
   coversSkills?: string[];
+  /** Carried through from the profile so the client knows who can actually reply. */
+  source?: 'platform' | 'sample';
 }
 
 /** Skill-coverage summary for the shortlist, used to decide if a team is needed. */
@@ -239,6 +250,7 @@ export function generateShortlist(
       fitReasons,
       skillGaps,
       riskFlags,
+      source: f.source ?? 'sample',
     } as MatchResult;
   });
 
