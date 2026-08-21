@@ -1,16 +1,27 @@
-import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, Lock, Play } from "lucide-react";
+import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, Check, LockKeyhole } from "lucide-react";
 import { RevealText } from "../components/RevealText";
+import { roleMessages } from "../data/landing";
 import { useLandingStore } from "../store/useLandingStore";
+
+const roles = ["client", "freelancer", "agency", "developer"];
 
 export function FinalCta() {
   const audience = useLandingStore((state) => state.audience);
+  const setAudience = useLandingStore((state) => state.setAudience);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [source, setSource] = useState("");
+  const [role, setRole] = useState(audience || "client");
   const [submitted, setSubmitted] = useState(false);
   const reducedMotion = useReducedMotion();
+
+  useEffect(() => setRole(audience || "client"), [audience]);
+
+  const chooseRole = (nextRole) => {
+    setRole(nextRole);
+    setAudience(nextRole);
+    setSubmitted(false);
+  };
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -19,196 +30,64 @@ export function FinalCta() {
   };
 
   return (
-    <section id="early-access" className="final-cta-section">
-      <div className="section-shell">
-        <div className="final-cta-layout">
-          {/* Left: Copy */}
-          <div>
-            <span className="panel-label" style={{ display: "block", marginBottom: 12, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8" }}>
-              Get Started
-            </span>
-            <RevealText as="h2" className="section-title" style={{ fontSize: 42, lineHeight: 1.1 }}>
-              Start with a brief.{" "}
-              <span style={{ color: "var(--brand)" }}>Leave with a working agreement.</span>
-            </RevealText>
-            <p style={{ fontSize: 16, color: "var(--muted)", lineHeight: 1.7, margin: "20px 0 28px", maxWidth: 440 }}>
-              FixFlowAI turns intent into an agreement you can trust. Human judgment stays in control. The system removes the friction.
-            </p>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <a className="button" href="#/signup">
-                Request access
-                <ArrowRight aria-hidden="true" size={18} />
-              </a>
-              <button className="button button--quiet" type="button">
-                <Play aria-hidden="true" size={17} />
-                Watch the system think
-              </button>
-            </div>
+    <section className="landing-section final-cta-section" id="early-access">
+      <div className="section-shell final-cta-layout">
+        <div className="final-cta-copy">
+          <span className="landing-index">07 / Early access</span>
+          <RevealText as="h2" className="section-title">
+            Start with a brief. Leave with a working agreement.
+          </RevealText>
+          <p className="section-copy">
+            Join the early-access group for your role. Your onboarding path will
+            focus on the decisions and safeguards that matter to how you work.
+          </p>
+          <div className="role-selector" role="group" aria-label="Choose your role">
+            {roles.map((item) => (
+              <button
+                className={role === item ? "is-active" : ""}
+                key={item}
+                type="button"
+                aria-pressed={role === item}
+                onClick={() => chooseRole(item)}
+              >{item}</button>
+            ))}
           </div>
+          <p className="role-message">{roleMessages[role]}</p>
+        </div>
 
-          {/* Right: Form */}
-          <div>
-            {submitted ? (
-              <motion.div
-                initial={{ opacity: 0, y: reducedMotion ? 0 : 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{
-                  padding: 32,
-                  border: "1px solid #bbf7d0",
-                  borderRadius: 12,
-                  background: "#f0fdf4",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    background: "#16a34a",
-                    color: "#fff",
-                    display: "grid",
-                    placeItems: "center",
-                    margin: "0 auto 16px",
-                  }}
-                >
-                  <Check size={24} />
-                </div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
-                  You are on the early-access list.
-                </h3>
-                <p style={{ fontSize: 14, color: "#64748b" }}>
-                  We will contact you with the {audience || "client"} onboarding path.
-                </p>
-              </motion.div>
-            ) : (
-              <form
-                onSubmit={handleSubmit}
-                style={{
-                  padding: 32,
-                  border: "1px solid var(--line)",
-                  borderRadius: 12,
-                  background: "var(--canvas)",
-                }}
-              >
-                {/* Work email */}
-                <div style={{ marginBottom: 20 }}>
-                  <label
-                    htmlFor="access-email"
-                    style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}
-                  >
-                    Work email
-                  </label>
-                  <input
-                    id="access-email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    autoComplete="email"
-                    required
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      border: "1px solid var(--line)",
-                      borderRadius: 8,
-                      fontSize: 14,
-                      color: "#0f172a",
-                    }}
-                  />
-                </div>
-
-                {/* Role */}
-                <div style={{ marginBottom: 20 }}>
-                  <label
-                    htmlFor="access-role"
-                    style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}
-                  >
-                    I am a
-                  </label>
-                  <select
-                    id="access-role"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      border: "1px solid var(--line)",
-                      borderRadius: 8,
-                      fontSize: 14,
-                      color: role ? "#0f172a" : "#94a3b8",
-                      background: "var(--canvas)",
-                      appearance: "auto",
-                    }}
-                  >
-                    <option value="">Select your role</option>
-                    <option value="client">Client</option>
-                    <option value="freelancer">Freelancer</option>
-                    <option value="agency">Agency</option>
-                    <option value="developer">Developer</option>
-                  </select>
-                </div>
-
-                {/* Source */}
-                <div style={{ marginBottom: 24 }}>
-                  <label
-                    htmlFor="access-source"
-                    style={{ display: "block", fontSize: 14, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}
-                  >
-                    How did you hear about us?
-                  </label>
-                  <select
-                    id="access-source"
-                    value={source}
-                    onChange={(e) => setSource(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      border: "1px solid var(--line)",
-                      borderRadius: 8,
-                      fontSize: 14,
-                      color: source ? "#0f172a" : "#94a3b8",
-                      background: "var(--canvas)",
-                      appearance: "auto",
-                    }}
-                  >
-                    <option value="">Select an option</option>
-                    <option value="twitter">Twitter / X</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="referral">Referral</option>
-                    <option value="search">Search</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-
-                <button
-                  className="button"
-                  type="submit"
-                  style={{ width: "100%", justifyContent: "center" }}
-                >
-                  Request access
-                  <ArrowRight aria-hidden="true" size={18} />
-                </button>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    marginTop: 16,
-                    fontSize: 12,
-                    color: "#94a3b8",
-                  }}
-                >
-                  <Lock size={12} />
-                  We respect your inbox. No spam. Ever.
-                </div>
-              </form>
-            )}
-          </div>
+        <div className="access-panel">
+          {submitted ? (
+            <motion.div
+              className="access-success"
+              initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              role="status"
+            >
+              <span><Check aria-hidden="true" size={22} /></span>
+              <h3>Your early-access request is ready.</h3>
+              <p>Continue to account setup for the <strong>{role}</strong> onboarding path.</p>
+              <a className="button" href="#/signup">Continue to account setup <ArrowRight aria-hidden="true" size={17} /></a>
+              <button className="text-action" type="button" onClick={() => setSubmitted(false)}>Use another email</button>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="access-panel-header"><span>Early-access request</span><strong>{role}</strong></div>
+              <label htmlFor="access-email">Work email</label>
+              <input
+                id="access-email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@company.com"
+                autoComplete="email"
+                required
+              />
+              <input name="role" type="hidden" value={role} />
+              <button className="button" type="submit">Request early access <ArrowRight aria-hidden="true" size={17} /></button>
+              <p className="access-note"><LockKeyhole aria-hidden="true" size={13} />No credit card. Your project data stays private.</p>
+            </form>
+          )}
         </div>
       </div>
     </section>

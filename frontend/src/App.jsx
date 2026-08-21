@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLandingStore } from "./store/useLandingStore";
 import { CursorField } from "./components/CursorField";
 import { ScrollProgress } from "./components/ScrollProgress";
@@ -10,20 +10,10 @@ import { Hero } from "./sections/Hero";
 import { HowItThinks } from "./sections/HowItThinks";
 import { Navigation } from "./sections/Navigation";
 import { Problem } from "./sections/Problem";
-import {
-  DeliveryFundsMoments,
-  IntelligenceProductMoments,
-  OutcomeProductMoment,
-  ProductOverviewMoment,
-  ProposalAgreementMoments,
-  RoleOnboardingMoment,
-} from "./sections/ProductMoments";
-import { SocialProof } from "./sections/SocialProof";
-import { Pricing } from "./sections/Pricing";
-import { Faq } from "./sections/Faq";
 import { SystemIntelligence } from "./sections/SystemIntelligence";
 import { Trust } from "./sections/Trust";
 import { Workflow } from "./sections/Workflow";
+import "./landing.css";
 
 import { Login } from "./sections/Login";
 import { Signup } from "./sections/Signup";
@@ -149,7 +139,7 @@ export function App() {
   }
 
   return (
-    <>
+    <div className="landing-page">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -158,24 +148,15 @@ export function App() {
       <Navigation />
       <main id="main-content">
         <Hero />
-        <SocialProof />
-        <ProductOverviewMoment />
         <Problem />
-        <IntelligenceProductMoments />
         <SystemIntelligence />
         <HowItThinks />
-        <ProposalAgreementMoments />
         <Workflow />
-        <DeliveryFundsMoments />
         <Automation />
         <Trust />
-        <OutcomeProductMoment />
-        <RoleOnboardingMoment />
-        <Pricing />
-        <Faq />
         <FinalCta />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

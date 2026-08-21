@@ -7,7 +7,6 @@ const navItems = [
   ["Problem", "problem"],
   ["Intelligence", "intelligence"],
   ["Workflow", "workflow"],
-  ["Pricing", "pricing"],
   ["Trust", "trust"],
 ];
 
@@ -63,7 +62,7 @@ export function Navigation() {
           >
             Log in
           </a>
-          <a className="button button--small nav-cta" href="#/signup">
+          <a className="button button--small nav-cta" href="#early-access">
             Request access
             <ArrowRight aria-hidden="true" size={15} strokeWidth={2} />
           </a>
@@ -101,7 +100,7 @@ export function Navigation() {
         </a>
         <a
           className="button"
-          href="#/signup"
+          href="#early-access"
           onClick={() => setMobileOpen(false)}
         >
           Request access
