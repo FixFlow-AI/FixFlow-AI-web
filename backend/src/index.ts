@@ -139,7 +139,13 @@ app.use(
         callback(null, true);
         return;
       }
-      callback(new Error(`Origin [${origin}] is not allowed by CORS policy.`));
+      // Disallowed origin: reflect NO CORS headers instead of throwing. Passing
+      // an Error here sends it to the global error handler, which turned every
+      // unlisted-origin request into a misleading HTTP 500 and filled the logs
+      // with fake server errors. Omitting the header is what actually blocks the
+      // browser (the browser enforces CORS, not the server), so this is a
+      // cleaner rejection with identical security behaviour.
+      callback(null, false);
     },
     credentials: true,
   }),

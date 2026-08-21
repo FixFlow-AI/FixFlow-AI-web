@@ -1,21 +1,33 @@
 /**
- * Guided product tour configuration for new CLIENT accounts.
+ * Guided product tour for new CLIENT accounts.
  *
- * Two tracks:
- *  - `coreTour`        runs once, immediately after signup, as a linear walkthrough.
- *  - `contextualTips`  fire individually the first time a client opens that tab,
- *                      because several surfaces (escrow, payments) cannot exist
- *                      until earlier steps are done. Teaching them upfront would
- *                      point at empty panels.
+ * Mirrors the sidebar journey defined in sections/Dashboard.jsx:
+ *   Overview → Brief Intelligence → AI Builder → AI Evaluation → Project Plan
+ *   → Talent Matches → Agreement → Escrow Funds → Delivery Control
+ *   → Payments → Outcomes
  *
- * `skipIf(ctx)` receives a snapshot of real store state (see buildTourContext in
+ * Two tracks, deliberately split:
+ *
+ *  - `coreTour` is a short orientation that only ever points at things a
+ *    brand-new account can actually see and act on. Every step here is
+ *    reachable with zero projects created.
+ *
+ *  - `contextualTips` fire once, the first time the client opens that tab.
+ *    Confidence scores, shortlists, escrow and payouts cannot exist until
+ *    earlier work is done, so teaching them upfront would spotlight empty
+ *    panels. This is why the deep steps are not in the core tour.
+ *
+ * Copy rule: describe what the client gets, not what the feature is called.
+ *
+ * `skipIf(ctx)` receives a snapshot of real store state (buildTourContext in
  * components/ProductTour.jsx). Returning true advances past the step silently.
- *
  * Every `target` must exist as a `data-tour` attribute in the referenced file.
  */
 
 export const TOUR_STORAGE_KEY = "ff_client_tour_v1";
-export const TOUR_VERSION = 1;
+// Bumped to 2: the tour was re-sequenced for the new sidebar order, so any
+// saved v1 progress is intentionally invalidated and the tour replays.
+export const TOUR_VERSION = 2;
 
 export const coreTour = [
   {
@@ -23,10 +35,10 @@ export const coreTour = [
     tab: "role-onboarding",
     target: '[data-tour="role-onboarding-panel"]',
     placement: "center",
-    title: "Welcome to your workspace",
+    title: "You're set up. Here's the short version.",
     tooltip:
-      "We'll walk through turning one project idea into a funded, protected agreement. About a minute, and you can leave any time.",
-    nextLabel: "Start tour",
+      "Six quick stops so you know where everything lives. You can leave at any point and pick it up later from the help icon.",
+    nextLabel: "Show me",
     skipIf: null,
   },
   {
@@ -34,112 +46,114 @@ export const coreTour = [
     tab: "role-onboarding",
     target: '[data-tour="client-profile-card"]',
     placement: "right",
-    title: "Set your context once",
+    title: "Tell us this once",
     tooltip:
-      "Fill this in once and it carries into every proposal and agreement, so you never re-explain who you are or how you work.",
+      "Company details carry into every brief, proposal and agreement you create, so you never retype your context for a new project.",
     nextLabel: "Next",
     skipIf: null,
   },
   {
-    id: "nav-orientation",
+    id: "nav-flow",
     tab: "role-onboarding",
     target: '[data-tour="sidebar-nav"]',
     placement: "right",
-    title: "How a project moves",
+    title: "The menu is the workflow",
     tooltip:
-      "Your project runs top to bottom: build the brief, evaluate it, match talent, agree on scope, then release funds against delivery.",
+      "It reads top to bottom in the order you'll actually use it: describe the work, plan it, choose who delivers, then protect the money.",
     nextLabel: "Next",
-    // Nothing useful to point at when the sidebar is collapsed to icons.
+    // Nothing readable to point at in the icon-only collapsed rail.
     skipIf: (ctx) => ctx.sidebarCollapsed,
   },
   {
-    id: "create-project",
-    tab: "proposal-generator",
-    target: '[data-tour="idea-input"]',
+    id: "brief-intake",
+    tab: "brief-intelligence",
+    target: '[data-tour="brief-input"]',
     placement: "bottom",
-    title: "Start with a plain description",
+    title: "Start by describing the work",
     tooltip:
-      "Describe what you want built in your own words. No template, no spec, no formatting rules — structure comes next.",
+      "Write it however you'd explain it to a colleague. No template needed — we turn it into requirements, constraints and open questions.",
     nextLabel: "Next",
-    skipIf: (ctx) => Boolean(ctx.parsedProposalId),
-  },
-  {
-    id: "clarifying-questions",
-    tab: "proposal-generator",
-    target: '[data-tour="discovery-start"]',
-    placement: "top",
-    title: "Guided discovery fills the gaps",
-    tooltip:
-      "Instead of one long form, the agent asks a question at a time and adapts to your answers until the brief is complete.",
-    nextLabel: "Next",
+    // The textarea only exists in the unparsed state; once a brief is saved
+    // this panel shows the parsed view instead.
     skipIf: (ctx) => ctx.isBriefParsed,
   },
   {
-    id: "ai-briefing",
-    tab: "brief-intelligence",
-    target: '[data-tour="parsed-requirements"]',
-    placement: "left",
-    title: "Your brief becomes structure",
+    id: "ai-builder",
+    tab: "proposal-generator",
+    target: '[data-tour="idea-input"]',
+    placement: "bottom",
+    title: "Turn it into a real proposal",
     tooltip:
-      "Outcomes, constraints, and open decisions are extracted here, and each one stays traceable back to what you originally wrote.",
+      "Guided discovery asks one question at a time and fills the gaps, so what comes out is scoped work with milestones, not a vague wishlist.",
     nextLabel: "Next",
-    skipIf: (ctx) => !ctx.isBriefParsed || ctx.briefParsing,
+    skipIf: null,
   },
   {
-    id: "open-decisions",
-    tab: "brief-intelligence",
-    target: '[data-tour="brief-decisions"]',
-    placement: "left",
-    title: "Ambiguity surfaces early",
+    id: "money-protection",
+    tab: "proposal-generator",
+    target: '[data-tour="nav-milestone-funds"]',
+    placement: "right",
+    title: "Your money stays protected",
     tooltip:
-      "Unclear items appear here instead of mid-project. Request clarification or record an assumption — either way the choice is logged.",
-    nextLabel: "Finish",
-    skipIf: (ctx) => ctx.decisionCount === 0,
+      "You fund one milestone at a time and it's only released when you accept the work. Nothing is paid out on trust alone.",
+    nextLabel: "Done",
+    skipIf: null,
   },
 ];
 
 export const contextualTips = [
   {
+    id: "brief-decisions",
+    tab: "brief-intelligence",
+    target: '[data-tour="brief-decisions"]',
+    placement: "left",
+    title: "Answer these before you hire",
+    tooltip:
+      "Anything ambiguous is listed here instead of surfacing halfway through delivery. Ask the question or record an assumption — both get logged.",
+    nextLabel: "Got it",
+    skipIf: (ctx) => ctx.decisionCount === 0,
+  },
+  {
     id: "evaluation",
     tab: "evidence-confidence",
     target: '[data-tour="evaluation-header"]',
     placement: "bottom",
-    title: "Confidence you can inspect",
+    title: "See why a match is credible",
     tooltip:
-      "Fit is broken down by evidence strength and what is still unresolved, rather than collapsed into a single opaque score.",
+      "Every confidence signal links back to the evidence behind it, and anything still unproven stays visible rather than averaged away.",
     nextLabel: "Got it",
     skipIf: (ctx) => !ctx.parsedProposal,
+  },
+  {
+    id: "project-plan",
+    tab: "project-plan",
+    target: '[data-tour="plan-header"]',
+    placement: "bottom",
+    title: "Check the plan before committing",
+    tooltip:
+      "Phases, estimates and acceptance criteria are all editable here. Nothing becomes binding until you approve the agreement.",
+    nextLabel: "Got it",
+    skipIf: (ctx) => !ctx.parsedProposalId,
   },
   {
     id: "matches",
     tab: "matching",
     target: '[data-tour="matches-header"]',
     placement: "bottom",
-    title: "A shortlist, not a bid pile",
+    title: "A shortlist, not an inbox",
     tooltip:
-      "Each match points to the evidence behind it. Your invitations and selection decisions are saved with the project.",
+      "You get a handful of candidates with the evidence for each, so you're comparing proven work instead of reading a hundred pitches.",
     nextLabel: "Got it",
     skipIf: (ctx) => ctx.matchingLoading,
-  },
-  {
-    id: "proposal-review",
-    tab: "project-plan",
-    target: '[data-tour="plan-header"]',
-    placement: "bottom",
-    title: "Review before you commit",
-    tooltip:
-      "Scope, phases, and acceptance criteria are all editable here. Nothing becomes binding until you approve the agreement.",
-    nextLabel: "Got it",
-    skipIf: (ctx) => !ctx.parsedProposalId,
   },
   {
     id: "agreement",
     tab: "agreement-composer",
     target: '[data-tour="agreement-header"]',
     placement: "bottom",
-    title: "Scope becomes an agreement",
+    title: "Agree once, in writing",
     tooltip:
-      "Assumptions, exclusions, and acceptance rules become the agreement both sides sign. Final approval stays with you.",
+      "Scope, exclusions and what counts as done are captured together, so a disagreement later has a written answer. You approve it.",
     nextLabel: "Got it",
     skipIf: (ctx) => ctx.agreementStatus === "approved",
   },
@@ -150,7 +164,7 @@ export const contextualTips = [
     placement: "bottom",
     title: "Funds are held, not sent",
     tooltip:
-      "Funding a milestone lets work start. The money is only released when you accept the delivery against the agreed criteria.",
+      "Funding a milestone signals you're serious and lets work start. The payout only happens once you accept it against the agreed criteria.",
     nextLabel: "Got it",
     skipIf: (ctx) => ctx.escrowState === "RELEASED",
   },
@@ -159,9 +173,20 @@ export const contextualTips = [
     tab: "payment-history",
     target: '[data-tour="payments-header"]',
     placement: "bottom",
-    title: "One ledger for everything",
+    title: "Every rupee, accounted for",
     tooltip:
-      "Every deposit, escrow hold, and payout across your projects, each tied to the milestone it belongs to.",
+      "Deposits, held funds and payouts across all your projects, each tied to the milestone it belongs to.",
+    nextLabel: "Got it",
+    skipIf: null,
+  },
+  {
+    id: "outcomes",
+    tab: "outcome-evidence",
+    target: '[data-tour="outcomes-header"]',
+    placement: "bottom",
+    title: "Proof you can reuse",
+    tooltip:
+      "Accepted work becomes a verifiable record of what was delivered, useful for your own reporting and for future hiring decisions.",
     nextLabel: "Done",
     skipIf: null,
   },
