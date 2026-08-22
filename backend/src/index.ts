@@ -55,6 +55,7 @@ import { generateShortlist } from './services/matchingEngine.js';
 import { getFreelancerRepository } from './services/freelancerRepository.js';
 import { getGithubScanRepository } from './services/githubScanRepository.js';
 import { getProposalRepository } from './services/proposalRepository.js';
+import { sanitizeWorkflow } from './services/proposalWorkflow.js';
 import { authRouter } from './routes/auth.js';
 import { freelancerRouter } from './routes/freelancer.js';
 import { interviewRouter } from './routes/interview.js';
@@ -301,33 +302,9 @@ app.get(
   })
 );
 
-// Total steps in the sequential proposal builder (Describe → Scope →
-// Intelligence → Timeline → Review). Kept in sync with the frontend stepper.
-const PROPOSAL_TOTAL_STEPS = 5;
-
-/**
- * Coerce a client-supplied workflow into a logically valid one:
- * - approvedSteps must be a contiguous prefix starting at 1 (you cannot approve
- *   step 3 without having approved 1 and 2);
- * - activeStep is clamped to [1, TOTAL] and can be at most (highest approved + 1).
- * This makes the persisted state tamper-resistant regardless of client input.
- */
-function sanitizeWorkflow(activeStep: unknown, approvedSteps: unknown) {
-  const uniq = Array.isArray(approvedSteps)
-    ? [...new Set(approvedSteps.filter((n) => Number.isInteger(n) && n >= 1 && n <= PROPOSAL_TOTAL_STEPS))].sort(
-        (a, b) => a - b,
-      )
-    : [];
-  const prefix: number[] = [];
-  for (let i = 0; i < uniq.length; i++) {
-    if (uniq[i] === i + 1) prefix.push(uniq[i]);
-    else break;
-  }
-  const maxAllowed = Math.min((prefix.length ? prefix[prefix.length - 1] : 0) + 1, PROPOSAL_TOTAL_STEPS);
-  let step = Number.isInteger(activeStep) ? (activeStep as number) : 1;
-  step = Math.min(Math.max(step, 1), maxAllowed);
-  return { activeStep: step, approvedSteps: prefix, updatedAt: new Date().toISOString() };
-}
+// Sequential-approval sanitisation lives in its own module so it is testable
+// without booting this server; re-exported here to keep the public surface.
+export { PROPOSAL_TOTAL_STEPS, sanitizeWorkflow } from './services/proposalWorkflow.js';
 
 // Persist the client's sequential step/approval state for a proposal so the
 // builder restores exactly where the owner left off when they return.

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutList, Boxes, CalendarRange, GaugeCircle, ClipboardCheck, RefreshCw,
   AlertTriangle, ShieldCheck, Clock, History, Pencil, X, CheckCircle2, Lock, Unlock,
 } from "lucide-react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { api, ApiError } from "../../lib/api";
+import { DeferredViz } from "../../components/plan/DeferredViz";
 
 /**
  * AI-008 — Deep proposal plan (v2 execution plan).
@@ -14,7 +15,26 @@ import { api, ApiError } from "../../lib/api";
  * an inspector (validated, conflict-safe PATCH), shows deterministic diagnostics,
  * and supports revision restore + approve/reopen. Planning is isolated from
  * escrow — nothing here touches payment state.
+ *
+ * The tab bodies project the plan through the shared diagram components in
+ * `components/plan/` rather than re-implementing list views here, so this panel
+ * and the AI Builder read the same plan the same way (Requirements 3.1, 4.1,
+ * 5.1, 6.1, 7.1). Each diagram is mounted behind {@link DeferredViz} with the
+ * module-level `load` factories below, so every diagram is its own Vite chunk
+ * fetched only once it scrolls into view (Requirements 12.1, 12.2). A section
+ * the stored plan cannot supply renders that diagram's own empty state while the
+ * rest of the panel stays usable — the components decide this from `plan` and
+ * `diagnostics`, so nothing is gated here (Requirement 11.4).
  */
+
+// Stable module-level import factories: `DeferredViz` memoises `React.lazy` on
+// the factory identity, so an inline arrow would remount the diagram every
+// render and discard its resolved chunk.
+const loadArchitectureGraph = () => import("../../components/plan/ArchitectureGraph.jsx");
+const loadScheduleGantt = () => import("../../components/plan/ScheduleGantt.jsx");
+const loadCapacityHeatmap = () => import("../../components/plan/CapacityHeatmap.jsx");
+const loadTraceabilityMatrix = () => import("../../components/plan/TraceabilityMatrix.jsx");
+const loadWeekDetail = () => import("../../components/plan/WeekDetail.jsx");
 
 const uuid = () =>
   (crypto?.randomUUID?.() || `op-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -67,7 +87,7 @@ const TABS = [
 ];
 
 export function ExecutionPlanPanel() {
-  const { parsedProposalId } = useLandingStore();
+  const { parsedProposalId, parsedProposal } = useLandingStore();
   const [plan, setPlan] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
   const [revision, setRevision] = useState(0);
@@ -81,6 +101,22 @@ export function ExecutionPlanPanel() {
   const [showRevisions, setShowRevisions] = useState(false);
   const [inspector, setInspector] = useState(null); // { kind, id }
   const abortRef = useRef(null);
+
+  // The shared diagrams hand back the whole task record; this panel already owns
+  // one inspector, so a selection opens *that* one rather than a second,
+  // competing detail surface. `ArchitectureGraph` and `ScheduleGantt` keep their
+  // own read-only detail panel for component/task description — the two do not
+  // overlap: one describes, this one edits.
+  const selectTask = useCallback((task) => {
+    const id = task && typeof task === "object" ? task.id : task;
+    if (typeof id === "string" && id) setInspector({ kind: "task", id });
+  }, []);
+
+  const editWeek = useCallback((id) => setInspector({ kind: "week", id }), []);
+
+  // The v1 proposal's phases, so `WeekDetail` can expand a phase into its weeks
+  // in place (Requirement 3.4). Absent proposal → no phase overview, no error.
+  const phases = Array.isArray(parsedProposal?.timeline) ? parsedProposal.timeline : undefined;
 
   const applyResult = (res) => {
     if (res.plan) setPlan(res.plan);
@@ -307,12 +343,40 @@ export function ExecutionPlanPanel() {
             })}
           </div>
 
-          {tab === "scope" && <ScopeTab plan={plan} diagnostics={diagnostics} onEdit={readonly ? null : setInspector} />}
-          {tab === "architecture" && (
-            <ArchitectureTab plan={plan} onRegenerate={readonly ? null : () => generate("architecture")} busy={busy === "generate"} />
+          {tab === "scope" && (
+            <ScopeTab
+              plan={plan}
+              diagnostics={diagnostics}
+              onEdit={readonly ? null : setInspector}
+              onSelectTask={readonly ? undefined : selectTask}
+            />
           )}
-          {tab === "timeline" && <TimelineTab plan={plan} onEdit={readonly ? null : setInspector} onRegenerate={readonly ? null : () => generate("timeline")} busy={busy === "generate"} />}
-          {tab === "capacity" && <CapacityTab plan={plan} diagnostics={diagnostics} />}
+          {tab === "architecture" && (
+            <ArchitectureTab
+              plan={plan}
+              diagnostics={diagnostics}
+              onRegenerate={readonly ? null : () => generate("architecture")}
+              busy={busy === "generate"}
+            />
+          )}
+          {tab === "timeline" && (
+            <TimelineTab
+              plan={plan}
+              diagnostics={diagnostics}
+              phases={phases}
+              onSelectTask={readonly ? undefined : selectTask}
+              onEditWeek={readonly ? null : editWeek}
+              onRegenerate={readonly ? null : () => generate("timeline")}
+              busy={busy === "generate"}
+            />
+          )}
+          {tab === "capacity" && (
+            <CapacityTab
+              plan={plan}
+              diagnostics={diagnostics}
+              onSelectTask={readonly ? undefined : selectTask}
+            />
+          )}
           {tab === "review" && (
             <ReviewTab
               plan={plan}
@@ -394,24 +458,24 @@ function ReadinessStrip({ diagnostics }) {
   );
 }
 
-function ScopeTab({ plan, diagnostics, onEdit }) {
-  const coverage = diagnostics?.scopeCoverage || [];
-  const reqById = Object.fromEntries((plan.requirements || []).map((r) => [r.id, r]));
+/**
+ * Scope tab: requirement traceability, then the editable scope modules.
+ *
+ * The coverage list is now `TraceabilityMatrix` (Requirement 7.1), which shows
+ * the diagnostics' own covered/total counts, each requirement's source, the
+ * modules/tasks/checkpoints covering it, and the open questions blocking it. The
+ * module cards stay, because they are this panel's edit affordance for a module.
+ */
+function ScopeTab({ plan, diagnostics, onEdit, onSelectTask }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="panel-card">
-        <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>Requirement coverage</h3>
-        {coverage.length === 0 && <p style={{ fontSize: 13, color: "#64748b" }}>No requirements recorded.</p>}
-        {coverage.map((c) => (
-          <div key={c.requirementId} style={{ marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}>
-              <span style={{ color: "#334155" }}>{reqById[c.requirementId]?.statement || c.requirementId}</span>
-              <Pill tone={c.covered ? "ok" : "warn"}>{c.covered ? "Covered" : "Uncovered"}</Pill>
-            </div>
-            <Bar value={c.taskIds.length} max={Math.max(1, c.taskIds.length)} color={c.covered ? "#16a34a" : "#f59e0b"} label={`${c.taskIds.length} task(s)`} />
-          </div>
-        ))}
-      </div>
+      <DeferredViz
+        load={loadTraceabilityMatrix}
+        title="Requirement traceability"
+        plan={plan}
+        diagnostics={diagnostics}
+        onSelectTask={onSelectTask}
+      />
 
       {(plan.scopeModules || []).map((m) => (
         <div key={m.id} className="panel-card">
@@ -444,142 +508,124 @@ function ScopeTab({ plan, diagnostics, onEdit }) {
   );
 }
 
-function ArchitectureTab({ plan, onRegenerate, busy }) {
-  const arch = plan.architecture;
-  if (!arch) {
-    return (
-      <div className="panel-card" style={{ textAlign: "center", padding: 24 }}>
-        <p style={{ color: "#64748b", fontSize: 14 }}>No architecture in this plan.</p>
-        {onRegenerate && (
-          <button type="button" className="panel-btn" onClick={onRegenerate} disabled={busy}>Generate architecture</button>
-        )}
-      </div>
-    );
-  }
+/**
+ * Architecture tab: the component graph (Requirement 4.1).
+ *
+ * `ArchitectureGraph` renders the summary, the graph (or its table view above the
+ * node cap), the legend, its own read-only component inspector, and the empty
+ * state with a generate affordance when the plan carries no architecture. The
+ * regenerate control stays here, because regeneration is this panel's concern.
+ */
+function ArchitectureTab({ plan, diagnostics, onRegenerate, busy }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="panel-card" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <p style={{ margin: 0, fontSize: 14, color: "#334155" }}>{arch.summary}</p>
-        {onRegenerate && (
-          <button type="button" className="panel-btn panel-btn--ghost" onClick={onRegenerate} disabled={busy} style={{ flexShrink: 0 }}>
-            <RefreshCw size={14} /> Regenerate
+      {onRegenerate && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button type="button" className="panel-btn panel-btn--ghost" onClick={onRegenerate} disabled={busy}>
+            <RefreshCw size={14} /> Regenerate architecture
           </button>
-        )}
-      </div>
-      <div className="panel-grid panel-grid--2">
-        {arch.components.map((c) => (
-          <div key={c.id} className="panel-card">
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>{c.name}</h3>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 8px" }}>{c.responsibility}</p>
-            <dl style={{ fontSize: 12.5, color: "#475569", margin: 0, display: "grid", gridTemplateColumns: "auto 1fr", gap: "3px 10px" }}>
-              <dt style={{ fontWeight: 600 }}>Data</dt><dd style={{ margin: 0 }}>{c.dataBoundary}</dd>
-              <dt style={{ fontWeight: 600 }}>Interfaces</dt><dd style={{ margin: 0 }}>{c.interfaces.join(", ")}</dd>
-              <dt style={{ fontWeight: 600 }}>Failure</dt><dd style={{ margin: 0 }}>{c.errorHandling}</dd>
-              {c.scaling && (<><dt style={{ fontWeight: 600 }}>Scaling</dt><dd style={{ margin: 0 }}>{c.scaling}</dd></>)}
-            </dl>
-          </div>
-        ))}
-      </div>
+        </div>
+      )}
+      <DeferredViz
+        load={loadArchitectureGraph}
+        title="Architecture"
+        plan={plan}
+        diagnostics={diagnostics}
+        onGenerate={onRegenerate ?? undefined}
+        generating={busy}
+      />
     </div>
   );
 }
 
-function TimelineTab({ plan, onEdit, onRegenerate, busy }) {
-  const tasksById = Object.fromEntries((plan.tasks || []).map((t) => [t.id, t]));
-  const cpById = Object.fromEntries((plan.checkpoints || []).map((c) => [c.id, c]));
-  const delById = Object.fromEntries((plan.deliverables || []).map((d) => [d.id, d]));
-  const roleName = (id) => (plan.teamCapacity || []).find((r) => r.roleId === id)?.roleName || id;
+/**
+ * Timeline tab: the week-by-week sequence (Requirement 3.1) above the schedule
+ * (Requirement 5.1).
+ *
+ * `WeekDetail` is the readable narrative — objectives, tasks, deliverables,
+ * checkpoints, blocking client actions, validator-flagged gaps, and phases that
+ * expand in place. `ScheduleGantt` is the positional view — spans across weeks,
+ * dependencies with the late case marked, and the critical path from
+ * `diagnostics.criticalPathTaskIds`. Both refuse to draw what the plan does not
+ * support and say why, so a stored plan missing newer inputs still renders.
+ *
+ * Week label/objective editing survives as an explicit row of week buttons: the
+ * shared components describe a week, they do not edit one.
+ */
+function TimelineTab({ plan, diagnostics, phases, onSelectTask, onEditWeek, onRegenerate, busy }) {
+  const weeks = plan.weeks || [];
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        {onRegenerate && (
+      {onRegenerate && (
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button type="button" className="panel-btn panel-btn--ghost" onClick={onRegenerate} disabled={busy}>
             <RefreshCw size={14} /> Regenerate timeline
           </button>
-        )}
-      </div>
-      {(plan.weeks || []).map((w) => (
-        <div key={w.id} className="panel-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
-              {w.label} <span style={{ fontWeight: 400, color: "#94a3b8", fontSize: 13 }}>— {w.objective}</span>
-            </h3>
-            {onEdit && (
-              <button type="button" className="panel-btn panel-btn--ghost" style={{ fontSize: 12 }} onClick={() => onEdit({ kind: "week", id: w.id })}>
-                <Pencil size={12} /> Edit
-              </button>
-            )}
-          </div>
-          <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
-            {w.taskIds.map((tid) => {
-              const t = tasksById[tid];
-              if (!t) return null;
-              return (
-                <div key={tid} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "8px 10px", background: "#f8fafc", borderRadius: 6 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{t.title}</div>
-                    <div style={{ fontSize: 11.5, color: "#94a3b8" }}>
-                      {roleName(t.ownerRoleId)} · {t.estimateHours}h · wk {t.startWeek}–{t.endWeek}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Pill tone={t.status === "done" ? "ok" : t.status === "blocked" ? "error" : "muted"}>{t.status}</Pill>
-                    {onEdit && (
-                      <button type="button" className="panel-btn panel-btn--ghost" style={{ fontSize: 11 }} onClick={() => onEdit({ kind: "task", id: t.id })}>
-                        <Pencil size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {w.deliverableIds?.length > 0 && (
-            <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#475569" }}>
-              <strong>Deliverables:</strong> {w.deliverableIds.map((d) => delById[d]?.title || d).join(", ")}
-            </p>
-          )}
-          {w.checkpointIds?.length > 0 && (
-            <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {w.checkpointIds.map((cid) => {
-                const cp = cpById[cid];
-                if (!cp) return null;
-                return <Pill key={cid} tone={cp.blocking ? "warn" : "info"}><ClipboardCheck size={11} /> {cp.title}</Pill>;
-              })}
-            </div>
-          )}
         </div>
-      ))}
+      )}
+
+      <DeferredViz
+        load={loadWeekDetail}
+        title="Week-by-week plan"
+        plan={plan}
+        diagnostics={diagnostics}
+        phases={phases}
+        onSelectTask={onSelectTask}
+      />
+
+      <DeferredViz
+        load={loadScheduleGantt}
+        title="Schedule"
+        plan={plan}
+        diagnostics={diagnostics}
+        onGenerate={onRegenerate ?? undefined}
+        generating={busy}
+      />
+
+      {onEditWeek && weeks.length > 0 && (
+        <div className="panel-card">
+          <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>Edit a week</h3>
+          <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 10px" }}>
+            Change a week's label or objective. Edits are validated and saved as a new revision.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {weeks.map((w) => (
+              <button
+                key={w.id}
+                type="button"
+                className="panel-btn panel-btn--ghost"
+                style={{ fontSize: 12 }}
+                onClick={() => onEditWeek(w.id)}
+              >
+                <Pencil size={12} /> {w.label || `Week ${w.weekNumber}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function CapacityTab({ plan, diagnostics }) {
-  const capacity = diagnostics?.capacity || [];
-  const roleName = (id) => (plan.teamCapacity || []).find((r) => r.roleId === id)?.roleName || id;
+/**
+ * Capacity & risk tab: the role × week heatmap (Requirement 6.1) plus risks.
+ *
+ * `CapacityHeatmap` displays the server's own capacity figures and state words —
+ * an absent `(role, week)` reads as unknown rather than zero, and no utilisation
+ * is recomputed in the browser. Risks stay as a local card; no shared component
+ * covers them.
+ */
+function CapacityTab({ plan, diagnostics, onSelectTask }) {
   const risks = plan.risks || [];
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <div className="panel-card">
-        <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>Capacity vs demand (per role / week)</h3>
-        {capacity.length === 0 && <p style={{ fontSize: 13, color: "#64748b" }}>No scheduled work yet.</p>}
-        {capacity.map((c, i) => (
-          <div key={i} style={{ marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 3 }}>
-              <span style={{ color: "#334155" }}>{roleName(c.roleId)} · week {c.weekNumber}</span>
-              <span style={{ color: c.state === "over" ? "#991b1b" : c.state === "warning" ? "#b45309" : "#64748b" }}>
-                {c.plannedHours}h planned{c.capacityHours != null ? ` / ${c.capacityHours}h capacity` : " / capacity unknown"}
-              </span>
-            </div>
-            <Bar
-              value={c.plannedHours}
-              max={c.capacityHours || c.plannedHours || 1}
-              color={c.state === "over" ? "#dc2626" : c.state === "warning" ? "#f59e0b" : "#16a34a"}
-              label={c.utilizationPct != null ? `${c.utilizationPct}%` : "—"}
-            />
-          </div>
-        ))}
-      </div>
+      <DeferredViz
+        load={loadCapacityHeatmap}
+        title="Capacity vs demand"
+        plan={plan}
+        diagnostics={diagnostics}
+        onSelectTask={onSelectTask}
+      />
 
       <div className="panel-card">
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px" }}>Risks by severity</h3>

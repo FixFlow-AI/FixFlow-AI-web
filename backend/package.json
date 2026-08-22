@@ -12,7 +12,7 @@
     "dev": "tsc && node dist/index.js",
     "lint": "echo 'Skipping lint - not configured'",
     "typecheck": "tsc --noEmit",
-    "test": "node dist/test/testSkills.js",
+    "test": "node dist/test/testSkills.js && node dist/test/testProposalWorkflow.js",
     "ddb:ingest": "npx tsx src/scripts/ingestJsonToDynamoDb.ts"
   },
   "dependencies": {

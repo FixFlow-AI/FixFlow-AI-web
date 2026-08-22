@@ -8,6 +8,47 @@
  * Keep these in sync with `ai-service/app/schemas/*` — they are the contract.
  */
 
+// ---- Depth accounting & score explainability ----
+// Mirrors ai-service/app/schemas/depth.py. Every field below is additive and
+// optional on the wire, so proposals stored before this feature still type-check.
+
+export type DepthLimitReason = 'brief_too_short' | 'model_shortfall' | 'degraded';
+
+/** Why a deterministically derived number is what it is. */
+export interface ScoreBasis {
+  /** The qualitative signals consumed, e.g. `["complexity=High", "scheduled in plan"]`. */
+  inputs: string[];
+  /** Reads back to the derived figure, e.g. `"base 55 (High) +5 approach"`. */
+  rule: string;
+}
+
+/** How much material the brief (plus discovery answers) actually supplied. */
+export interface BriefSubstance {
+  wordCount: number;
+  distinctTopicCount: number;
+  hasDiscoveryAnswers: boolean;
+  sufficient: boolean;
+}
+
+/** Actual versus targeted item count for one proposal section. */
+export interface SectionDepth {
+  section: string;
+  actual: number;
+  target: number;
+  met: boolean;
+}
+
+/** Assessment of the depth a generated proposal reached. */
+export interface DepthReport {
+  sections: SectionDepth[];
+  depthLimited: boolean;
+  limitReason?: DepthLimitReason | null;
+  /** User-facing sentence stating that depth was limited by brief detail. */
+  note?: string | null;
+  /** True when the one bounded shortfall re-ask was spent. */
+  reaskUsed: boolean;
+}
+
 export interface Feature {
   title: string;
   description: string;
@@ -16,6 +57,10 @@ export interface Feature {
   confidence: 'High' | 'Medium' | 'Low';
   confidence_pct: number;
   area: string;
+  /** Where the feature came from. Absent on v1 proposals (treat as `brief`). */
+  source?: 'brief' | 'discovery' | 'inferred';
+  /** Read-back for `confidence_pct`. Absent on v1 proposals. */
+  score_basis?: ScoreBasis | null;
 }
 
 export interface Risk {
@@ -23,6 +68,8 @@ export interface Risk {
   severity: number;
   mitigation: string;
   category: string;
+  /** Read-back for `severity`. Absent on v1 proposals. */
+  score_basis?: ScoreBasis | null;
 }
 
 export interface TimelinePhase {
@@ -95,6 +142,8 @@ export interface MarketItem {
   description: string;
   trend: 'up' | 'down' | 'stable';
   relevance: number;
+  /** Read-back for `relevance`. Absent on v1 proposals. */
+  score_basis?: ScoreBasis | null;
 }
 
 export interface ImpactItem {
@@ -102,6 +151,8 @@ export interface ImpactItem {
   description: string;
   impact_score: number;
   category: string;
+  /** Read-back for `impact_score`. Absent on v1 proposals. */
+  score_basis?: ScoreBasis | null;
 }
 
 export interface Proposal {
@@ -118,6 +169,8 @@ export interface Proposal {
    * proposal — the gateway keeps reading `timeline`/`delivery_plan` unchanged.
    */
   executionPlan?: ExecutionPlan;
+  /** Depth accounting for this proposal. Additive and optional. */
+  depth_report?: DepthReport | null;
 }
 
 // ---- AI-008: v2 Execution Plan (deep proposal / editable timeline) ----
@@ -241,6 +294,8 @@ export interface PlanTask {
   workstreamId: string;
   ownerRoleId: string;
   estimateHours: number;
+  /** Plain-language reason the hours were derived, e.g. "Medium complexity → 16h baseline". */
+  estimateBasis?: string | null;
   startWeek: number;
   endWeek: number;
   dependencyTaskIds: string[];
@@ -319,6 +374,11 @@ export interface PlanDiagnostics {
   issues: DiagnosticIssue[];
   capacity: CapacityCell[];
   scopeCoverage: ScopeCoverage[];
+  /**
+   * Longest dependency chain by summed `estimateHours`, computed server-side.
+   * Empty when the graph contains a cycle or has not been computed.
+   */
+  criticalPathTaskIds?: string[];
   coveredRequirementCount: number;
   totalRequirementCount: number;
   unresolvedQuestionCount: number;
@@ -346,6 +406,8 @@ export interface ExecutionPlan {
   checkpoints: Checkpoint[];
   risks: PlanRiskLink[];
   diagnostics?: PlanDiagnostics | null;
+  /** How this plan was produced. Absent on plans stored before this field existed. */
+  authoringSource?: 'authored' | 'repaired' | 'derived' | 'degraded' | null;
 }
 
 // ---- Confidence Grid (AI-002) ----

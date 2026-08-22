@@ -20,6 +20,9 @@ Checks implemented:
   8. No orphan deliverables, owner-role IDs, or architecture components.
   9. Chart inputs (hours, severity) are non-negative.
 
+It also derives the schedule's critical path (``compute_critical_path``) so the
+UI can highlight it without recomputing anything in the browser (spec §5.5).
+
 All functions are deterministic and independent of the LLM.
 """
 from __future__ import annotations
@@ -32,6 +35,7 @@ from ..schemas.execution_plan import (
     DiagnosticIssue,
     ExecutionPlan,
     PlanDiagnostics,
+    PlanTask,
     ScopeCoverage,
 )
 
@@ -224,23 +228,32 @@ def _check_week_content(plan: ExecutionPlan, issues: List[DiagnosticIssue]) -> N
                    suggestion="Add at least one task, deliverable, checkpoint, or client action.")
 
 
-def _check_task_dependency_dag(plan: ExecutionPlan, issues: List[DiagnosticIssue]) -> None:
+def _build_task_dependency_graph(plan: ExecutionPlan) -> Tuple[Dict[str, PlanTask], Dict[str, List[str]]]:
+    """Tasks keyed by id plus the dependency adjacency (task → its dependencies).
+
+    Dangling dependency ids are dropped here; they are reported separately by
+    ``_check_references``.
+    """
     tasks_by_id = {t.id: t for t in plan.tasks}
     graph = {t.id: [d for d in t.dependencyTaskIds if d in tasks_by_id] for t in plan.tasks}
+    return tasks_by_id, graph
 
-    # Cycle detection (DFS colouring).
+
+def _find_dependency_cycle_edges(graph: Dict[str, List[str]]) -> List[Tuple[str, str]]:
+    """Back edges of the dependency graph, in DFS discovery order.
+
+    Empty result means the graph is a DAG. Shared by the dependency check and
+    ``compute_critical_path`` so both agree on what a cycle is.
+    """
     WHITE, GREY, BLACK = 0, 1, 2
     color: Dict[str, int] = {tid: WHITE for tid in graph}
-    cycle_found = {"v": False}
+    back_edges: List[Tuple[str, str]] = []
 
     def dfs(node: str) -> None:
         color[node] = GREY
         for nxt in graph.get(node, []):
             if color[nxt] == GREY:
-                cycle_found["v"] = True
-                _issue(issues, code="dependency_cycle", severity="error",
-                       message=f"Task dependency cycle detected involving '{node}' → '{nxt}'.",
-                       path=f"tasks.{node}.dependencyTaskIds")
+                back_edges.append((node, nxt))
             elif color[nxt] == WHITE:
                 dfs(nxt)
         color[node] = BLACK
@@ -248,8 +261,75 @@ def _check_task_dependency_dag(plan: ExecutionPlan, issues: List[DiagnosticIssue
     for tid in graph:
         if color[tid] == WHITE:
             dfs(tid)
+    return back_edges
 
-    if cycle_found["v"]:
+
+def _is_longer_chain(
+    candidate: Tuple[float, List[str]],
+    incumbent: Tuple[float, List[str]],
+) -> bool:
+    """Chain comparison: more hours wins; equal hours tie-break on task ids.
+
+    The lexicographically smallest id sequence wins a tie, which makes the
+    critical path stable across dict/insertion orderings.
+    """
+    if candidate[0] != incumbent[0]:
+        return candidate[0] > incumbent[0]
+    return candidate[1] < incumbent[1]
+
+
+def compute_critical_path(plan: ExecutionPlan) -> List[str]:
+    """Longest task dependency chain by summed ``estimateHours``.
+
+    Returns the chain ordered from start to end — each id is a dependency of
+    the one that follows it. Returns ``[]`` when the dependency graph contains
+    a cycle (no chain is well defined) or when the plan has no tasks.
+    Deterministic: ties are broken on task id.
+    """
+    tasks_by_id, graph = _build_task_dependency_graph(plan)
+    if not graph or _find_dependency_cycle_edges(graph):
+        return []
+
+    # best[t] = (summed hours, chain) for the heaviest chain ending at t.
+    best: Dict[str, Tuple[float, List[str]]] = {}
+    for root in sorted(graph):
+        if root in best:
+            continue
+        # Iterative post-order so deep chains can't blow the recursion limit.
+        stack: List[Tuple[str, bool]] = [(root, False)]
+        while stack:
+            node, expanded = stack.pop()
+            if node in best:
+                continue
+            if not expanded:
+                stack.append((node, True))
+                for dep in sorted(set(graph.get(node, []))):
+                    if dep not in best:
+                        stack.append((dep, False))
+                continue
+            prefix: Tuple[float, List[str]] = (0.0, [])
+            for dep in sorted(set(graph.get(node, []))):
+                if _is_longer_chain(best[dep], prefix):
+                    prefix = best[dep]
+            best[node] = (prefix[0] + tasks_by_id[node].estimateHours, prefix[1] + [node])
+
+    winner: Tuple[float, List[str]] = (0.0, [])
+    for tid in sorted(best):
+        if _is_longer_chain(best[tid], winner):
+            winner = best[tid]
+    return list(winner[1])
+
+
+def _check_task_dependency_dag(plan: ExecutionPlan, issues: List[DiagnosticIssue]) -> None:
+    tasks_by_id, graph = _build_task_dependency_graph(plan)
+
+    back_edges = _find_dependency_cycle_edges(graph)
+    for node, nxt in back_edges:
+        _issue(issues, code="dependency_cycle", severity="error",
+               message=f"Task dependency cycle detected involving '{node}' → '{nxt}'.",
+               path=f"tasks.{node}.dependencyTaskIds")
+
+    if back_edges:
         return  # ordering checks below are meaningless with a cycle present
 
     # Ordering: a dependency must not start after its dependent; ideally it
@@ -454,6 +534,8 @@ def validate_execution_plan(plan: ExecutionPlan) -> PlanDiagnostics:
     coverage = _compute_scope_coverage(plan)
     _check_requirement_coverage(coverage, issues)
 
+    critical_path = compute_critical_path(plan)
+
     error_count = sum(1 for i in issues if i.severity == "error")
     warning_count = sum(1 for i in issues if i.severity == "warning")
 
@@ -463,6 +545,7 @@ def validate_execution_plan(plan: ExecutionPlan) -> PlanDiagnostics:
         issues=issues,
         capacity=capacity,
         scopeCoverage=coverage,
+        criticalPathTaskIds=critical_path,
         coveredRequirementCount=sum(1 for c in coverage if c.covered),
         totalRequirementCount=len(plan.requirements),
         unresolvedQuestionCount=sum(1 for q in plan.openQuestions if q.blocking),

@@ -157,6 +157,10 @@ class PlanValidateRequest(BaseModel):
 class PlanGenerateResponse(BaseModel):
     executionPlan: ExecutionPlan
     diagnostics: PlanDiagnostics
+    # How the returned plan came to be: a clean authored pass, an authored pass
+    # that needed one subtractive repair, the deterministic derivation, or the
+    # degraded fallback. Requirement 9.5.
+    authoringSource: Literal["authored", "repaired", "derived", "degraded"]
 
 
 # --------------------------------------------------------------------------
@@ -344,14 +348,27 @@ async def plan_generate(body: PlanGenerateRequest) -> PlanGenerateResponse:
     """AI-008 — build (or regenerate a section of) a deep v2 execution plan from
     a proposal. Deterministic and always returns a validator-clean plan; the
     numeric diagnostics are recomputed here, never trusted from any LLM."""
-    plan = generate_execution_plan(
+    existing = body.existingPlan
+    if existing is not None:
+        # Drop anything the caller sent as diagnostics: only this service's
+        # deterministic validator may produce them, so they cannot be smuggled
+        # in past the validator. Requirement 9.2.
+        existing.diagnostics = None
+
+    plan = await generate_execution_plan(
         body.proposal,
         scope=body.scope,
-        existing_plan=body.existingPlan,
+        existing_plan=existing,
         preserve_client_edits=body.preserveClientEdits,
+        brief_text=body.briefText,
+        timeout_sec=get_settings().gemini_plan_timeout_sec,
     )
     diagnostics = plan.diagnostics or validate_execution_plan(plan)
-    return PlanGenerateResponse(executionPlan=plan, diagnostics=diagnostics)
+    return PlanGenerateResponse(
+        executionPlan=plan,
+        diagnostics=diagnostics,
+        authoringSource=plan.authoringSource or "derived",
+    )
 
 
 @app.post(
@@ -362,6 +379,9 @@ async def plan_generate(body: PlanGenerateRequest) -> PlanGenerateResponse:
 async def plan_validate(body: PlanValidateRequest) -> PlanDiagnostics:
     """AI-008 — recompute deterministic diagnostics for a plan (called by the
     backend after every accepted client edit). Pure; no LLM, no side effects."""
+    # Any inbound diagnostics are discarded before the plan is read, so a caller
+    # cannot smuggle a figure past the validator. Requirement 9.2.
+    body.executionPlan.diagnostics = None
     return validate_execution_plan(body.executionPlan)
 
 

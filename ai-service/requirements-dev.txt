@@ -11,3 +11,10 @@ pytest>=8.0.0
 # runtime (e.g. inside an `except` clause). Guards against regressions of
 # BUG-10 (ValidationError referenced but never imported).
 ruff>=0.5.0
+
+# Property-based testing. Generates many inputs per test to check invariants the
+# deterministic suites cannot enumerate by hand (e.g. that a plan is always
+# validator-clean, that derived scores ignore model-supplied numbers). Used by
+# the test_*_properties.py suites; integrates with pytest via the @given
+# decorator, so no extra plugin is needed.
+hypothesis>=6.100

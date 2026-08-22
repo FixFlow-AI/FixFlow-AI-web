@@ -51,6 +51,9 @@ class Settings:
         ).strip()
 
         self.gemini_timeout_sec: float = float(os.getenv("GEMINI_TIMEOUT_SEC", "15"))
+        # Plan authoring is a single, larger generation than brief parsing, so it
+        # gets its own (longer) budget. Requirement 9.5.
+        self.gemini_plan_timeout_sec: float = float(os.getenv("GEMINI_PLAN_TIMEOUT_SEC", "20"))
         # Total attempts per model for transient failures (429/5xx/timeout/network).
         self.gemini_max_retries: int = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
         # Exponential backoff bounds (seconds): delay = min(max, base * 2**attempt) + jitter.

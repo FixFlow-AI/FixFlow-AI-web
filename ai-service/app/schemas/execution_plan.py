@@ -153,6 +153,10 @@ class PlanTask(BaseModel):
     workstreamId: str = Field(min_length=1)
     ownerRoleId: str = Field(min_length=1)
     estimateHours: float = Field(gt=0, le=2000)
+    # Plain-language reason the hours above were derived, e.g. "Medium
+    # complexity → 16h baseline". Optional so plans stored before this field
+    # existed keep parsing unchanged.
+    estimateBasis: Optional[str] = None
     startWeek: int = Field(ge=1)
     endWeek: int = Field(ge=1)
     dependencyTaskIds: List[str] = Field(default_factory=list)
@@ -237,6 +241,9 @@ class PlanDiagnostics(BaseModel):
     issues: List[DiagnosticIssue] = Field(default_factory=list)
     capacity: List[CapacityCell] = Field(default_factory=list)
     scopeCoverage: List[ScopeCoverage] = Field(default_factory=list)
+    # Longest dependency chain by summed estimateHours, computed server-side.
+    # Empty when the graph contains a cycle or has not been computed.
+    criticalPathTaskIds: List[str] = Field(default_factory=list)
     coveredRequirementCount: int = 0
     totalRequirementCount: int = 0
     unresolvedQuestionCount: int = 0
@@ -268,3 +275,6 @@ class ExecutionPlan(BaseModel):
     risks: List[PlanRiskLink] = Field(default_factory=list)
     # Deterministic, recomputed server-side; never trusted from the LLM.
     diagnostics: Optional[PlanDiagnostics] = None
+    # How this plan was produced. Absent on plans stored before this field
+    # existed, so it stays optional.
+    authoringSource: Optional[Literal["authored", "repaired", "derived", "degraded"]] = None

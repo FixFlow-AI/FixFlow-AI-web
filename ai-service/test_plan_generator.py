@@ -3,6 +3,7 @@
 Proves that deriving a v2 ExecutionPlan from any well-formed v1 Proposal yields
 a validator-clean plan, and that sectioned regeneration preserves client edits.
 """
+import asyncio
 import unittest
 
 from app.schemas.proposal import Proposal
@@ -88,9 +89,11 @@ class TestPlanGenerator(unittest.TestCase):
         base = derive_execution_plan_from_proposal(sample_proposal())
         # Simulate a client edit to the architecture summary.
         base.architecture.summary = "CLIENT EDITED SUMMARY"
-        regenerated = generate_execution_plan(
+        # ``generate_execution_plan`` is a coroutine now (it awaits the optional
+        # authoring pass), so the synchronous suite drives it with asyncio.run.
+        regenerated = asyncio.run(generate_execution_plan(
             sample_proposal(), scope="timeline", existing_plan=base, preserve_client_edits=True
-        )
+        ))
         self.assertEqual(regenerated.architecture.summary, "CLIENT EDITED SUMMARY")
         self.assertTrue(validate_execution_plan(regenerated).valid)
 

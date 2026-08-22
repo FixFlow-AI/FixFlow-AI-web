@@ -1,7 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useLandingStore } from "../../store/useLandingStore";
 import { DiscoveryWizard } from "./DiscoveryWizard";
 import { api } from "../../lib/api";
+import { usePlan } from "../../hooks/usePlan";
+import { DeferredViz } from "../../components/plan/DeferredViz";
+import { EmptyDiagram } from "../../components/plan/EmptyDiagram";
+import { sectionAvailability } from "../../lib/plan/selectors";
+import { discloseSlice } from "../../lib/plan/disclosure";
 import {
   Sparkles,
   RefreshCw,
@@ -31,6 +36,7 @@ import {
   RotateCcw,
   Search,
   SearchX,
+  Info,
 } from "lucide-react";
 
 
@@ -43,13 +49,92 @@ const proposalSteps = [
   { num: 5, label: "Review & finalize" },
 ];
 
-// Which detail views belong to each approval step. Steps 1 and 5 have no tabs
-// (idea capture and final review); steps 2-4 group the relevant analysis tabs.
+// Which detail views belong to each approval step. Step 1 has no tabs (idea
+// capture) and step 5 carries the workflow map rather than a tab set; steps 2-4
+// group the relevant analysis sections.
 const STEP_TABS = {
-  2: ["scope", "architecture"],
-  3: ["risks", "competitors"],
-  4: ["milestones", "roles"],
+  2: ["scope", "architecture", "traceability"],
+  3: ["risks", "competitors", "impact"],
+  4: ["weeks", "schedule", "capacity", "roles"],
 };
+
+// Module-level dynamic-import factories. `DeferredViz` memoises `React.lazy` on
+// the factory's identity, so these must be stable across renders — recreating
+// one per render would discard the resolved chunk and remount the diagram.
+// Keeping them here is also what gives each diagram its own Vite chunk, so
+// nothing is fetched until the section is actually viewed (Requirement 12.2).
+const loadArchitectureGraph = () => import("../../components/plan/ArchitectureGraph.jsx");
+const loadTraceabilityMatrix = () => import("../../components/plan/TraceabilityMatrix.jsx");
+const loadWeekDetail = () => import("../../components/plan/WeekDetail.jsx");
+const loadScheduleGantt = () => import("../../components/plan/ScheduleGantt.jsx");
+const loadCapacityHeatmap = () => import("../../components/plan/CapacityHeatmap.jsx");
+const loadProjectWorkflowMap = () => import("../../components/plan/ProjectWorkflowMap.jsx");
+
+// How many cards a long list shows before the reviewer asks for more.
+const SECTION_PAGE_SIZE = 6;
+
+/**
+ * Read-back for a deterministic score (Requirement 2.4).
+ *
+ * Every number in the intelligence sections is derived server-side from
+ * qualitative signals, and `score_basis` carries those signals plus the rule
+ * that produced the figure. Rendering it as a disclosure keeps the card compact
+ * while making the number explainable rather than asserted. Absent on
+ * proposals generated before this feature, in which case nothing is rendered.
+ *
+ * @param {{basis?: {inputs?: string[], rule?: string} | null, label?: string}} props
+ * @returns {JSX.Element|null}
+ */
+function ScoreBasisNote({ basis, label = "How this score was reached" }) {
+  const inputs = Array.isArray(basis?.inputs)
+    ? basis.inputs.filter((entry) => typeof entry === "string" && entry.trim())
+    : [];
+  const rule = typeof basis?.rule === "string" ? basis.rule.trim() : "";
+  if (inputs.length === 0 && !rule) return null;
+
+  return (
+    <details style={{ marginTop: 10 }}>
+      <summary style={{ fontSize: 11.5, fontWeight: 600, color: "#2563eb", cursor: "pointer" }}>
+        {label}
+      </summary>
+      <div
+        style={{
+          marginTop: 6,
+          padding: "8px 10px",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          borderRadius: 6,
+        }}
+      >
+        {inputs.length > 0 && (
+          <>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Inputs used
+            </span>
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
+              {inputs.map((entry, idx) => (
+                <li key={`${idx}-${entry}`}>{entry}</li>
+              ))}
+            </ul>
+          </>
+        )}
+        {rule && (
+          <p style={{ margin: inputs.length > 0 ? "8px 0 0" : 0, fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
+            <strong style={{ color: "#334155" }}>Rule:</strong> {rule}
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
 
 // The client's per-step approval action label (step 5 hands off to Agreement).
 const STEP_APPROVE_LABEL = {
@@ -83,6 +168,8 @@ export function ProposalGenerator() {
     proposalWorkflow,
     runBriefParse,
     briefParsing,
+    matchResults,
+    milestones,
   } = useLandingStore();
 
   const [generating, setGenerating] = useState(false);
@@ -97,6 +184,42 @@ export function ProposalGenerator() {
   // Tracks which proposalId the local step state was hydrated for, so we never
   // clobber in-session progress on unrelated re-renders.
   const hydratedFor = useRef(null);
+
+  // The v2 execution plan behind the new diagrams. A proposal with no plan sets
+  // `notGenerated` rather than an error, so the section offers to generate one
+  // (Requirement 11.2); a genuine failure lands in `planError` and is shown
+  // alongside the sections that can still render (Requirement 11.4).
+  const {
+    plan,
+    diagnostics,
+    status: planStatus,
+    error: planError,
+    notGenerated: planNotGenerated,
+    loading: planLoading,
+    generating: planGenerating,
+    reload: reloadPlan,
+    generate: generatePlan,
+  } = usePlan(parsedProposalId);
+
+  // Selector results are memoised on the plan/diagnostics identity so switching
+  // sections never recomputes a projection (the diagrams do the same inside).
+  const availability = useMemo(() => sectionAvailability(plan, diagnostics), [plan, diagnostics]);
+
+  // Requirement 1.3: a proposal kept thin by a thin brief says so, instead of
+  // looking complete. Absent on proposals generated before this feature.
+  const depthReport = parsedProposal?.depth_report || null;
+  const depthLimited = Boolean(depthReport?.depthLimited);
+  const shortSections = useMemo(
+    () => (Array.isArray(depthReport?.sections) ? depthReport.sections.filter((s) => s && s.met === false) : []),
+    [depthReport],
+  );
+
+  // Progressive disclosure for the longer lists: the remainder is one click
+  // away rather than silently truncated (Requirement 10.3).
+  const [pagesShown, setPagesShown] = useState({});
+  const showMore = useCallback((key) => {
+    setPagesShown((current) => ({ ...current, [key]: (current[key] ?? 1) + 1 }));
+  }, []);
 
   const isStepUnlocked = (num) => num === 1 || approvedSteps.includes(num - 1);
 
@@ -134,12 +257,29 @@ export function ProposalGenerator() {
     persistWorkflow(nextStep, nextApproved);
   };
 
-  // When entering a step, focus its first relevant detail tab.
+  // Section-per-step memory. Entering a step reopens the section the reviewer
+  // was last reading there and falls back to its first section otherwise, so
+  // moving between steps never loses their place (Requirement 10.1).
+  const [sectionByStep, setSectionByStep] = useState({});
+
   useEffect(() => {
     const allowed = STEP_TABS[activeStep];
-    if (allowed && !allowed.includes(activeTab)) setActiveTab(allowed[0]);
+    if (!allowed) return;
+    const remembered = sectionByStep[activeStep];
+    const next = allowed.includes(remembered) ? remembered : allowed[0];
+    if (next !== activeTab) setActiveTab(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStep]);
+
+  // Move between the sections of the current step. Deliberately changes nothing
+  // else: no scrolling, no step change, no approval side effects (Requirement 10.1).
+  const selectSection = useCallback(
+    (tabId) => {
+      setActiveTab(tabId);
+      setSectionByStep((current) => ({ ...current, [activeStep]: tabId }));
+    },
+    [activeStep],
+  );
 
   // Restore persisted step/approval state when the active proposal changes.
   // Priority: DB workflow (via store) > localStorage cache > clean defaults.
@@ -244,10 +384,35 @@ export function ProposalGenerator() {
   };
 
   const tabsRef = useRef(null);
+  // Section buttons, so keyboard traversal can move focus with the selection.
+  const sectionTabRefs = useRef(new Map());
+
+  // Arrow/Home/End traversal across the current step's sections. Selection
+  // moves with focus; the reviewer's step and scroll position are untouched.
+  const handleSectionKeyDown = (event, index, list) => {
+    if (list.length === 0) return;
+    let nextIndex = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % list.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + list.length) % list.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = list.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const target = list[nextIndex];
+    selectSection(target.id);
+    sectionTabRefs.current.get(target.id)?.focus();
+  };
+
+  // The workflow map reads the builder's own progress; passing a memoised
+  // object keeps its lifecycle derivation from recomputing on every render.
+  const workflowForMap = useMemo(() => ({ activeStep, approvedSteps }), [activeStep, approvedSteps]);
 
   const handleViewFullSummary = () => {
     setActiveStep(2);
     setActiveTab("scope");
+    // Record it as the step's section too, so the step-entry effect agrees with
+    // this explicit jump instead of restoring a previously read section.
+    setSectionByStep((current) => ({ ...current, 2: "scope" }));
     setShowSummaryModal(true);
     setTimeout(() => {
       tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -257,6 +422,7 @@ export function ProposalGenerator() {
   const handleViewFullIntelligence = () => {
     setActiveStep(3);
     setActiveTab("risks");
+    setSectionByStep((current) => ({ ...current, 3: "risks" }));
     setShowIntelligenceModal(true);
     setTimeout(() => {
       tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -286,6 +452,10 @@ export function ProposalGenerator() {
     desc: f.description,
     badge: f.complexity,
     badgeColor: f.complexity === "High" ? "orange" : f.complexity === "Medium" ? "blue" : "green",
+    // Derived server-side; carried through so the figure can be read back (R2.4).
+    confidence: f.confidence,
+    confidencePct: f.confidence_pct,
+    scoreBasis: f.score_basis || null,
   })) || [];
 
   const buildSections = () => {
@@ -333,14 +503,148 @@ export function ProposalGenerator() {
     }, 450);
   };
 
+  // Order here is the order the section nav shows within a step.
   const tabs = [
     { id: "scope", label: "Scope outline" },
+    { id: "architecture", label: "Technical architecture" },
+    { id: "traceability", label: "Requirement traceability" },
     { id: "risks", label: "Risk analysis" },
     { id: "competitors", label: "Competitor landscape" },
-    { id: "architecture", label: "Technical architecture" },
-    { id: "milestones", label: "Milestones" },
+    { id: "impact", label: "Impact analysis" },
+    { id: "weeks", label: "Week by week" },
+    { id: "schedule", label: "Task schedule" },
+    { id: "capacity", label: "Role capacity" },
     { id: "roles", label: "Required roles" },
   ];
+  const stepTabs = tabs.filter((t) => (STEP_TABS[activeStep] || []).includes(t.id));
+
+  /**
+   * Mount one plan diagram.
+   *
+   * Diagrams always go through `DeferredViz` so their chunk is only requested
+   * once the section is viewed (Requirement 12.2). When there is no stored plan
+   * the generate affordance is rendered here instead, which both answers
+   * Requirement 11.2 and avoids fetching a chunk just to show an empty state.
+   * `section` is passed only for the diagrams that cannot offer generation
+   * themselves; `ArchitectureGraph` and `ScheduleGantt` own that empty state.
+   */
+  const renderPlanDiagram = ({ load, title, section, ...props }) => {
+    if (planLoading) {
+      return (
+        <div
+          className="panel-card"
+          style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#64748b" }}
+        >
+          <RefreshCw size={15} className="animate-spin" style={{ color: "#2563eb" }} />
+          Loading the execution plan…
+        </div>
+      );
+    }
+    if (!plan) {
+      return (
+        <EmptyDiagram
+          title={`${title} needs an execution plan`}
+          reason={
+            planNotGenerated
+              ? "This proposal has no execution plan yet. Generating one adds the week-by-week schedule, the architecture graph, role capacity, and requirement traceability."
+              : "The execution plan could not be loaded, so this diagram has nothing to draw. Every other section of this step is unaffected."
+          }
+          action={{
+            label: planGenerating ? "Generating plan…" : "Generate detailed plan",
+            onClick: () => generatePlan(),
+            disabled: planGenerating || !parsedProposalId,
+          }}
+        />
+      );
+    }
+    if (section && !section.available) {
+      return <EmptyDiagram title={`${title} is not available yet`} reason={section} />;
+    }
+    return <DeferredViz load={load} title={title} {...props} />;
+  };
+
+  /**
+   * Phase-level timeline straight from the v1 proposal. It stays reachable
+   * whenever the week-by-week breakdown cannot be shown, so a proposal without
+   * a plan still has a timeline to review (Requirement 10.5).
+   */
+  const renderPhaseTimeline = () => {
+    const timeline = parsedProposal?.timeline || [];
+    if (timeline.length === 0) return null;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {timeline.map((phase, idx) => (
+          <div className="panel-card" key={phase.phase + idx}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <span
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "#eff6ff",
+                  border: "2px solid #bfdbfe",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "#2563eb",
+                  flexShrink: 0,
+                }}
+              >
+                {idx + 1}
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{phase.phase}</div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>Duration: {phase.duration}</div>
+              </div>
+              <span className="panel-badge panel-badge--blue">{phase.duration}</span>
+            </div>
+
+            {/* Tasks */}
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Tasks
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                {phase.tasks.map((task, ti) => (
+                  <div key={task + ti} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                    <Check size={14} style={{ color: "#16a34a" }} />
+                    {task}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Dependencies */}
+            {phase.dependencies?.length > 0 && (
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Dependencies
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {phase.dependencies.map((dep, di) => (
+                    <span key={dep + di} className="panel-badge panel-badge--outline" style={{ fontSize: 11 }}>
+                      {dep}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  /** "Show more" affordance for a progressively disclosed list. */
+  const renderShowMore = (key, slice, noun) =>
+    slice.hasMore ? (
+      <div style={{ gridColumn: "1 / -1", textAlign: "center" }}>
+        <button type="button" className="panel-btn--ghost panel-btn" onClick={() => showMore(key)}>
+          Show more {noun} ({slice.remaining} of {slice.total} not shown)
+        </button>
+      </div>
+    ) : null;
 
   /* ── Tab content renderer ── */
   const renderTabContent = () => {
@@ -368,52 +672,55 @@ export function ProposalGenerator() {
 
     switch (activeTab) {
       /* ── SCOPE OUTLINE ── */
-      case "scope":
+      case "scope": {
+        const scopeSlice = discloseSlice(displayScope, SECTION_PAGE_SIZE, pagesShown.scope ?? 1);
         return (
           <div className="panel-grid panel-grid--3">
             {/* Proposed scope */}
             <div className="panel-card">
               <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>
-                Proposed scope
+                Proposed scope{scopeSlice.total > 0 ? ` (${scopeSlice.total})` : ""}
               </h3>
-              {displayScope.length > 0 ? (
-                displayScope.map((item) => {
+              {scopeSlice.total > 0 ? (
+                scopeSlice.visible.map((item) => {
                   const Icon = item.icon;
                   return (
                     <div
                       key={item.title}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "12px 0",
-                        borderBottom: "1px solid #f1f5f9",
-                      }}
+                      style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}
                     >
-                      <span
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 6,
-                          background: "#eff6ff",
-                          display: "grid",
-                          placeItems: "center",
-                          color: "#2563eb",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Icon size={14} />
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
-                        <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 6,
+                            background: "#eff6ff",
+                            display: "grid",
+                            placeItems: "center",
+                            color: "#2563eb",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon size={14} />
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
+                          <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.desc}</div>
+                        </div>
+                        <span
+                          className={`panel-badge panel-badge--${item.badgeColor || "blue"}`}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {item.badge}
+                        </span>
                       </div>
-                      <span
-                        className={`panel-badge panel-badge--${item.badgeColor || "blue"}`}
-                        style={{ flexShrink: 0 }}
-                      >
-                        {item.badge}
-                      </span>
+                      {typeof item.confidencePct === "number" && (
+                        <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 6 }}>
+                          Confidence {item.confidence || "—"} · {item.confidencePct}/100
+                        </div>
+                      )}
+                      <ScoreBasisNote basis={item.scoreBasis} label="How this confidence was reached" />
                     </div>
                   );
                 })
@@ -421,6 +728,16 @@ export function ProposalGenerator() {
                 <p style={{ fontSize: 13, color: "#64748b" }}>
                   Generate a proposal to see the scope outline.
                 </p>
+              )}
+              {scopeSlice.hasMore && (
+                <button
+                  type="button"
+                  className="panel-link"
+                  style={{ marginTop: 12 }}
+                  onClick={() => showMore("scope")}
+                >
+                  Show more scope items ({scopeSlice.remaining} of {scopeSlice.total} not shown)
+                </button>
               )}
               <button type="button" className="panel-link" style={{ marginTop: 12 }}>
                 <Plus size={14} /> Add custom item
@@ -533,14 +850,16 @@ export function ProposalGenerator() {
             </div>
           </div>
         );
+      }
 
       /* ── RISK ANALYSIS ── */
       case "risks": {
         const risks = parsedProposal?.risks || [];
         if (risks.length === 0) return emptyState("risk analysis");
+        const riskSlice = discloseSlice(risks, SECTION_PAGE_SIZE, pagesShown.risks ?? 1);
         return (
           <div className="panel-grid panel-grid--3">
-            {risks.map((risk, idx) => {
+            {riskSlice.visible.map((risk, idx) => {
               const severityColor = risk.severity >= 70 ? "#ef4444" : risk.severity >= 40 ? "#f59e0b" : "#16a34a";
               const severityBg = risk.severity >= 70 ? "#fef2f2" : risk.severity >= 40 ? "#fffbeb" : "#f0fdf4";
               const badge = risk.severity >= 70 ? "High" : risk.severity >= 40 ? "Medium" : "Low";
@@ -621,10 +940,12 @@ export function ProposalGenerator() {
                     <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
                       {risk.mitigation}
                     </p>
+                    <ScoreBasisNote basis={risk.score_basis} label="How this severity was reached" />
                   </div>
                 </div>
               );
             })}
+            {renderShowMore("risks", riskSlice, "risks")}
           </div>
         );
       }
@@ -633,9 +954,10 @@ export function ProposalGenerator() {
       case "competitors": {
         const market = parsedProposal?.market || [];
         if (market.length === 0) return emptyState("competitor landscape");
+        const marketSlice = discloseSlice(market, SECTION_PAGE_SIZE, pagesShown.competitors ?? 1);
         return (
           <div className="panel-grid panel-grid--3">
-            {market.map((item, idx) => {
+            {marketSlice.visible.map((item, idx) => {
               const trendColor = item.trend === "up" ? "#16a34a" : item.trend === "down" ? "#ef4444" : "#f59e0b";
               const trendBg = item.trend === "up" ? "#f0fdf4" : item.trend === "down" ? "#fef2f2" : "#fffbeb";
               const trendLabel = item.trend === "up" ? "↑ Trending Up" : item.trend === "down" ? "↓ Trending Down" : "→ Stable";
@@ -679,10 +1001,66 @@ export function ProposalGenerator() {
                         }}
                       />
                     </div>
+                    <ScoreBasisNote basis={item.score_basis} label="How this relevance was reached" />
                   </div>
                 </div>
               );
             })}
+            {renderShowMore("competitors", marketSlice, "market signals")}
+          </div>
+        );
+      }
+
+      /* ── IMPACT ANALYSIS ── */
+      case "impact": {
+        const impact = parsedProposal?.impact || [];
+        if (impact.length === 0) return emptyState("impact analysis");
+        const impactSlice = discloseSlice(impact, SECTION_PAGE_SIZE, pagesShown.impact ?? 1);
+        return (
+          <div className="panel-grid panel-grid--3">
+            {impactSlice.visible.map((item, idx) => (
+              <div className="panel-card" key={item.title + idx}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <BadgeCheck size={18} style={{ color: "#7c3aed", flexShrink: 0 }} />
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", flex: 1 }}>
+                    {item.title}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      padding: "2px 8px",
+                      borderRadius: 12,
+                      background: "#f1f5f9",
+                      color: "#475569",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.category}
+                  </span>
+                </div>
+                <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 12px" }}>
+                  {item.description}
+                </p>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginBottom: 4 }}>
+                    <span>Impact</span>
+                    <span style={{ fontWeight: 700 }}>{item.impact_score}/100</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: "#f1f5f9", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${item.impact_score}%`,
+                        borderRadius: 3,
+                        background: "#7c3aed",
+                      }}
+                    />
+                  </div>
+                  <ScoreBasisNote basis={item.score_basis} label="How this impact score was reached" />
+                </div>
+              </div>
+            ))}
+            {renderShowMore("impact", impactSlice, "impact items")}
           </div>
         );
       }
@@ -690,134 +1068,126 @@ export function ProposalGenerator() {
       /* ── TECHNICAL ARCHITECTURE ── */
       case "architecture": {
         const features = parsedProposal?.features || [];
-        if (features.length === 0) return emptyState("technical architecture");
-        return (
-          <div className="panel-grid panel-grid--2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {features.map((f, idx) => (
-              <div className="panel-card" key={f.title + idx}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <span
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      background: "#eff6ff",
-                      display: "grid",
-                      placeItems: "center",
-                      color: "#2563eb",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Code2 size={16} />
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{f.title}</div>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        padding: "1px 8px",
-                        borderRadius: 10,
-                        background: "#f1f5f9",
-                        color: "#64748b",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {f.area}
-                    </span>
-                  </div>
-                  <span
-                    className={`panel-badge panel-badge--${f.complexity === "High" ? "orange" : f.complexity === "Medium" ? "blue" : "green"}`}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {f.complexity}
-                  </span>
-                </div>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Technical Approach
-                  </span>
-                  <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
-                    {f.technical_approach}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      }
-
-      /* ── MILESTONES ── */
-      case "milestones": {
-        const timeline = parsedProposal?.timeline || [];
-        if (timeline.length === 0) return emptyState("milestones");
         return (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {timeline.map((phase, idx) => (
-              <div className="panel-card" key={phase.phase + idx}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <span
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      background: "#eff6ff",
-                      border: "2px solid #bfdbfe",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 14,
-                      fontWeight: 800,
-                      color: "#2563eb",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {idx + 1}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>{phase.phase}</div>
-                    <div style={{ fontSize: 12, color: "#64748b" }}>Duration: {phase.duration}</div>
-                  </div>
-                  <span className="panel-badge panel-badge--blue">{phase.duration}</span>
-                </div>
+            {/* The plan's own component graph — the authoritative architecture. */}
+            {renderPlanDiagram({
+              load: loadArchitectureGraph,
+              title: "Architecture graph",
+              plan,
+              diagnostics,
+              onGenerate: () => generatePlan(),
+              generating: planGenerating,
+            })}
 
-                {/* Tasks */}
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    Tasks
-                  </span>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
-                    {phase.tasks.map((task, ti) => (
-                      <div key={task + ti} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
-                        <Check size={14} style={{ color: "#16a34a" }} />
-                        {task}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Dependencies */}
-                {phase.dependencies?.length > 0 && (
-                  <div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      Dependencies
-                    </span>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
-                      {phase.dependencies.map((dep, di) => (
+            {/* Per-feature technical approach from the proposal itself. */}
+            {features.length > 0 && (
+              <div className="panel-grid panel-grid--2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {features.map((f, idx) => (
+                  <div className="panel-card" key={f.title + idx}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: "#eff6ff",
+                          display: "grid",
+                          placeItems: "center",
+                          color: "#2563eb",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Code2 size={16} />
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{f.title}</div>
                         <span
-                          key={dep + di}
-                          className="panel-badge panel-badge--outline"
-                          style={{ fontSize: 11 }}
+                          style={{
+                            fontSize: 11,
+                            padding: "1px 8px",
+                            borderRadius: 10,
+                            background: "#f1f5f9",
+                            color: "#64748b",
+                            fontWeight: 600,
+                          }}
                         >
-                          {dep}
+                          {f.area}
                         </span>
-                      ))}
+                      </div>
+                      <span
+                        className={`panel-badge panel-badge--${f.complexity === "High" ? "orange" : f.complexity === "Medium" ? "blue" : "green"}`}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {f.complexity}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        Technical Approach
+                      </span>
+                      <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "4px 0 0" }}>
+                        {f.technical_approach}
+                      </p>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
         );
       }
+
+      /* ── REQUIREMENT TRACEABILITY ── */
+      case "traceability":
+        return renderPlanDiagram({
+          load: loadTraceabilityMatrix,
+          title: "Requirement traceability",
+          section: availability.traceability,
+          plan,
+          diagnostics,
+        });
+
+      /* ── WEEK BY WEEK ── */
+      case "weeks":
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {renderPlanDiagram({
+              load: loadWeekDetail,
+              title: "Week-by-week timeline",
+              section: availability.weeks,
+              plan,
+              diagnostics,
+              // The v1 phases, so a milestone expands into its weeks in place
+              // without leaving the step (Requirement 3.4).
+              phases: parsedProposal?.timeline,
+            })}
+            {/* Phase durations remain the only timeline a proposal without a
+                weekly breakdown has, so they are never hidden behind the plan. */}
+            {(!plan || !availability.weeks.available) && renderPhaseTimeline()}
+          </div>
+        );
+
+      /* ── TASK SCHEDULE ── */
+      case "schedule":
+        return renderPlanDiagram({
+          load: loadScheduleGantt,
+          title: "Task schedule",
+          plan,
+          diagnostics,
+          onGenerate: () => generatePlan(),
+          generating: planGenerating,
+        });
+
+      /* ── ROLE CAPACITY ── */
+      case "capacity":
+        return renderPlanDiagram({
+          load: loadCapacityHeatmap,
+          title: "Role capacity",
+          section: availability.capacity,
+          plan,
+          diagnostics,
+        });
 
       /* ── REQUIRED ROLES ── */
       case "roles": {
@@ -1120,6 +1490,53 @@ export function ProposalGenerator() {
         </div>
       </div>
 
+      {/* Depth limited by the brief — the proposal explains its own thinness
+          instead of looking complete (Requirement 1.3). */}
+      {depthLimited && (
+        <div
+          role="note"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: "12px 14px",
+            marginBottom: 20,
+            borderRadius: 8,
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            color: "#92400e",
+            fontSize: 13,
+          }}
+        >
+          <Info size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700 }}>This proposal is intentionally less detailed</div>
+            <p style={{ margin: "2px 0 0", lineHeight: 1.6 }}>
+              {depthReport.note ||
+                (depthReport.limitReason === "brief_too_short"
+                  ? "The brief was too short to support a fuller breakdown, so fewer items were produced rather than padding the proposal with generic entries."
+                  : depthReport.limitReason === "degraded"
+                  ? "The analysis ran in a degraded mode, so the result is deliberately limited and nothing was synthesised to fill it out."
+                  : "Some sections came back shorter than the target, so they are reported as they are rather than padded.")}
+            </p>
+            {shortSections.length > 0 && (
+              <details style={{ marginTop: 8 }}>
+                <summary style={{ fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  Which sections are short
+                </summary>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 12, lineHeight: 1.6 }}>
+                  {shortSections.map((entry) => (
+                    <li key={entry.section}>
+                      {entry.section}: {entry.actual} of {entry.target} targeted
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Step 1 — describe idea + AI summary + intelligence at a glance */}
       {activeStep === 1 && (
       <div className="panel-grid panel-grid--3">
@@ -1366,40 +1783,95 @@ export function ProposalGenerator() {
       {/* Steps 2-4 — grouped detail views, shown only for the current step */}
       {activeStep >= 2 && activeStep <= 4 && (
       <div style={{ marginTop: 8 }} ref={tabsRef}>
+        {/* Section navigation for this step. Selecting a section changes nothing
+            but the section: no scrolling, no step change (Requirement 10.1). */}
         <div
+          role="tablist"
+          aria-label={`${proposalSteps[activeStep - 1].label} sections`}
           style={{
             display: "flex",
             gap: 0,
             borderBottom: "1px solid #e2e8f0",
             marginBottom: 20,
+            overflowX: "auto",
+            maxWidth: "100%",
           }}
         >
-          {tabs
-            .filter((t) => (STEP_TABS[activeStep] || []).includes(t.id))
-            .map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: "10px 16px",
-                border: "none",
-                borderBottom: activeTab === tab.id ? "2px solid #2563eb" : "2px solid transparent",
-                background: "transparent",
-                color: activeTab === tab.id ? "#2563eb" : "#64748b",
-                fontSize: 13,
-                fontWeight: activeTab === tab.id ? 700 : 500,
-                cursor: "pointer",
-                transition: "color 150ms ease",
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {stepTabs.map((tab, idx) => {
+            const selected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`proposal-section-tab-${tab.id}`}
+                aria-selected={selected}
+                aria-controls={`proposal-section-panel-${tab.id}`}
+                tabIndex={selected ? 0 : -1}
+                ref={(node) => {
+                  if (node) sectionTabRefs.current.set(tab.id, node);
+                  else sectionTabRefs.current.delete(tab.id);
+                }}
+                onClick={() => selectSection(tab.id)}
+                onKeyDown={(event) => handleSectionKeyDown(event, idx, stepTabs)}
+                style={{
+                  padding: "10px 16px",
+                  border: "none",
+                  borderBottom: selected ? "2px solid #2563eb" : "2px solid transparent",
+                  background: "transparent",
+                  color: selected ? "#2563eb" : "#64748b",
+                  fontSize: 13,
+                  fontWeight: selected ? 700 : 500,
+                  cursor: "pointer",
+                  transition: "color 150ms ease",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Tab content — renders based on activeTab */}
-        {renderTabContent()}
+        {/* A plan that failed to load is reported here while every other section
+            of the step keeps rendering (Requirement 11.4). */}
+        {planError && (
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              padding: "10px 12px",
+              marginBottom: 16,
+              borderRadius: 8,
+              background: "#fef2f2",
+              border: "1px solid #fee2e2",
+              color: "#991b1b",
+              fontSize: 13,
+            }}
+          >
+            <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700 }}>{planError}</div>
+              <p style={{ margin: "2px 0 8px", color: "#b91c1c" }}>
+                The proposal itself is unaffected — only the plan-driven diagrams are missing.
+              </p>
+              <button type="button" className="panel-btn panel-btn--ghost" onClick={() => reloadPlan()}>
+                <RefreshCw size={14} /> Try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Section content — renders based on activeTab */}
+        <div
+          role="tabpanel"
+          id={`proposal-section-panel-${activeTab}`}
+          aria-labelledby={`proposal-section-tab-${activeTab}`}
+        >
+          {renderTabContent()}
+        </div>
       </div>
       )}
 
@@ -1447,6 +1919,27 @@ export function ProposalGenerator() {
               );
             })}
           </div>
+
+          <hr className="panel-divider" />
+
+          {/* What the client is committing to, end to end. Deferred like every
+              other diagram so its chunk only loads when this step is viewed. */}
+          <h4 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>
+            How this project moves from here
+          </h4>
+          <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>
+            Every stage, who owns it, and which decisions gate it — including the ones that are not
+            yours to make.
+          </p>
+          <DeferredViz
+            load={loadProjectWorkflowMap}
+            title="Project workflow"
+            reserveHeight={280}
+            workflow={workflowForMap}
+            planStatus={planStatus}
+            matchWorkflow={matchResults}
+            milestones={milestones}
+          />
         </div>
       )}
 
@@ -1536,7 +2029,7 @@ export function ProposalGenerator() {
                 className="panel-btn"
                 onClick={() => {
                   setShowSummaryModal(false);
-                  setActiveTab("scope");
+                  selectSection("scope");
                 }}
               >
                 View Scope Tab
@@ -1622,7 +2115,7 @@ export function ProposalGenerator() {
                 className="panel-btn"
                 onClick={() => {
                   setShowIntelligenceModal(false);
-                  setActiveTab("risks");
+                  selectSection("risks");
                 }}
               >
                 View Risk Tab

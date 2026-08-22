@@ -1,15 +1,23 @@
 """AI-008 — Deep execution-plan generation (Week 2).
 
-Turns a v1 ``Proposal`` into a v2 ``ExecutionPlan``. The primary path is a
-**deterministic derivation** from the proposal's own structure — it always
-produces a schema-valid, validator-clean plan with no LLM dependency, so the
-feature is reliable in a live demo. When Gemini is available we *optionally*
-enrich the plan with deeper narrative; enriched output is only used if it still
-passes the deterministic validator with zero errors, otherwise we keep the
-deterministic baseline (spec §6.4 safe fallback).
+Turns a v1 ``Proposal`` into a v2 ``ExecutionPlan``. This module is the
+**orchestrator** of the plan pipeline, and it always has a floor to stand on:
+``derive_execution_plan_from_proposal`` is a deterministic derivation from the
+proposal's own structure that produces a schema-valid, validator-clean plan with
+no LLM dependency.
+
+``generate_execution_plan`` builds that baseline *first*, then optionally runs
+the authoring pipeline in front of it — ``plan_authoring`` (one bounded Gemini
+call for content only) → ``plan_assembly`` (mints ids, computes every number) →
+``timeline_validation`` → at most one subtractive ``plan_repair`` pass →
+re-validate. The authored candidate is only returned when it is validator-clean
+*and* substantive (see ``_is_substantive``); otherwise the baseline is returned
+untouched. An authoring timeout therefore costs latency and nothing else
+(R9.3, R9.4, R9.5).
 
 Numbers (hours, capacity, severity, coverage) are never taken from the LLM —
-they are computed here or validated by ``timeline_validation.py``.
+they are computed here, in ``plan_assembly``, or validated by
+``timeline_validation.py``.
 """
 from __future__ import annotations
 
@@ -18,6 +26,7 @@ import math
 import re
 from typing import Dict, List, Optional
 
+from ..config import get_settings
 from ..schemas.execution_plan import (
     ArchitectureComponent,
     ArchitectureDocument,
@@ -25,6 +34,7 @@ from ..schemas.execution_plan import (
     Checkpoint,
     Deliverable,
     ExecutionPlan,
+    PlanDiagnostics,
     PlanRiskLink,
     PlanTask,
     PlanWeek,
@@ -34,6 +44,10 @@ from ..schemas.execution_plan import (
     Workstream,
 )
 from ..schemas.proposal import Proposal
+from .fallback_logger import log_fallback
+from .plan_assembly import assemble_plan
+from .plan_authoring import author_plan_draft
+from .plan_repair import repair_plan
 from .timeline_validation import HIGH_RISK_SEVERITY, validate_execution_plan
 
 logger = logging.getLogger(__name__)
@@ -385,23 +399,134 @@ def _merge_section(base: ExecutionPlan, fresh: ExecutionPlan, scope: str) -> Exe
     return merged
 
 
-def generate_execution_plan(
+_FEATURE = "plan_generator"
+
+
+def _is_substantive(candidate: ExecutionPlan, baseline: ExecutionPlan) -> bool:
+    """Is an authored candidate actually worth preferring over the baseline?
+
+    ``errorCount == 0`` is deliberately *not* the whole gate. A degenerate draft
+    — one where nothing survives key resolution in ``plan_assembly`` — assembles
+    into a thin-but-perfectly-clean plan: no modules, no tasks, one placeholder
+    week. Such a plan would pass a pure validity check and silently replace a
+    good deterministic baseline with an empty one.
+
+    So a candidate must also earn its place:
+
+    * it carries real work — at least one scope module and one task;
+    * it does not regress traceability — it covers at least as many
+      requirements as the baseline it would replace.
+
+    Coverage is compared by count rather than by identity because the authored
+    plan mints its own requirement ids from the draft; the baseline's ids come
+    from the proposal's features and the two sets are not comparable. What must
+    not shrink is how much of the plan is actually traced (R9.1).
+    """
+    if not candidate.scopeModules or not candidate.tasks or not candidate.weeks:
+        return False
+
+    candidate_diagnostics = candidate.diagnostics
+    if candidate_diagnostics is None:
+        return False
+    baseline_covered = baseline.diagnostics.coveredRequirementCount if baseline.diagnostics else 0
+    return candidate_diagnostics.coveredRequirementCount >= baseline_covered
+
+
+def _revalidate(plan: ExecutionPlan) -> PlanDiagnostics:
+    """Recompute and attach diagnostics. Never trusts what the plan arrived with."""
+    diagnostics = validate_execution_plan(plan)
+    plan.diagnostics = diagnostics
+    return diagnostics
+
+
+async def _authored_candidate(
+    proposal: Proposal,
+    brief_text: Optional[str],
+    baseline: ExecutionPlan,
+    timeout_sec: float,
+) -> Optional[ExecutionPlan]:
+    """Run author → assemble → validate → repair → re-validate.
+
+    Returns a plan with ``authoringSource`` set to ``"authored"`` (clean first
+    time) or ``"repaired"`` (clean after one repair pass), or ``None`` when the
+    pipeline produced nothing worth using — no draft, still invalid after
+    repair, or clean but not substantive. ``None`` means "keep the baseline";
+    nothing broken is ever surfaced (R9.3).
+    """
+    draft = await author_plan_draft(proposal, brief_text, timeout_sec=timeout_sec)
+    if draft is None:
+        return None
+
+    try:
+        candidate = assemble_plan(draft, proposal, baseline=baseline)
+        diagnostics = candidate.diagnostics or _revalidate(candidate)
+        source = "authored"
+
+        if diagnostics.errorCount > 0:
+            # One bounded, subtractive pass. ``repair_plan`` clears diagnostics
+            # precisely because it cannot know whether it succeeded.
+            candidate = repair_plan(candidate, diagnostics)
+            diagnostics = _revalidate(candidate)
+            source = "repaired"
+    except Exception as error:  # noqa: BLE001 - authoring is optional enrichment
+        log_fallback(_FEATURE, "assembly_failed", str(error))
+        logger.warning(
+            "Plan assembly/repair failed (%s); keeping the derived plan.",
+            type(error).__name__,
+        )
+        return None
+
+    if diagnostics.errorCount > 0:
+        log_fallback(_FEATURE, "authored_plan_invalid", f"errorCount={diagnostics.errorCount}")
+        logger.info("Authored plan still invalid after repair; keeping the derived plan.")
+        return None
+
+    if not _is_substantive(candidate, baseline):
+        log_fallback(_FEATURE, "authored_plan_thin", f"tasks={len(candidate.tasks)}")
+        logger.info("Authored plan is clean but not substantive; keeping the derived plan.")
+        return None
+
+    candidate.authoringSource = source
+    return candidate
+
+
+async def generate_execution_plan(
     proposal: Proposal,
     *,
     scope: str = "all",
     existing_plan: Optional[ExecutionPlan] = None,
     preserve_client_edits: bool = True,
+    brief_text: Optional[str] = None,
+    timeout_sec: Optional[float] = None,
 ) -> ExecutionPlan:
     """Generate or regenerate (a section of) an execution plan.
 
-    Deterministic and reliable. ``scope`` may be 'all' | 'architecture' |
+    The deterministic baseline is built first and is always the fallback, so
+    this coroutine always resolves to a validator-clean plan with
+    ``authoringSource`` set. ``scope`` may be 'all' | 'architecture' |
     'timeline'. When ``existing_plan`` is supplied and ``preserve_client_edits``
     is true, only the requested section is replaced.
+
+    ``timeout_sec`` bounds the single authoring call; it defaults to
+    ``GEMINI_PLAN_TIMEOUT_SEC`` (R9.5).
     """
-    fresh = derive_execution_plan_from_proposal(proposal)
-    if scope != "all" and existing_plan is not None and preserve_client_edits:
-        return _merge_section(existing_plan, fresh, scope)
-    return fresh
+    baseline = derive_execution_plan_from_proposal(proposal)
+    baseline.authoringSource = "derived"
+
+    merging_section = scope != "all" and existing_plan is not None and preserve_client_edits
+    if merging_section:
+        # A section merge splices ids into a plan derived from this same
+        # proposal, so the incoming section must use baseline ids. Authored ids
+        # are minted from the draft and would not resolve against the retained
+        # sections, which is exactly the dangling-reference class R9.1 forbids —
+        # so sectioned regeneration stays deterministic.
+        merged = _merge_section(existing_plan, baseline, scope)
+        merged.authoringSource = "derived"
+        return merged
+
+    budget = timeout_sec if timeout_sec and timeout_sec > 0 else get_settings().gemini_plan_timeout_sec
+    candidate = await _authored_candidate(proposal, brief_text, baseline, float(budget))
+    return candidate if candidate is not None else baseline
 
 
 def degraded_execution_plan(reason: str) -> ExecutionPlan:
@@ -411,6 +536,7 @@ def degraded_execution_plan(reason: str) -> ExecutionPlan:
         schemaVersion=2,
         degraded=True,
         degradedReason=reason,
+        authoringSource="degraded",
         planningAssumptions=[
             Assumption(id="asm-degraded", statement="AI plan details were unavailable; this is a minimal placeholder.")
         ],
